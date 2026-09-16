@@ -11,7 +11,8 @@
     "chapters": 3,
     "acts": 1,
     "wordsPerChapter": 350,
-    "wordsTolerance": 0.3
+    "wordsTolerance": 0.3,
+    "summaryWindow": 2
   },
 
   "research": {
@@ -26,6 +27,7 @@
   "budget": {
     "maxUsd": 5,
     "maxTokens": 300000,
+    "maxUsdPerCall": 0.5,
     "onExceed": "stop-after-chapter"
   },
 

@@ -310,7 +310,11 @@ desastre aparece al integrar.
 **Reglas del sobre.**
 
 - `inputs.paths` lleva rutas; `inputs.values` lleva escalares y listas cortas. **La prosa
-  nunca viaja inline**: el manuscrito no cabe y no debe caber (invariante 5).
+  nunca viaja inline en el sobre**: el manuscrito no cabe y no debe caber (invariante 5).
+- Como ningún agente tiene herramienta de lectura de ficheros ([§17](#17-el-harness)), es
+  **el orquestador quien resuelve esas rutas** e inserta su contenido en el mensaje que
+  envía. La invariante 5 se mantiene porque solo se resuelven las rutas listadas en el
+  sobre, nunca el manuscrito: el sobre es el límite de lo que un turno puede ver.
 - `limits.maxSearches` es `0` para los nueve agentes que no son `researcher`, y la
   implementación además no les da la herramienta
   ([§14](#14-criterios-de-aceptación), criterio 3).
@@ -510,6 +514,7 @@ Cada fichero, con su ruta, quién lo escribe y en qué nodo del diagrama aparece
 | `<novel>/chapters/ch<NN>.draft.md` | `scene-writer` | `WRITE` |
 | `<novel>/chapters/ch<NN>.md` | `voice-editor` | `VOICE` |
 | `<novel>/run-state.json` | `orchestrator` | cada transición de nodo |
+| `<novel>/run-log.jsonl` | `orchestrator` | una línea por llamada; sin prosa, solo rutas y uso |
 | `<novel>/out/manuscript.md` | `compiler` | `COMP`, al terminar los capítulos |
 | `<novel>/out/manuscript.pdf` | export mecánico | `EXPORT`, si está en `outputFormats` |
 | `<novel>/out/manuscript.epub` | export mecánico | `EXPORT`, si está en `outputFormats` |
@@ -650,6 +655,7 @@ del agrupamiento.
 | `scope.acts` | entero ≥ 1 | Dónde cae el corte de acto que consulta `GATE`. |
 | `scope.wordsPerChapter` | entero | Objetivo; viaja como `limits.maxWords` en el sobre. |
 | `scope.wordsTolerance` | 0–1 | Margen sobre el objetivo. |
+| `scope.summaryWindow` | entero ≥ 0 | Cuántos resúmenes previos entran en el contexto. Es lo que impide que el coste por capítulo crezca con el número de capítulos escritos. |
 | `supervision.approvalMode` | `every-chapter`, `act-end-or-flagged`, `never` | La decisión de `GATE`. |
 | `supervision.presentUnit` | `chapter`, `act` | Qué se imprime en `HUMAN`. |
 | `supervision.onFlagged` | `force-gate`, `continue` | `force-gate` hace que `FLAG` interrumpa aunque `approvalMode` sea `never`. |
@@ -666,6 +672,7 @@ del agrupamiento.
 | `limits.maxHumanRevisions` | entero | Ciclo `DEC` → `WRITE`. |
 | `budget.maxUsd` | número | Tope de coste estimado de la corrida. |
 | `budget.maxTokens` | entero | Tope de tokens de la corrida. |
+| `budget.maxUsdPerCall` | número o ausente | Tope duro por llamada. Acota el daño de un turno que se desmande, que es lo que `budget.maxUsd` no puede hacer ([§15](#15-limitaciones-conocidas), limitación 3). |
 | `budget.onExceed` | `pause-at-gate`, `stop-after-chapter`, `warn` | Qué hacer al superarlo. |
 | `output.outputFormats` | lista de `markdown`, `pdf`, `epub` | El nodo `EXPORT`. |
 | `output.manuscriptPath` | ruta relativa a `<novel>/` | Salida de `COMP`. |
@@ -775,8 +782,9 @@ Comprobables, en este orden.
    verificación técnica está protegida de esto porque compara contra notas externas; la de
    continuidad no lo está.
 3. **El coste solo se conoce a posteriori del turno.** `budget.maxUsd` se comprueba
-   después de cada llamada, no antes. Un único turno muy largo puede sobrepasar el tope
-   antes de que nadie pueda impedirlo. El tope acota la corrida, no la llamada.
+   después de cada llamada, no antes. `budget.maxUsdPerCall` acota el daño —se pasa como
+   tope duro al SDK, que corta la llamada al alcanzarlo— pero sigue siendo un límite por
+   turno, no una previsión: nadie sabe lo que va a costar un turno hasta que termina.
 4. **La prueba de 3 capítulos no ejercita el problema real.** El sistema existe porque un
    modelo olvida en el capítulo 30 lo que estableció en el 3. Con 3 capítulos, la biblia
    cabe holgadamente en el contexto y la gestión de estado no está bajo presión. La prueba
@@ -831,3 +839,73 @@ orquestador.
 Razón: el commit es mecánico, y el comportamiento de los agentes vive en texto, no en
 código. Dar a un agente la capacidad de ejecutar git para cumplir una caja del diagrama al
 pie de la letra sería ampliarle los permisos por una cuestión de dibujo.
+
+---
+
+## 17. El harness
+
+Orquestador determinista en Node más el **Claude Agent SDK** para cada llamada. Una
+`query()` aislada por nodo del diagrama, sin conversación acumulada entre nodos.
+
+Se lanza con un solo comando: `npm start`.
+
+### 17.1 Por qué así
+
+Lo determinista —contadores, topes, ramas, rutas, commits— vive en código. Lo que es
+juicio vive en `agents/*.md` y `skills/*.md`, que son ficheros de texto editables.
+
+Se descartaron dos alternativas. **Subagentes conducidos por un slash command**: el
+orquestador sería un modelo, y entonces el modo en seco es imposible —no se puede
+recorrer el bucle «sin llamar a ningún modelo» si el bucle *es* un modelo— y los
+contadores dejan de ser deterministas. **Messages API con clave propia**: exige una
+clave de API aparte, cuando el entorno fija que los modelos llegan por el acceso a
+Claude de la cuenta.
+
+### 17.2 Cómo se hacen ciertas las invariantes 2 y 3
+
+**Ningún agente recibe herramienta de fichero ni de shell.** Cada llamada fija
+`tools` desde el frontmatter del agente: `[]` en nueve de los diez, `['WebSearch']` solo
+en `researcher`. En el SDK, `tools` es lo que restringe qué herramientas existen;
+`allowedTools` solo auto-aprueba las que ya existen, que no es lo mismo. Se añade
+`settingSources: []` para que ningún `CLAUDE.md` ni `settings.json` amplíe permisos por
+la puerta de atrás, y `permissionMode: 'dontAsk'` para que lo no pre-aprobado se deniegue
+en vez de preguntarse.
+
+Eso convierte a los diez roles en generadores de texto puro: **el orquestador lee y
+escribe todos los ficheros**. Su función de escritura comprueba la ruta contra las que el
+agente declara en su frontmatter y rechaza cualquier otra.
+
+**Comprobación de arranque.** Antes del primer nodo se verifica que exactamente un agente
+declara herramienta web, que exactamente uno declara escritura bajo `bible/`, que no son
+el mismo, y que nadie declara una herramienta fuera de la lista permitida. Si la cuenta
+no sale, la corrida no empieza. `npm run invariantes` la ejecuta sola.
+
+### 17.3 Control de gasto
+
+El coste de este diseño crece con facilidad, así que se acota en seis sitios:
+
+| Palanca | Qué evita |
+|---|---|
+| `scope.summaryWindow` | Que el contexto —y por tanto el precio de cada capítulo— crezca con el número de capítulos ya escritos. |
+| `maxTurns: 1` | Turnos extra. Sin herramientas no hay bucle agéntico que justificarlos. |
+| `budget.maxUsdPerCall` | Que un turno desmandado se lleve el presupuesto de la corrida. |
+| `budget.maxUsd` + `onExceed` | Que la corrida siga gastando pasado el tope. Ninguna política aborta a mitad de capítulo: eso dejaría trabajo pagado y sin commitear. |
+| Salida estructurada (`outputFormat`) | Reintentos por JSON malformado, que se pagan dos veces por la misma respuesta. |
+| Solo el modo activo en el prompt | Enviar en cada llamada las instrucciones de modos que no se van a usar. |
+
+El prompt se compone con lo estable delante —agente, skills, pack de género— y lo volátil
+detrás, que es la condición para que la caché de prompt sirva de algo. Cada llamada deja
+una línea en `run-log.jsonl` con sus tokens, su coste y las herramientas que tenía.
+
+### 17.4 Ficheros
+
+| Módulo | Qué hace |
+|---|---|
+| `tools/run.js` | CLI y arranque. El único comando. |
+| `tools/config.js` | Base + overlay, merge por sección, validación. |
+| `tools/agents.js` | Carga de `agents/` y `skills/`, composición del prompt, invariantes. |
+| `tools/call.js` | La llamada al SDK, el modo en seco y la contabilidad de gasto. |
+| `tools/loop.js` | El recorrido del diagrama. |
+| `tools/gate.js` | Presentación en CLI y decisión humana. |
+| `tools/git.js` | Commits, archivado del rollback, lectura del historial. |
+| `tools/state.js` | `run-state.json`, registro y escritura con control de ruta. |

@@ -12,7 +12,8 @@
     "chapters": 30,
     "acts": 3,
     "wordsPerChapter": 2200,
-    "wordsTolerance": 0.2
+    "wordsTolerance": 0.2,
+    "summaryWindow": 4
   },
 
   "supervision": {
@@ -44,6 +45,7 @@
   "budget": {
     "maxUsd": 120,
     "maxTokens": 12000000,
+    "maxUsdPerCall": 2.5,
     "onExceed": "pause-at-gate"
   },
 

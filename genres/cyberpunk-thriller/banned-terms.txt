@@ -1,0 +1,36 @@
+# Términos prohibidos del pack cyberpunk-thriller (invariante 9).
+#
+# Son términos acuñados por obras existentes que se cuelan por inercia al escribir en
+# este género. Uno de ellos en la prosa produce una incidencia blocker de tipo
+# banned-term, y el capítulo se reescribe.
+#
+# La lista es corta a propósito: recoge lo que más se cuela, no todo lo imaginable. Que
+# un término no esté aquí no lo autoriza — el worldbuilding es original, y punto.
+#
+# Una línea por término. Las líneas que empiezan por # son comentarios.
+
+ciberespacio
+matrix
+netrunner
+runner
+deck
+cyberdeck
+consola de ciberespacio
+ICE
+hielo negro
+implante neural
+neurolink
+enchufe craneal
+replicante
+androide
+blade runner
+test de empatía
+arcología
+megacorp
+zaibatsu
+yakuza
+mundo espejo
+carne de cañón digital
+simstim
+cortical
+biochip

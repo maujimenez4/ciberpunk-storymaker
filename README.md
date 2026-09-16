@@ -201,8 +201,42 @@ esa prueba, y por qué, está en
 
 ---
 
+## Cómo se lanza
+
+```bash
+npm install
+npm start                    # perfil smoke-3ch, que viene en modo en seco
+```
+
+`npm start` recorre el bucle entero **sin llamar a ningún modelo**, escribiendo ficheros
+marcador con la forma correcta. Verifica rutas, contadores, compuerta y commits sin gastar
+nada: si el bucle falla vacío, falla gratis. Para la corrida real, `npm start -- --live`.
+
+```bash
+npm run invariantes          # comprueba los permisos de los agentes y sale
+npm start -- --profile X     # otro perfil de config/profiles/
+npm start -- --decide a      # respuesta guionizada para la compuerta
+```
+
+El comportamiento de los diez roles vive en [`agents/`](agents/) y los procedimientos
+compartidos en [`skills/`](skills/). Son ficheros de texto: editarlos cambia el sistema sin
+tocar una línea de código. `tools/` se limita a lo mecánico.
+
+### Permisos
+
+Ningún agente tiene herramienta de fichero ni de shell. Nueve de los diez corren con
+`tools: []` y no pueden hacer absolutamente nada salvo devolver texto; solo `researcher`
+lleva `WebSearch`. El orquestador lee y escribe todos los ficheros, y rechaza cualquier
+escritura fuera de las rutas que el agente declara en su frontmatter.
+
+Antes de la primera llamada se comprueba que exactamente un agente tiene acceso web y
+exactamente uno puede escribir en la biblia. Si la cuenta no sale, la corrida no empieza.
+Las invariantes 2 y 3 no son una promesa del prompt: son una precondición de ejecución.
+
+---
+
 ## Estado
 
 - [x] **Commit 1** — Diagrama, estructura y README.
 - [x] **Commit 2** — Especificación y configuración.
-- [ ] **Commit 3** — Harness y corrida de prueba (3 capítulos).
+- [x] **Commit 3** — Harness, verificado en seco de principio a fin.
