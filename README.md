@@ -9,8 +9,10 @@ modelo escribiendo treinta capítulos olvida lo que estableció en el tercero, i
 hermano y suaviza al villano. StoryMaker trata la novela como un proceso de larga
 duración, con estado explícito en disco y puntos de control humanos.
 
-Este commit contiene el flujo y nada más. La especificación, la configuración y el
-harness llegan en los dos commits siguientes.
+El flujo está en [`docs/architecture/agent-loop.mmd`](docs/architecture/agent-loop.mmd) y
+la especificación completa —inventario de agentes y skills, contrato de handoff, formato
+del reporte de incidencias, inputs, outputs, reanudación, criterios de aceptación y
+limitaciones— en [`docs/spec.md`](docs/spec.md). El harness llega en el commit siguiente.
 
 ---
 
@@ -121,15 +123,19 @@ notas, o hacer rollback a un capítulo K. Las tres salidas están en el diagrama
 README.md
 docs/
   architecture/agent-loop.mmd     fuente única del flujo
-  spec.md                         (commit 2)
-agents/                           un fichero de prompt por rol
-skills/                           procedimientos compartidos por más de un agente
+  spec.md                         la especificación ejecutable
+agents/                           un fichero de prompt por rol (commit 3)
+skills/                           procedimientos compartidos por más de un agente (commit 3)
 genres/
-  cyberpunk-thriller/             convenciones del pack + términos prohibidos
-config/                           perfiles de corrida (commit 2)
+  cyberpunk-thriller/             convenciones del pack + términos prohibidos (commit 3)
+config/
+  run.base.json                   todas las claves, valores de novela completa
+  profiles/full-novel.json        overlay casi vacío: la novela completa es el caso base
+  profiles/smoke-3ch.json         el delta de la prueba de 3 capítulos
 novels/
   <slug>/                         estado de una novela concreta
-    bible/  chapters/  notes/  research/  out/
+    brief.md                      escrito a mano por el usuario
+    bible/  chapters/  notes/  research/  out/  attic/
 tools/                            código mecánico del harness (commit 3)
 ```
 
@@ -171,13 +177,32 @@ El diseño se apoya en nueve invariantes. Las dos que más condicionan la estruc
 - **Un solo escritor del estado.** Solo `Continuity Keeper` escribe en la biblia, y solo
   después de aprobación. Todos los demás leen.
 
-La lista completa está en [`docs/prompt-arranque-storymaker.md`](docs/prompt-arranque-storymaker.md)
-y pasará a la especificación en el commit 2.
+La lista completa está en [`docs/spec.md`](docs/spec.md#0-las-nueve-invariantes), y cada
+sección de la spec señala cuál hace cumplir. Las desviaciones respecto al diagrama están
+recogidas, sin disimular, en
+[`docs/spec.md §16`](docs/spec.md#16-desviaciones-respecto-al-diagrama-y-a-las-invariantes).
+
+---
+
+## Cómo se configura una corrida
+
+Un cambio de comportamiento no toca la spec ni los prompts: toca un JSON.
+`config/run.base.json` tiene todas las claves con los valores de novela completa, y un
+perfil de `config/profiles/` solo lleva las que cambia. El delta entre «prueba pequeña» y
+«novela completa» es, por tanto, el contenido literal de
+[`config/profiles/smoke-3ch.json`](config/profiles/smoke-3ch.json).
+
+La prueba objetivo —3 capítulos de 3 o 4 párrafos sobre
+[`novels/neon-smoke/`](novels/neon-smoke/brief.md)— está configurada y lista para correr,
+con `dryRun` activado: primero se verifica el bucle vacío, y solo después se gasta en
+llamadas reales. Si el bucle falla vacío, falla gratis. El razonamiento de qué se apaga en
+esa prueba, y por qué, está en
+[`docs/spec.md §13`](docs/spec.md#13-perfil-de-prueba--3-capítulos).
 
 ---
 
 ## Estado
 
 - [x] **Commit 1** — Diagrama, estructura y README.
-- [ ] **Commit 2** — Especificación y configuración.
+- [x] **Commit 2** — Especificación y configuración.
 - [ ] **Commit 3** — Harness y corrida de prueba (3 capítulos).

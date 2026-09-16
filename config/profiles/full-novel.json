@@ -1,0 +1,5 @@
+{
+  "config": "storymaker/run-config@1",
+  "profile": "full-novel",
+  "extends": "../run.base.json"
+}

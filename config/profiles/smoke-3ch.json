@@ -1,0 +1,40 @@
+{
+  "config": "storymaker/run-config@1",
+  "profile": "smoke-3ch",
+  "extends": "../run.base.json",
+
+  "run": {
+    "novel": "neon-smoke"
+  },
+
+  "scope": {
+    "chapters": 3,
+    "acts": 1,
+    "wordsPerChapter": 350,
+    "wordsTolerance": 0.3
+  },
+
+  "research": {
+    "maxSearchesSetup": 2,
+    "maxSearchesPerChapter": 1
+  },
+
+  "limits": {
+    "maxRewrites": 1
+  },
+
+  "budget": {
+    "maxUsd": 5,
+    "maxTokens": 300000,
+    "onExceed": "stop-after-chapter"
+  },
+
+  "output": {
+    "outputFormats": ["markdown"]
+  },
+
+  "execution": {
+    "dryRun": true,
+    "dryRunInjectBlockerAt": 2
+  }
+}

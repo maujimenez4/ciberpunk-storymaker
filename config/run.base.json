@@ -1,0 +1,66 @@
+{
+  "config": "storymaker/run-config@1",
+  "profile": "base",
+
+  "run": {
+    "novel": null,
+    "genre": "cyberpunk-thriller",
+    "language": "es"
+  },
+
+  "scope": {
+    "chapters": 30,
+    "acts": 3,
+    "wordsPerChapter": 2200,
+    "wordsTolerance": 0.2
+  },
+
+  "supervision": {
+    "approvalMode": "act-end-or-flagged",
+    "presentUnit": "act",
+    "onFlagged": "force-gate"
+  },
+
+  "validation": {
+    "continuity": true,
+    "technical": true,
+    "bannedTerms": true,
+    "runInParallel": true
+  },
+
+  "research": {
+    "enabled": true,
+    "maxSearchesSetup": 25,
+    "maxSearchesPerChapter": 6,
+    "requireSourceAndDate": true
+  },
+
+  "limits": {
+    "maxResearchRounds": 3,
+    "maxRewrites": 3,
+    "maxHumanRevisions": 3
+  },
+
+  "budget": {
+    "maxUsd": 120,
+    "maxTokens": 12000000,
+    "onExceed": "pause-at-gate"
+  },
+
+  "output": {
+    "outputFormats": ["markdown", "pdf", "epub"],
+    "manuscriptPath": "out/manuscript.md"
+  },
+
+  "execution": {
+    "dryRun": false,
+    "dryRunInjectBlockerAt": null,
+    "commitPerChapter": true,
+    "rollbackPolicy": "archive",
+    "models": {
+      "default": "claude-sonnet-5",
+      "scene-writer": "claude-opus-5",
+      "plot-architect": "claude-opus-5"
+    }
+  }
+}
