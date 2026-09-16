@@ -1,0 +1,7 @@
+# Normaliza los finales de línea a LF en el repositorio.
+# El diseño hace un commit de git por capítulo: sin esto, los diffs de prosa
+# se llenan de ruido CRLF y el rollback deja de ser legible.
+* text=auto eol=lf
+
+# El diagrama es un artefacto parseable, no prosa.
+*.mmd text eol=lf

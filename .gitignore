@@ -1,0 +1,15 @@
+# Dependencias
+node_modules/
+
+# Secretos y entorno local
+.env
+.env.*
+
+# Derivados regenerables (invariante 8: Markdown es el formato canónico).
+# El manuscrito en Markdown sí se versiona; PDF y EPUB se reconstruyen.
+novels/**/out/*.pdf
+novels/**/out/*.epub
+
+# Ruido del sistema
+Thumbs.db
+.DS_Store

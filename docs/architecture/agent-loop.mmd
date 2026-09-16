@@ -1,0 +1,53 @@
+---
+title: StoryMaker - Agent Loop v2
+---
+flowchart TD
+    START(["User: run novel"]) --> BOOT{"Bible exists?"}
+
+    subgraph SETUP["Setup · runs once"]
+        RES0["1 · Researcher<br/>thematic dossier"]
+        ARCH["2 · Plot Architect<br/>acts + chapter outline"]
+        PROF["3 · Character Profiler<br/>character sheets"]
+        RES0 --> ARCH
+        ARCH --> PROF
+    end
+
+    BOOT -->|no| RES0
+    PROF --> LOAD
+    BOOT -->|yes| LOAD["Load context<br/>bible + summaries + open threads"]
+
+    LOAD --> BEAT["4 · Beat Planner<br/>goal · conflict · turn · hook"]
+    BEAT --> GAP{"Research gaps?"}
+    GAP -->|yes| RES1["1 · Researcher<br/>sourced notes"]
+    RES1 --> GAP
+
+    GAP -->|no| WRITE["5 · Scene Writer<br/>prose only"]
+    WRITE --> VOICE["6 · Voice Editor<br/>rhythm · register · cuts only"]
+
+    VOICE --> VAL1["7 · Continuity Keeper<br/>validate vs bible"]
+    VOICE --> VAL2["8 · Technical Verifier<br/>prose vs sourced notes"]
+    VAL1 --> REPORT["Merge issue report"]
+    VAL2 --> REPORT
+
+    REPORT --> BLOCK{"Blockers?"}
+    BLOCK -->|yes · retries < 3| WRITE
+    BLOCK -->|yes · retries = 3| FLAG["Flag as unresolved"]
+
+    FLAG --> GATE{"Gate needed?<br/>config: approvalMode"}
+    BLOCK -->|no| GATE
+
+    GATE -->|no · auto-approve| COMMIT["7 · Continuity Keeper<br/>write bible + summary<br/>git commit per chapter"]
+    GATE -->|end of act · or flagged| HUMAN["Present act in CLI"]
+
+    HUMAN --> DEC{"Human decision"}
+    DEC -->|approve| COMMIT
+    DEC -->|revise with notes| WRITE
+    DEC -->|rollback to chapter K| ROLL["Revert bible to K<br/>invalidate K+1..N"]
+    ROLL --> LOAD
+
+    COMMIT --> MORE{"More chapters?"}
+    MORE -->|yes| LOAD
+    MORE -->|no| COMP["9 · Compiler<br/>assemble manuscript.md"]
+
+    COMP --> EXPORT["Export<br/>config: outputFormats"]
+    EXPORT --> DONE(["manuscript.md<br/>+ pdf / epub"])
