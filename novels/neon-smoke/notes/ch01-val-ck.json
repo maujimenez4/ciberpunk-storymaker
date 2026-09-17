@@ -1,0 +1,18 @@
+{
+  "agent": "continuity-keeper",
+  "mode": "validate",
+  "novel": "neon-smoke",
+  "chapter": 1,
+  "attempt": 1,
+  "dryRun": true,
+  "issues": [
+    {
+      "severity": "note",
+      "kind": "dry-run",
+      "where": "ch01 ¶1",
+      "claim": "[DRY-RUN] continuity-keeper ch01",
+      "canon": null,
+      "fix": "[DRY-RUN] continuity-keeper ch01"
+    }
+  ]
+}

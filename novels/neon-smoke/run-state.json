@@ -2,12 +2,12 @@
   "state": "storymaker/run-state@1",
   "novel": "neon-smoke",
   "profile": "smoke-3ch",
-  "phase": "setup",
-  "node": "SEED",
+  "phase": "chapter-loop",
+  "node": "COMMIT",
   "chapter": 1,
   "act": 1,
   "counters": {
-    "researchRounds": 0,
+    "researchRounds": 1,
     "rewrites": 0,
     "humanRevisions": 0
   },
@@ -20,5 +20,6 @@
   "lastApprovedChapter": 0,
   "lastApprovedCommit": null,
   "flagged": [],
-  "updatedAt": "2026-09-17T16:58:43.501Z"
+  "updatedAt": "2026-09-17T17:05:40.900Z",
+  "attempt": 1
 }

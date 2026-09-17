@@ -1,0 +1,5 @@
+{"ts":"2026-09-17T17:03:54.550Z","node":"LOAD","phase":"chapter-loop","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":true,"usage":{"inputTokens":0,"outputTokens":0}}
+{"ts":"2026-09-17T17:03:54.638Z","node":"BEAT","phase":"chapter-loop","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":true,"usage":{"inputTokens":0,"outputTokens":0}}
+{"ts":"2026-09-17T17:04:12.856Z","node":"RES1","phase":"chapter-loop","chapter":1,"attempt":null,"counters":{"researchRounds":1,"rewrites":0,"humanRevisions":0},"dryRun":true,"usage":{"inputTokens":0,"outputTokens":0}}
+{"ts":"2026-09-17T17:04:51.339Z","node":"WRITE","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":1,"rewrites":0,"humanRevisions":0},"dryRun":true,"usage":{"inputTokens":0,"outputTokens":0}}
+{"ts":"2026-09-17T17:05:40.900Z","node":"COMMIT","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":1,"rewrites":0,"humanRevisions":0},"dryRun":true,"usage":{"inputTokens":0,"outputTokens":0}}
