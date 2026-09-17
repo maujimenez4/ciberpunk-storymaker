@@ -1,3 +1,9 @@
 {"ts":"2026-09-17T17:28:10.391Z","node":"ARCH","phase":"setup","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":23644}}
 {"ts":"2026-09-17T17:29:40.434Z","node":"PROF","phase":"setup","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":18523}}
 {"ts":"2026-09-17T17:30:49.421Z","node":"SEED","phase":"setup","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":17300}}
+{"ts":"2026-09-17T17:33:57.522Z","node":"LOAD","phase":"chapter-loop","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":34697}}
+{"ts":"2026-09-17T17:33:57.600Z","node":"BEAT","phase":"chapter-loop","chapter":1,"attempt":null,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":0}}
+{"ts":"2026-09-17T17:34:45.766Z","node":"WRITE","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":22566}}
+{"ts":"2026-09-17T17:35:59.047Z","node":"VOICE","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":25562}}
+{"ts":"2026-09-17T17:37:47.496Z","node":"VAL","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":20781}}
+{"ts":"2026-09-17T17:39:50.949Z","node":"COMMIT","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":51719}}

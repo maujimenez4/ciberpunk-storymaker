@@ -1,0 +1,18 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "neon-smoke",
+  "chapter": 1,
+  "attempt": 1,
+  "issues": [
+    {
+      "id": "tv-01",
+      "severity": "warning",
+      "kind": "unsourced-stretch",
+      "where": "ch01 ¶4",
+      "claim": "\"Para sostener eso por escrito hacía falta otro documento sellado con la misma referencia y una hora que yo conociera de primera mano.\"",
+      "canon": "research/dossier.md#eje-1 — nota \"Lo que hace verificable un sello de tiempo no es la precisión del reloj... sino que el origen del tiempo sea auditable hasta una fuente confiable\"",
+      "fix": "La nota sostiene el principio general (trazabilidad del origen), pero no describe este procedimiento concreto de cotejo con un segundo documento sellado y hora conocida de primera mano. Marcarlo como razonamiento del personaje en vez de procedimiento establecido, o buscar respaldo explícito si se quiere presentar como práctica estándar."
+    }
+  ],
+  "counts": { "blocker": 0, "warning": 1, "note": 0 }
+}
