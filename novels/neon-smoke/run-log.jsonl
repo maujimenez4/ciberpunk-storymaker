@@ -13,3 +13,10 @@
 {"ts":"2026-09-17T17:43:59.798Z","node":"VOICE","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":28095}}
 {"ts":"2026-09-17T17:45:49.670Z","node":"VAL","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":21829}}
 {"ts":"2026-09-17T17:48:07.409Z","node":"COMMIT","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":48945}}
+{"ts":"2026-09-17T17:49:50.084Z","node":"LOAD","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":26447}}
+{"ts":"2026-09-17T17:49:50.162Z","node":"BEAT","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":0}}
+{"ts":"2026-09-17T17:51:12.861Z","node":"WRITE","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":26573}}
+{"ts":"2026-09-17T17:52:46.630Z","node":"VOICE","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":30014}}
+{"ts":"2026-09-17T17:54:50.487Z","node":"VAL","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":24121}}
+{"ts":"2026-09-17T17:57:16.221Z","node":"GATE","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":55836}}
+{"ts":"2026-09-17T17:58:55.764Z","node":"COMMIT","phase":"chapter-loop","chapter":3,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":0}}
