@@ -36,6 +36,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/trace-langfuse.mjs"
+          }
+        ]
+      }
     ]
   }
 }
