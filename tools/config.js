@@ -98,6 +98,14 @@ export function loadConfig(profile, root) {
   return cfg;
 }
 
+// Salida por consola, para que el orquestador nativo no tenga que fundir la
+// configuración a mano: `node tools/config.js smoke-3ch` imprime el JSON resultante.
+if (process.argv[1] && process.argv[1].endsWith('config.js')) {
+  const profile = process.argv[2] ?? 'smoke-3ch';
+  const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+  console.log(JSON.stringify(loadConfig(profile, root), null, 2));
+}
+
 /** Aplica los overrides de la línea de comandos sobre la configuración ya fundida. */
 export function applyFlags(cfg, flags) {
   if (flags.novel) cfg.run.novel = flags.novel;
