@@ -169,6 +169,19 @@ process.stdin.on('end', async () => {
     },
   ];
 
+  // Registro local, siempre y antes de la red: es la fuente del panel de resumen y no
+  // puede depender de que Langfuse conteste. Una línea por llamada de subagente, que es
+  // justo lo que `run-log.jsonl` no consigue por escribirlo el orquestador a mano.
+  if (!SELFTEST) {
+    try {
+      appendFileSync(`${novelDir}/agent-calls.jsonl`, JSON.stringify({
+        ts: now, agent: agentType, model: modelOf(repoRoot, agentType),
+        node: state.node, phase, chapter, attempt: state.attempt ?? null,
+        tokens: total, rawTokenFields: tokens,
+      }) + '\n');
+    } catch { /* si no se puede escribir, la corrida sigue igual */ }
+  }
+
   if (SELFTEST) {
     const auth = resolveAuth();
     process.stdout.write(JSON.stringify({

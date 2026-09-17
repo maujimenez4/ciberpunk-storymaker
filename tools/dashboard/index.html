@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StoryMaker</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=satoshi@300,400,500,700,900&display=swap">
+<style>
+  /* Qaracter Design System — valores del brand book.
+     La escala de slate y los colores semánticos se derivan: el sistema nombra
+     slate-100/200/400 y no publica sus hex, y no define semánticos de estado. */
+  :root {
+    --q-orange-400: #FF7932;   /* primario: CTA y nodo activo, nada más */
+    --q-orange-500: #FF5F0B;   /* hover y press */
+    --q-slate:      #233441;   /* texto y superficies inversas */
+    --q-slate-800:  #2E4454;
+    --q-slate-600:  #4A6273;
+    --q-slate-400:  #7D93A1;
+    --q-slate-200:  #C7D2D9;
+    --q-slate-100:  #E3E9ED;
+    --q-slate-50:   #F4F7F8;
+    --q-white:      #FFFFFF;
+
+    --ok:      #2F7A5E;        /* derivados: el sistema no define semánticos */
+    --warn:    #B5761B;
+    --blocker: #C1372B;
+
+    --bg: var(--q-white);
+    --surface: var(--q-white);
+    --surface-2: var(--q-slate-50);
+    --fg: var(--q-slate);
+    --fg-muted: var(--q-slate-600);
+    --fg-faint: var(--q-slate-400);
+    --line: var(--q-slate-100);
+    --line-strong: var(--q-slate-200);
+
+    --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+    --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+    --r-chip: 3px; --r-btn: 10px; --r-card: 16px;
+    --ease: cubic-bezier(.2,.7,.2,1);
+    --sans: "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: var(--q-slate); --surface: var(--q-slate-800); --surface-2: #263B4A;
+      --fg: #EEF3F6; --fg-muted: var(--q-slate-200); --fg-faint: var(--q-slate-400);
+      --line: #3A5062; --line-strong: #4A6273;
+      --ok: #5FB894; --warn: #E0A54A; --blocker: #E8705F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--q-slate); --surface: var(--q-slate-800); --surface-2: #263B4A;
+    --fg: #EEF3F6; --fg-muted: var(--q-slate-200); --fg-faint: var(--q-slate-400);
+    --line: #3A5062; --line-strong: #4A6273;
+    --ok: #5FB894; --warn: #E0A54A; --blocker: #E8705F;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--sans); font-size: 15px; line-height: 1.6; font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+  h2 { font-size: 24px; line-height: 1.2; }
+  h3 { font-size: 16px; line-height: 1.3; font-weight: 500; }
+  p { margin: 0; }
+  .eyebrow {
+    font-size: 13px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.14em; color: var(--q-orange-400);
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    max-width: 1200px; margin: 0 auto; padding: var(--sp-3) var(--sp-6);
+    display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  }
+  .mark { display: flex; align-items: center; gap: var(--sp-2); font-weight: 700; letter-spacing: -0.02em; }
+  .mark svg { display: block; }
+  .bar .spacer { flex: 1 1 auto; }
+
+  main { max-width: 1200px; margin: 0 auto; padding: var(--sp-8) var(--sp-6) var(--sp-16); }
+  section + section { margin-top: var(--sp-12); }
+  .head { display: flex; align-items: baseline; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+  .head p { color: var(--fg-muted); font-size: 14px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-card); padding: var(--sp-6);
+  }
+  .grid { display: grid; gap: var(--sp-4); }
+
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--fg-muted); margin-bottom: var(--sp-2); }
+  select, textarea, input {
+    width: 100%; font: inherit; font-size: 14px; color: var(--fg);
+    background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: var(--r-chip); padding: 10px 12px;
+  }
+  textarea { min-height: 148px; resize: vertical; line-height: 1.55; }
+  select:focus-visible, textarea:focus-visible, input:focus-visible, button:focus-visible {
+    outline: 2px solid var(--q-orange-400); outline-offset: 2px;
+  }
+
+  button {
+    font: inherit; font-weight: 500; font-size: 16px;
+    padding: 14px 24px; border-radius: var(--r-btn); border: 1px solid transparent;
+    cursor: pointer; transition: background-color .22s var(--ease), color .22s var(--ease);
+  }
+  .btn-primary { background: var(--q-orange-400); color: #fff; }
+  .btn-primary:hover { background: var(--q-orange-500); }
+  .btn-primary:active { filter: brightness(.94); }
+  .btn-primary[disabled] { background: var(--q-slate-200); color: var(--q-slate-600); cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: var(--fg); border-color: var(--line-strong); font-size: 14px; padding: 8px 16px; }
+  .btn-secondary:hover { color: var(--q-orange-400); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+    font-size: 13px; font-weight: 500; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid var(--line-strong); color: var(--fg-muted);
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.live { color: var(--q-orange-400); border-color: currentColor; }
+  .pill.done { color: var(--ok); border-color: currentColor; }
+  .pill.gate { color: var(--warn); border-color: currentColor; }
+  .pill.flag { color: var(--blocker); border-color: currentColor; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-4); }
+  .tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-chip); padding: var(--sp-4); }
+  .tile .k { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--fg-faint); }
+  .tile .v { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
+  .tile .s { font-size: 13px; color: var(--fg-muted); }
+
+  /* Matriz capítulo × nodo. Una fila por capítulo hace visible que esto es un bucle. */
+  .matrix { overflow-x: auto; }
+  .matrix table { border-collapse: separate; border-spacing: 6px; min-width: 760px; }
+  .matrix th { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
+               color: var(--fg-faint); text-align: center; padding-bottom: 2px; font-family: var(--sans); }
+  .matrix th.row { text-align: left; min-width: 96px; }
+  .matrix td.row { font-size: 13px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; padding-right: var(--sp-2); }
+  .cell {
+    display: block; min-width: 62px; padding: 9px 8px; border-radius: var(--r-chip);
+    font-size: 12px; font-weight: 500; text-align: center; letter-spacing: .02em;
+    background: var(--surface-2); color: var(--fg-faint); border: 1px solid var(--line);
+    transition: background-color .28s var(--ease), color .28s var(--ease), border-color .28s var(--ease);
+  }
+  .cell.done { background: var(--surface); color: var(--fg); border-color: var(--line-strong); }
+  .cell.active { background: var(--q-orange-400); color: #fff; border-color: var(--q-orange-400); animation: breathe 2.2s var(--ease) infinite; }
+  .cell.skip { opacity: .42; }
+  .cell.flagged { border-color: var(--blocker); color: var(--blocker); }
+  @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: .72; } }
+  @media (prefers-reduced-motion: reduce) { .cell.active { animation: none; } * { transition: none !important; } }
+
+  table.data { width: 100%; border-collapse: collapse; }
+  table.data th {
+    text-align: left; font-size: 12px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--fg-faint); padding: 0 var(--sp-3) var(--sp-2) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  table.data td { padding: 10px var(--sp-3) 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; }
+  table.data td:last-child, table.data th:last-child { padding-right: 0; }
+  table.data .r { text-align: right; }
+  .bar-track { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--q-orange-500), var(--q-orange-400)); }
+
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+  .timeline li { display: flex; gap: var(--sp-3); align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .timeline .t { color: var(--fg-faint); font-variant-numeric: tabular-nums; min-width: 66px; }
+  .timeline .n { font-weight: 500; min-width: 74px; }
+  .timeline .d { color: var(--fg-muted); }
+
+  pre.console {
+    margin: 0; padding: var(--sp-4); background: var(--q-slate); color: #D6E0E6;
+    border-radius: var(--r-chip); font-size: 12.5px; line-height: 1.5;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .note { font-size: 13px; color: var(--fg-muted); }
+  .empty { color: var(--fg-faint); font-size: 14px; }
+  .warn-row { color: var(--warn); }
+  .two { display: grid; grid-template-columns: 1.15fr .85fr; gap: var(--sp-6); align-items: start; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <span class="mark">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <rect x="0" y="0" width="8" height="8" fill="#FF7932"></rect>
+        <rect x="10" y="10" width="8" height="8" fill="#FF7932"></rect>
+      </svg>
+      StoryMaker
+    </span>
+    <label for="novel" style="margin:0"></label>
+    <select id="novel" style="width:auto; min-width:150px" aria-label="Novela"></select>
+    <span class="spacer"></span>
+    <span id="status" class="pill"><span class="dot"></span><span id="statusText">Cargando</span></span>
+  </div>
+</header>
+
+<main>
+
+  <section id="start">
+    <div class="head">
+      <h2>Arranque</h2>
+      <p>Escribe el brief y lanza el bucle. El brief es la única entrada: premisa, personajes, tono y restricciones.</p>
+    </div>
+    <div class="card">
+      <div class="two">
+        <div>
+          <label for="brief">Brief de la novela</label>
+          <textarea id="brief" spellcheck="false"
+            placeholder="# Título&#10;&#10;## Premisa&#10;…&#10;&#10;## Protagonista&#10;…&#10;&#10;## Tono y registro&#10;…&#10;&#10;## Restricciones&#10;…"></textarea>
+          <p class="note" style="margin-top:8px">Si lo dejas vacío se conserva el <code>brief.md</code> que ya exista.</p>
+        </div>
+        <div class="grid">
+          <div>
+            <label for="profile">Perfil</label>
+            <select id="profile"></select>
+          </div>
+          <div id="scopeBox" class="tile" hidden>
+            <div class="k">Alcance</div>
+            <div class="s" id="scopeText"></div>
+          </div>
+          <div>
+            <button id="run" class="btn-primary" style="width:100%">Iniciar corrida</button>
+            <p class="note" id="runMsg" style="margin-top:10px"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="monitor">
+    <div class="head">
+      <h2>Monitor</h2>
+      <p>Se actualiza solo cada segundo. Una fila por capítulo, porque esto es un bucle.</p>
+    </div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="card" style="margin-top:var(--sp-4)">
+      <div class="matrix" id="matrix"></div>
+      <p class="note" style="margin-top:var(--sp-4)">
+        <span class="eyebrow" style="font-size:11px">Leyenda</span>
+        &nbsp; naranja, nodo en curso · sólido, recorrido · tenue, pendiente · borde rojo, capítulo marcado
+      </p>
+    </div>
+  </section>
+
+  <section id="summary">
+    <div class="head">
+      <h2>Resumen</h2>
+      <p>Cuántas llamadas hizo cada agente y qué pasó en cada nodo.</p>
+    </div>
+    <div class="two">
+      <div class="card">
+        <h3 style="margin-bottom:var(--sp-4)">Llamadas por agente</h3>
+        <div id="agents"></div>
+        <p class="note" id="agentsNote" style="margin-top:var(--sp-4)"></p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3 style="margin-bottom:var(--sp-3)">Recorrido</h3>
+          <ul class="timeline" id="timeline"></ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:var(--sp-3)">Salida del proceso</h3>
+          <pre class="console" id="console">Sin corrida lanzada desde este panel.</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const CHAPTER_NODES = ['LOAD','BEAT','GAP','RES1','WRITE','VOICE','VAL','REPORT','BLOCK','GATE','COMMIT'];
+const SETUP_NODES   = ['RES0','ARCH','PROF','SEED'];
+const END_NODES     = ['COMP','EXPORT','DONE'];
+const ORDER = [...SETUP_NODES, ...CHAPTER_NODES, ...END_NODES];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hhmm = (iso) => { try { return new Date(iso).toTimeString().slice(0,8); } catch { return ''; } };
+
+let currentNovel = null;
+let running = false;
+
+async function loadMeta() {
+  const meta = await (await fetch('/api/meta')).json();
+  $('profile').innerHTML = meta.profiles.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  $('novel').innerHTML = meta.novels.length
+    ? meta.novels.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')
+    : '<option value="">sin novelas</option>';
+  currentNovel = $('novel').value || null;
+}
+
+function setStatus(cls, text) {
+  $('status').className = 'pill ' + cls;
+  $('statusText').textContent = text;
+}
+
+function renderTiles(d) {
+  const s = d.state, lim = s.limits ?? {}, c = s.counters ?? {};
+  const total = d.scope?.chapters ?? '—';
+  const tiles = [
+    { k: 'Fase',     v: s.phase === 'chapter-loop' ? 'Capítulos' : s.phase === 'setup' ? 'Setup' : 'Terminada', s: `nodo ${s.node}` },
+    { k: 'Capítulo', v: `${s.chapter}<span style="color:var(--fg-faint);font-size:17px">/${total}</span>`, s: `aprobados: ${s.lastApprovedChapter}` },
+    { k: 'Reescrituras', v: `${c.rewrites ?? 0}<span style="color:var(--fg-faint);font-size:17px">/${lim.maxRewrites ?? '—'}</span>`, s: 'por blocker' },
+    { k: 'Investigación', v: `${c.researchRounds ?? 0}<span style="color:var(--fg-faint);font-size:17px">/${lim.maxResearchRounds ?? '—'}</span>`, s: 'rondas' },
+    { k: 'Llamadas', v: d.totals.calls, s: d.totals.tokens ? `${(d.totals.tokens/1000).toFixed(0)}k tokens` : 'sin tokens registrados' },
+  ];
+  $('tiles').innerHTML = tiles.map((t) =>
+    `<div class="tile"><div class="k">${esc(t.k)}</div><div class="v num">${t.v}</div><div class="s">${esc(t.s)}</div></div>`).join('');
+}
+
+function renderMatrix(d) {
+  const s = d.state;
+  const chapters = d.scope?.chapters ?? Math.max(s.chapter, s.lastApprovedChapter, 1);
+  const flagged = new Set(s.flagged ?? []);
+  const visited = {};
+  for (const row of d.timeline) {
+    const key = row.phase === 'chapter-loop' ? `ch${row.chapter}` : 'setup';
+    (visited[key] ??= new Set()).add(row.node);
+  }
+  const isActive = (scope, node) => s.node === node &&
+    ((scope === 'setup' && s.phase === 'setup') ||
+     (scope === `ch${s.chapter}` && s.phase === 'chapter-loop') ||
+     (scope === 'end' && s.phase === 'done'));
+
+  const cell = (scope, node, chapterDone) => {
+    const done = chapterDone || visited[scope]?.has(node);
+    const cls = ['cell'];
+    if (isActive(scope, node)) cls.push('active');
+    else if (done) cls.push('done');
+    if (scope.startsWith('ch') && flagged.has(Number(scope.slice(2)))) cls.push('flagged');
+    return `<td><span class="${cls.join(' ')}">${esc(node)}</span></td>`;
+  };
+
+  const width = Math.max(CHAPTER_NODES.length, SETUP_NODES.length, END_NODES.length);
+  const pad = (n) => '<td></td>'.repeat(width - n);
+
+  let html = '<table><thead><tr><th class="row">Fase</th>' +
+    CHAPTER_NODES.map((n) => `<th>${esc(n)}</th>`).join('') + '</tr></thead><tbody>';
+
+  html += '<tr><td class="row">Setup</td>' +
+    SETUP_NODES.map((n) => cell('setup', n, s.lastApprovedChapter > 0 || s.phase !== 'setup')).join('') + pad(SETUP_NODES.length) + '</tr>';
+
+  for (let i = 1; i <= chapters; i += 1) {
+    const chapterDone = i <= s.lastApprovedChapter;
+    html += `<tr><td class="row">Capítulo ${i}${flagged.has(i) ? ' ·' : ''}</td>` +
+      CHAPTER_NODES.map((n) => cell(`ch${i}`, n, chapterDone)).join('') + '</tr>';
+  }
+
+  html += '<tr><td class="row">Cierre</td>' +
+    END_NODES.map((n) => cell('end', n, s.phase === 'done')).join('') + pad(END_NODES.length) + '</tr>';
+
+  $('matrix').innerHTML = html + '</tbody></table>';
+}
+
+function renderAgents(d) {
+  if (!d.agents.length) {
+    $('agents').innerHTML = '<p class="empty">Ninguna llamada registrada todavía.</p>';
+    $('agentsNote').textContent = '';
+    return;
+  }
+  const max = Math.max(...d.agents.map((a) => a.calls));
+  $('agents').innerHTML = '<table class="data"><thead><tr>' +
+    '<th>Agente</th><th class="r">Llamadas</th><th class="r">Tokens</th><th>Nodos</th>' +
+    '</tr></thead><tbody>' +
+    d.agents.map((a) => `<tr>
+      <td><span style="font-weight:500">${esc(a.agent)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(100*a.calls/max).toFixed(0)}%"></div></div></td>
+      <td class="r num">${a.calls}</td>
+      <td class="r num">${a.tokens ? a.tokens.toLocaleString('es') : '—'}</td>
+      <td style="color:var(--fg-muted);font-size:13px">${esc(Object.entries(a.nodes).map(([n,c]) => c > 1 ? `${n}×${c}` : n).join(', '))}</td>
+    </tr>`).join('') + '</tbody></table>';
+  $('agentsNote').innerHTML = d.derived
+    ? 'Deducido del recorrido de nodos: esta corrida es anterior al hook de trazado, así que no hay tokens por llamada. Las corridas nuevas los traen.'
+    : 'Medido por el hook <code>PostToolUse</code>, una línea por subagente en <code>agent-calls.jsonl</code>.';
+}
+
+function renderTimeline(d) {
+  if (!d.timeline.length) { $('timeline').innerHTML = '<li class="empty">Sin recorrido registrado.</li>'; return; }
+  const rows = [...d.timeline].reverse().slice(0, 18);
+  $('timeline').innerHTML = rows.map((r) => {
+    const detail = r.phase === 'chapter-loop' ? `capítulo ${r.chapter}` : r.phase === 'done' ? 'cierre' : 'setup';
+    const c = r.counters ?? {};
+    const extra = c.rewrites ? ` · reescritura ${c.rewrites}` : c.researchRounds ? ` · ronda ${c.researchRounds}` : '';
+    return `<li><span class="t">${esc(hhmm(r.ts))}</span><span class="n">${esc(r.node)}</span>
+      <span class="d">${esc(detail + extra)}</span></li>`;
+  }).join('');
+}
+
+async function tick() {
+  if (!currentNovel) return;
+  try {
+    const d = await (await fetch(`/api/state?novel=${encodeURIComponent(currentNovel)}`)).json();
+    if (d.empty || d.missing) {
+      setStatus('', 'Sin corrida');
+      $('matrix').innerHTML = '<p class="empty">Esta novela no tiene <code>run-state.json</code>. Lanza una corrida para empezar.</p>';
+      $('tiles').innerHTML = ''; $('agents').innerHTML = ''; $('timeline').innerHTML = '';
+      return;
+    }
+    const s = d.state;
+    const flagged = (s.flagged ?? []).length > 0;
+    if (s.phase === 'done') setStatus('done', 'Terminada');
+    else if (s.node === 'GATE') setStatus('gate', 'Esperando compuerta');
+    else if (flagged) setStatus('flag', `En curso · ${s.node}`);
+    else setStatus('live', `En curso · ${s.node}`);
+
+    renderTiles(d); renderMatrix(d); renderAgents(d); renderTimeline(d);
+    if (d.consoleTail) $('console').textContent = d.consoleTail;
+    if (d.scope) {
+      $('scopeBox').hidden = false;
+      $('scopeText').textContent =
+        `${d.scope.chapters} capítulos · ${d.scope.acts} acto${d.scope.acts > 1 ? 's' : ''} · ${d.scope.wordsPerChapter} palabras por capítulo`;
+    }
+  } catch { setStatus('', 'Sin conexión con el panel'); }
+}
+
+$('novel').addEventListener('change', (e) => { currentNovel = e.target.value || null; tick(); });
+
+$('profile').addEventListener('change', async () => {
+  // El perfil fija la novela destino; se refleja en cuanto se elige.
+  try {
+    const d = await (await fetch('/api/meta')).json();
+    if (d.novels.length) tick();
+  } catch { /* el panel sigue sirviendo el estado */ }
+});
+
+$('run').addEventListener('click', async () => {
+  if (running) return;
+  running = true;
+  $('run').disabled = true;
+  $('runMsg').textContent = 'Lanzando…';
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: $('profile').value, brief: $('brief').value }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      $('runMsg').innerHTML = `Corrida lanzada sobre <strong>${esc(d.slug)}</strong>. El monitor la sigue desde aquí.`;
+      currentNovel = d.slug;
+      await loadMeta();
+      $('novel').value = d.slug;
+    } else {
+      $('runMsg').innerHTML = `<span class="warn-row">${esc(d.error)}</span>`;
+    }
+  } catch (error) {
+    $('runMsg').innerHTML = `<span class="warn-row">${esc(error.message)}</span>`;
+  } finally {
+    running = false;
+    $('run').disabled = false;
+  }
+});
+
+loadMeta().then(() => { tick(); setInterval(tick, 1000); });
+</script>
+</body>
+</html>
