@@ -36,7 +36,7 @@
   },
 
   "execution": {
-    "dryRun": true,
-    "dryRunInjectBlockerAt": 2
+    "dryRun": false,
+    "dryRunInjectBlockerAt": null
   }
 }
