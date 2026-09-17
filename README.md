@@ -12,7 +12,12 @@ duración, con estado explícito en disco y puntos de control humanos.
 El flujo está en [`docs/architecture/agent-loop.mmd`](docs/architecture/agent-loop.mmd) y
 la especificación completa —inventario de agentes y skills, contrato de handoff, formato
 del reporte de incidencias, inputs, outputs, reanudación, criterios de aceptación y
-limitaciones— en [`docs/spec.md`](docs/spec.md). El harness llega en el commit siguiente.
+limitaciones— en [`docs/spec.md`](docs/spec.md).
+
+> **Esta rama** (`refactor/subagentes-nativos`) usa a **Claude como orquestador**, con los
+> nueve especialistas como subagentes nativos. La rama `main` conserva la variante con
+> orquestador determinista en Node. Misma spec, mismo diagrama, mismas invariantes: cambia
+> quién recorre el bucle. La comparación está en [`docs/spec.md` §17](docs/spec.md).
 
 ---
 
@@ -121,13 +126,18 @@ notas, o hacer rollback a un capítulo K. Las tres salidas están en el diagrama
 
 ```
 README.md
+CLAUDE.md                         quién es el orquestador y las reglas duras
 docs/
   architecture/agent-loop.mmd     fuente única del flujo
   spec.md                         la especificación ejecutable
-agents/                           un fichero de prompt por rol (commit 3)
-skills/                           procedimientos compartidos por más de un agente (commit 3)
+.claude/
+  agents/                         los nueve especialistas, un subagente por fichero
+  skills/<id>/SKILL.md            procedimientos compartidos por más de un agente
+  commands/novela.md              el bucle
+  hooks/                          las guardas que imponen las invariantes
+  settings.json                   registro de hooks y permisos
 genres/
-  cyberpunk-thriller/             convenciones del pack + términos prohibidos (commit 3)
+  cyberpunk-thriller/             convenciones del pack + términos prohibidos
 config/
   run.base.json                   todas las claves, valores de novela completa
   profiles/full-novel.json        overlay casi vacío: la novela completa es el caso base
@@ -136,11 +146,10 @@ novels/
   <slug>/                         estado de una novela concreta
     brief.md                      escrito a mano por el usuario
     bible/  chapters/  notes/  research/  out/  attic/
-tools/                            código mecánico del harness (commit 3)
+tools/                            dos utilidades: validar permisos y fundir configuración
 ```
 
-Solo existen ahora los directorios con contenido. El árbol completo está documentado
-aquí, pero no se siembran carpetas vacías que los commits siguientes podrían contradecir.
+Solo existen los directorios con contenido. `novels/<slug>/` se llena al correr.
 
 ### Por qué así
 
@@ -157,14 +166,14 @@ notas y sus salidas. Es lo que permite que un rollback en una novela no toque a 
 demás, y lo que hace que la reanudación de una corrida interrumpida sea una cuestión de
 leer un directorio.
 
-**`agents/` y `skills/` están separados a propósito.** `agents/` define *quién es* cada
-rol; `skills/` recoge los procedimientos que comparten varios. La distinción es fácil de
-dejar podrida —todo acaba duplicado en diez prompts— y mantenerla en el árbol de ficheros
-la hace visible. Si algo lo usa un solo agente, va en su prompt y no en `skills/`.
+**`.claude/agents/` y `.claude/skills/` están separados a propósito.** `agents/` define
+*quién es* cada rol; `skills/` recoge los procedimientos que comparten varios. La
+distinción es fácil de dejar podrida —todo acaba duplicado en nueve prompts— y mantenerla
+en el árbol de ficheros la hace visible. Si algo lo usa un solo agente, va en su prompt.
 
-**El comportamiento vive en texto, no en código.** `agents/`, `skills/`, `genres/` y
-`config/` son ficheros editables. `tools/` queda para lo mecánico: leer configuración,
-encadenar llamadas, escribir ficheros, hacer commits.
+**El comportamiento vive en texto, no en código.** `.claude/`, `genres/` y `config/` son
+ficheros editables, y no queda código que ejecutar para correr el bucle. `tools/` se
+reduce a dos utilidades: validar permisos y fundir la configuración.
 
 ---
 
@@ -203,35 +212,37 @@ esa prueba, y por qué, está en
 
 ## Cómo se lanza
 
-```bash
-npm install
-npm start                    # perfil smoke-3ch, que viene en modo en seco
+Esta rama usa a **Claude como orquestador**. No hay comando de shell que arranque el
+bucle: se abre Claude Code en el repositorio y se escribe
+
+```
+/novela smoke-3ch
 ```
 
-`npm start` recorre el bucle entero **sin llamar a ningún modelo**, escribiendo ficheros
-marcador con la forma correcta. Verifica rutas, contadores, compuerta y commits sin gastar
-nada: si el bucle falla vacío, falla gratis. Para la corrida real, `npm start -- --live`.
+`.claude/commands/novela.md` lleva el recorrido del diagrama. Los nueve especialistas son
+subagentes de [`.claude/agents/`](.claude/agents/) y los procedimientos compartidos, skills
+de [`.claude/skills/`](.claude/skills/). Todo es texto editable: cambiar el sistema es
+editar un `.md`.
 
 ```bash
-npm run invariantes          # comprueba los permisos de los agentes y sale
-npm start -- --profile X     # otro perfil de config/profiles/
-npm start -- --decide a      # respuesta guionizada para la compuerta
+npm run invariantes          # valida el reparto de permisos sin correr nada
+npm run config smoke-3ch     # imprime la configuración fundida
 ```
-
-El comportamiento de los diez roles vive en [`agents/`](agents/) y los procedimientos
-compartidos en [`skills/`](skills/). Son ficheros de texto: editarlos cambia el sistema sin
-tocar una línea de código. `tools/` se limita a lo mecánico.
 
 ### Permisos
 
-Ningún agente tiene herramienta de fichero ni de shell. Nueve de los diez corren con
-`tools: []` y no pueden hacer absolutamente nada salvo devolver texto; solo `researcher`
-lleva `WebSearch`. El orquestador lee y escribe todos los ficheros, y rechaza cualquier
-escritura fuera de las rutas que el agente declara en su frontmatter.
+Cada subagente declara sus herramientas en su frontmatter, y solo `researcher` tiene
+`WebSearch`. Pero el prompt de un agente no es una garantía: es una petición. Lo que
+manda son tres hooks de `PreToolUse`, que corren **fuera** del modelo y no se pueden
+persuadir:
 
-Antes de la primera llamada se comprueba que exactamente un agente tiene acceso web y
-exactamente uno puede escribir en la biblia. Si la cuenta no sale, la corrida no empieza.
-Las invariantes 2 y 3 no son una promesa del prompt: son una precondición de ejecución.
+- Ninguna escritura bajo `bible/` que no venga de `continuity-keeper`.
+- Ninguna escritura fuera de las rutas de [`ownership.json`](.claude/hooks/ownership.json).
+- Ninguna búsqueda web que no venga de `researcher` — el orquestador incluido.
+- Ningún término prohibido en disco, y ninguna edición de voz más larga que su borrador.
+- Ningún ciclo que gire pasado su tope.
+
+No hay control de gasto: nada aborta una corrida por consumo.
 
 ---
 
@@ -239,4 +250,5 @@ Las invariantes 2 y 3 no son una promesa del prompt: son una precondición de ej
 
 - [x] **Commit 1** — Diagrama, estructura y README.
 - [x] **Commit 2** — Especificación y configuración.
-- [x] **Commit 3** — Harness, verificado en seco de principio a fin.
+- [x] **Commit 3** — Harness determinista (rama `main`), verificado en seco.
+- [ ] **Refactor** — Claude como orquestador y subagentes nativos (esta rama). Falta la corrida real.

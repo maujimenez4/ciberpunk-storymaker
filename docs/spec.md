@@ -844,68 +844,80 @@ pie de la letra sería ampliarle los permisos por una cuestión de dibujo.
 
 ## 17. El harness
 
-Orquestador determinista en Node más el **Claude Agent SDK** para cada llamada. Una
-`query()` aislada por nodo del diagrama, sin conversación acumulada entre nodos.
+Existen **dos implementaciones** de esta misma spec. El diagrama, las invariantes, el
+inventario de roles y los formatos no cambian entre ellas: cambia quién recorre el bucle.
 
-Se lanza con un solo comando: `npm start`.
+| | `main` — orquestador en código | `refactor/subagentes-nativos` — orquestador en modelo |
+|---|---|---|
+| Recorre el bucle | `tools/loop.js` | Claude, guiado por `/novela` |
+| Los nueve roles | `agents/*.md`, invocados por el SDK | `.claude/agents/*.md`, subagentes nativos |
+| Permisos | `tools: []` en cada llamada | `tools:` del frontmatter **+ hooks** |
+| Escribe los ficheros | solo el orquestador | cada subagente, acotado por hook |
+| Arranque | `npm start` | `/novela <perfil>` |
+| Modo en seco | gratis: cero llamadas a modelo | sin subagentes, pero el orquestador cuesta |
 
-### 17.1 Por qué así
+### 17.1 La variante nativa
 
-Lo determinista —contadores, topes, ramas, rutas, commits— vive en código. Lo que es
-juicio vive en `agents/*.md` y `skills/*.md`, que son ficheros de texto editables.
+Claude es el agente principal. Los nueve especialistas son subagentes de
+`.claude/agents/`, con su prompt, sus herramientas y su modelo declarados en frontmatter.
+El bucle vive en `.claude/commands/novela.md`. Las reglas que el diagrama no puede
+imponer por sí solo están en `CLAUDE.md`.
 
-Se descartaron dos alternativas. **Subagentes conducidos por un slash command**: el
-orquestador sería un modelo, y entonces el modo en seco es imposible —no se puede
-recorrer el bucle «sin llamar a ningún modelo» si el bucle *es* un modelo— y los
-contadores dejan de ser deterministas. **Messages API con clave propia**: exige una
-clave de API aparte, cuando el entorno fija que los modelos llegan por el acceso a
-Claude de la cuenta.
+**La regla que sostiene la invariante 5 aquí es distinta.** Los subagentes escriben en
+disco y devuelven al orquestador rutas y contadores, nunca prosa. Si devolvieran texto,
+el contexto del hilo principal acabaría conteniendo la novela entera — exactamente lo que
+el sistema existe para evitar. Por eso, y solo por eso, los subagentes nativos sí tienen
+`Write`, al contrario que en `main`.
 
-### 17.2 Cómo se hacen ciertas las invariantes 2 y 3
+### 17.2 Los hooks
 
-**Ningún agente recibe herramienta de fichero ni de shell.** Cada llamada fija
-`tools` desde el frontmatter del agente: `[]` en nueve de los diez, `['WebSearch']` solo
-en `researcher`. En el SDK, `tools` es lo que restringe qué herramientas existen;
-`allowedTools` solo auto-aprueba las que ya existen, que no es lo mismo. Se añade
-`settingSources: []` para que ningún `CLAUDE.md` ni `settings.json` amplíe permisos por
-la puerta de atrás, y `permissionMode: 'dontAsk'` para que lo no pre-aprobado se deniegue
-en vez de preguntarse.
+Cuando el orquestador es un modelo, **el prompt deja de ser una garantía**: es una
+petición que se puede ignorar, olvidar o reinterpretar. Los hooks corren fuera del
+modelo, así que no se les puede persuadir. Son el equivalente de `tools/agents.js`.
 
-Eso convierte a los diez roles en generadores de texto puro: **el orquestador lee y
-escribe todos los ficheros**. Su función de escritura comprueba la ruta contra las que el
-agente declara en su frontmatter y rechaza cualquier otra.
+Se apoyan en `agent_type`, que el contrato de hooks entrega solo cuando la llamada nace
+dentro de un subagente; su ausencia significa hilo principal. Eso permite acotar también
+al propio orquestador, y de hecho lo acota.
 
-**Comprobación de arranque.** Antes del primer nodo se verifica que exactamente un agente
-declara herramienta web, que exactamente uno declara escritura bajo `bible/`, que no son
-el mismo, y que nadie declara una herramienta fuera de la lista permitida. Si la cuenta
-no sale, la corrida no empieza. `npm run invariantes` la ejecuta sola.
+| Hook | Evento | Qué impone |
+|---|---|---|
+| `guard-permissions.mjs` | `PreToolUse` | Invariante 2: nadie salvo `continuity-keeper` escribe en `bible/`. Invariante 3: nadie salvo `researcher` busca. Y ninguna escritura fuera de `ownership.json`. |
+| `guard-prose.mjs` | `PreToolUse` | Invariante 9: un término prohibido no llega a disco. Invariante 4: la salida del editor de voz no puede tener más palabras que el borrador. |
+| `guard-cycles.mjs` | `PreToolUse` | Invariante 6: un ciclo agotado no gira otra vez; escala al humano. |
 
-### 17.3 Control de gasto
+Los tres **deniegan antes**, no avisan después: prevenir un término prohibido cuesta un
+turno, detectarlo cuesta una reescritura entera.
 
-El coste de este diseño crece con facilidad, así que se acota en seis sitios:
+`.claude/hooks/ownership.json` es el mapa de qué ruta puede escribir cada rol. Es texto
+editable, como el resto del comportamiento. `npm run invariantes` lo valida sin correr
+nada: comprueba en tiempo de revisión lo que los hooks imponen en tiempo de ejecución.
 
-| Palanca | Qué evita |
-|---|---|
-| `scope.summaryWindow` | Que el contexto —y por tanto el precio de cada capítulo— crezca con el número de capítulos ya escritos. |
-| `maxTurns: 1` | Turnos extra. Sin herramientas no hay bucle agéntico que justificarlos. |
-| `budget.maxUsdPerCall` | Que un turno desmandado se lleve el presupuesto de la corrida. |
-| `budget.maxUsd` + `onExceed` | Que la corrida siga gastando pasado el tope. Ninguna política aborta a mitad de capítulo: eso dejaría trabajo pagado y sin commitear. |
-| Salida estructurada (`outputFormat`) | Reintentos por JSON malformado, que se pagan dos veces por la misma respuesta. |
-| Solo el modo activo en el prompt | Enviar en cada llamada las instrucciones de modos que no se van a usar. |
+### 17.3 Gasto
 
-El prompt se compone con lo estable delante —agente, skills, pack de género— y lo volátil
-detrás, que es la condición para que la caché de prompt sirva de algo. Cada llamada deja
-una línea en `run-log.jsonl` con sus tokens, su coste y las herramientas que tenía.
+**En la variante nativa no hay control de gasto.** Ningún tope de coste ni de tokens
+aborta una corrida, por decisión explícita: un sistema que se detiene a mitad de novela
+por consumo es peor que uno que gasta de más.
 
-### 17.4 Ficheros
+`limits` sigue vigente y **no es control de gasto**: es la invariante 6. Sin esos topes,
+un `blocker` que no se resuelve reescribe sin fin y `FLAG` no llega a dispararse nunca.
 
-| Módulo | Qué hace |
-|---|---|
-| `tools/run.js` | CLI y arranque. El único comando. |
-| `tools/config.js` | Base + overlay, merge por sección, validación. |
-| `tools/agents.js` | Carga de `agents/` y `skills/`, composición del prompt, invariantes. |
-| `tools/call.js` | La llamada al SDK, el modo en seco y la contabilidad de gasto. |
-| `tools/loop.js` | El recorrido del diagrama. |
-| `tools/gate.js` | Presentación en CLI y decisión humana. |
-| `tools/git.js` | Commits, archivado del rollback, lectura del historial. |
-| `tools/state.js` | `run-state.json`, registro y escritura con control de ruta. |
+Lo que se pierde respecto a `main`: `budget.maxUsdPerCall`, que era un tope duro del SDK
+por llamada, y el corte por `budget.onExceed`. Ambas claves siguen en la configuración
+porque el harness de `main` las usa; el nativo las ignora.
+
+### 17.4 Desviaciones propias de la variante nativa
+
+1. **`plot-architect` y `character-profiler` sí escriben en disco**, en
+   `research/outline-proposal.md` y `research/characters-proposal.md`. El §2 dice que no
+   escriben nada. Razón: sus propuestas son largas y no deben pasar por el contexto del
+   orquestador. La invariante 2 no se toca — `bible/` sigue siendo solo de
+   `continuity-keeper`.
+2. **Los validadores escriben su informe** en `notes/ch<NN>-val-ck.json` y
+   `-val-tv.json`, en vez de devolverlo en el sobre. El orquestador funde los dos, que son
+   pequeños, en `ch<NN>-issues.json`. Misma razón.
+3. **Los términos prohibidos se previenen, no se detectan.** El §6.2 los lista como un
+   `kind` del `technical-verifier`; aquí el hook deniega la escritura antes de que el
+   texto llegue a disco, así que no llegan a aparecer en un reporte.
+4. **El criterio de aceptación 1 no se sostiene.** «Sin una sola llamada a un modelo» es
+   imposible cuando el orquestador *es* un modelo. En esta variante el modo en seco
+   significa «sin llamadas a los nueve subagentes», que es más débil y no es gratis.
