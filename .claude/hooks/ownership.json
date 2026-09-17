@@ -1,0 +1,15 @@
+{
+  "_comment": "Qué ruta puede escribir cada rol, relativa a novels/<slug>/. Lo lee guard-permissions.mjs. __main__ es el hilo principal, es decir el orquestador. {NN} casa dos dígitos; ** casa cualquier profundidad.",
+
+  "researcher": ["research/dossier.md", "research/ch{NN}-notes.md"],
+  "plot-architect": ["research/outline-proposal.md"],
+  "character-profiler": ["research/characters-proposal.md"],
+  "beat-planner": ["notes/ch{NN}-beats.md"],
+  "scene-writer": ["chapters/ch{NN}.draft.md"],
+  "voice-editor": ["chapters/ch{NN}.md"],
+  "continuity-keeper": ["bible/**", "notes/ch{NN}-val-ck.json"],
+  "technical-verifier": ["notes/ch{NN}-val-tv.json"],
+  "compiler": ["out/**"],
+
+  "__main__": ["run-state.json", "run-log.jsonl", "notes/ch{NN}-issues.json", "attic/**"]
+}

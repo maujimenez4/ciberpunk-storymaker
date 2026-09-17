@@ -34,6 +34,27 @@ Lee `<novel>/run-state.json` si existe. Si no existe o está corrupto, reconstru
 git: `git log --grep "^ch[0-9][0-9]:" -1 --format="%h %s" -- novels/<slug>` te da el
 último capítulo aprobado. **El historial manda sobre el fichero de estado.**
 
+Escríbelo con esta forma exacta. Los campos `limits` y `dryRun` **no son decorativos**:
+los leen los hooks, y sin ellos las guardas no pueden hacer su trabajo.
+
+```json
+{
+  "state": "storymaker/run-state@1",
+  "novel": "<slug>", "profile": "<perfil>",
+  "phase": "setup | chapter-loop | done", "node": "<nodo actual>",
+  "chapter": 1, "act": 1,
+  "counters": { "researchRounds": 0, "rewrites": 0, "humanRevisions": 0 },
+  "limits": { "maxResearchRounds": 3, "maxRewrites": 1, "maxHumanRevisions": 3 },
+  "dryRun": false,
+  "lastApprovedChapter": 0, "lastApprovedCommit": null,
+  "flagged": [], "updatedAt": "<ISO-8601>"
+}
+```
+
+`limits` se copia tal cual de la configuración. `counters.rewrites` cuenta reintentos por
+`blocker`, y **vuelve a cero** cuando la reentrada en WRITE viene de notas del editor
+humano: es otro ciclo con otra causa.
+
 ## 1 · BOOT
 
 ¿Existe `<novel>/bible/canon.md`?
