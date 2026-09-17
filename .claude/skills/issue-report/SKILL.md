@@ -1,5 +1,6 @@
 ---
-id: issue-report
+name: issue-report
+description: Formato del reporte de incidencias y semántica de severidad: qué es blocker, qué es warning y qué reescribe.
 ---
 
 Los validadores devuelven incidencias con esta forma:

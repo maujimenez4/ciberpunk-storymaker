@@ -1,5 +1,6 @@
 ---
-id: neo-noir-register
+name: neo-noir-register
+description: Registro neo-noir: cómo suena una frase que pertenece a esta novela y cuál sobra.
 ---
 
 El registro de esta novela es neo-noir. Es una forma de mirar antes que una lista de

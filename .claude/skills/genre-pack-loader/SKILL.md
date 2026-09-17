@@ -1,5 +1,6 @@
 ---
-id: genre-pack-loader
+name: genre-pack-loader
+description: Cómo se lee un pack de género y por qué su lista de términos prohibidos no es negociable.
 ---
 
 Un pack de género vive en `genres/<id>/` y trae dos cosas: `pack.md`, con las

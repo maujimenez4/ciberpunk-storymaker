@@ -1,5 +1,6 @@
 ---
-id: sourced-notes-format
+name: sourced-notes-format
+description: Forma de una nota con fuente: afirmación, fuente, fecha de consulta y confianza. Y cómo se declara un hueco.
 ---
 
 Una nota con fuente tiene esta forma exacta:

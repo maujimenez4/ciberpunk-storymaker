@@ -1,5 +1,6 @@
 ---
-id: handoff-envelope
+name: handoff-envelope
+description: Contrato de turno: cada llamada es aislada, se devuelve el artefacto y nada más. La cargan los diez roles.
 ---
 
 Cada turno tuyo es una llamada aislada. No hay conversación previa ni posterior: recibes

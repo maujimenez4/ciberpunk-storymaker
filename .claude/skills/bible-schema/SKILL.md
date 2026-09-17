@@ -1,5 +1,6 @@
 ---
-id: bible-schema
+name: bible-schema
+description: Estructura de la biblia narrativa, qué va en cada fichero y cómo se cita una entrada de canon.
 ---
 
 La biblia es la **fuente única de verdad**. Si algo no está aquí, no es canon. Vive en
