@@ -7,3 +7,9 @@
 {"ts":"2026-09-17T17:35:59.047Z","node":"VOICE","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":25562}}
 {"ts":"2026-09-17T17:37:47.496Z","node":"VAL","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":20781}}
 {"ts":"2026-09-17T17:39:50.949Z","node":"COMMIT","phase":"chapter-loop","chapter":1,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":51719}}
+{"ts":"2026-09-17T17:41:24.935Z","node":"LOAD","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":26076}}
+{"ts":"2026-09-17T17:41:25.017Z","node":"BEAT","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":0}}
+{"ts":"2026-09-17T17:42:27.677Z","node":"WRITE","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":24376}}
+{"ts":"2026-09-17T17:43:59.798Z","node":"VOICE","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":28095}}
+{"ts":"2026-09-17T17:45:49.670Z","node":"VAL","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":21829}}
+{"ts":"2026-09-17T17:48:07.409Z","node":"COMMIT","phase":"chapter-loop","chapter":2,"attempt":1,"counters":{"researchRounds":0,"rewrites":0,"humanRevisions":0},"dryRun":false,"usage":{"subagentTokens":48945}}
