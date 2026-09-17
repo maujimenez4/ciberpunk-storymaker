@@ -105,6 +105,15 @@ process.stdin.on('end', () => {
   const relative = novelRelative(filePath);
   if (!relative) allow(); // Fuera de novels/: es código o documentación, no estado narrativo.
 
+  // ── Modo en seco ──────────────────────────────────────────────────────────
+  // En seco no se llama a ningún modelo, así que los nueve roles no existen: el
+  // orquestador escribe él mismo todos los ficheros marcador, biblia incluida. Esta
+  // excepción va ANTES de la invariante 2 porque, si va después, el nodo SEED queda
+  // sin escritor posible —el hook deniega al hilo principal y el modo prohíbe lanzar
+  // a continuity-keeper— y la corrida en seco no puede pasar del setup.
+  // Solo aplica con dryRun: true en run-state.json; en corrida real no se alcanza.
+  if (role === '__main__' && dryRunActive(filePath)) allow();
+
   // ── Invariante 2 ──────────────────────────────────────────────────────────
   if (relative.startsWith('bible/') && role !== 'continuity-keeper') {
     deny(
@@ -115,8 +124,6 @@ process.stdin.on('end', () => {
   }
 
   // ── Rutas declaradas ──────────────────────────────────────────────────────
-  // En seco el orquestador escribe todos los ficheros marcador, así que se le deja.
-  if (role === '__main__' && dryRunActive(filePath)) allow();
 
   const owned = OWNERSHIP[role];
   if (!owned) {
