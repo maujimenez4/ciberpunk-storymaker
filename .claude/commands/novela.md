@@ -84,14 +84,33 @@ Para cada capítulo `N` desde `lastApprovedChapter + 1` hasta `scope.chapters`:
 
 ### LOAD
 
-Reúne las **rutas** —no el contenido— de: los ficheros de `<novel>/bible/`, los últimos
-`scope.summaryWindow` resúmenes (`bible/summaries/`), y la entrada de `N` en
-`bible/outline.md`. No leas capítulos anteriores.
+**Ensambla el contexto, no repartas rutas.** Un fichero por nodo:
+
+```
+node tools/assemble-context.mjs <slug> beat   N
+node tools/assemble-context.mjs <slug> write  N
+node tools/assemble-context.mjs <slug> val-ck N
+node tools/assemble-context.mjs <slug> val-tv N
+node tools/assemble-context.mjs <slug> commit N
+```
+
+Cada uno escribe `<novel>/notes/ch<NN>-ctx-<nodo>.md` con el canon, los resúmenes de la
+ventana y la entrada de `N` en la escaleta, **recortado a lo que ese nodo necesita**.
+
+Esto es la invariante 5 en serio: el contexto **se ensambla aquí, una vez**, en lugar de
+que cada rol lo monte abriendo ocho ficheros. Repartir rutas costaba 34 lecturas por
+capítulo y reenviaba el contexto acumulado en cada una; así son 5.
+
+Tú sigues sin leer nada de eso. El ensamblador lo escribe, tú pasas la ruta.
+
+Los de `write` y `val-*` se ensamblan **después** de GAP ⇄ RES1, para que recojan
+`research/ch<NN>-notes.md` si existe. El de `commit`, después de REPORT.
 
 ### BEAT
 
-Lanza `beat-planner` con esas rutas. Te devuelve la ruta de
-`<novel>/notes/ch<NN>-beats.md`, el título y la lista de lagunas.
+Lanza `beat-planner` con `<novel>/notes/ch<NN>-ctx-beat.md` — **esa ruta y ninguna más**.
+Dile que ahí está todo su contexto y que no abra los ficheros originales. Te devuelve la
+ruta de `<novel>/notes/ch<NN>-beats.md`, el título y la lista de lagunas.
 
 ### GAP ⇄ RES1
 
@@ -105,8 +124,10 @@ resolver, y anota un `warning` para la compuerta.
 
 ### WRITE
 
-Lanza `scene-writer` con: rutas de beats, notas, biblia y resúmenes; objetivo
-`scope.wordsPerChapter` palabras y máximo `wordsPerChapter × (1 + wordsTolerance)`.
+Reensambla el contexto —ahora ya existen las notas de RES1— y lanza `scene-writer` con
+`<novel>/notes/ch<NN>-ctx-write.md`, **esa ruta y ninguna más**. Lleva dentro los beats,
+las notas con fuente, el canon y los resúmenes. Objetivo `scope.wordsPerChapter` palabras,
+máximo `wordsPerChapter × (1 + wordsTolerance)`.
 
 Si esta es una reescritura, añade **solo los `blocker`** del reporte anterior. Si viene de
 notas del editor humano, añade las notas.
@@ -121,8 +142,13 @@ Si `validation.runInParallel`, **lanza los dos en el mismo mensaje** para que co
 vez. Es la única paralelización del diseño, y es legítima porque ninguno de los dos
 escribe en la biblia.
 
-- `continuity-keeper` en modo validate → `<novel>/notes/ch<NN>-val-ck.json`
-- `technical-verifier` → `<novel>/notes/ch<NN>-val-tv.json`
+- `continuity-keeper` en modo validate, con `notes/ch<NN>-ctx-val-ck.md` → escribe
+  `<novel>/notes/ch<NN>-val-ck.json`
+- `technical-verifier`, con `notes/ch<NN>-ctx-val-tv.md` → escribe
+  `<novel>/notes/ch<NN>-val-tv.json`
+
+A cada uno, **dos rutas**: su contexto y el capítulo (`chapters/ch<NN>.md`). El capítulo va
+aparte a propósito: es el artefacto que juzgan, no contexto de fondo.
 
 Salta el que esté desactivado en `validation`.
 
@@ -168,8 +194,13 @@ severidad, y si está marcado. Luego pregunta y **espera**:
 
 ### COMMIT
 
-Lanza `continuity-keeper` en modo commit con la ruta del capítulo aprobado. Actualiza la
-biblia y escribe `bible/summaries/ch<NN>.md`.
+Reensambla `commit` —ahora ya existe el reporte de incidencias— y lanza
+`continuity-keeper` en modo commit con **dos rutas**: `notes/ch<NN>-ctx-commit.md` y el
+capítulo aprobado. Actualiza la biblia y escribe `bible/summaries/ch<NN>.md`.
+
+Ese contexto **no lleva `canon.md`, `world.md` ni `characters.md`**, y es deliberado: un
+capítulo mueve cronología e hilos, no las reglas del mundo. Si el reporte señala un
+personaje o una regla, entonces sí, añádele esa ruta suelta.
 
 Luego haz tú el commit de git —esto es mecánico y es tuyo, no suyo—:
 

@@ -11,5 +11,5 @@
   "technical-verifier": ["notes/ch{NN}-val-tv.json"],
   "compiler": ["out/**"],
 
-  "__main__": ["run-state.json", "run-log.jsonl", "notes/ch{NN}-issues.json", "attic/**"]
+  "__main__": ["run-state.json", "run-log.jsonl", "notes/ch{NN}-issues.json", "notes/ch{NN}-ctx-*.md", "attic/**"]
 }

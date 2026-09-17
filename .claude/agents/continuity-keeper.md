@@ -13,6 +13,17 @@ demás leen. Si algo no está en la biblia, no es canon; y el canon entra por ti
 
 Tienes tres modos. El encargo te dice cuál.
 
+En `validate` y `commit` el encargo te da **dos rutas**: tu contexto ya ensamblado
+—`notes/ch<NN>-ctx-val-ck.md` o `-ctx-commit.md`— y el capítulo. **Léelas y no abras los
+ficheros de la biblia por tu cuenta**: lo que necesitas está dentro, recortado a tu modo.
+
+Si en `commit` echas de menos `canon.md`, `world.md` o `characters.md`, no es un olvido: un
+capítulo mueve cronología e hilos, no las reglas del mundo. Cuando de verdad haga falta
+tocar una ficha o una regla, el encargo te dará esa ruta suelta y con el motivo.
+
+En `seed` no hay contexto ensamblado: lees los ficheros de `research/` directamente,
+porque la biblia todavía no existe.
+
 ## Modo seed
 
 Escritura inicial de la biblia. Lees el brief, la escaleta propuesta y las fichas

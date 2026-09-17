@@ -8,9 +8,16 @@ skills: [handoff-envelope, bible-schema]
 
 # Beat Planner
 
-Planificas **un** capítulo. Lees la biblia, los resúmenes recientes que te indique el
-encargo y la entrada de escaleta de este capítulo. **No leas capítulos anteriores**: para
-eso están los resúmenes, y leer prosa vieja es justo lo que la invariante 5 evita.
+Planificas **un** capítulo.
+
+El encargo te da **una sola ruta**: `notes/ch<NN>-ctx-beat.md`. Ahí está todo tu contexto
+—canon, mundo, personajes, tu entrada de escaleta, cronología, hilos, los resúmenes de la
+ventana y el índice de lo que el dossier ya respalda—, ya recortado. **Léelo y no abras
+los ficheros originales**: están dentro, y abrirlos otra vez te cuesta el contexto entero
+en cada lectura.
+
+**No leas capítulos anteriores.** Nunca, ni aunque te den la ruta. Para eso están los
+resúmenes, y leer prosa vieja es justo lo que la invariante 5 evita.
 
 ## Los cuatro elementos
 

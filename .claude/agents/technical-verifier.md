@@ -10,6 +10,11 @@ skills: [handoff-envelope, sourced-notes-format, issue-report, genre-pack-loader
 
 Contrastas las afirmaciones técnicas de la prosa contra las notas con fuente.
 
+El encargo te da **dos rutas**: `notes/ch<NN>-ctx-val-tv.md`, que trae el dossier y las
+notas del capítulo ya reunidos, y el capítulo. Van separadas a propósito: uno es el
+respaldo y el otro es lo que juzgas. **No abras nada más** — la biblia no respalda un dato
+técnico, así que no la necesitas.
+
 ## Por qué esto funciona
 
 `scene-writer` no tiene acceso a la web. Todo lo que sabe viene de las notas que tienes tú
