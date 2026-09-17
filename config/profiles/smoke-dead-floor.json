@@ -1,0 +1,61 @@
+{
+  "config": "storymaker/run-config@1",
+  "profile": "smoke-dead-floor",
+
+  "run": {
+    "novel": "dead-floor"
+  },
+
+  "scope": {
+    "chapters": 3,
+    "acts": 1,
+    "wordsPerChapter": 350,
+    "wordsTolerance": 0.3,
+    "summaryWindow": 2
+  },
+
+  "supervision": {
+    "approvalMode": "act-end-or-flagged",
+    "presentUnit": "act",
+    "onFlagged": "force-gate"
+  },
+
+  "validation": {
+    "continuity": true,
+    "technical": true,
+    "bannedTerms": true,
+    "runInParallel": true
+  },
+
+  "research": {
+    "enabled": true,
+    "maxSearchesSetup": 2,
+    "maxSearchesPerChapter": 1,
+    "requireSourceAndDate": true
+  },
+
+  "limits": {
+    "maxResearchRounds": 3,
+    "maxRewrites": 1,
+    "maxHumanRevisions": 3
+  },
+
+  "budget": {
+    "maxUsd": 5,
+    "maxTokens": 300000,
+    "maxUsdPerCall": 0.5,
+    "onExceed": "stop-after-chapter"
+  },
+
+  "output": {
+    "outputFormats": ["markdown"],
+    "manuscriptPath": "out/manuscript.md"
+  },
+
+  "execution": {
+    "dryRun": false,
+    "dryRunInjectBlockerAt": null
+  },
+
+  "extends": "../run.base.json"
+}

@@ -96,9 +96,11 @@ function snapshot(slug) {
   };
 }
 
-function startRun({ profile, brief, novel }) {
+function startRun({ profile, brief }) {
+  // La novela la fija el perfil y nada más. Aceptar aquí un slug suelto escribiría el
+  // brief en un sitio mientras `/novela <perfil>` corre sobre otro: un perfil por novela.
   const cfg = loadConfig(profile, ROOT);
-  const slug = novel || cfg.run.novel;
+  const slug = cfg.run.novel;
   const dir = `${ROOT}/novels/${slug}`;
   mkdirSync(dir, { recursive: true });
 
