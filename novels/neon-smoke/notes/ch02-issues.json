@@ -1,0 +1,18 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "neon-smoke",
+  "chapter": 2,
+  "attempt": 2,
+  "issues": [
+    {
+      "id": "ck-01",
+      "severity": "blocker",
+      "kind": "canon-conflict",
+      "where": "ch02 ¶3",
+      "claim": "[DRY-RUN] blocker sintético ch02 — inyectado por execution.dryRunInjectBlockerAt",
+      "canon": "bible/canon.md",
+      "fix": "[DRY-RUN] no resoluble en seco: existe para forzar BLOCK → WRITE → FLAG"
+    }
+  ],
+  "counts": { "blocker": 1, "warning": 0, "note": 0 }
+}

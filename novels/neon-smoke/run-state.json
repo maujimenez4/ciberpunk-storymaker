@@ -4,11 +4,11 @@
   "profile": "smoke-3ch",
   "phase": "chapter-loop",
   "node": "COMMIT",
-  "chapter": 1,
+  "chapter": 2,
   "act": 1,
   "counters": {
-    "researchRounds": 1,
-    "rewrites": 0,
+    "researchRounds": 0,
+    "rewrites": 1,
     "humanRevisions": 0
   },
   "limits": {
@@ -17,9 +17,11 @@
     "maxHumanRevisions": 3
   },
   "dryRun": true,
-  "lastApprovedChapter": 0,
-  "lastApprovedCommit": null,
-  "flagged": [],
-  "updatedAt": "2026-09-17T17:05:40.900Z",
-  "attempt": 1
+  "lastApprovedChapter": 1,
+  "lastApprovedCommit": "30ad647",
+  "flagged": [
+    2
+  ],
+  "updatedAt": "2026-09-17T17:08:49.505Z",
+  "attempt": 2
 }
