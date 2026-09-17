@@ -2,8 +2,8 @@
   "state": "storymaker/run-state@1",
   "novel": "neon-smoke",
   "profile": "smoke-3ch",
-  "phase": "chapter-loop",
-  "node": "COMMIT",
+  "phase": "done",
+  "node": "DONE",
   "chapter": 3,
   "act": 1,
   "counters": {
@@ -17,9 +17,9 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 2,
-  "lastApprovedCommit": "68afd47",
+  "lastApprovedChapter": 3,
+  "lastApprovedCommit": "c71c372",
   "flagged": [],
-  "updatedAt": "2026-09-17T17:58:55.764Z",
+  "updatedAt": "2026-09-17T18:03:49.132Z",
   "attempt": 1
 }
