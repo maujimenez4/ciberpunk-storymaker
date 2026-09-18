@@ -3,7 +3,7 @@ context: storymaker/node-context@1
 novel: dead-floor
 node: val-tv
 chapter: 2
-assembledAt: 2026-09-18T01:07:19.969Z
+assembledAt: 2026-09-18T01:22:27.208Z
 ---
 
 # Contexto ensamblado — val-tv · capítulo 2

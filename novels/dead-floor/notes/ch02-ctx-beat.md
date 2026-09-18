@@ -3,7 +3,7 @@ context: storymaker/node-context@1
 novel: dead-floor
 node: beat
 chapter: 2
-assembledAt: 2026-09-18T01:04:20.601Z
+assembledAt: 2026-09-18T01:21:54.544Z
 ---
 
 # Contexto ensamblado — beat · capítulo 2

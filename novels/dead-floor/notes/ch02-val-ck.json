@@ -1,12 +1,1 @@
-{
-  "issues": [
-    {
-      "severity": "warning",
-      "kind": "character-drift",
-      "where": "ch02 ¶4",
-      "claim": "\"Podía haberle contado cómo se hereda una numeración, cómo un expediente en papel se copia mal una vez y ya está.\"",
-      "canon": "bible/characters.md#el-tecnico",
-      "fix": "Partir la frase en oraciones cortas de sujeto y verbo, sin subordinadas encadenadas, para sostener la voz fijada en la ficha."
-    }
-  ]
-}
+{ "issues": [] }

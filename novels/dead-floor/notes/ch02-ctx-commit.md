@@ -3,7 +3,7 @@ context: storymaker/node-context@1
 novel: dead-floor
 node: commit
 chapter: 2
-assembledAt: 2026-09-18T01:08:53.577Z
+assembledAt: 2026-09-18T01:30:58.164Z
 ---
 
 # Contexto ensamblado — commit · capítulo 2
@@ -74,37 +74,19 @@ capítulo 3 con la firma de la discrepancia, sin testigos.
   "report": "storymaker/issue-report@1",
   "novel": "dead-floor",
   "chapter": 2,
-  "attempt": 1,
+  "attempt": 2,
   "issues": [
-    {
-      "id": "ck-01",
-      "severity": "warning",
-      "kind": "character-drift",
-      "where": "ch02 ¶4",
-      "claim": "\"Podía haberle contado cómo se hereda una numeración, cómo un expediente en papel se copia mal una vez y ya está.\"",
-      "canon": "bible/characters.md#el-tecnico",
-      "fix": "Partir la frase en oraciones cortas de sujeto y verbo, sin subordinadas encadenadas, para sostener la voz fijada en la ficha."
-    },
     {
       "id": "tv-01",
       "severity": "warning",
-      "kind": "unsupported-claim",
-      "where": "ch02 ¶7",
-      "claim": "\"Once años firmando este edificio\" — cifra concreta sobre la antigüedad de la conserje firmando/registrando el edificio.",
-      "canon": null,
-      "fix": "Es un dato de relleno (antigüedad del personaje) sin respaldo en las notas, que solo declaran huecos sobre registro de tránsito vertical. No contradice nada, pero es una cifra concreta sin fuente; si no es imprescindible, sustituir por una expresión no cuantificada (\"lleva años firmando este edificio\")."
-    },
-    {
-      "id": "tv-02",
-      "severity": "note",
-      "kind": "unsupported-detail",
+      "kind": "unsourced-claim",
       "where": "ch02 ¶2",
-      "claim": "\"Extintor en su sitio, con etiqueta, revisado por alguien...\" — alude a una revisión periódica sin especificar norma, fecha ni autoridad.",
+      "claim": "\"El registro anotó el trayecto con mi credencial, como siempre.\" — se afirma como rutina establecida que el ascensor registra cada trayecto asociado a la credencial del técnico.",
       "canon": null,
-      "fix": "El detalle es lo bastante genérico (sin cifra, sin norma citada) para no requerir respaldo; se señala solo porque toca de cerca el hueco declarado sobre certificados periódicos de mantenimiento. No requiere cambio."
+      "fix": "El dossier no trae fuente para vocabulario o prácticas de registro de tránsito vertical (bitácoras, monitorización de accesos): es un hueco declarado, no una nota con fuente. El detalle es breve y no incluye cifras ni procedimiento verificable, así que no llega a blocker, pero conviene que quede constancia de que el mecanismo se afirma sin respaldo externo."
     }
   ],
-  "counts": { "blocker": 0, "warning": 2, "note": 1 }
+  "counts": { "blocker": 0, "warning": 1, "note": 0 }
 }
 
 ## Resúmenes previos (ventana 2)
