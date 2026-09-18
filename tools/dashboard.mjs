@@ -10,7 +10,7 @@
 //   node tools/dashboard.mjs [--port 4173]
 
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, openSync, appendFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, openSync, appendFileSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { loadConfig } from './config.js';
 
@@ -67,7 +67,12 @@ function snapshot(slug) {
   if (!state) return { novel: slug, missing: true, brief, launched };
 
   const calls = readLines(`${dir}/agent-calls.jsonl`);
+  // run-log.jsonl lo escribe el orquestador a mano y a menudo no existe. agent-calls lo
+  // escribe el hook, siempre, con nodo y capítulo: sirve de recorrido y es más fiable.
   const log = readLines(`${dir}/run-log.jsonl`);
+  const trail = log.length ? log : calls.map((c) => ({
+    ts: c.ts, node: c.node, chapter: c.chapter, phase: c.phase, counters: c.counters ?? null,
+  }));
 
   // El resumen sale de agent-calls.jsonl, que escribe el hook fuera del modelo. Si aún
   // no existe —corrida anterior al hook—, se deduce del recorrido de nodos, y se dice.
@@ -80,7 +85,7 @@ function snapshot(slug) {
     perAgent[agent].nodes[node] = (perAgent[agent].nodes[node] ?? 0) + 1;
   };
   if (derived) {
-    for (const row of log) for (const a of NODE_AGENTS[row.node] ?? []) bump(a, 0, row.node);
+    for (const row of trail) for (const a of NODE_AGENTS[row.node] ?? []) bump(a, 0, row.node);
   } else {
     for (const c of calls) bump(c.agent, c.tokens, c.node);
   }
@@ -120,7 +125,7 @@ function snapshot(slug) {
       calls: Object.values(perAgent).reduce((a, r) => a + r.calls, 0),
       tokens: Object.values(perAgent).reduce((a, r) => a + r.tokens, 0),
     },
-    timeline: log.slice(-60).map((r) => ({
+    timeline: trail.slice(-60).map((r) => ({
       ts: r.ts, node: r.node, chapter: r.chapter, phase: r.phase, counters: r.counters,
     })),
     calls: calls.slice(-60),
@@ -243,7 +248,16 @@ createServer((req, res) => {
   }
 
   if (url.pathname === '/api/meta') {
-    return send(res, 200, { novels: listNovels(), profiles: listProfiles() });
+    const novels = listNovels();
+    // La novela con el estado escrito más recientemente es la que está corriendo. El
+    // panel la sigue sola: antes la lista se cargaba una vez al abrir la página, así que
+    // una novela creada después no aparecía nunca y el monitor se quedaba mirando otra.
+    const active = novels
+      .map((n) => ({ n, at: existsSync(`${ROOT}/novels/${n}/run-state.json`)
+        ? statSync(`${ROOT}/novels/${n}/run-state.json`).mtimeMs : 0 }))
+      .filter((r) => r.at > 0)
+      .sort((a, b) => b.at - a.at)[0]?.n ?? null;
+    return send(res, 200, { novels, profiles: listProfiles(), active });
   }
 
   if (url.pathname === '/api/state') {

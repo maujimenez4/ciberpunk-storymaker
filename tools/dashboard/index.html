@@ -350,14 +350,44 @@ const hhmm = (iso) => { try { return new Date(iso).toTimeString().slice(0,8); } 
 
 let currentNovel = null;
 let running = false;
+let pinned = false;      // el usuario eligió novela a mano: deja de seguir a la activa
+let novelsKey = '';      // firma de la lista, para no reconstruir el select cada segundo
 
-async function loadMeta() {
+/**
+ * Sincroniza la lista de novelas y sigue a la que está corriendo.
+ *
+ * Antes esto corría una sola vez al abrir la página, así que una novela creada después
+ * —el caso normal: se lanza una corrida nueva— no aparecía nunca en el desplegable y el
+ * monitor se quedaba mirando otra. Ahora se refresca en cada tick, y solo se reconstruye
+ * el desplegable cuando la lista cambia de verdad, para no pisar la selección.
+ */
+async function syncNovels() {
   const meta = await (await fetch('/api/meta')).json();
-  $('profile').innerHTML = meta.profiles.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-  $('novel').innerHTML = meta.novels.length
-    ? meta.novels.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')
-    : '<option value="">sin novelas</option>';
-  currentNovel = $('novel').value || null;
+
+  const profKey = meta.profiles.join('|');
+  if ($('profile').dataset.key !== profKey) {
+    const keep = $('profile').value;
+    $('profile').innerHTML = meta.profiles.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    if (meta.profiles.includes(keep)) $('profile').value = keep;
+    $('profile').dataset.key = profKey;
+  }
+
+  const key = meta.novels.join('|');
+  if (key !== novelsKey) {
+    novelsKey = key;
+    const keep = $('novel').value;
+    $('novel').innerHTML = meta.novels.length
+      ? meta.novels.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')
+      : '<option value="">sin novelas</option>';
+    if (meta.novels.includes(keep)) $('novel').value = keep;
+  }
+
+  if (!pinned && meta.active && meta.active !== currentNovel) {
+    currentNovel = meta.active;
+    $('novel').value = meta.active;
+  } else if (!currentNovel) {
+    currentNovel = $('novel').value || null;
+  }
 }
 
 function setStatus(cls, text) {
@@ -576,15 +606,8 @@ async function tick() {
   } catch { setStatus('', 'Sin conexión con el panel'); }
 }
 
-$('novel').addEventListener('change', (e) => { currentNovel = e.target.value || null; tick(); });
-
-$('profile').addEventListener('change', async () => {
-  // El perfil fija la novela destino; se refleja en cuanto se elige.
-  try {
-    const d = await (await fetch('/api/meta')).json();
-    if (d.novels.length) tick();
-  } catch { /* el panel sigue sirviendo el estado */ }
-});
+// Elegir novela a mano fija la vista: a partir de ahí el panel deja de seguir a la activa.
+$('novel').addEventListener('change', (e) => { pinned = true; currentNovel = e.target.value || null; tick(); });
 
 $('run').addEventListener('click', async () => {
   if (running) return;
@@ -599,8 +622,11 @@ $('run').addEventListener('click', async () => {
     const d = await res.json();
     if (d.ok) {
       $('runMsg').innerHTML = `Corrida lanzada sobre <strong>${esc(d.slug)}</strong>. El monitor la sigue desde aquí.`;
+      // Lanzar desde el panel devuelve el seguimiento automático a la corrida nueva.
+      pinned = false;
       currentNovel = d.slug;
-      await loadMeta();
+      novelsKey = '';
+      await syncNovels();
       $('novel').value = d.slug;
     } else {
       $('runMsg').innerHTML = `<span class="warn-row">${esc(d.error)}</span>`;
@@ -613,7 +639,8 @@ $('run').addEventListener('click', async () => {
   }
 });
 
-loadMeta().then(() => { tick(); setInterval(tick, 1000); });
+syncNovels().then(tick);
+setInterval(async () => { await syncNovels(); await tick(); }, 1000);
 </script>
 </body>
 </html>
