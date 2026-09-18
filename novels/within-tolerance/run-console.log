@@ -26,3 +26,30 @@ Tampoco intenté deshacer el solapamiento. El diagrama no tiene un nodo para est
 **Lo que hace falta decidir:** primero, parar la otra corrida. Después, o se descarta `novels/within-tolerance/` y se relanza una sola corrida limpia —es una novela de humo de tres capítulos, cuesta poco—, o se elige cuál de las dos genealogías se conserva y se archivan los capítulos de la otra con el camino de `ROLLBACK`. Yo recomiendo lo primero: el árbol de commits tiene seeds duplicados, y desenredar cuál capítulo vino de qué canon cuesta más que reescribir mil palabras.
 
 Aparte de esto, convendría que el lanzador tomara un lock por slug de novela. Ahora mismo nada impide que dos corridas del mismo perfil se destruyan mutuamente en silencio.
+La corrida se detiene en la compuerta, que es donde el diseño dice que debe detenerse.
+
+## Recorrido
+
+**Setup** — `researcher` (dossier, 9 notas / 5 huecos, 2 búsquedas) → `plot-architect` (1 acto, 3 capítulos) → `character-profiler` (4 fichas) → `continuity-keeper` en seed. Biblia sembrada y commiteada: `canon.md`, `world.md`, `characters.md`, `outline.md`, `timeline.md`, `threads.md`.
+
+**Bucle de capítulo** — tres vueltas completas, sin lagunas declaradas en ningún BEAT, así que RES1 no llegó a dispararse y `researchRounds` se quedó en 0.
+
+| Cap | Título | Borrador | Tras VOICE | ck / tv | Estado |
+|-----|--------|----------|-----------|---------|--------|
+| 01 | La tercera comprobación | 360 | 349 | 0/0/0 · 0/0/0 | aprobado `03a6592` |
+| 02 | La cifra propia | 371 | 339 | 0/0/0 · 0/0/0 | aprobado `7245e88` |
+| 03 | El nombre detrás del número | 374 | 350 | 0/0/**1 note** · 0/0/0 | **en compuerta** |
+
+Las tres extensiones cayeron dentro de 350–455, que es lo que el perfil venía a comprobar. Ninguna reescritura: cero `blocker` en los tres capítulos, así que BLOCK nunca desvió a WRITE.
+
+## Por qué paro aquí
+
+`approvalMode: act-end-or-flagged` y ch03 cierra el único acto. Con `gateChannel: file` no hay nadie a quien preguntar, así que la petición queda en disco y la corrida termina limpia — no es un abandono: ch01 y ch02 tienen su commit y el estado está en `run-state.json` con `node: "GATE"`.
+
+La petición ya estaba escrita y commiteada por el hook (`cbb174d`), con el contenido correcto: capítulo 3, intento 1, `reason: "act-end"`, `flagged: false`. La dejé como estaba en vez de reescribirla, porque su `createdAt` es lo que decide si una futura `gate-decision.json` es fresca, y regenerarlo solo habría movido esa referencia.
+
+## Lo que verá la persona en el panel
+
+Una sola incidencia abierta, `ck-01`, severidad `note`: el hilo `criterio-mal-aplicado` llega abierto al final de la novela. El propio `continuity-keeper` lo marca como no accionable — coincide con el arco declarado de la protagonista, cuyo cierre es una decisión privada y no la resolución del conflicto. Es informativo, no reescribe nada.
+
+Para continuar: la decisión va en `novels/within-tolerance/gate-decision.json` con `chapter: 3` y un `decidedAt` posterior a `2026-09-18T16:38:18.140Z`. Al relanzarme, BOOT la detecta y sigue desde ahí — aprobar lleva a COMMIT de ch03 y de ahí a COMP/EXPORT, que con `outputFormats: ["markdown"]` no necesita herramienta externa.

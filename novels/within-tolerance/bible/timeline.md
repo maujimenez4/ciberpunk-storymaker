@@ -17,3 +17,10 @@ Llega la respuesta: el desvío está medido, consta en el informe trimestral y c
 de la tolerancia aceptada. Nuria confirma la validez de la tanda en el pasillo, el mismo
 día. Adela identifica la cifra del informe como propia: es la tasa de desvío que ella y
 Marcial calculan cada mes en el muestreo.
+
+### dia-4-capitulo-3
+Llega el detalle desagregado con la continuidad de registro de las denegaciones. Adela
+baja catorce meses y encuentra el criterio sobrante aplicado a la denegación de Teodora
+Nin (bible/timeline.md#catorce-meses-antes): es el mismo caso. Busca cauce de reapertura
+desde su puesto de muestreo: no existe, la resolución es firme y la tanda sigue siendo
+válida por tolerancia. Cierre de la novela.

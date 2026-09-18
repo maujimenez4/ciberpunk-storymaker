@@ -1,0 +1,9 @@
+{
+  "decision": "storymaker/gate-decision@1",
+  "novel": "within-tolerance",
+  "chapter": 3,
+  "action": "approve",
+  "notes": "",
+  "rollbackTo": 1,
+  "decidedAt": "2026-09-18T17:59:33.896Z"
+}
