@@ -1,0 +1,62 @@
+{
+  "config": "storymaker/run-config@1",
+  "profile": "mini-arc",
+
+  "run": {
+    "novel": "night-haul"
+  },
+
+  "scope": {
+    "chapters": 5,
+    "acts": 1,
+    "wordsPerChapter": 450,
+    "wordsTolerance": 0.25,
+    "summaryWindow": 2
+  },
+
+  "supervision": {
+    "approvalMode": "act-end-or-flagged",
+    "presentUnit": "act",
+    "onFlagged": "force-gate",
+    "gateChannel": "file"
+  },
+
+  "validation": {
+    "continuity": true,
+    "technical": true,
+    "bannedTerms": true,
+    "runInParallel": true
+  },
+
+  "research": {
+    "enabled": true,
+    "maxSearchesSetup": 3,
+    "maxSearchesPerChapter": 1,
+    "requireSourceAndDate": true
+  },
+
+  "limits": {
+    "maxResearchRounds": 2,
+    "maxRewrites": 2,
+    "maxHumanRevisions": 3
+  },
+
+  "budget": {
+    "maxUsd": 15,
+    "maxTokens": 2500000,
+    "maxUsdPerCall": 0.8,
+    "onExceed": "stop-after-chapter"
+  },
+
+  "output": {
+    "outputFormats": ["markdown"],
+    "manuscriptPath": "out/manuscript.md"
+  },
+
+  "execution": {
+    "dryRun": false,
+    "dryRunInjectBlockerAt": null
+  },
+
+  "extends": "../run.base.json"
+}
