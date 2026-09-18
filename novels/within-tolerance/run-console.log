@@ -53,3 +53,16 @@ La petición ya estaba escrita y commiteada por el hook (`cbb174d`), con el cont
 Una sola incidencia abierta, `ck-01`, severidad `note`: el hilo `criterio-mal-aplicado` llega abierto al final de la novela. El propio `continuity-keeper` lo marca como no accionable — coincide con el arco declarado de la protagonista, cuyo cierre es una decisión privada y no la resolución del conflicto. Es informativo, no reescribe nada.
 
 Para continuar: la decisión va en `novels/within-tolerance/gate-decision.json` con `chapter: 3` y un `decidedAt` posterior a `2026-09-18T16:38:18.140Z`. Al relanzarme, BOOT la detecta y sigue desde ahí — aprobar lleva a COMMIT de ch03 y de ahí a COMP/EXPORT, que con `outputFormats: ["markdown"]` no necesita herramienta externa.
+Corrida terminada.
+
+**Qué pasó**: el estado estaba parado en `GATE` con `gate-decision.json` válido (ch03, `decidedAt` posterior al `createdAt` de la petición) y acción `approve`. No se regeneró nada: entré directamente por COMMIT.
+
+- **COMMIT ch03** — `continuity-keeper` actualizó `bible/timeline.md`, `bible/threads.md` y escribió `bible/summaries/ch03.md`. Commit `c437059 — ch03: El nombre detrás del número`.
+- **COMP** — `compiler` ensambló `novels/within-tolerance/out/manuscript.md`: 3 capítulos, 1048 palabras.
+- **EXPORT** — `output.outputFormats` es solo `markdown`, así que no hay nada que requiera herramienta externa. Commit `20e593d — compile: manuscript.md (3 capítulos)`.
+
+**Estado final**: `phase: done`, `lastApprovedChapter: 3`, `lastApprovedCommit: c437059`, contadores a cero, `flagged` vacío.
+
+**Incidencia abierta**: 1 `note` (`ck-01`) — el hilo `criterio-mal-aplicado` queda sin cerrar al final de la novela. El validador lo marcó como coherente con el arco declarado del personaje, no como defecto; por eso es `note` y no reescribió nada.
+
+[panel] proceso terminado · código 0
