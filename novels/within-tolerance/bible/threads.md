@@ -1,4 +1,4 @@
-# Hilos — Dentro de tolerancia
+# Threads — within-tolerance
 
 ### criterio-mal-aplicado
 Abierto en capítulo 1: Adela encuentra un requisito de denegación que la norma no

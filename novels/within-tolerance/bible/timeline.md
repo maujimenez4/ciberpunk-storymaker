@@ -1,8 +1,8 @@
-# Cronología — Dentro de tolerancia
+# Timeline — within-tolerance
 
 ### catorce-meses-antes
 Se deniega la ayuda del expediente a nombre de Teodora Nin, aplicando el criterio
-sobrante que Adela encontrará en el capítulo 1. Hecho pasado, fuera de escena.
+sobrante que Adela encuentra en el capítulo 1. Hecho pasado, fuera de escena.
 
 ### dia-1-capitulo-1
 Febrero. Adela saca el muestreo mensual y encuentra el criterio mal aplicado repetido en
