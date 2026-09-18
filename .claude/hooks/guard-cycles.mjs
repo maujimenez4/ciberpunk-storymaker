@@ -9,7 +9,7 @@
 // resuelve reescribe sin fin: FLAG no llegaría a dispararse nunca y la compuerta
 // nunca vería el capítulo.
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 
 function deny(reason) {
   process.stdout.write(JSON.stringify({
@@ -30,14 +30,35 @@ const CYCLE_OF = {
   researcher: { counter: 'researchRounds', limit: 'maxResearchRounds' },
 };
 
-function findNovelDir(cwd) {
-  const dir = `${cwd}/novels`;
-  if (!existsSync(dir)) return null;
-  const slugs = readdirSync(dir, { withFileTypes: true })
+/**
+ * A qué novela pertenece esta llamada.
+ *
+ * Devolver null aquí **desactiva el tope en silencio**, y la versión anterior lo hacía en
+ * cuanto había más de una novela con estado. Con dos novelas en el repo, la invariante 6
+ * dejaba de regir sin que nada lo dijera: un blocker podría reescribir sin fin y FLAG no
+ * llegaría a dispararse nunca.
+ *
+ * De la señal más fiable a la más débil:
+ *   1. El encargo al subagente lleva las rutas de su novela. Es indiscutible.
+ *   2. Una sola novela con estado: es esa.
+ *   3. Varias y ningún indicio: la de estado escrito más recientemente es la que corre.
+ */
+function findNovelDir(cwd, hint) {
+  const base = `${String(cwd ?? '').replace(/\\/g, '/')}/novels`;
+  if (!existsSync(base)) return null;
+  const slugs = readdirSync(base, { withFileTypes: true })
     .filter((d) => d.isDirectory())
-    .map((d) => `${dir}/${d.name}`)
-    .filter((p) => existsSync(`${p}/run-state.json`));
-  return slugs.length === 1 ? slugs[0] : null;
+    .map((d) => d.name)
+    .filter((n) => existsSync(`${base}/${n}/run-state.json`));
+  if (!slugs.length) return null;
+
+  const named = String(hint ?? '').match(/novels[/\\]([^/\\]+)[/\\]/);
+  if (named && slugs.includes(named[1])) return `${base}/${named[1]}`;
+  if (slugs.length === 1) return `${base}/${slugs[0]}`;
+
+  return `${base}/${slugs
+    .map((n) => ({ n, at: statSync(`${base}/${n}/run-state.json`).mtimeMs }))
+    .sort((a, b) => b.at - a.at)[0].n}`;
 }
 
 let input = '';
@@ -56,7 +77,7 @@ process.stdin.on('end', () => {
   const cycle = CYCLE_OF[target];
   if (!cycle) allow();
 
-  const novelDir = findNovelDir(String(hook.cwd ?? '').replace(/\\/g, '/'));
+  const novelDir = findNovelDir(hook.cwd, hook.tool_input?.prompt);
   if (!novelDir) allow(); // Sin estado que consultar no se puede afirmar que haya exceso.
 
   let state;

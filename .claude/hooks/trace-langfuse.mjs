@@ -19,7 +19,7 @@
 //          "tool_response":{"usage":{"subagent_tokens":25562}},"cwd":"<repo>"}' \
 //     | node .claude/hooks/trace-langfuse.mjs --selftest
 
-import { readFileSync, existsSync, readdirSync, appendFileSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, appendFileSync, statSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -31,14 +31,35 @@ const TIMEOUT_MS = 5000;
 /** Un hook de telemetría que rompe la corrida es peor que no tener telemetría. */
 const done = () => { process.stdout.write('{}'); process.exit(0); };
 
-function findNovelDir(cwd) {
-  const dir = `${String(cwd ?? '').replace(/\\/g, '/')}/novels`;
-  if (!existsSync(dir)) return null;
-  const slugs = readdirSync(dir, { withFileTypes: true })
+/**
+ * A qué novela pertenece esta llamada.
+ *
+ * La versión anterior devolvía null en cuanto había más de una novela con estado, y un
+ * null aquí apaga el hook **en silencio**: en la segunda corrida no se trazó nada y no
+ * hubo ni un error que lo dijera. Con dos novelas en el repo eso pasa de caso raro a
+ * caso normal.
+ *
+ * El orden va de la señal más fiable a la más débil:
+ *   1. El encargo al subagente lleva las rutas de su novela. Es indiscutible.
+ *   2. Una sola novela con estado: es esa.
+ *   3. Varias y ningún indicio: la de estado escrito más recientemente es la que corre.
+ */
+function findNovelDir(cwd, hint) {
+  const base = `${String(cwd ?? '').replace(/\\/g, '/')}/novels`;
+  if (!existsSync(base)) return null;
+  const slugs = readdirSync(base, { withFileTypes: true })
     .filter((d) => d.isDirectory())
-    .map((d) => `${dir}/${d.name}`)
-    .filter((p) => existsSync(`${p}/run-state.json`));
-  return slugs.length === 1 ? slugs[0] : null;
+    .map((d) => d.name)
+    .filter((n) => existsSync(`${base}/${n}/run-state.json`));
+  if (!slugs.length) return null;
+
+  const named = String(hint ?? '').match(/novels[/\\]([^/\\]+)[/\\]/);
+  if (named && slugs.includes(named[1])) return `${base}/${named[1]}`;
+  if (slugs.length === 1) return `${base}/${slugs[0]}`;
+
+  return `${base}/${slugs
+    .map((n) => ({ n, at: statSync(`${base}/${n}/run-state.json`).mtimeMs }))
+    .sort((a, b) => b.at - a.at)[0].n}`;
 }
 
 /**
@@ -161,7 +182,7 @@ process.stdin.on('end', async () => {
   if (hook.tool_name !== 'Task') done();
 
   const repoRoot = String(hook.cwd ?? process.cwd()).replace(/\\/g, '/');
-  const novelDir = findNovelDir(repoRoot);
+  const novelDir = findNovelDir(repoRoot, hook.tool_input?.prompt);
   if (!novelDir) done(); // Sin corrida identificable no hay nada que atribuir.
 
   let state;
@@ -276,5 +297,9 @@ process.stdin.on('end', async () => {
       `${now} ${agentType} ${label} fallo de red: ${error.message}\n`);
   }
 
-  done();
+  // Aquí NO se llama a `done()`: un process.exit() con el handle del fetch todavía
+  // cerrándose hace que libuv aborte en Windows con "Assertion failed: !(handle->flags
+  // & UV_HANDLE_CLOSING)". Se contesta al harness y se deja que el proceso termine solo
+  // cuando el socket se cierre. El hook ya no tiene nada que hacer.
+  process.stdout.write('{}');
 });
