@@ -244,6 +244,7 @@
           <textarea id="brief" spellcheck="false"
             placeholder="# Título&#10;&#10;## Premisa&#10;…&#10;&#10;## Protagonista&#10;…&#10;&#10;## Tono y registro&#10;…&#10;&#10;## Restricciones&#10;…"></textarea>
           <p class="note" style="margin-top:8px">Si lo dejas vacío se conserva el <code>brief.md</code> que ya exista.</p>
+          <div id="briefOnDisk" class="tile" style="margin-top:var(--sp-3)" hidden></div>
         </div>
         <div class="grid">
           <div>
@@ -517,17 +518,43 @@ $('gateRollback').addEventListener('click', () => postGate('rollback'));
 
 let latest = null;
 
+/**
+ * Enseña el brief que hay en disco. Un brief de una línea suele significar que se pegó
+ * un resumen en vez del documento, y eso condiciona la novela entera: aquí se ve antes
+ * de gastar la corrida, no después.
+ */
+function renderBrief(d) {
+  const b = d.brief;
+  const box = $('briefOnDisk');
+  if (!b) {
+    box.hidden = false;
+    box.innerHTML = '<div class="k">Brief en disco</div><div class="s" style="color:var(--warn)">No hay ninguno. Sin brief el bucle para en el arranque.</div>';
+    return;
+  }
+  box.hidden = false;
+  const thin = b.sections.length < 3;
+  box.innerHTML = `<div class="k">Brief en disco · ${esc(d.novel)}</div>
+    <div class="v num" style="font-size:20px">${b.words} <span style="font-size:13px;font-weight:400;color:var(--fg-muted)">palabras</span></div>
+    <div class="s">${b.sections.length ? 'Secciones: ' + esc(b.sections.join(' · ')) : 'Sin secciones (<code>##</code>)'}</div>
+    ${thin ? '<div class="s" style="color:var(--warn);margin-top:6px">Parece un resumen, no un brief. Un brief lleva premisa, protagonista, antagonismo, mundo, tono y restricciones en secciones.</div>' : ''}`;
+}
+
 async function tick() {
   if (!currentNovel) return;
   try {
     const d = await (await fetch(`/api/state?novel=${encodeURIComponent(currentNovel)}`)).json();
-    if (d.empty || d.missing) {
-      setStatus('', 'Sin corrida');
-      $('matrix').innerHTML = '<p class="empty">Esta novela no tiene <code>run-state.json</code>. Lanza una corrida para empezar.</p>';
+    if (d.empty) { setStatus('', 'Sin novelas'); return; }
+    latest = d;
+    renderBrief(d);
+    if (d.missing) {
+      setStatus(d.launched ? 'live' : '', d.launched ? 'Lanzada, sin estado aún' : 'Sin corrida');
+      $('matrix').innerHTML = d.launched
+        ? '<p class="empty">Corrida lanzada. Esperando a que el bucle escriba <code>run-state.json</code>. Si la salida del proceso sigue vacía al cabo de un minuto, algo falló al arrancar.</p>'
+        : '<p class="empty">Esta novela no tiene <code>run-state.json</code>. Lanza una corrida para empezar.</p>';
       $('tiles').innerHTML = ''; $('agents').innerHTML = ''; $('timeline').innerHTML = '';
+      $('gate').hidden = true;
       return;
     }
-    latest = d;
     const s = d.state;
     const flagged = (s.flagged ?? []).length > 0;
     if (d.gate) setStatus('gate', `Compuerta · capítulo ${d.gate.chapter}`);

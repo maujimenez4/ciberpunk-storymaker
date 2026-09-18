@@ -10,7 +10,7 @@
 //   node tools/dashboard.mjs [--port 4173]
 
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, openSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, openSync, appendFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { loadConfig } from './config.js';
 
@@ -46,10 +46,25 @@ const NODE_AGENTS = {
   COMMIT: ['continuity-keeper'],
 };
 
+/** Lo que hay de brief en disco, para que pegar el texto equivocado se vea al momento. */
+function briefOf(dir) {
+  const path = `${dir}/brief.md`;
+  if (!existsSync(path)) return null;
+  const text = readFileSync(path, 'utf8');
+  return {
+    words: (text.match(/\S+/g) ?? []).length,
+    sections: (text.match(/^##\s+.*$/gm) ?? []).map((h) => h.replace(/^##\s+/, '')),
+    excerpt: text.slice(0, 400),
+  };
+}
+
 function snapshot(slug) {
   const dir = `${ROOT}/novels/${slug}`;
   const state = readJson(`${dir}/run-state.json`);
-  if (!state) return { novel: slug, missing: true };
+  const brief = briefOf(dir);
+  // Una corrida recién lanzada aún no ha escrito estado: eso no es "no hay corrida".
+  const launched = existsSync(`${dir}/run-console.log`);
+  if (!state) return { novel: slug, missing: true, brief, launched };
 
   const calls = readLines(`${dir}/agent-calls.jsonl`);
   const log = readLines(`${dir}/run-log.jsonl`);
@@ -99,7 +114,7 @@ function snapshot(slug) {
     : '';
 
   return {
-    novel: slug, state, scope, derived, gate,
+    novel: slug, state, scope, derived, gate, brief, launched: true,
     agents: Object.values(perAgent).sort((a, b) => b.calls - a.calls),
     totals: {
       calls: Object.values(perAgent).reduce((a, r) => a + r.calls, 0),
@@ -116,13 +131,49 @@ function snapshot(slug) {
   };
 }
 
-/** Lanza `/novela <perfil>` en segundo plano, con la salida a run-console.log. */
+// Herramientas que el bucle necesita. En modo headless nadie puede aprobar un permiso,
+// así que sin esta lista el orquestador recibe "permiso denegado" en cuanto intenta
+// `node tools/config.js` y la corrida muere en el arranque. Es una lista explícita y no
+// un bypass general: la lista `deny` de .claude/settings.json —git push, rm -rf,
+// git reset --hard— sigue por delante.
+const ALLOWED_TOOLS = process.env.STORYMAKER_ALLOWED_TOOLS
+  ?? 'Read Write Edit Bash Task Glob Grep';
+
+/**
+ * Lanza `/novela <perfil>` en segundo plano, con la salida a run-console.log.
+ *
+ * Tres cosas aquí son cicatrices de fallos reales, no preferencias:
+ *
+ * 1. **Sin `detached`.** Con `detached: true` en Windows el proceso pierde la consola y
+ *    `claude` sale con código 1 sin escribir una línea. Medido: sin detach exit=0 y
+ *    salida capturada; con detach exit=1 y fichero vacío. El precio es que la corrida
+ *    vive mientras viva el panel, que para un panel es lo que se quiere.
+ * 2. **El prompt por stdin.** `claude` es un .cmd y hay que pasar por cmd.exe, pero con
+ *    `shell: true` Node concatena los argumentos sin escapar y cualquier token con
+ *    espacio se parte. Por stdin no hay comillas que perder.
+ * 3. **cmd.exe como ejecutable, no `shell: true`.** Así el binario no lleva espacios y
+ *    se controla la línea de comando entera.
+ */
 function spawnRun(profile, dir) {
   const out = openSync(`${dir}/run-console.log`, 'a');
-  const child = spawn('claude', ['-p', `/novela ${profile}`], {
-    cwd: ROOT, stdio: ['ignore', out, out], detached: true, shell: process.platform === 'win32',
+  const isWindows = process.platform === 'win32';
+  const args = ['-p', '--allowedTools', ...ALLOWED_TOOLS.split(/\s+/)];
+
+  const child = isWindows
+    ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', `claude ${args.join(' ')}`], {
+        cwd: ROOT, stdio: ['pipe', out, out], windowsHide: true })
+    : spawn('claude', args, { cwd: ROOT, stdio: ['pipe', out, out] });
+
+  child.stdin.end(`/novela ${profile}\n`);
+  // El código de salida va al mismo log: una corrida que muere al arrancar deja de ser
+  // un fichero vacío y pasa a decir por qué.
+  child.on('exit', (code, signal) => {
+    appendFileSync(`${dir}/run-console.log`,
+      `\n[panel] proceso terminado · código ${code}${signal ? ` · señal ${signal}` : ''}\n`);
   });
-  child.unref();
+  child.on('error', (error) => {
+    appendFileSync(`${dir}/run-console.log`, `\n[panel] no se pudo lanzar: ${error.message}\n`);
+  });
   return child.pid;
 }
 
