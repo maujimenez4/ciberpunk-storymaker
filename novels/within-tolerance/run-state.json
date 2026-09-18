@@ -2,8 +2,8 @@
   "state": "storymaker/run-state@1",
   "novel": "within-tolerance",
   "profile": "smoke-within-tolerance",
-  "phase": "chapter-loop",
-  "node": "COMMIT",
+  "phase": "done",
+  "node": "EXPORT",
   "chapter": 3,
   "act": 1,
   "counters": {
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 2,
-  "lastApprovedCommit": "7245e8865d029c934dfec80e9f0cb4a91310744e",
+  "lastApprovedChapter": 3,
+  "lastApprovedCommit": "c4370597c353fe1a6e4caafe5faff9ca02d2e2da",
   "flagged": [],
-  "updatedAt": "2026-09-18T18:05:00.000Z"
+  "updatedAt": "2026-09-18T18:10:00.000Z"
 }
