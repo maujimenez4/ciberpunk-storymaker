@@ -66,3 +66,74 @@ Corrida terminada.
 **Incidencia abierta**: 1 `note` (`ck-01`) — el hilo `criterio-mal-aplicado` queda sin cerrar al final de la novela. El validador lo marcó como coherente con el arco declarado del personaje, no como defecto; por eso es `note` y no reescribió nada.
 
 [panel] proceso terminado · código 0
+La corrida de `smoke-within-tolerance` **ya estaba completa**. No he regenerado nada.
+
+## BOOT
+
+Antes de nada resolví el `run.lock` que había en disco, porque el commit de cabecera (`c283a1b`) documenta que una corrida anterior de esta misma novela se contaminó por colisión de dos orquestadores. El lock apunta a `pid 12628` / `childPid 2324`, ambos vivos — pero la traza de procesos confirma que son **míos**: `node tools/dashboard.mjs` (12628) → `cmd.exe` (2324) → esta sesión de claude (13296). No hay segundo orquestador.
+
+Resuelto eso, el estado en disco dice `phase: done`, `node: EXPORT`, `lastApprovedChapter: 3`. No es una continuación de compuerta: la `gate-decision.json` de ch03 (`approve`, `decidedAt` 17:59:33) ya se aplicó en la corrida anterior, y el historial lo respalda. Con `scope.chapters: 3`, no queda ningún capítulo por escribir, y COMP/EXPORT ya tienen su commit. **El historial manda, y lo aprobado no se regenera.**
+
+## Lo que hay en disco
+
+| Cap | Título | Palabras | ck/tv | Commit |
+|-----|--------|----------|-------|--------|
+| 01 | La tercera comprobación | 350 | 0/0/0 | `03a6592` |
+| 02 | La cifra propia | 339 | 0/0/0 | `7245e88` |
+| 03 | El nombre detrás del número | 359 | 0/0/**1 note** | `c437059` |
+
+Las tres extensiones caen dentro de 350 ± 30 % (máximo 455), que es exactamente lo que este perfil venía a comprobar. Cero `blocker` en los tres capítulos, así que BLOCK nunca desvió a WRITE y `rewrites` se quedó en 0. Ningún BEAT declaró lagunas, así que RES1 no llegó a dispararse.
+
+Biblia completa (`canon.md`, `world.md`, `characters.md`, `outline.md`, `timeline.md`, `threads.md` + los tres resúmenes) y `out/manuscript.md` con 1075 palabras, commiteado en `20e593d`. Árbol de trabajo limpio bajo `novels/within-tolerance/`.
+
+## Incidencia abierta
+
+Una sola, `ck-01`, severidad `note`: el hilo `criterio-mal-aplicado` llega abierto al final de la novela. `continuity-keeper` lo marcó como coherente con el arco declarado de la protagonista, no como defecto — por eso es `note` y no reescribió nada.
+
+Una nota menor sobre los contadores: el log de la corrida anterior registró ch03 en 350 palabras tras VOICE; `wc -w` da 359. Es diferencia de método de conteo, no de contenido, y en cualquier caso ambos caen dentro de tolerancia.
+
+Si quieres volver a recorrer el bucle de verdad para este perfil, hay que empezar de una novela nueva o hacer `rollback` a un capítulo `K`; relanzarme sobre este estado seguirá sin hacer nada, que es el comportamiento correcto.
+
+[panel] proceso terminado · código 0
+No he ejecutado ningún nodo ni lanzado ningún subagente. La corrida ya estaba completa — pero el estado en disco **no es fiable**, y eso es lo que importa aquí.
+
+## BOOT
+
+Primero resolví el `run.lock`, porque el commit de cabecera documenta una colisión de dos orquestadores sobre esta misma novela. El lock (`startedAt` 19:17:37.323Z) llega **sin `sessionId`**: es el que escribe el panel antes de lanzar `claude`, pendiente de que lo adopte el hijo. El árbol de procesos lo confirma — `node` 4796 (panel) → `cmd` 15004 → `claude` 1448, creados en el mismo segundo que el lock. No hay segundo orquestador vivo.
+
+Estado en disco: `phase: done`, `node: EXPORT`, `lastApprovedChapter: 3`. No es continuación de compuerta — la `gate-decision.json` de ch03 (`approve`, 17:59:33) ya se consumió: el commit `c437059` de ch03 es de las 18:01:50, posterior. Con `scope.chapters: 3`, el bucle arrancaría en el capítulo 4 y no hay capítulo 4. COMP y EXPORT tienen su commit (`20e593d`). **Nada que regenerar.**
+
+## La contaminación no está reparada
+
+El commit `c283a1b` la documenta, pero mirando su contenido **solo añade 13 líneas a `run-console.log`**. Es un marcador, no un arreglo. La genealogía sigue mezclada en el artefacto:
+
+```
+03a6592  16:29:31  ch01: La tercera comprobación   → chapters/ch01.md + bible/summaries/ch01.md
+7bec27c  16:29:59  ch01: El desvío que sale a mano → bible/summaries/ch01.md, threads.md, timeline.md
+                                                     (ningún chapters/ch01.md)
+```
+
+28 segundos después del primero, el segundo orquestador **sobrescribió el resumen, los hilos y la cronología** de un capítulo 1 que nunca llegó a disco. El `ch01.md` del manuscrito es *La tercera comprobación*; la biblia describe *El desvío que sale a mano*. Mismo patrón en ch02 (`4400855` → `7245e88` sobrescribe `summaries/ch02.md`), y dos `setup: bible seed`.
+
+Es decir: **canon y prosa divergen desde el capítulo 1**, y ch02 y ch03 se escribieron contra ese canon contaminado. Es la invariante 1 rota en lo ya commiteado. Los validadores no lo vieron porque cada uno juzgaba su capítulo contra la biblia — que era justamente la pieza corrompida.
+
+## Lo que sí está bien formado
+
+| Cap | Título | Palabras | blocker/warning/note |
+|-----|--------|----------|----------------------|
+| 01 | La tercera comprobación | 350 | 0/0/0 |
+| 02 | La cifra propia | 339 | 0/0/0 |
+| 03 | El nombre detrás del número | 359 | 0/0/**1** |
+
+Las tres dentro de 350 ± 30 % (máx. 455), que es lo que el perfil venía a comprobar. Cero `blocker`, así que BLOCK nunca desvió a WRITE. Única incidencia abierta: `ck-01`, severidad `note`. `out/manuscript.md` son 1075 palabras. Solo `markdown` en `outputFormats`, así que no hay derivados pendientes.
+
+## Decisión que te toca a ti
+
+No he tocado la biblia (es de `continuity-keeper`, y hay hook) ni he reescrito prosa. Reparar esto no es un nodo del diagrama: son dos caminos, y elegir es tuyo.
+
+- **ROLLBACK a K=0** y rehacer setup + los tres capítulos sobre este mismo slug.
+- **Slug nuevo**, dejando `within-tolerance` como el caso de estudio que ya es — el hook `guard-run-lock.mjs` existe por esto y conviene que quede la evidencia.
+
+Relanzarme sobre el estado actual seguirá sin hacer nada, que es el comportamiento correcto. Y el hook está sin commitear (`??` en git status): mientras siga así, no protege a nadie que clone el repo.
+
+[panel] proceso terminado · código 0

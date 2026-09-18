@@ -52,3 +52,28 @@ El panel tiene que enseñar la petición y escribir `gate-decision.json`. Si se 
 **Hay un fichero basura en la raíz del repo:** `console.log('GOT` — untracked, de algún comando mal escapado. No lo he tocado ni commiteado.
 
 [panel] proceso terminado · código 0
+Corrida completa. `dead-floor` / perfil `smoke-dead-floor`.
+
+**Lo que hice en este turno** — la corrida entró por BOOT como continuación de compuerta: el estado decía `node: "GATE"` en el capítulo 3 y había un `gate-decision.json` válido (capítulo 3, `decidedAt` posterior al `createdAt` de la petición). Decisión: **aprobar**. Nada se regeneró.
+
+| Nodo | Resultado |
+|---|---|
+| GATE | Decisión `approve` aplicada desde disco (canal `file`) |
+| COMMIT | `continuity-keeper` en modo commit → `bible/timeline.md`, `bible/threads.md`, `bible/summaries/ch03.md` |
+| — | Commit `cdb6f6f` · `ch03: La firma sin testigos` |
+| COMP | `compiler` → `novels/dead-floor/out/manuscript.md` (3 capítulos, 1203 palabras) |
+| EXPORT | Sin trabajo: `output.outputFormats` solo pide `markdown` |
+| — | Commit `cfd2b6a` · `compile: manuscript.md (3 capítulos)` |
+
+**Incidencias abiertas del capítulo 3** — dos `warning`, ningún `blocker`, las dos de `technical-verifier` y las dos por afirmaciones sin fuente:
+
+- `tv-01` (¶5): el formato de la casilla de observaciones del certificado. El dossier lo dejó como hueco declarado; es detalle de relleno y no sostiene trama.
+- `tv-02` (¶7): subir a pie «por no dejar el trayecto anotado» asume trazabilidad del tránsito vertical. Vago está bien; si en el futuro se detalla el mecanismo, necesitará fuente.
+
+Quedan anotadas, no bloquean: invariante 7. El estado final en `run-state.json` es `phase: "done"`, `lastApprovedChapter: 3`, `lastApprovedCommit: cdb6f6f`, contadores a cero y `flagged` vacío.
+
+Una nota sobre el ensamblador: el contexto de commit se generó sin la entrada de escaleta del capítulo 3, así que `continuity-keeper` no pudo devolverme el título y lo saqué yo de la cabecera de `notes/ch03-beats.md`. Funcionó, pero `tools/assemble-context.mjs` debería incluir esa entrada en el bloque `commit` —la pide el propio flujo— si quieres que lo mire.
+
+[panel] proceso terminado · código 0
+
+[panel] proceso terminado · código 4294967295
