@@ -1,1 +1,12 @@
-{ "issues": [] }
+{
+  "issues": [
+    {
+      "severity": "note",
+      "kind": "thread-dropped",
+      "where": "ch03 (capítulo completo)",
+      "claim": "El hilo criterio-mal-aplicado sigue abierto al cierre de la novela: Adela busca cauce de reapertura, no lo encuentra y no repara el criterio.",
+      "canon": "bible/threads.md#criterio-mal-aplicado",
+      "fix": "Ninguna acción necesaria: coincide con el arco declarado de Adela (bible/characters.md#adela-roig), cuyo cierre es la decisión privada, no una resolución del conflicto. Se deja como nota informativa para la compuerta."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+La corrida está parada en la compuerta, que es donde el flujo manda parar. Pero hay un problema que va por delante del resultado.
+
+## Otra corrida ha estado escribiendo en esta misma novela, a la vez que yo
+
+`novels/within-tolerance/` está siendo escrito por dos orquestadores en paralelo. No es una sospecha:
+
+- **Commits intercalados, mismo autor, mismos ficheros.** `setup: bible seed` aparece dos veces (`56b323a` 16:23:49 — mío; `81abc00` 16:24:56 — no mío). Igual con `ch02: La cifra propia` (`4400855` mío, `7245e88` no). Y un `ch01: La tercera comprobación` (`03a6592`) con un título que ningún agente mío produjo.
+- **La biblia sobre la que escribí no es la que sembré.** `canon.md`, `world.md`, `characters.md` y `outline.md` vienen de `81abc00`, el seed de la otra corrida, que sobrescribió el mío. Mis capítulos 1–3 se escribieron contra ese canon.
+- **Los capítulos están mezclados.** `ch02.draft.md` abre con «La respuesta entró por el cauce habitual…» y `ch02.md` con «Nuria me alcanzó en el pasillo…». `voice-editor` solo quita y sustituye: no puede convertir una en otra. Además «Nuria» es un nombre propio, y mi `character-profiler` devolvió roles sin nombre. `ch02.md` no salió de mi pipeline.
+- **Sigue viva.** `agent-calls.jsonl` registra un `technical-verifier` a las 16:38:59, después de que yo escribiera la petición de compuerta a las 16:38:18.
+
+La causa es estructural: las dos corridas comparten todas las rutas y un único `run-state.json`, así que se pisan sin detectarse. Las etiquetas de nodo descolocadas en `agent-calls.jsonl` (`technical-verifier | VOICE`, `| GATE`) son el mismo síntoma — cada corrida lee el nodo que la otra acaba de escribir.
+
+## Qué sí quedó hecho
+
+Recorrí el bucle completo: setup (RES0 → ARCH → PROF → SEED) y los tres capítulos, cada uno LOAD → BEAT → GAP → WRITE → VOICE → VAL1∥VAL2 → REPORT → BLOCK → GATE/COMMIT. Ningún capítulo tuvo lagunas, así que RES1 no llegó a correr. Validación limpia salvo un `warning` en ch01; cero `blocker`, cero reescrituras. Palabras dentro de tolerancia (349 / 350 / 333 sobre objetivo 350, techo 455).
+
+Capítulo 3 cierra el acto único, así que la compuerta era obligatoria. Canal `file`: escribí `gate-request.json` y terminé ahí, sin adivinar la decisión.
+
+## Lo que no hice, y por qué
+
+No compilé el manuscrito. Con los capítulos mezclados entre dos corridas, `COMP` produciría un manuscrito incoherente con apariencia de terminado — peor que no producirlo.
+
+Tampoco intenté deshacer el solapamiento. El diagrama no tiene un nodo para esto y `CLAUDE.md` es explícito: si algo no encaja, dilo en vez de improvisar. Además la otra corrida seguía escribiendo mientras yo miraba, así que cualquier arreglo mío se habría pisado también.
+
+**Lo que hace falta decidir:** primero, parar la otra corrida. Después, o se descarta `novels/within-tolerance/` y se relanza una sola corrida limpia —es una novela de humo de tres capítulos, cuesta poco—, o se elige cuál de las dos genealogías se conserva y se archivan los capítulos de la otra con el camino de `ROLLBACK`. Yo recomiendo lo primero: el árbol de commits tiene seeds duplicados, y desenredar cuál capítulo vino de qué canon cuesta más que reescribir mil palabras.
+
+Aparte de esto, convendría que el lanzador tomara un lock por slug de novela. Ahora mismo nada impide que dos corridas del mismo perfil se destruyan mutuamente en silencio.
