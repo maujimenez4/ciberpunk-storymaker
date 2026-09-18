@@ -1,0 +1,16 @@
+{
+  "state": "storymaker/run-state@1",
+  "novel": "night-haul",
+  "profile": "mini-arc",
+  "phase": "setup",
+  "node": "SEED",
+  "chapter": 1,
+  "act": 1,
+  "counters": { "researchRounds": 0, "rewrites": 0, "humanRevisions": 0 },
+  "limits": { "maxResearchRounds": 2, "maxRewrites": 2, "maxHumanRevisions": 3 },
+  "dryRun": false,
+  "lastApprovedChapter": 0,
+  "lastApprovedCommit": null,
+  "flagged": [],
+  "updatedAt": "2026-09-18T19:56:10Z"
+}

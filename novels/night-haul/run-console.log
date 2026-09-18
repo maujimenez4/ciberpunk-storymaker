@@ -1,0 +1,34 @@
+Paro aquí. **No soy el orquestador legítimo de esta novela: ya hay otro corriendo.**
+
+El árbol de procesos lo deja sin ambigüedad:
+
+```
+4796  node tools/dashboard.mjs                    ← el panel
+ └ 12100  cmd /c "claude -p --allowedTools ..."   ← childPid del run.lock
+    └ 10404  claude.exe                           ← el orquestador del panel, VIVO
+```
+
+Y yo soy el pid 2652, `claude.exe` lanzado por la extensión de VS Code. Otro árbol, otra sesión.
+
+El `run.lock` de `novels/night-haul/` se escribió a las 19:39:33 —hace medio minuto— con `novel: night-haul`, `profile: mini-arc` y sin `sessionId`: es un lock del panel esperando a que su hijo lo adopte en la primera escritura. Ese hijo es el 10404, no yo.
+
+## Por qué no sigo
+
+Si continúo, mi primera escritura bajo `novels/night-haul/` cae en la rama de `guard-run-lock.mjs:157` — `if (!lock.sessionId) take(lock, 'lock del panel adoptado')` — y **adopto el lock del panel**. La guarda no me pararía; me dejaría pasar. El que se encontraría la puerta cerrada sería el orquestador legítimo, que fallaría en voz alta en cuanto intentase escribir.
+
+Es literalmente la ventana de un par de segundos que el propio hook documenta en su comentario, y el resultado sería el de `within-tolerance`: dos `setup: bible seed`, biblia compartida, capítulos de dos genealogías y un `run-state.json` que cada uno lee justo después de que el otro lo escriba. La corrida del panel está arrancando ahora mismo (`run-console.log` vacío, sin `.run-lock.log`, sin `run-state.json`), así que iríamos los dos por el setup a la vez.
+
+No he escrito nada bajo `novels/night-haul/`. El único trabajo hecho ha sido leer configuración, git y procesos.
+
+## Lo que hay que decidir
+
+Hay dos corridas de `mini-arc` sobre `night-haul` y sobre una de las dos hay que decidir, no sobre las dos:
+
+- **Dejar que siga la del panel** (lo normal): no hagas nada aquí. El panel ya la lleva, y cuando llegue a la compuerta escribirá `gate-request.json` y te la enseñará. Esta sesión mía sobra.
+- **Quedarte con esta sesión**: mata antes el proceso 10404 (y el 12100 que lo envuelve), borra `novels/night-haul/run.lock`, y relánzame `/novela mini-arc`. Entonces el lock será mío sin disputa.
+
+No uso `STORYMAKER_IGNORE_RUN_LOCK=1`: esa válvula es para cuando sabes con certeza que la otra corrida ya no existe, y aquí consta lo contrario —el proceso está vivo y lo acabo de ver en la tabla.
+
+Dime cuál y sigo.
+
+[panel] proceso terminado · código 0
