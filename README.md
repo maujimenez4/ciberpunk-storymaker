@@ -146,7 +146,12 @@ novels/
   <slug>/                         estado de una novela concreta
     brief.md                      escrito a mano por el usuario
     bible/  chapters/  notes/  research/  out/  attic/
-tools/                            dos utilidades: validar permisos y fundir configuración
+tools/
+  check-invariants.mjs            valida el reparto de permisos sin correr nada
+  config.js                       funde `run.base.json` con el overlay del perfil
+  assemble-context.mjs            arma el contexto de cada nodo en un solo fichero
+  dashboard.mjs                   servidor local del panel: estado, historial y arranque
+  dashboard/                      el panel en sí (React + Vite); `dist/` no se versiona
 ```
 
 Solo existen los directorios con contenido. `novels/<slug>/` se llena al correr.
@@ -227,6 +232,29 @@ editar un `.md`.
 ```bash
 npm run invariantes          # valida el reparto de permisos sin correr nada
 npm run config smoke-3ch     # imprime la configuración fundida
+```
+
+### El panel
+
+Hay un panel local para lanzar corridas, seguir el bucle, responder compuertas y leer lo
+que ya se ha escrito. Escucha solo en `127.0.0.1` a propósito: este proceso puede arrancar
+corridas, así que no se expone.
+
+```bash
+npm install                  # la primera vez
+npm run panel                # construye el panel y lo sirve en http://127.0.0.1:4173
+```
+
+Tres pestañas: **Corrida** (arranque, compuerta y monitor del bucle), **Historial** (todas
+las novelas de `novels/`, terminadas o no) y el detalle de una novela, con sus capítulos,
+el resumen que `continuity-keeper` dejó en la biblia y el texto.
+
+El panel se compila con Vite y el build no se versiona, así que `npm run panel` lo
+construye antes de servir. Para trabajar en la interfaz con recarga en caliente:
+
+```bash
+npm run panel:serve          # el servidor, en una terminal
+npm run panel:dev            # Vite en :5173, con /api hacia el servidor, en otra
 ```
 
 ### Permisos

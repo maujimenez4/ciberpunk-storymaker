@@ -1,0 +1,204 @@
+/* Lo propio de cada vista. Lo que se repite en las tres está en base.css. */
+
+/* ---- Matriz capítulo × nodo (Corrida) ---- */
+
+.matrix { overflow-x: auto; }
+.matrix table { border-collapse: separate; border-spacing: 6px; min-width: 760px; }
+.matrix th {
+  font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--fg-faint); text-align: center; padding-bottom: 2px; font-family: var(--sans);
+}
+.matrix th.row { text-align: left; min-width: 96px; }
+.matrix td.row { font-size: 13px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; padding-right: var(--sp-2); }
+
+.cell {
+  display: block; min-width: 62px; padding: 9px 8px; border-radius: var(--r-chip);
+  font-size: 12px; font-weight: 500; text-align: center; letter-spacing: .02em;
+  background: var(--surface-2); color: var(--fg-faint); border: 1px solid var(--line);
+  transition: background-color .28s var(--ease), color .28s var(--ease),
+              border-color .28s var(--ease), transform .28s var(--ease);
+}
+.cell.done { background: var(--surface); color: var(--fg); border-color: var(--line-strong); }
+.cell.active {
+  background: var(--q-orange-400); color: #fff; border-color: var(--q-orange-400);
+  transform: scale(1.04); box-shadow: var(--shadow-1);
+  animation: breathe 2.2s var(--ease) infinite;
+}
+.cell.skip { opacity: .42; }
+.cell.flagged { border-color: var(--blocker); color: var(--blocker); }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .72; } }
+
+/* ---- Recorrido (Corrida) ---- */
+
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.timeline li {
+  display: flex; gap: var(--sp-3); align-items: baseline;
+  padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.timeline .t { color: var(--fg-faint); font-variant-numeric: tabular-nums; min-width: 66px; }
+.timeline .n { font-weight: 500; min-width: 74px; }
+.timeline .d { color: var(--fg-muted); }
+
+/* ---- Compuerta (Corrida) ----
+   Va sobre slate, el fondo inverso de la marca: es lo único de la página que exige una
+   decisión, y tiene que verse sin buscarlo. */
+
+.gate-card { background: var(--q-slate); border-color: var(--q-slate); color: #EEF3F6; box-shadow: var(--shadow-2); }
+.gate-top { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.gate-card .pill { color: #FF9A62; border-color: currentColor; }
+.gate-card table.data th { color: #8FA5B4; border-color: #3A5062; }
+.gate-card table.data td { border-color: #3A5062; }
+.gate-card label { color: #8FA5B4; }
+.gate-card textarea, .gate-card input { background: #2E4454; border-color: #4A6273; color: #EEF3F6; }
+.gate-card textarea:hover, .gate-card input:hover { border-color: #7D93A1; }
+
+.gate-prose { margin: var(--sp-6) 0; border-top: 1px solid #3A5062; padding-top: var(--sp-6); }
+.gate-prose .prose { color: #E4EBEF; }
+.gate-chapter-head {
+  margin: var(--sp-6) 0 var(--sp-2); font-size: 13px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .12em; color: #8FA5B4;
+}
+.gate-prose > div:first-child .gate-chapter-head { margin-top: 0; }
+.gate-actions {
+  display: flex; gap: var(--sp-6); flex-wrap: wrap; align-items: flex-start;
+  border-top: 1px solid #3A5062; padding-top: var(--sp-6);
+}
+
+/* ---- Rejilla del historial ---- */
+
+.history-bar {
+  display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;
+  margin-bottom: var(--sp-6);
+}
+.history-search { flex: 1 1 220px; width: auto; }
+
+.chips { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.chip {
+  font: inherit; font-size: 13px; font-weight: 500; padding: 7px 14px;
+  border-radius: 999px; border: 1px solid var(--line-strong);
+  background: transparent; color: var(--fg-muted); cursor: pointer;
+}
+.chip:hover { color: var(--fg); border-color: var(--q-slate-400); }
+.chip.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+.novel-grid {
+  display: grid; gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.novel-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-card); padding: var(--sp-6);
+  box-shadow: var(--shadow-1); cursor: pointer;
+  /* `height: 100%` más `margin-top: auto` en el pie: las tarjetas de una fila miden lo
+     mismo, pero sin esto su contenido flotaba a alturas distintas y la rejilla parecía
+     descuadrada aunque las cajas estuvieran alineadas. */
+  height: 100%;
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  transition: box-shadow .26s var(--ease), border-color .26s var(--ease);
+}
+.novel-card:hover, .novel-card:focus-visible {
+  box-shadow: var(--shadow-2); border-color: var(--line-strong);
+}
+
+.novel-card-top { display: flex; align-items: flex-start; gap: var(--sp-3); justify-content: space-between; }
+.novel-card-top > div { min-width: 0; }
+.novel-title { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+.novel-slug { font-size: 13px; color: var(--fg-faint); margin-top: 2px; }
+/* El slug y el perfil llevan guiones y el navegador partía por ellos a media palabra.
+   Que el token entero salte de línea se lee mucho mejor que `smoke-within-` / `tolerance`. */
+.novel-slug code { white-space: nowrap; }
+
+.novel-card-foot {
+  display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+  font-size: 13px; color: var(--fg-muted);
+  border-top: 1px solid var(--line); padding-top: var(--sp-3);
+  margin-top: auto;
+}
+.novel-when { margin-left: auto; color: var(--fg-faint); }
+.novel-card-meta {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  font-size: 12px; color: var(--fg-faint);
+}
+.novel-badge {
+  font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--fg-muted);
+}
+.novel-badge.flag { color: var(--blocker); border-color: currentColor; }
+
+.issue-row { display: inline-flex; gap: var(--sp-3); flex-wrap: wrap; }
+.issue-chip { font-size: 13px; }
+
+/* Tokens por capítulo. Sin ejes: solo importa si el gasto fue parejo o se disparó.
+   Las barras llevan ancho máximo porque con tres capítulos un `flex: 1` las convertía en
+   tres bloques anchos que no se leían como un gráfico. */
+.spark-wrap { display: flex; flex-direction: column; gap: 5px; }
+.spark {
+  display: flex; align-items: flex-end; gap: 4px; height: 30px;
+  border-bottom: 1px solid var(--line);
+}
+.spark-bar {
+  flex: 1 1 auto; max-width: 26px; min-height: 2px;
+  background: var(--q-orange-400); opacity: var(--spark-alpha);
+  border-radius: 3px 3px 0 0;
+  transition: opacity .26s var(--ease);
+}
+.novel-card:hover .spark-bar { opacity: 1; }
+.spark-caption {
+  font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--fg-faint);
+}
+
+/* ---- Detalle de una novela ---- */
+
+.novel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--sp-4); flex-wrap: wrap;
+  margin: var(--sp-6) 0 var(--sp-6);
+}
+
+.chapter { border-bottom: 1px solid var(--line); }
+.chapter:last-child { border-bottom: none; }
+.chapter.open { background: var(--surface-2); }
+
+.chapter-head {
+  width: 100%; display: flex; align-items: center; gap: var(--sp-4);
+  background: none; border: none; border-radius: 0; cursor: pointer;
+  padding: var(--sp-4) var(--sp-6); text-align: left; font-size: 15px;
+  transition: background-color .2s var(--ease);
+}
+.chapter-head:hover { background: var(--surface-2); }
+.chapter-n { color: var(--fg-faint); font-size: 13px; font-weight: 500; flex: none; }
+.chapter-title { font-weight: 500; flex: 1 1 auto; }
+.chapter-meta {
+  display: flex; align-items: center; gap: var(--sp-3);
+  font-size: 13px; color: var(--fg-muted); flex: none;
+}
+.chapter-caret { color: var(--fg-faint); font-size: 20px; line-height: 1; flex: none; }
+
+.chapter-body { padding: 0 var(--sp-6) var(--sp-6); }
+.chapter-label {
+  margin: var(--sp-4) 0 var(--sp-2); font-size: 12px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .1em; color: var(--fg-faint);
+}
+.chapter-summary { font-size: 14px; color: var(--fg-muted); max-width: 72ch; white-space: pre-line; }
+.chapter-actions { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-4); }
+
+.reader {
+  margin-top: var(--sp-4); padding: var(--sp-6);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-inner);
+  max-height: 60vh; overflow-y: auto;
+}
+
+/* Hueco del gráfico cuando no hay desglose: una línea base tenue en vez de nada, para
+   que la tarjeta no enseñe un rectángulo vacío que parece un estado de carga. */
+.spark-empty { border-bottom-style: dashed; border-bottom-color: var(--line-strong); }
+
+/* Las citas de canon dentro del resumen y de las incidencias. */
+.chapter-summary code, table.data code {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 5px; font-size: .88em;
+  white-space: nowrap;
+}
+.gate-card table.data code { background: #263B4A; border-color: #3A5062; }

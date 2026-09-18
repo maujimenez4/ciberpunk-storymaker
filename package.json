@@ -6,9 +6,22 @@
   "private": true,
   "scripts": {
     "invariantes": "node tools/check-invariants.mjs",
-    "config": "node tools/config.js"
+    "config": "node tools/config.js",
+    "panel": "vite build --config tools/dashboard/vite.config.js && node tools/dashboard.mjs",
+    "panel:build": "vite build --config tools/dashboard/vite.config.js",
+    "panel:dev": "vite --config tools/dashboard/vite.config.js",
+    "panel:serve": "node tools/dashboard.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "framer-motion": "^13.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.0"
   }
 }
