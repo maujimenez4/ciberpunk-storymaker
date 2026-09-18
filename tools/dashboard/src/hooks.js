@@ -41,6 +41,10 @@ export function useMeta(intervalMs = 1000) {
   const [meta, setMeta] = useState({ novels: [], profiles: [], active: null });
   const [novel, setNovel] = useState(null);
   const pinned = useRef(false);
+  // La novela que se acaba de lanzar desde aquí. Manda sobre `active` hasta que el
+  // servidor la reconozca: si no, el tick siguiente devolvía el seguimiento a la novela
+  // activa anterior y el panel se iba solo de la corrida que acababas de arrancar.
+  const justLaunched = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -50,6 +54,11 @@ export function useMeta(intervalMs = 1000) {
         if (!alive) return;
         setMeta(next);
         setNovel((current) => {
+          // Lanzada desde aquí: se queda hasta que el servidor la dé por activa.
+          if (justLaunched.current) {
+            if (next.active === justLaunched.current) justLaunched.current = null;
+            return current;
+          }
           if (!pinned.current && next.active) return next.active;
           if (current && next.novels.includes(current)) return current;
           return next.novels[0] ?? null;
@@ -65,9 +74,9 @@ export function useMeta(intervalMs = 1000) {
     ...meta,
     novel,
     /** Elegir a mano fija la vista: a partir de ahí se deja de seguir a la activa. */
-    pick: (slug) => { pinned.current = true; setNovel(slug); },
+    pick: (slug) => { pinned.current = true; justLaunched.current = null; setNovel(slug); },
     /** Lanzar desde el panel devuelve el seguimiento automático a la corrida nueva. */
-    follow: (slug) => { pinned.current = false; setNovel(slug); },
+    follow: (slug) => { pinned.current = false; justLaunched.current = slug; setNovel(slug); },
   };
 }
 

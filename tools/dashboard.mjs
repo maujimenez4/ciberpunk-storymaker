@@ -14,6 +14,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, openSy
 import { spawn } from 'node:child_process';
 import { resolve, extname } from 'node:path';
 import { hostname } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { loadConfig } from './config.js';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -464,7 +465,7 @@ function readLock(dir) {
 }
 
 /** Toma el lock o explica quién lo tiene. Lanza: el error sube al 400 del endpoint. */
-function acquireLock(dir, slug, profile) {
+function acquireLock(dir, slug, profile, runToken) {
   const held = readLock(dir);
   if (held?.alive) {
     // El dueño puede ser este panel —hay PID— o una sesión de Claude Code lanzada a mano,
@@ -484,6 +485,9 @@ function acquireLock(dir, slug, profile) {
   writeFileSync(lockPath(dir), JSON.stringify({
     lock: 'storymaker/run-lock@1',
     novel: slug, profile, pid: process.pid,
+    // El testigo que identifica a la corrida que este panel va a lanzar. Solo quien lo
+    // trae en el entorno puede adoptar este lock, así que no hay carrera que ganar.
+    runToken,
     startedAt: stamp, touchedAt: stamp,
     host: hostname(),
   }, null, 2) + '\n');
@@ -514,8 +518,14 @@ function releaseLock(dir) {
  *    se controla la línea de comando entera.
  */
 function spawnRun(profile, slug, dir) {
+  // El testigo que hace inequívoco quién es el dueño del lock: va dentro del fichero y
+  // viaja al hijo en el entorno. Sin él, la corrida que el panel acaba de lanzar tenía
+  // que deducir de la tabla de procesos si era ella misma, y una vez dedujo que no: se
+  // negó a empezar creyéndose un intruso.
+  const runToken = randomUUID();
+
   // Antes de nada: si ya hay una corrida viva sobre esta novela, esto no sale de aquí.
-  const reclaimed = acquireLock(dir, slug, profile);
+  const reclaimed = acquireLock(dir, slug, profile, runToken);
   if (reclaimed) {
     appendFileSync(`${dir}/run-console.log`,
       `\n[panel] lock huérfano del PID ${reclaimed} reclamado: ese proceso ya no existe.\n`);
@@ -525,12 +535,16 @@ function spawnRun(profile, slug, dir) {
   const isWindows = process.platform === 'win32';
   const args = ['-p', '--allowedTools', ...ALLOWED_TOOLS.split(/\s+/)];
 
+  // `guard-run-lock.mjs` lee el testigo del entorno: los hooks los lanza `claude`, así
+  // que heredan esto sin que haya que pasárselo por ningún otro sitio.
+  const env = { ...process.env, STORYMAKER_RUN_TOKEN: runToken };
+
   let child;
   try {
     child = isWindows
       ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', `claude ${args.join(' ')}`], {
-          cwd: ROOT, stdio: ['pipe', out, out], windowsHide: true })
-      : spawn('claude', args, { cwd: ROOT, stdio: ['pipe', out, out] });
+          cwd: ROOT, stdio: ['pipe', out, out], windowsHide: true, env })
+      : spawn('claude', args, { cwd: ROOT, stdio: ['pipe', out, out], env });
   } catch (error) {
     // Un lock retenido por una corrida que nunca llegó a existir bloquea la novela entera.
     releaseLock(dir);
@@ -702,12 +716,20 @@ createServer((req, res) => {
 
   if (url.pathname === '/api/meta') {
     const novels = listNovels();
-    // La novela con el estado escrito más recientemente es la que está corriendo. El
-    // panel la sigue sola: antes la lista se cargaba una vez al abrir la página, así que
-    // una novela creada después no aparecía nunca y el monitor se quedaba mirando otra.
+    // La novela tocada más recientemente es la que está corriendo, y el panel la sigue
+    // sola: antes la lista se cargaba una vez al abrir la página, así que una novela
+    // creada después no aparecía nunca y el monitor se quedaba mirando otra.
+    //
+    // Cuenta también `run-console.log`, no solo `run-state.json`. Una corrida recién
+    // lanzada tarda en escribir estado, y si en ese hueco se mira solo el estado, la
+    // novela que acabas de lanzar no es "la activa" y el panel se va solo a otra. Pasó
+    // con `night-haul`: la corrida no llegó a escribir estado nunca y el monitor se
+    // quedó enseñando una novela distinta, que parecía que no se actualizaba.
+    const touched = (n) => ['run-state.json', 'run-console.log']
+      .map((f) => (existsSync(`${ROOT}/novels/${n}/${f}`) ? statSync(`${ROOT}/novels/${n}/${f}`).mtimeMs : 0))
+      .reduce((a, b) => Math.max(a, b), 0);
     const active = novels
-      .map((n) => ({ n, at: existsSync(`${ROOT}/novels/${n}/run-state.json`)
-        ? statSync(`${ROOT}/novels/${n}/run-state.json`).mtimeMs : 0 }))
+      .map((n) => ({ n, at: touched(n) }))
       .filter((r) => r.at > 0)
       .sort((a, b) => b.at - a.at)[0]?.n ?? null;
     return send(res, 200, { novels, profiles: listProfiles(), active });

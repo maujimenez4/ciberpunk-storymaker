@@ -14,6 +14,13 @@
 // El dueño del lock es una **sesión**, no un proceso, porque el orquestador y sus nueve
 // subagentes son la misma sesión y tienen que poder escribir todos.
 //
+// Si te lanzó el panel, el lock ya es tuyo y esta guarda te deja pasar sin que tengas que
+// hacer nada: el testigo viaja en el entorno. **No inspecciones el árbol de procesos para
+// averiguar si eres el orquestador legítimo.** Un modelo no puede saber cuál de los
+// `claude.exe` de la tabla es él mismo, y equivocarse ahí sale caro: una corrida entera
+// que se niega a empezar por creerse un intruso. Si esta guarda no te ha denegado nada,
+// eres quien tiene que escribir.
+//
 // Comprobación en seco, sin tocar nada:
 //   echo '{"tool_name":"Write","session_id":"s1","cwd":"<repo>",
 //          "tool_input":{"file_path":"<repo>/novels/x/chapters/ch01.md"}}' \
@@ -150,11 +157,18 @@ process.stdin.on('end', () => {
   // Nuestro. El caso normal, una vez por cada escritura de la corrida.
   if (lock.sessionId === me) take(lock, 'latido');
 
-  // El panel escribe el lock antes de lanzar `claude`, así que llega sin sesión: el hijo
-  // lo adopta en su primera escritura. Hay una ventana de un par de segundos en la que
-  // otra sesión podría adoptarlo primero; entonces el hijo legítimo se encuentra la
-  // puerta cerrada y falla en voz alta, que es mejor que dos corridas escribiendo.
-  if (!lock.sessionId) take(lock, 'lock del panel adoptado');
+  // El panel escribe el lock antes de lanzar `claude`, así que llega sin sesión: lo adopta
+  // su propia corrida en la primera escritura.
+  //
+  // Quién es «su propia corrida» no se deduce ni se adivina: el panel genera un testigo,
+  // lo guarda en el lock y se lo pasa al hijo en el entorno. Coinciden o no coinciden. Si
+  // el panel te lanzó, el testigo ya está en tu entorno y la adopción es automática — no
+  // hay nada que comprobar ni ninguna carrera que ganar.
+  if (!lock.sessionId) {
+    const esMio = !lock.runToken // Lock anterior al testigo: se adopta como antes.
+      || process.env.STORYMAKER_RUN_TOKEN === lock.runToken;
+    if (esMio) take(lock, 'lock del panel adoptado');
+  }
 
   // Huérfano: la corrida que lo dejó ya no existe.
   if (!live(lock)) {
