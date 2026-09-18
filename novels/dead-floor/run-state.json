@@ -4,7 +4,7 @@
   "profile": "smoke-dead-floor",
   "phase": "chapter-loop",
   "node": "COMMIT",
-  "chapter": 1,
+  "chapter": 2,
   "act": 1,
   "counters": {
     "researchRounds": 0,
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 0,
-  "lastApprovedCommit": null,
+  "lastApprovedChapter": 1,
+  "lastApprovedCommit": "8325b72",
   "flagged": [],
-  "updatedAt": "2026-09-18T01:02:40Z"
+  "updatedAt": "2026-09-18T01:08:53Z"
 }

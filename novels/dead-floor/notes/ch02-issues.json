@@ -1,0 +1,36 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "dead-floor",
+  "chapter": 2,
+  "attempt": 1,
+  "issues": [
+    {
+      "id": "ck-01",
+      "severity": "warning",
+      "kind": "character-drift",
+      "where": "ch02 ¶4",
+      "claim": "\"Podía haberle contado cómo se hereda una numeración, cómo un expediente en papel se copia mal una vez y ya está.\"",
+      "canon": "bible/characters.md#el-tecnico",
+      "fix": "Partir la frase en oraciones cortas de sujeto y verbo, sin subordinadas encadenadas, para sostener la voz fijada en la ficha."
+    },
+    {
+      "id": "tv-01",
+      "severity": "warning",
+      "kind": "unsupported-claim",
+      "where": "ch02 ¶7",
+      "claim": "\"Once años firmando este edificio\" — cifra concreta sobre la antigüedad de la conserje firmando/registrando el edificio.",
+      "canon": null,
+      "fix": "Es un dato de relleno (antigüedad del personaje) sin respaldo en las notas, que solo declaran huecos sobre registro de tránsito vertical. No contradice nada, pero es una cifra concreta sin fuente; si no es imprescindible, sustituir por una expresión no cuantificada (\"lleva años firmando este edificio\")."
+    },
+    {
+      "id": "tv-02",
+      "severity": "note",
+      "kind": "unsupported-detail",
+      "where": "ch02 ¶2",
+      "claim": "\"Extintor en su sitio, con etiqueta, revisado por alguien...\" — alude a una revisión periódica sin especificar norma, fecha ni autoridad.",
+      "canon": null,
+      "fix": "El detalle es lo bastante genérico (sin cifra, sin norma citada) para no requerir respaldo; se señala solo porque toca de cerca el hueco declarado sobre certificados periódicos de mantenimiento. No requiere cambio."
+    }
+  ],
+  "counts": { "blocker": 0, "warning": 2, "note": 1 }
+}

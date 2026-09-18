@@ -1,4 +1,6 @@
-# Ruido de fondo — Cronología
+# Ruido de fondo — Timeline
+
+## Cronología
 
 Tres capítulos, tres jornadas consecutivas dentro del mismo ciclo de cierre del
 certificado anual. Sin fechas ni plazos concretos: el orden es lo que importa, no la
