@@ -1,0 +1,12 @@
+{
+  "issues": [
+    {
+      "severity": "warning",
+      "kind": "character-drift",
+      "where": "ch02 línea 49",
+      "claim": "Bruna responde con la frase completa «Te estoy preguntando si esto me va a caer encima» justo después de haber tocado el monosílabo («No.», «Ferrán.») en el pico de presión de Ferrán.",
+      "canon": "bible/characters.md#bruna-sasal",
+      "fix": "Recortar la réplica a algo más seco (p. ej. «Si esto me cae encima.») para sostener la progresión hacia el monosílabo en el punto de mayor tensión con Ferrán."
+    }
+  ]
+}

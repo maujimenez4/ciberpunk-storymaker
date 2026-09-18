@@ -13,7 +13,10 @@ sino porque el papel ya lleva su nombre de todos modos y prefiere que diga la ve
 
 **Voz.** Frase corta, verbo antes que adjetivo. Pregunta lo que no debería y lo pregunta
 mal, sin cortesía. Nombra lo que hace, no lo que siente. Con Ferrán, cuanta más presión,
-más corta la frase, hasta el monosílabo. Línea de referencia: «Dime el peso y ya está.»
+más corta la frase, hasta el monosílabo — salvo la pregunta directa que fuerza el punto
+más alto de tensión (cap. 2: «Te estoy preguntando si esto me va a caer encima»), que
+rompe el acortamiento una sola vez y vuelve a él de inmediato. Línea de referencia: «Dime
+el peso y ya está.»
 
 **Qué sabe.** Sabe desde el capítulo 1 qué es la hoja sin control intermedio y qué compra
 el sobre. No sabe qué mueve a Ferrán hasta que él se lo deja ver a medias en el capítulo

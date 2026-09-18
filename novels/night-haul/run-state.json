@@ -4,13 +4,13 @@
   "profile": "mini-arc",
   "phase": "chapter-loop",
   "node": "WRITE",
-  "chapter": 1,
+  "chapter": 2,
   "act": 1,
   "counters": { "researchRounds": 0, "rewrites": 0, "humanRevisions": 0 },
   "limits": { "maxResearchRounds": 2, "maxRewrites": 2, "maxHumanRevisions": 3 },
   "dryRun": false,
-  "lastApprovedChapter": 0,
-  "lastApprovedCommit": "22fa3ae",
+  "lastApprovedChapter": 1,
+  "lastApprovedCommit": "9c23f66",
   "flagged": [],
-  "updatedAt": "2026-09-18T20:01:00Z"
+  "updatedAt": "2026-09-18T20:10:00Z"
 }
