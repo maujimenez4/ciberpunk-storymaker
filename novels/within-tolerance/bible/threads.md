@@ -1,19 +1,18 @@
-# Dentro de tolerancia — Hilos
+# Hilos — Dentro de tolerancia
 
-### Criterio mal aplicado en las resoluciones automáticas
-- Abre: capítulo 1. El muestreo mensual revela un requisito de denegación que la
-  norma no exige, aplicado de forma repetida y no reciente.
-- Cierra: capítulo 3. No se corrige: queda aceptado por estar dentro del umbral de
-  tolerancia. El hilo cierra en tolerado, no en resuelto.
+### criterio-mal-aplicado
+Abierto en capítulo 1: Adela encuentra un requisito de denegación que la norma no
+exige, repetido en varias tandas. Cerrado en capítulo 3 como hecho consentido y no
+reparado: sigue vigente y validado por la tolerancia aceptada.
 
-### Autoría de la narradora sobre la tasa de desvío
-- Abre: capítulo 2. La cifra de tolerancia con la que le responden está construida
-  con los propios muestreos de la narradora.
-- Cierra: capítulo 3. Firma la tanda sabiendo que su firma, y el número que ella
-  produce, son lo que mantiene el criterio en pie.
+### naturalidad-de-marcial
+Abierto en capítulo 1: Marcial reconoce el hallazgo sin sorpresa. Cerrado en capítulo 2:
+se explica como aritmética de quien ha visto repetirse el patrón muchas veces, no como
+cinismo.
 
-### Vía formal de corrección
-- Abre: capítulo 2 (implícito en la meta del capítulo 1, formalizado al elevar el
-  hallazgo). La narradora eleva el hallazgo por el cauce que corresponde.
-- Cierra: capítulo 2. Se agota en dos días con una respuesta que confirma el
-  hallazgo y no cambia nada.
+### autoria-de-la-cifra
+Abierto en capítulo 2: Adela reconoce que la cifra de tolerancia que la contradice es la
+que ella misma produce en su trabajo de muestreo. Cerrado en capítulo 3, en decisión
+privada de Adela: asume que la cifra es también suya y que lo que haga con esa autoría
+depende de ella. La novela deja deliberadamente sin respuesta qué hará Adela a partir de
+ahí; no es un hilo pendiente de trama, es el final buscado.

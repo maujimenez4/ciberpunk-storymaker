@@ -1,24 +1,22 @@
-# Dentro de tolerancia — Cronología
+# Cronología — Dentro de tolerancia
 
-Plazos internos de la trama (catorce meses, dos días): hechos de ficción declarados
-por el encargo, no afirmaciones técnicas; no requieren nota de `researcher`
-(ver `canon.md#regla-datos-tecnicos-con-nota-de-fuente`).
+### catorce-meses-antes
+Se deniega la ayuda del expediente a nombre de Teodora Nin, aplicando el criterio
+sobrante que Adela encontrará en el capítulo 1. Hecho pasado, fuera de escena.
 
-### Catorce meses antes del arranque — denegación del expediente
-Se deniega, por el criterio no exigido por la norma, la ayuda que corresponde al
-expediente que la narradora reconstruye en el capítulo 3. El plazo de impugnación pasa
-sin que nadie actúe: la resolución queda firme.
+### dia-1-capitulo-1
+Febrero. Adela saca el muestreo mensual y encuentra el criterio mal aplicado repetido en
+varias tandas. Lo comprueba tres veces el mismo día. Marcial está presente y lo reconoce
+sin sorpresa.
 
-### Día 1 (capítulo 1) — hallazgo en el muestreo mensual
-La narradora abre el muestreo del mes y encuentra el patrón repetido de denegaciones
-por el criterio no exigido. El compañero de muestreo confirma que ya estaba medido.
+### dia-1-a-dia-3
+Adela eleva el hallazgo por el cauce correspondiente.
 
-### Día 1 a día 3 (capítulo 2) — elevación y respuesta
-La narradora eleva el hallazgo por el cauce correspondiente. En un plazo de dos días
-recibe respuesta: el desvío consta en informe trimestral y está por debajo del umbral
-aceptado.
+### dia-3-capitulo-2
+Llega la respuesta: el desvío está medido, consta en el informe trimestral y cae dentro
+de la tolerancia aceptada. Nuria confirma la validez de la tanda en el pasillo, el mismo
+día. Adela identifica la cifra del informe como propia.
 
-### Cierre del mes (capítulo 3) — reconstrucción y firma
-La narradora identifica, entre los expedientes de la tanda, el caso denegado catorce
-meses antes. Reconstruye lo que el registro permite, cierra el muestreo del mes y
-firma la tanda como válida. Empieza el muestreo del mes siguiente.
+### capitulo-3-mismo-dia-o-siguiente
+Adela pide y recibe el detalle del desvío, localiza el expediente de Teodora Nin y
+cierra la tanda de febrero anotando su propia tasa de desvío.

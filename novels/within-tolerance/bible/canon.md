@@ -1,42 +1,38 @@
-# Dentro de tolerancia — Canon
+# Canon — Dentro de tolerancia
 
-Thriller de despacho en clave cyberpunk-noir. Sin persecución, sin villano, sin secreto
-que descubrir: el antagonismo es una tolerancia estadística que funciona como permiso.
-Alcance: 1 acto, 3 capítulos, ~350 palabras cada uno. Español, primera persona.
+Cyberpunk-thriller de cámara corta: un acto, tres capítulos de 350 palabras. Neo-noir en
+primera persona, narrado por Adela Roig, revisora de muestreo, cuando descubre que la
+cifra de tolerancia que ampara un criterio de denegación indebido es la que ella misma
+calcula.
 
-### Premisa
-Una revisora de resoluciones automáticas de ayudas municipales encuentra, en el muestreo
-mensual, un criterio de denegación que la norma no exige y que lleva años aplicándose.
-Lo eleva por el cauce correcto. La respuesta, en dos días, confirma el hallazgo y no
-cambia nada: el desvío está medido y cae dentro de la tolerancia aceptada.
+## Reglas inviolables
 
-### Regla — nadie oculta nada
-Todo lo que la narradora pide se le entrega, con detalle. El conflicto es de criterio y
-de muestreo, nunca de ocultamiento ni de secreto.
+### sin-antagonista-personal
+No hay villano ni encubrimiento. El antagonismo es la tolerancia aceptada: una cifra de
+desvío admitido que funciona como permiso. Nadie oculta nada; todo lo que Adela pide se
+le concede.
 
-### Regla — sin amenaza
-No hay persecuciones, amenazas ni despidos en esta novela.
+### sin-cifras-en-prosa
+Ninguna cifra, umbral, plazo o norma concreta aparece en la prosa. Los umbrales se
+nombran de forma descriptiva ("dentro de tolerancia", "por debajo del umbral"), nunca con
+número, y solo si hay nota de investigación con fuente y fecha que respalde la afirmación
+técnica; sin nota, la frase se escribe sin el dato.
 
-### Regla — sin aliado ni superior que frene
-La narradora no tiene un aliado que le resuelva el problema ni un superior que la
-detenga. Quien podría frenarla (`characters.md#la-responsable-de-seccion`) coincide con
-ella y no mueve nada; eso no es freno, es confirmación sin efecto.
+### sin-persecucion-ni-despido
+Sin persecuciones, amenazas ni despidos. El conflicto es de criterio y de muestreo, nunca
+de acción física ni de represalia laboral explícita.
 
-### Regla — datos técnicos con nota de fuente
-Ninguna cifra, norma, umbral o plazo técnico concreto se afirma en la prosa sin nota de
-`researcher` con fuente y fecha. Sin nota, la frase se escribe sin el dato. Excepción:
-los plazos internos de la trama —catorce meses, dos días— son hechos de ficción, no
-afirmaciones técnicas, y no requieren nota (ver `timeline.md`).
+### worldbuilding-original
+Nada de nombres propios ni elementos de obras existentes. La acreditación por
+continuidad de registro sustituye al documento identificativo; se trata como gesto
+cotidiano, nunca se explica en diálogo entre quienes ya lo saben.
 
-### Regla — worldbuilding original
-Ni nombres propios ni elementos de obras existentes. Los términos de este mundo
-(«tanda», «desvío», «tolerancia aceptada», «continuidad de registro») son propios de
-esta novela.
+## Índice
 
-### Índice
-- `world.md` — cómo funciona el mundo
-- `characters.md` — fichas de personajes
-- `outline.md` — acto y escaleta capítulo a capítulo
-- `timeline.md` — cronología
-- `threads.md` — hilos abiertos y cerrados
-- `summaries/ch<NN>.md` — resumen de cada capítulo aprobado
+- `world.md` — cómo funcionan resoluciones, muestreo, tolerancia y acreditación.
+- `characters.md` — fichas de Adela Roig, Nuria Vega, Marcial Duque y el expediente de
+  Teodora Nin.
+- `outline.md` — acto único y los tres capítulos con su promesa narrativa.
+- `timeline.md` — orden y duración de los hechos.
+- `threads.md` — hilos abiertos y cerrados por capítulo.
+- `summaries/` — resumen de cada capítulo aprobado.

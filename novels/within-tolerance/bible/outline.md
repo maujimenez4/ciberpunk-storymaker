@@ -1,52 +1,49 @@
-# Dentro de tolerancia — Escaleta
+# Escaleta — Dentro de tolerancia
 
-1 acto, 3 capítulos, ~350 palabras cada uno. Curva: una sola subida sin descarga.
+Un acto, tres capítulos, 350 palabras cada uno. Primera persona, narradora Adela Roig.
 
-### Acto único — De la medida al permiso
-Empieza con un hallazgo que parece un error corregible, pasa por una respuesta que lo
-confirma todo y no cambia nada, y termina con la narradora convertida en la parte del
-mecanismo que buscaba mover. La tensión viene de la reducción progresiva del margen:
-cap. 1 hay un error, cap. 2 hay una cifra, cap. 3 hay una persona y ninguna vía. El
-clímax es una firma rutinaria.
+## Acto único — La cifra vuelve
 
-### Capítulo 1 — El desvío que sale a mano
-- Qué pasa: en el muestreo mensual, la narradora encuentra denegaciones que aplican un
-  requisito que la norma no exige, repetido en varios expedientes de la tanda.
-- Meta de la narradora: cerrar el muestreo del mes como cualquier otro.
-- Conflicto: el hallazgo es demasiado limpio y demasiado repetido para ser reciente;
-  comprobarlo la obliga a mirar fuera del alcance de su encargo.
-- Giro: el compañero de muestreo lo reconoce al instante; ya está medido y tiene
-  nombre en los informes.
-- Gancho: si está medido desde hace tiempo, ¿por qué se sigue emitiendo igual?
-- Hilo que abre: `threads.md#criterio-mal-aplicado-en-las-resoluciones-automaticas`.
-- Hilo que cierra: ninguno.
+Ascenso continuo sin descarga: la tensión crece porque el sistema le concede a Adela
+todo lo que pide, no porque se lo niegue. Tres tiempos: hallazgo, respuesta, nombre.
+Cierre en decisión privada de Adela, no en resolución del conflicto.
 
-### Capítulo 2 — Dentro de tolerancia
-- Qué pasa: la narradora eleva el hallazgo por el cauce correspondiente. Responden en
-  dos días: el desvío consta en el informe trimestral y queda por debajo del umbral
-  aceptado, así que las tandas son válidas.
-- Meta: que alguien con capacidad de decidir pare la emisión y revise lo emitido.
-- Conflicto: no hay nada que desmontar. Le enseñan todo lo que pide y todo le da la
-  razón sin moverse; la responsable de sección coincide y explica por qué no se toca.
-- Giro: la cifra de tolerancia con la que le responden está construida con sus propios
-  muestreos.
-- Gancho: si el número es suyo, ¿qué queda por hacer que no sea dejar de producirlo?
-- Hilo que abre: `threads.md#autoria-de-la-narradora-sobre-la-tasa-de-desvio`.
-- Hilo que cierra: `threads.md#via-formal-de-correccion`.
+### capitulo-1
+**Un criterio de más.** Adela saca el muestreo de febrero y encuentra, tanda tras
+tanda, denegaciones que se apoyan en un requisito que la norma no pide. Lo comprueba
+tres veces porque el error es demasiado limpio para ser un error. Marcial lo reconoce
+sin sorpresa y sigue con su tanda.
 
-### Capítulo 3 — La firma de la tanda
-- Qué pasa: entre los expedientes afectados hay uno denegado catorce meses antes por
-  ese criterio. La narradora lo reconstruye hasta donde el registro lo permite: el
-  plazo pasó, la resolución es firme, la persona no sabe que existe este debate. Cierra
-  el muestreo del mes y lo firma.
-- Meta: sacar un caso del agregado y devolverle su nombre.
-- Conflicto: el sistema acredita identidad por continuidad de registro, y el registro
-  solo guarda lo que ya decidió; cuanto más mira, menos persona y más unidad de desvío.
-- Giro: el desvío de este mes vuelve a quedar por debajo del umbral. Firmar la tanda
-  como válida es exacto, es su trabajo, y es lo que mantiene el criterio en pie un mes
-  más.
-- Gancho final: anota el número de expediente aparte, sin decir para qué, y empieza el
-  muestreo siguiente.
-- Hilo que abre: ninguno.
-- Hilo que cierra: `threads.md#criterio-mal-aplicado-en-las-resoluciones-automaticas`
-  (aceptado, no corregido) y `threads.md#autoria-de-la-narradora-sobre-la-tasa-de-desvio`.
+Promesa narrativa: si esto lleva años pasando y se ve a simple vista, ¿por qué nadie lo
+ha parado?
+
+Abre: el criterio mal aplicado; la naturalidad de Marcial ante el hallazgo. Cierra:
+ninguno.
+
+### capitulo-2
+**Dentro de tolerancia.** Adela lo eleva por el cauce que corresponde. Le contestan en
+dos días: el desvío está medido, consta en el informe trimestral y cae dentro de la
+tolerancia aceptada. Nuria le da la razón en el pasillo sin defenderse: la tanda es
+válida porque la tasa está dentro del umbral. Adela reconoce la cifra del informe: es
+suya, la firmó ella.
+
+Promesa narrativa: cierra la del capítulo 1 con la peor respuesta posible —nadie lo ha
+parado porque está contado y permitido— y abre: ¿qué hace quien produce el número cuando
+el número es lo que autoriza el daño?
+
+Abre: la autoría de Adela sobre la cifra de tolerancia. Cierra: la naturalidad de
+Marcial, explicada como aritmética, no cinismo.
+
+### capitulo-3
+**El expediente con nombre.** Adela pide el detalle del desvío y se lo dan entero. Baja
+del porcentaje al caso y se detiene en una denegación de catorce meses atrás a nombre de
+Teodora Nin: el criterio sobrante, aplicado, firmado, válido. Nadie le impide mirarlo y
+nadie va a revisarlo. Adela cierra la tanda de febrero y anota su propia tasa de desvío,
+sabiendo ya para qué va a servir.
+
+Promesa narrativa: el número sí significa algo, y significa exactamente esto. Queda
+deliberadamente abierta la pregunta de qué hará Adela con la firma que sigue siendo
+suya.
+
+Abre: ninguno nuevo. Cierra: el criterio mal aplicado, como hecho consentido y no
+reparado; la autoría de la cifra, en decisión privada de Adela.

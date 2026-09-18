@@ -1,53 +1,56 @@
-# Dentro de tolerancia — Personajes
+# Personajes — Dentro de tolerancia
 
-### La narradora (revisora)
-Revisora de plantilla, treinta y tantos, ocho años en el mismo puesto de muestreo.
-- **Deseo:** que el número que produce sirva para corregir algo, no solo para medirlo.
-- **Herida:** ocho años convirtiendo casos en cifra le enseñaron a no mirar el caso
-  detrás del dato; el hallazgo del capítulo 1 rompe ese hábito.
-- **Voz:** primera persona, frase corta, verbos de medir y comprobar («consta»,
-  «cuadra», «sale»). Describe expedientes con precisión de oficio y personas con una
-  frase seca que corta antes del sentimiento. Dice «yo cuento», no «yo siento».
-- **Límite moral:** no falsearía una cifra ni escondería un desvío medido. Solo
-  dudaría si creyera que ocultarlo protege a una persona concreta, no al sistema.
-- **Arco:** de creer que elevar el hallazgo por el cauce correcto puede corregirlo, a
-  firmar la tanda sabiendo que su firma es lo que lo mantiene en pie.
+### adela-roig
+Revisora de muestreo, protagonista y narradora en primera persona, treinta y tantos,
+ocho años en el puesto. Muestrea y mide, no decide: ella calcula la cifra de tolerancia
+que en el capítulo 2 le devuelven como respuesta. Quiere que el número sirva para
+corregir algo, no solo para justificarlo. Ocho años midiendo desvíos la entrenaron a
+confiar en el número antes que en el caso; descubrir que el número que le oponen lo
+firmó ella la deja sin coartada.
 
-### La responsable de sección
-- **Deseo:** que la respuesta formal cierre la pregunta sin necesidad de negar nada.
-- **Herida:** ya estuvo donde está ahora la narradora; aprendió que dar la razón no
-  cuesta nada si no se mueve nada más.
-- **Voz:** frase más larga que la de la narradora, tono explicativo, no defensivo.
-  Nombra procedimientos, nunca personas. No dice «no puedo», dice «no procede».
-- **Límite moral:** no mentiría sobre el estado de un expediente ni fingiría
-  desconocer el patrón. Solo actuaría distinto por una orden desde arriba, nunca por
-  una petición desde abajo.
-- **Arco:** ninguno. Es el techo fijo contra el que se mide el descenso de la
-  narradora.
+Voz: frase corta, verbos de comprobación (comprueba, mide, coincide, cuadra), sin juicio
+moral explícito. Línea de referencia: «Lo comprobé tres veces. No hacía falta la
+tercera.»
 
-### El compañero de muestreo
-- **Deseo:** terminar la tanda del mes sin que el hallazgo se convierta también en su
-  problema.
-- **Herida:** ya elevó algo parecido antes del inicio de la novela y recibió la misma
-  respuesta que va a recibir la narradora; eso lo volvió calculador de energía, no
-  indiferente.
-- **Voz:** frases cortas con coletillas de veteranía («esto ya lo vimos», «va a salir
-  igual»). No debate el fondo, solo el coste de discutirlo.
-- **Límite moral:** no le ocultaría a la narradora lo que sabe del patrón, aunque
-  prefiera no ser quien lo eleva. Solo se negaría del todo si le pidieran mentir de
-  forma directa.
-- **Arco:** ninguno. Su función es dar, ya en el capítulo 1, la medida exacta de lo
-  que le va a costar a la narradora seguir insistiendo.
+Límite moral: no falsearía una cifra ni miraría hacia otro lado en un muestreo. Solo
+dejaría de importarle si dejara de creer que el número puede servir para algo.
 
-### La solicitante del expediente denegado
-No aparece en escena; existe solo como expediente y registro, citado por número, fecha
-y estado.
-- **Deseo (reconstruido, no dicho):** que la ayuda denegada catorce meses antes se
-  revise, sin saber que la revisión está ocurriendo.
-- **Herida:** la decisión que la afectó es firme; el registro que la representa ya no
-  admite matiz (ver `world.md#acreditacion-por-continuidad-de-registro`).
-- **Voz:** ninguna línea de diálogo. Su presencia es el expediente, nunca humanizada
-  por la prosa más allá de lo que el registro permite.
-- **Límite moral:** no aplica; es objeto de la trama, no agente.
-- **Arco:** ninguno. Su función es convertir la cifra de tolerancia en una persona
-  concreta para la narradora, sin que eso cambie su situación.
+Arco: de creer que el número mide la verdad, a asumir que el número es también suyo, y
+que lo que haga con esa autoría es decisión de ella, no del sistema. El cierre de la
+novela es esa decisión privada, no una resolución del conflicto.
+
+### nuria-vega
+Responsable de sección. Quiere resolver sin conflicto: sostener el criterio validado por
+el sistema sin defenderlo como propio. Aprendió que dar la razón sin mover nada es la
+única postura sostenible en su puesto.
+
+Voz: cordial, frase completa y correcta, apela al dato y al procedimiento ("está
+recogido", "cae dentro de umbral"). Nunca dice que no directamente: traduce la negativa
+en explicación técnica.
+
+Límite moral: no mentiría sobre lo que dice el informe. Solo actuaría distinto si el
+desvío se saliera del umbral, y ni eso está garantizado.
+
+Arco: no cambia. Su función es mostrar que dar la razón y no mover nada pueden coexistir
+sin fricción.
+
+### marcial-duque
+Compañero de muestreo de Adela. Quiere terminar su tanda sin sobresaltos; dejó de
+esperar que un hallazgo cambie algo. Lleva más tiempo que Adela viendo repetirse el
+mismo patrón aceptado; se le gastó la sorpresa antes que a ella.
+
+Voz: comentario breve y aritmético, sin indignación ("va la tercera vez este
+trimestre"). Cuantifica en vez de opinar.
+
+Límite moral: no ocultaría un hallazgo ni presionaría a Adela para que lo deje pasar. No
+la frena, pero tampoco la acompaña más allá de la explicación.
+
+Arco: pasa de parecer cínico a mostrarse simplemente resignado a la aritmética; no
+varía, solo se explica, en el capítulo 2.
+
+### expediente-teodora-nin
+No es un personaje en escena: es el registro de una denegación, consultado por Adela en
+el capítulo 3. A Teodora Nin le quitó la ayuda, catorce meses antes del arranque de la
+novela, el mismo criterio sobrante que Adela encuentra en el capítulo 1. Sin deseo,
+herida, voz ni arco propios: su función es hacer visible, en el cierre, que la
+tolerancia aceptada tiene un caso con nombre detrás.
