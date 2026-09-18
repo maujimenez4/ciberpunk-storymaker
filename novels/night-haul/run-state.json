@@ -3,14 +3,22 @@
   "novel": "night-haul",
   "profile": "mini-arc",
   "phase": "chapter-loop",
-  "node": "WRITE",
-  "chapter": 2,
+  "node": "COMMIT",
+  "chapter": 3,
   "act": 1,
-  "counters": { "researchRounds": 0, "rewrites": 0, "humanRevisions": 0 },
-  "limits": { "maxResearchRounds": 2, "maxRewrites": 2, "maxHumanRevisions": 3 },
+  "counters": {
+    "researchRounds": 0,
+    "rewrites": 0,
+    "humanRevisions": 0
+  },
+  "limits": {
+    "maxResearchRounds": 2,
+    "maxRewrites": 2,
+    "maxHumanRevisions": 3
+  },
   "dryRun": false,
-  "lastApprovedChapter": 1,
-  "lastApprovedCommit": "9c23f66",
+  "lastApprovedChapter": 2,
+  "lastApprovedCommit": "22d6520",
   "flagged": [],
-  "updatedAt": "2026-09-18T20:10:00Z"
+  "updatedAt": "2026-09-18T20:30:11Z"
 }
