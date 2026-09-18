@@ -180,6 +180,31 @@
     overflow-x: auto; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
+  /* La compuerta va sobre slate, el fondo inverso de la marca: es lo único de la página
+     que exige una decisión, y tiene que verse sin buscarlo. */
+  .gate-card { background: var(--q-slate); border-color: var(--q-slate); color: #EEF3F6; }
+  .gate-top { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .gate-card .pill { color: #FF9A62; border-color: currentColor; }
+  .gate-card table.data th { color: #8FA5B4; border-color: #3A5062; }
+  .gate-card table.data td { border-color: #3A5062; }
+  .prose {
+    max-width: 62ch; font-size: 17px; line-height: 1.62; color: #E4EBEF;
+    margin: var(--sp-6) 0; border-top: 1px solid #3A5062; padding-top: var(--sp-6);
+  }
+  .prose h4 { margin: var(--sp-6) 0 var(--sp-2); font-size: 13px; font-weight: 500;
+              text-transform: uppercase; letter-spacing: .12em; color: #8FA5B4; }
+  .prose p { margin: 0 0 var(--sp-4); }
+  .gate-actions { display: flex; gap: var(--sp-6); flex-wrap: wrap; align-items: flex-start;
+                  border-top: 1px solid #3A5062; padding-top: var(--sp-6); }
+  .gate-card label { color: #8FA5B4; }
+  .gate-card textarea, .gate-card input {
+    background: #2E4454; border-color: #4A6273; color: #EEF3F6;
+  }
+  .btn-ghost { background: transparent; color: #EEF3F6; border-color: #4A6273; font-size: 14px; padding: 11px 18px; }
+  .btn-ghost:hover { color: var(--q-orange-400); border-color: var(--q-orange-400); }
+
+  .errors { margin-top: var(--sp-4); font-size: 13px; color: var(--warn); }
+  .errors code { font-size: 12px; word-break: break-all; }
   .note { font-size: 13px; color: var(--fg-muted); }
   .empty { color: var(--fg-faint); font-size: 14px; }
   .warn-row { color: var(--warn); }
@@ -238,6 +263,36 @@
     </div>
   </section>
 
+  <section id="gate" hidden>
+    <div class="head">
+      <h2>Compuerta</h2>
+      <p>La corrida paró aquí y espera tu decisión. El estado está en disco: al decidir se relanza y continúa.</p>
+    </div>
+    <div class="card gate-card">
+      <div class="gate-top">
+        <span class="eyebrow" id="gateWhy"></span>
+        <span class="pill" id="gateFlag" hidden><span class="dot"></span>Marcado</span>
+      </div>
+      <div id="gateIssues"></div>
+      <div id="gateText" class="prose"></div>
+      <div class="gate-actions">
+        <div class="grid" style="flex:1 1 260px">
+          <label for="gateNotes">Notas para revisar (obligatorias si eliges revisar)</label>
+          <textarea id="gateNotes" style="min-height:92px" placeholder="Qué no funciona y qué habría que cambiar."></textarea>
+        </div>
+        <div class="grid" style="flex:0 0 auto; align-content:start">
+          <button id="gateApprove" class="btn-primary">Aprobar</button>
+          <button id="gateRevise" class="btn-ghost">Revisar con notas</button>
+          <div style="display:flex; gap:var(--sp-2); align-items:center">
+            <button id="gateRollback" class="btn-ghost" style="flex:1">Rollback a</button>
+            <input id="gateTo" type="number" min="1" value="1" style="width:66px" aria-label="Capítulo de rollback">
+          </div>
+        </div>
+      </div>
+      <p class="note" id="gateMsg" style="color:#C7D2D9"></p>
+    </div>
+  </section>
+
   <section id="monitor">
     <div class="head">
       <h2>Monitor</h2>
@@ -274,6 +329,7 @@
         <div class="card">
           <h3 style="margin-bottom:var(--sp-3)">Salida del proceso</h3>
           <pre class="console" id="console">Sin corrida lanzada desde este panel.</pre>
+          <div class="errors" id="errors"></div>
         </div>
       </div>
     </div>
@@ -400,6 +456,67 @@ function renderTimeline(d) {
   }).join('');
 }
 
+const SEV = { blocker: 'blocker', warning: 'warn', note: 'faint' };
+
+function renderGate(d) {
+  const g = d.gate;
+  $('gate').hidden = !g;
+  if (!g) return;
+
+  const why = { 'act-end': 'Fin de acto', flagged: 'Capítulo marcado', 'every-chapter': 'Cada capítulo' };
+  $('gateWhy').textContent = `Capítulo ${g.chapter} · ${why[g.reason] ?? g.reason}`;
+  $('gateFlag').hidden = !g.flagged;
+  $('gateTo').max = Math.max(1, g.chapter - 1);
+
+  const issues = g.issues?.issues ?? [];
+  $('gateIssues').innerHTML = issues.length
+    ? '<table class="data"><thead><tr><th>id</th><th>Severidad</th><th>Dónde</th><th>Qué</th></tr></thead><tbody>' +
+      issues.map((i) => `<tr>
+        <td class="num">${esc(i.id ?? '')}</td>
+        <td><span class="pill" style="border-color:var(--${SEV[i.severity] ?? 'faint'});color:var(--${SEV[i.severity] ?? 'faint'})">${esc(i.severity)}</span></td>
+        <td>${esc(i.where ?? '')}</td>
+        <td>${esc(i.fix ?? i.claim ?? '')}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="note" style="color:#8FA5B4">Ninguna incidencia abierta.</p>';
+
+  // presentUnit: act enseña el acto entero; si no, solo el capítulo que se juzga.
+  const units = g.presentUnit === 'act' && g.act?.length
+    ? g.act.filter((c) => c.text)
+    : [{ chapter: g.chapter, text: g.chapterText }];
+  $('gateText').innerHTML = units.map((u) => {
+    const body = (u.text ?? '').replace(/^---[\s\S]*?\n---\n/, '').trim();
+    const paras = body.split(/\n\n+/).map((p) => p.trim()).filter(Boolean)
+      .map((p) => /^#{1,6}\s/.test(p) ? '' : `<p>${esc(p)}</p>`).join('');
+    return `<h4>Capítulo ${u.chapter}</h4>${paras}`;
+  }).join('');
+}
+
+async function postGate(action) {
+  const body = {
+    profile: latest?.state?.profile,
+    action,
+    notes: $('gateNotes').value,
+    rollbackTo: Number($('gateTo').value),
+  };
+  $('gateMsg').textContent = 'Enviando…';
+  try {
+    const d = await (await fetch('/api/gate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })).json();
+    $('gateMsg').innerHTML = d.ok
+      ? `Decisión <strong>${esc(d.action)}</strong> sobre el capítulo ${d.chapter}. La corrida se ha relanzado.`
+      : `<span style="color:#E8705F">${esc(d.error)}</span>`;
+    if (d.ok) { $('gate').hidden = true; $('gateNotes').value = ''; }
+  } catch (error) {
+    $('gateMsg').innerHTML = `<span style="color:#E8705F">${esc(error.message)}</span>`;
+  }
+}
+
+$('gateApprove').addEventListener('click', () => postGate('approve'));
+$('gateRevise').addEventListener('click', () => postGate('revise'));
+$('gateRollback').addEventListener('click', () => postGate('rollback'));
+
+let latest = null;
+
 async function tick() {
   if (!currentNovel) return;
   try {
@@ -410,15 +527,20 @@ async function tick() {
       $('tiles').innerHTML = ''; $('agents').innerHTML = ''; $('timeline').innerHTML = '';
       return;
     }
+    latest = d;
     const s = d.state;
     const flagged = (s.flagged ?? []).length > 0;
-    if (s.phase === 'done') setStatus('done', 'Terminada');
-    else if (s.node === 'GATE') setStatus('gate', 'Esperando compuerta');
+    if (d.gate) setStatus('gate', `Compuerta · capítulo ${d.gate.chapter}`);
+    else if (s.phase === 'done') setStatus('done', 'Terminada');
     else if (flagged) setStatus('flag', `En curso · ${s.node}`);
     else setStatus('live', `En curso · ${s.node}`);
 
-    renderTiles(d); renderMatrix(d); renderAgents(d); renderTimeline(d);
+    renderGate(d); renderTiles(d); renderMatrix(d); renderAgents(d); renderTimeline(d);
     if (d.consoleTail) $('console').textContent = d.consoleTail;
+    $('errors').innerHTML = (d.errors ?? []).length
+      ? '<strong>Trazado a Langfuse con errores:</strong>' +
+        d.errors.map((e) => `<div><code>${esc(e)}</code></div>`).join('')
+      : '';
     if (d.scope) {
       $('scopeBox').hidden = false;
       $('scopeText').textContent =

@@ -17,7 +17,8 @@
   "supervision": {
     "approvalMode": "act-end-or-flagged",
     "presentUnit": "act",
-    "onFlagged": "force-gate"
+    "onFlagged": "force-gate",
+    "gateChannel": "file"
   },
 
   "validation": {

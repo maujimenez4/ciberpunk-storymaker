@@ -73,13 +73,33 @@ function snapshot(slug) {
   let scope = null;
   try { scope = loadConfig(state.profile, ROOT).scope; } catch { /* perfil ausente */ }
 
+  // Compuerta pendiente: hay petición y ninguna decisión posterior que la responda.
+  const gateRequest = readJson(`${dir}/gate-request.json`);
+  const gateDecision = readJson(`${dir}/gate-decision.json`);
+  const answered = gateRequest && gateDecision
+    && gateDecision.chapter === gateRequest.chapter
+    && Date.parse(gateDecision.decidedAt) >= Date.parse(gateRequest.createdAt);
+  const gate = gateRequest && !answered
+    ? {
+        ...gateRequest,
+        chapterText: existsSync(`${dir}/${gateRequest.chapterPath}`)
+          ? readFileSync(`${dir}/${gateRequest.chapterPath}`, 'utf8')
+          : null,
+        issues: readJson(`${dir}/${gateRequest.issuesPath}`, { issues: [], counts: {} }),
+        act: (gateRequest.actChapters ?? []).map((n) => {
+          const p = `${dir}/chapters/ch${String(n).padStart(2, '0')}.md`;
+          return { chapter: n, text: existsSync(p) ? readFileSync(p, 'utf8') : null };
+        }),
+      }
+    : null;
+
   const consolePath = `${dir}/run-console.log`;
   const consoleTail = existsSync(consolePath)
     ? readFileSync(consolePath, 'utf8').split('\n').slice(-40).join('\n')
     : '';
 
   return {
-    novel: slug, state, scope, derived,
+    novel: slug, state, scope, derived, gate,
     agents: Object.values(perAgent).sort((a, b) => b.calls - a.calls),
     totals: {
       calls: Object.values(perAgent).reduce((a, r) => a + r.calls, 0),
@@ -94,6 +114,46 @@ function snapshot(slug) {
       ? readFileSync(`${dir}/.langfuse-errors.log`, 'utf8').split('\n').filter(Boolean).slice(-5)
       : [],
   };
+}
+
+/** Lanza `/novela <perfil>` en segundo plano, con la salida a run-console.log. */
+function spawnRun(profile, dir) {
+  const out = openSync(`${dir}/run-console.log`, 'a');
+  const child = spawn('claude', ['-p', `/novela ${profile}`], {
+    cwd: ROOT, stdio: ['ignore', out, out], detached: true, shell: process.platform === 'win32',
+  });
+  child.unref();
+  return child.pid;
+}
+
+/**
+ * Responde una compuerta y relanza. La corrida anterior terminó al llegar a GATE: el
+ * estado está en disco y el bucle sabe reanudar, así que continuar es arrancar de nuevo.
+ * Sale más barato y más robusto que dejar un proceso bloqueado esperando un fichero.
+ */
+function decideGate({ profile, action, notes, rollbackTo }) {
+  if (!['approve', 'revise', 'rollback'].includes(action)) {
+    throw new Error(`Decisión desconocida: "${action}".`);
+  }
+  const cfg = loadConfig(profile, ROOT);
+  const dir = `${ROOT}/novels/${cfg.run.novel}`;
+  const request = readJson(`${dir}/gate-request.json`);
+  if (!request) throw new Error('No hay ninguna compuerta abierta para esta novela.');
+  if (action === 'revise' && !(notes ?? '').trim()) {
+    throw new Error('Una revisión sin notas no le dice nada al escritor. Escribe qué falla.');
+  }
+  if (action === 'rollback' && !(rollbackTo >= 1 && rollbackTo < request.chapter)) {
+    throw new Error(`El rollback tiene que apuntar a un capítulo entre 1 y ${request.chapter - 1}.`);
+  }
+
+  writeFileSync(`${dir}/gate-decision.json`, JSON.stringify({
+    decision: 'storymaker/gate-decision@1',
+    novel: cfg.run.novel, chapter: request.chapter,
+    action, notes: notes ?? null, rollbackTo: rollbackTo ?? null,
+    decidedAt: new Date().toISOString(),
+  }, null, 2) + '\n');
+
+  return { slug: cfg.run.novel, chapter: request.chapter, action, pid: spawnRun(profile, dir) };
 }
 
 function startRun({ profile, brief }) {
@@ -111,12 +171,7 @@ function startRun({ profile, brief }) {
     throw new Error(`No hay brief para "${slug}". Escribe uno en el formulario: sin brief el bucle para en el arranque.`);
   }
 
-  const out = openSync(`${dir}/run-console.log`, 'a');
-  const child = spawn('claude', ['-p', `/novela ${profile}`], {
-    cwd: ROOT, stdio: ['ignore', out, out], detached: true, shell: process.platform === 'win32',
-  });
-  child.unref();
-  return { slug, pid: child.pid, profile };
+  return { slug, pid: spawnRun(profile, dir), profile };
 }
 
 const send = (res, code, body, type = 'application/json') => {
@@ -141,12 +196,13 @@ createServer((req, res) => {
     return send(res, 200, snapshot(slug));
   }
 
-  if (url.pathname === '/api/run' && req.method === 'POST') {
+  if ((url.pathname === '/api/run' || url.pathname === '/api/gate') && req.method === 'POST') {
+    const act = url.pathname === '/api/run' ? startRun : decideGate;
     let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', () => {
       try {
-        return send(res, 200, { ok: true, ...startRun(JSON.parse(body || '{}')) });
+        return send(res, 200, { ok: true, ...act(JSON.parse(body || '{}')) });
       } catch (error) {
         return send(res, 400, { ok: false, error: error.message });
       }

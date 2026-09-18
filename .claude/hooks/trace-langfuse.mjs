@@ -25,6 +25,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 const SELFTEST = process.argv.includes('--selftest');
+const PING = process.argv.includes('--ping');
 const TIMEOUT_MS = 5000;
 
 /** Un hook de telemetría que rompe la corrida es peor que no tener telemetría. */
@@ -89,6 +90,63 @@ function traceIdFor(runId, phase, chapter) {
   const key = phase === 'chapter-loop' ? `ch${String(chapter).padStart(2, '0')}` : phase;
   return createHash('sha256').update(`${runId}:${key}`).digest('hex').slice(0, 32);
 }
+
+/**
+ * `--ping`: manda UNA traza mínima y dice qué contestó Langfuse. Existe porque hasta que
+ * algo llega de verdad no se sabe si la credencial del MCP sirve también para la API de
+ * ingesta —puede ser un bearer de OAuth y no el Basic de clave pública/secreta— ni si el
+ * nombre del campo de uso es el que espera esta instancia. Dos segundos contra una
+ * corrida entera para descubrir lo mismo.
+ *
+ *   node .claude/hooks/trace-langfuse.mjs --ping
+ */
+async function ping() {
+  const auth = resolveAuth();
+  if (!auth) {
+    console.error('Sin credencial. Define LANGFUSE_PUBLIC_KEY y LANGFUSE_SECRET_KEY, o configura el MCP de Langfuse.');
+    process.exit(1);
+  }
+  const now = new Date().toISOString();
+  const traceId = createHash('sha256').update(`storymaker-ping:${now}`).digest('hex').slice(0, 32);
+  const usageField = process.env.LANGFUSE_USAGE_FIELD ?? 'usageDetails';
+  const batch = [
+    { id: randomUUID(), type: 'trace-create', timestamp: now,
+      body: { id: traceId, name: 'storymaker ping', tags: ['storymaker', 'ping'] } },
+    { id: randomUUID(), type: 'generation-create', timestamp: now,
+      body: { id: randomUUID(), traceId, name: 'ping', model: 'claude-sonnet-5',
+              startTime: now, endTime: now, [usageField]: { total: 1 } } },
+  ];
+
+  console.log(`Destino:      ${host()}/api/public/ingestion`);
+  console.log(`Credencial:   presente (origen: ${auth.from}), esquema ${auth.header.split(' ')[0]}`);
+  console.log(`Campo de uso: ${usageField}`);
+  try {
+    const response = await fetch(`${host()}/api/public/ingestion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: auth.header },
+      body: JSON.stringify({ batch }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const text = (await response.text()).slice(0, 600);
+    console.log(`Respuesta:    HTTP ${response.status}`);
+    console.log(text ? `Cuerpo:       ${text}` : '');
+    if (response.ok) {
+      console.log(`\nLlegó. Busca la traza "storymaker ping" en tu proyecto (id ${traceId}).`);
+    } else if (response.status === 401 || response.status === 403) {
+      console.log('\nLa credencial del MCP no vale para la API de ingesta. Saca un par de claves' +
+        '\nde proyecto en Langfuse y expórtalas como LANGFUSE_PUBLIC_KEY y LANGFUSE_SECRET_KEY.');
+    } else if (response.status === 207 || response.status === 400) {
+      console.log(`\nLa credencial vale y el formato no. Mira qué evento rechaza el cuerpo de arriba;` +
+        `\nsi se queja del uso, prueba con LANGFUSE_USAGE_FIELD=usage.`);
+    }
+    process.exit(response.ok ? 0 : 1);
+  } catch (error) {
+    console.error(`Fallo de red: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+if (PING) { await ping(); }
 
 let input = '';
 process.stdin.on('data', (chunk) => { input += chunk; });

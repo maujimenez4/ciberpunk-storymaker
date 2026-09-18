@@ -57,7 +57,12 @@ humano: es otro ciclo con otra causa.
 
 ## 1 · BOOT
 
-¿Existe `<novel>/bible/canon.md`?
+¿El estado dice `node: "GATE"` y hay un `<novel>/gate-decision.json` que responde a la
+petición en disco? Entonces esta corrida es la continuación de una compuerta: aplica la
+decisión y sigue desde ahí, sin rehacer nada. Es el camino normal cuando el panel te
+relanza, no una excepción.
+
+Si no, ¿existe `<novel>/bible/canon.md`?
 
 - **No** → ve a **Setup**.
 - **Sí** → ve al **bucle de capítulo**, empezando en `lastApprovedChapter + 1`. Todo lo
@@ -184,8 +189,33 @@ en la compuerta.
 - `act-end-or-flagged` → al cerrar acto (`N` múltiplo de `ceil(chapters/acts)`, o el
   último) o si está marcado.
 
-Si paras, **enseña a la persona**: el texto del capítulo, las incidencias abiertas con su
-severidad, y si está marcado. Luego pregunta y **espera**:
+Si paras, la decisión llega por uno de dos canales, según `supervision.gateChannel`
+(por defecto `cli`):
+
+**`cli` — hay una persona al otro lado.** Enseña el texto del capítulo, las incidencias
+abiertas con su severidad y si está marcado. Luego pregunta y **espera**.
+
+**`file` — corres sin terminal, lanzado desde el panel.** No puedes preguntar y no debes
+adivinar. Escribe `<novel>/gate-request.json` y **termina la corrida ahí**, limpiamente:
+
+```json
+{ "request": "storymaker/gate-request@1", "novel": "<slug>", "chapter": N, "attempt": A,
+  "reason": "act-end | flagged | every-chapter", "flagged": false,
+  "chapterPath": "chapters/ch<NN>.md", "issuesPath": "notes/ch<NN>-issues.json",
+  "presentUnit": "<supervision.presentUnit>", "actChapters": [1, 2, 3],
+  "counters": { ... }, "limits": { ... }, "createdAt": "<ISO-8601>" }
+```
+
+Parar **no es abandonar**: el estado está en disco y todo lo aprobado tiene su commit. El
+panel enseña la petición, la persona decide y vuelve a lanzarte. Bloquearte esperando un
+fichero sería peor: gastarías contexto en no hacer nada y una caída se llevaría el turno.
+
+Antes de escribir la petición, **mira si ya hay respuesta**. Honra
+`<novel>/gate-decision.json` solo si su `chapter` es el capítulo actual y su `decidedAt` es
+posterior al `createdAt` de la petición que hay en disco. Así una decisión vieja no puede
+reabrir una compuerta ya resuelta, y nadie tiene que borrar ficheros.
+
+Las tres decisiones, venga del canal que venga:
 
 - **aprobar** → COMMIT.
 - **revisar con notas** → vuelve a WRITE con las notas. El contador de reescrituras
