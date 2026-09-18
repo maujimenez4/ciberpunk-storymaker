@@ -1,0 +1,8 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "dead-floor",
+  "chapter": 3,
+  "attempt": 2,
+  "issues": [],
+  "counts": { "blocker": 0, "warning": 0, "note": 0 }
+}

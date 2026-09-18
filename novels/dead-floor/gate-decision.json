@@ -1,0 +1,9 @@
+{
+  "decision": "storymaker/gate-decision@1",
+  "novel": "dead-floor",
+  "chapter": 3,
+  "action": "rollback",
+  "notes": "",
+  "rollbackTo": 1,
+  "decidedAt": "2026-09-18T01:20:24.507Z"
+}

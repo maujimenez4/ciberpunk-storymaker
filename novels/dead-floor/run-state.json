@@ -3,7 +3,7 @@
   "novel": "dead-floor",
   "profile": "smoke-dead-floor",
   "phase": "chapter-loop",
-  "node": "COMMIT",
+  "node": "LOAD",
   "chapter": 2,
   "act": 1,
   "counters": {
@@ -20,5 +20,5 @@
   "lastApprovedChapter": 1,
   "lastApprovedCommit": "8325b72",
   "flagged": [],
-  "updatedAt": "2026-09-18T01:08:53Z"
+  "updatedAt": "2026-09-18T01:27:00Z"
 }

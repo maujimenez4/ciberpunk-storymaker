@@ -1,0 +1,15 @@
+{
+  "request": "storymaker/gate-request@1",
+  "novel": "dead-floor",
+  "chapter": 3,
+  "attempt": 2,
+  "reason": "act-end",
+  "flagged": false,
+  "chapterPath": "chapters/ch03.md",
+  "issuesPath": "notes/ch03-issues.json",
+  "presentUnit": "act",
+  "actChapters": [1, 2, 3],
+  "counters": { "researchRounds": 0, "rewrites": 1, "humanRevisions": 0 },
+  "limits": { "maxResearchRounds": 3, "maxRewrites": 1, "maxHumanRevisions": 3 },
+  "createdAt": "2026-09-18T01:18:37Z"
+}

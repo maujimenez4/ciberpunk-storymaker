@@ -1,0 +1,24 @@
+---
+
+## Corrida parada en la compuerta
+
+`novels/dead-floor/gate-request.json` escrito. El panel la enseña, decides, y me relanzas.
+
+**Lo que hay en disco**
+
+| | |
+|---|---|
+| Setup | `b4c9171 setup: bible seed` |
+| ch01 · *La parada que sobra* | `8325b72` — 373 palabras, 1 warning |
+| ch02 · *La planta que no consta* | `ea9bac2` — 372 palabras, 2 warning · 1 note |
+| ch03 · *La firma sin testigos* | sin commit, a la espera de la compuerta — 348 palabras, 0 incidencias tras la reescritura |
+
+**El camino de reescritura se recorrió de verdad.** En el capítulo 3, `continuity-keeper` marcó un `blocker`: el último párrafo databa en once años el tiempo que la cabina llevaba parándose en la planta sin catastrar, calcando además los once años que el técnico lleva firmando. Vuelta a WRITE con solo ese blocker (`rewrites: 1`), y el intento 2 salió limpio en ambos validadores. No hizo falta FLAG.
+
+**Lo que no funcionó: `researcher` no tiene web.** El entorno denegó `WebSearch` en los tres intentos de RES0, así que `research/dossier.md` es una lista de tres huecos declarados y en toda la corrida **no existe ni una nota con fuente**. El bucle siguió porque el brief ya manda escribir la frase sin el dato cuando no hay nota, y así se lo dije a cada escritor — pero conviene verlo como lo que es: la invariante 3 se cumplió por abstención, no por investigación. De ahí salen los tres `warning` técnicos de ch01 y ch02, todos del mismo tipo (cifras o cadencias dadas por supuestas). Si el permiso es concedible, esta prueba de humo merece repetirse con él.
+
+Dos detalles menores del recorrido: el hook de propiedad rechazó `drafts/ch01-draft.md` y `scene-writer` escribió en su ruta declarada, `chapters/ch<NN>.draft.md` — usé esa a partir de ahí. Y hay dos ficheros sueltos sin seguimiento que no son míos: `console.log('GOT` en la raíz del repo y `novels/dead-floor/run-console.log`.
+
+Las tres decisiones abiertas son aprobar, revisar con notas (pone `rewrites` a cero, hasta 3 revisiones humanas) o rollback a un capítulo K.
+
+[panel] proceso terminado · código 0
