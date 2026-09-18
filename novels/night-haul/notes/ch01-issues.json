@@ -1,0 +1,18 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "night-haul",
+  "chapter": 1,
+  "attempt": 1,
+  "issues": [
+    {
+      "id": "ck-01",
+      "severity": "warning",
+      "kind": "character-drift",
+      "where": "ch01 ¶2-16 (diálogo de Ferrán)",
+      "claim": "Ferrán habla casi siempre en fragmentos de una o dos palabras («Esta.», «Al final. Como siempre.», «Por no preguntar.», «En el papel sí.»).",
+      "canon": "characters.md#ferrán-oleta",
+      "fix": "Tensiona, sin romperlo, el rasgo de voz «frases completas, tono razonable»; si se revisa, dar a alguna de sus réplicas estructura de oración completa sin perder la sequedad ni subir el tono."
+    }
+  ],
+  "counts": { "blocker": 0, "warning": 1, "note": 0 }
+}

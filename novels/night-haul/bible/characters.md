@@ -36,9 +36,13 @@ antes esta ficha.
 (cap. 2), recuerda la fecha de la deuda (cap. 3), y deja ver que la ruta podría constar
 como idea de ella (cap. 3). No amenaza con nada que no pudiera ejecutar de verdad.
 
-**Voz.** Frases completas, tono razonable incluso amenazando. No pide, ofrece; no
-amenaza, informa. Línea de referencia: «Las hojas llevan tu nombre. Ninguna lleva el
-mío.»
+**Voz.** Tono razonable siempre, incluso amenazando; no pide, ofrece, no amenaza,
+informa. Ese tono se reparte en dos registros: en la orden mínima o el cierre de una
+pregunta que no piensa discutir, cae en fragmentos secos de una o dos palabras («Esta.»,
+«Al final. Como siempre.», «En el papel sí.»); cuando quiere que el razonamiento quede
+claro y le convenga que ella lo entienda —escalando, cap. 2-3—, usa frases completas.
+Ninguno de los dos registros sube el tono. Línea de referencia: «Las hojas llevan tu
+nombre. Ninguna lleva el mío.»
 
 **Límite duro.** No recurre nunca a la violencia física ni sube el volumen; su método es
 la palabra exacta y la paciencia.
