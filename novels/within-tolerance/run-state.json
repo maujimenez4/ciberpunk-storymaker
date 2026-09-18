@@ -3,7 +3,7 @@
   "novel": "within-tolerance",
   "profile": "smoke-within-tolerance",
   "phase": "chapter-loop",
-  "node": "BEAT",
+  "node": "COMMIT",
   "chapter": 2,
   "act": 1,
   "counters": {
@@ -18,7 +18,7 @@
   },
   "dryRun": false,
   "lastApprovedChapter": 1,
-  "lastApprovedCommit": "03a6592669707f54e2789cdf3abb69bc98f65944",
+  "lastApprovedCommit": "7bec27c",
   "flagged": [],
-  "updatedAt": "2026-09-18T16:29:39.735Z"
+  "updatedAt": "2026-09-18T16:33:51.138Z"
 }

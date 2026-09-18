@@ -1,4 +1,4 @@
-# Timeline — within-tolerance
+# Timeline
 
 ### catorce-meses-antes
 Se deniega la ayuda del expediente a nombre de Teodora Nin, aplicando el criterio
@@ -15,8 +15,5 @@ Adela eleva el hallazgo por el cauce correspondiente.
 ### dia-3-capitulo-2
 Llega la respuesta: el desvío está medido, consta en el informe trimestral y cae dentro
 de la tolerancia aceptada. Nuria confirma la validez de la tanda en el pasillo, el mismo
-día. Adela identifica la cifra del informe como propia.
-
-### capitulo-3-mismo-dia-o-siguiente
-Adela pide y recibe el detalle del desvío, localiza el expediente de Teodora Nin y
-cierra la tanda de febrero anotando su propia tasa de desvío.
+día. Adela identifica la cifra del informe como propia: es la tasa de desvío que ella y
+Marcial calculan cada mes en el muestreo.
