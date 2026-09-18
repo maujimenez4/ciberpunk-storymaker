@@ -1,0 +1,18 @@
+{
+  "report": "storymaker/issue-report@1",
+  "novel": "dead-floor",
+  "chapter": 1,
+  "attempt": 1,
+  "issues": [
+    {
+      "id": "tv-01",
+      "severity": "warning",
+      "kind": "unsourced-technical-detail",
+      "where": "ch01 ¶1, ¶13",
+      "claim": "El texto da por hecho una cadencia anual para el certificado de mantenimiento de ascensores (\"Llevo once años cerrando el certificado\"; \"el año pasado salió. Y el otro.\"), justo el concepto que las notas dejan como HUECO sin fuente (certificado periódico firmado por técnico).",
+      "canon": null,
+      "fix": "Si el capítulo pasa la compuerta, dejar constancia de que la periodicidad anual es una suposición sin respaldo para que una revisión posterior no la trate como dato verificado."
+    }
+  ],
+  "counts": { "blocker": 0, "warning": 1, "note": 0 }
+}
