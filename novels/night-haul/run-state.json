@@ -2,8 +2,8 @@
   "state": "storymaker/run-state@1",
   "novel": "night-haul",
   "profile": "mini-arc",
-  "phase": "chapter-loop",
-  "node": "COMMIT",
+  "phase": "done",
+  "node": "EXPORT",
   "chapter": 5,
   "act": 1,
   "counters": {
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 4,
-  "lastApprovedCommit": "cce1569",
+  "lastApprovedChapter": 5,
+  "lastApprovedCommit": "4cf1add",
   "flagged": [],
-  "updatedAt": "2026-09-18T21:10:00Z"
+  "updatedAt": "2026-09-18T21:16:00Z"
 }
