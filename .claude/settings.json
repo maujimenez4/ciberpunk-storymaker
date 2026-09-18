@@ -35,6 +35,15 @@
             "command": "node .claude/hooks/guard-cycles.mjs"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-run-lock.mjs"
+          }
+        ]
       }
     ],
     "PostToolUse": [
