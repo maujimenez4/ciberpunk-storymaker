@@ -2,13 +2,13 @@
   "state": "storymaker/run-state@1",
   "novel": "dead-floor",
   "profile": "smoke-dead-floor",
-  "phase": "chapter-loop",
-  "node": "COMMIT",
+  "phase": "done",
+  "node": "EXPORT",
   "chapter": 3,
   "act": 1,
   "counters": {
     "researchRounds": 0,
-    "rewrites": 1,
+    "rewrites": 0,
     "humanRevisions": 0
   },
   "limits": {
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 2,
-  "lastApprovedCommit": "18deb60",
+  "lastApprovedChapter": 3,
+  "lastApprovedCommit": "cdb6f6f",
   "flagged": [],
-  "updatedAt": "2026-09-18T15:40:00Z"
+  "updatedAt": "2026-09-18T15:50:00Z"
 }
