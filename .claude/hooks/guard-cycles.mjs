@@ -71,7 +71,10 @@ process.stdin.on('end', () => {
     allow();
   }
 
-  if (hook.tool_name !== 'Task') allow();
+  // El harness llama a esta herramienta **Agent**, no `Task`. Mientras esto filtró solo
+  // por `Task`, esta guarda no llegó a ejecutarse ni una vez: la invariante 6 estaba
+  // escrita, documentada y muerta. Se aceptan los dos nombres.
+  if (!['Agent', 'Task'].includes(hook.tool_name)) allow();
 
   const target = hook.tool_input?.subagent_type;
   const cycle = CYCLE_OF[target];

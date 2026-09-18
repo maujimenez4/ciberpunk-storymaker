@@ -179,7 +179,10 @@ process.stdin.on('end', async () => {
     done();
   }
 
-  if (hook.tool_name !== 'Task') done();
+  // El harness llama a esta herramienta **Agent**, no `Task`. Filtrar por `Task` a secas
+  // hacía que el hook se invocara y saliera aquí mismo, sin trazar nada y sin decir nada:
+  // una corrida entera con el dashboard de Langfuse vacío. Se aceptan los dos nombres.
+  if (!['Agent', 'Task'].includes(hook.tool_name)) done();
 
   const repoRoot = String(hook.cwd ?? process.cwd()).replace(/\\/g, '/');
   const novelDir = findNovelDir(repoRoot, hook.tool_input?.prompt);
@@ -199,6 +202,24 @@ process.stdin.on('end', async () => {
   const tokens = collectTokenFields(hook.tool_response);
   const total = tokens.subagent_tokens ?? tokens.totalTokens ?? tokens.total_tokens
     ?? Object.values(tokens).reduce((a, b) => a + b, 0);
+
+  /**
+   * El sobre trae el desglose completo, no solo un total: entrada, salida, escritura de
+   * caché y **lectura de caché**. Esa última es la que cambia la aritmética del gasto —
+   * un token leído de caché cuesta la décima parte—, así que mandarla a Langfuse
+   * convierte el panel de coste en algo real en vez de una estimación.
+   */
+  const usage = {
+    input: tokens.input_tokens ?? 0,
+    output: tokens.output_tokens ?? 0,
+    cache_read_input_tokens: tokens.cache_read_input_tokens ?? 0,
+    cache_creation_input_tokens: tokens.cache_creation_input_tokens ?? 0,
+    total,
+  };
+  // El modelo que de verdad resolvió la llamada, no el que declara el frontmatter.
+  const model = hook.tool_response?.resolvedModel ?? modelOf(repoRoot, agentType);
+  const durationMs = hook.duration_ms ?? hook.tool_response?.totalDurationMs ?? null;
+  const toolUses = hook.tool_response?.totalToolUseCount ?? null;
 
   const runId = state.runId ?? `${state.novel}:${state.profile}`;
   const phase = state.phase ?? 'setup';
@@ -231,10 +252,10 @@ process.stdin.on('end', async () => {
         id: randomUUID(),
         traceId: traceIdFor(runId, phase, chapter),
         name: agentType,
-        model: modelOf(repoRoot, agentType),
+        model,
         startTime: now,
         endTime: now,
-        [usageField]: { total },
+        [usageField]: usage,
         metadata: {
           node: state.node,
           chapter,
@@ -242,7 +263,7 @@ process.stdin.on('end', async () => {
           counters: state.counters,
           // El sobre solo expone el total, no el reparto entrada/salida. Se guarda en
           // crudo para que se vea qué llegó de verdad si el formato cambia.
-          rawTokenFields: tokens,
+          rawTokenFields: tokens, durationMs, toolUses,
         },
       },
     },
@@ -254,9 +275,9 @@ process.stdin.on('end', async () => {
   if (!SELFTEST) {
     try {
       appendFileSync(`${novelDir}/agent-calls.jsonl`, JSON.stringify({
-        ts: now, agent: agentType, model: modelOf(repoRoot, agentType),
+        ts: now, agent: agentType, model,
         node: state.node, phase, chapter, attempt: state.attempt ?? null,
-        tokens: total, rawTokenFields: tokens,
+        tokens: total, usage, durationMs, toolUses, rawTokenFields: tokens,
       }) + '\n');
     } catch { /* si no se puede escribir, la corrida sigue igual */ }
   }
