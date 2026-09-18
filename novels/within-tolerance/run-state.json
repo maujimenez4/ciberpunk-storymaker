@@ -1,0 +1,24 @@
+{
+  "state": "storymaker/run-state@1",
+  "novel": "within-tolerance",
+  "profile": "smoke-within-tolerance",
+  "phase": "chapter-loop",
+  "node": "LOAD",
+  "chapter": 1,
+  "act": 1,
+  "counters": {
+    "researchRounds": 0,
+    "rewrites": 0,
+    "humanRevisions": 0
+  },
+  "limits": {
+    "maxResearchRounds": 3,
+    "maxRewrites": 1,
+    "maxHumanRevisions": 3
+  },
+  "dryRun": false,
+  "lastApprovedChapter": 0,
+  "lastApprovedCommit": null,
+  "flagged": [],
+  "updatedAt": "2026-09-18T16:23:48.796Z"
+}
