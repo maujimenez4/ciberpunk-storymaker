@@ -136,8 +136,13 @@ function snapshot(slug) {
 // `node tools/config.js` y la corrida muere en el arranque. Es una lista explícita y no
 // un bypass general: la lista `deny` de .claude/settings.json —git push, rm -rf,
 // git reset --hard— sigue por delante.
+// WebSearch va aquí porque sin ella `researcher` no puede buscar, y entonces todos los
+// huecos del dossier quedan declarados y sin rellenar: en la corrida de dead-floor eso
+// produjo cinco incidencias, todas del mismo patrón, y una reescritura por capítulo.
+// Que esté permitida no la abre a todos: guard-permissions sigue denegando el acceso web
+// a cualquier rol que no sea researcher.
 const ALLOWED_TOOLS = process.env.STORYMAKER_ALLOWED_TOOLS
-  ?? 'Read Write Edit Bash Task Glob Grep';
+  ?? 'Read Write Edit Bash Task Glob Grep WebSearch';
 
 /**
  * Lanza `/novela <perfil>` en segundo plano, con la salida a run-console.log.
