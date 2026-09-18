@@ -3,6 +3,25 @@
   "novel": "dead-floor",
   "chapter": 3,
   "attempt": 2,
-  "issues": [],
-  "counts": { "blocker": 0, "warning": 0, "note": 0 }
+  "issues": [
+    {
+      "id": "tv-01",
+      "severity": "warning",
+      "kind": "unsupported-claim",
+      "where": "ch03 ¶5",
+      "claim": "La casilla de observaciones del certificado \"es pequeña, tres renglones, hecha para escribir «sin novedad»\".",
+      "canon": null,
+      "fix": "El dossier no trae ninguna fuente sobre el formato del certificado de mantenimiento de ascensores (HUECO declarado). El detalle es de relleno, no sostiene ninguna consecuencia de la trama; si se quiere mantener, dejarlo como impresión del narrador en vez de dato de diseño del formulario, o quitarlo."
+    },
+    {
+      "id": "tv-02",
+      "severity": "warning",
+      "kind": "unsupported-claim",
+      "where": "ch03 ¶7",
+      "claim": "\"Subí a pie, por no dejar el trayecto anotado\" — implica que el uso del ascensor queda registrado/trazado.",
+      "canon": null,
+      "fix": "El dossier declara como hueco el vocabulario y las prácticas reales de trazabilidad de tránsito vertical (sin fuente). La frase asume una capacidad de registro sin respaldo; mantenerla en términos igual de vagos está bien para no afirmar un mecanismo concreto, pero si en revisiones futuras se detalla cómo funciona ese registro, necesitará fuente."
+    }
+  ],
+  "counts": { "blocker": 0, "warning": 2, "note": 0 }
 }

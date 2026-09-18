@@ -3,7 +3,7 @@ context: storymaker/node-context@1
 novel: dead-floor
 node: write
 chapter: 3
-assembledAt: 2026-09-18T01:11:14.189Z
+assembledAt: 2026-09-18T01:33:04.132Z
 ---
 
 # Contexto ensamblado — write · capítulo 3
@@ -13,29 +13,20 @@ no abras los ficheros originales, ya están aquí y recortados a lo que tu nodo 
 Los capítulos anteriores no se leen nunca — para eso están los resúmenes.
 ## Plan de beats
 
-- **Meta:** El técnico quiere cerrar el certificado anual firmando lo que el registro
-  dice, no lo que le resultaría más cómodo dejar pasar.
-
-- **Conflicto:** El compañero de turno vuelve a ofrecerle la salida fácil: cerrar sin
-  mirar, como salió bien otros años. Aceptar no le cuesta nada hoy; firmar la
-  discrepancia sí le cuesta, porque pone por escrito un hecho que él sabe que va a
-  afectar a la inquilina y a quienes trabajan en la planta que el catastro no recoge, sin
-  que nadie se lo pida ni lo vigile. No hay superior que le ordene nada ni aliado que
-  resuelva el trámite por él: la decisión es solo suya.
-
-- **Giro:** El técnico deja de sopesar la firma como una cuestión de conciencia privada
-  y la convierte en documento: redacta la discrepancia. Ese acto cambia lo que está en
-  juego. Ya no se trata de si él sabe o no lo que hay arriba, sino de que, en cuanto
-  queda escrito, el expediente se pone en marcha solo, y con él el coste que asumirán
-  otros. El técnico entiende que su límite moral —no firmar lo que no ha comprobado con
-  sus manos— ya está resuelto desde el capítulo 2: comprobó. Lo único que le toca ahora
-  es la firma, no la corrección del error, que no es su tarea ni su culpa.
-
-- **Gancho:** El técnico firma la discrepancia a solas, sin testigos, y con ella cierra
-  el certificado del año sobre la verdad del registro. El acto queda resuelto para él;
-  el expediente que su firma pone en marcha, no: se abre y se queda abierto, fuera de las
-  páginas de esta novela, con la inquilina y quienes trabajan con ella todavía sin saber
-  lo que la firma de hoy va a significarles.
+- **Meta:** El técnico, a solas, decide qué constancia deja en el certificado sobre la
+  planta que no consta, cerrando el ciclo de cierre del certificado anual.
+- **Conflicto:** El compañero de turno vuelve a ofrecer la salida fácil —firmar como cada
+  año, sin mencionar la planta—; tomarla lo libra de todo coste, pero es firmar sobre algo
+  que ya comprobó falso. Dejar constancia escrita, en cambio, abre el expediente que
+  dejará sin uso el metraje donde trabaja la inquilina: no hay opción sin coste para
+  alguien.
+- **Giro:** El técnico deja de preguntarse si el error es suyo —la sospecha que arrastra
+  desde hace once años— y entiende que es un fallo heredado del expediente en papel, ajeno
+  a cualquier intención; la pregunta que le queda no es de culpa sino de qué le toca
+  firmar a él.
+- **Gancho:** Cierre de la novela: el técnico resuelve su firma en soledad, sin testigos ni
+  ayuda, y un gesto suyo —no una explicación— contesta, sin que ella llegue a saberlo, la
+  pregunta que la inquilina dejó abierta en el capítulo 2.
 
 ## Lagunas de investigación
 
@@ -213,15 +204,13 @@ posible.
 
 ## Abiertos
 
+### dilema-de-la-firma
+Abierto en el capítulo 1, como herida del técnico (ver `characters.md#el-tecnico`): si
+firma lo que sabe o lo que le conviene.
+
 ### coste-humano-de-corregirlo
 Abierto en el capítulo 2: corregir la numeración deja fuera de uso el metraje que ocupa
-la inquilina y quienes trabajan con ella, mientras se rehace el expediente. Sigue abierto
-al cierre del acto.
-
-### expediente-abierto
-Abierto en el capítulo 3: la discrepancia queda por escrito y firmada, y eso pone en
-marcha un expediente cuyo trámite y consecuencia no se cuentan en esta novela. Abierto a
-propósito al cierre del acto.
+la inquilina y quienes trabajan con ella, mientras se rehace el expediente.
 
 ## Cerrados
 
@@ -229,11 +218,6 @@ propósito al cierre del acto.
 Abierto en el capítulo 1: la cabina se detiene en una parada que el plano no recoge.
 Cerrado en el capítulo 2: deja de ser un enigma —el técnico confirma qué hay arriba— y
 pasa a ser un hecho administrativo pendiente de firma.
-
-### dilema-de-la-firma
-Abierto en el capítulo 1, como herida del técnico (ver
-`characters.md#el-tecnico`): si firma lo que sabe o lo que le conviene. Cerrado en el
-capítulo 3 con la firma de la discrepancia, sin testigos.
 
 ## Resúmenes previos (ventana 2)
 
@@ -254,15 +238,17 @@ Hilo abierto: `dilema-de-la-firma` — si firmará lo que sabe o lo que le convi
 
 ### Resumen del capítulo 2
 
-El técnico sube a comprobar la parada que el plano no recogía y encuentra una planta en
-uso —oficinas, gente trabajando— que el catastro no registra. La conserje lo ve salir de
-la cabina; no pregunta, pero ya lo ha visto. La inquilina del rellano pregunta si la
-corrección le va a afectar; el técnico responde que todavía no ha firmado nada.
+El técnico sube a comprobar la parada que el plano no recoge y encuentra una planta en
+uso: mesas ocupadas, gente trabajando, sin que conste en el catastro ni en el expediente.
+La conserje lo ve salir de la cabina y no pregunta. Una inquilina le pregunta en el
+rellano si va a pasar algo; él no le da respuesta.
 
-Cierra `threads.md#discrepancia-registro-plano`: deja de ser enigma y pasa a hecho
-administrativo pendiente de firma. Abre `threads.md#coste-humano-de-corregirlo`: corregir
-la numeración deja sin uso el metraje que ocupa la inquilina mientras se rehace el
-expediente.
+Canon nuevo: la parada deja de ser un enigma de registro y pasa a ser un hecho
+administrativo pendiente de firma (`threads.md#discrepancia-registro-plano`, cerrado).
+Se abre `threads.md#coste-humano-de-corregirlo`: corregir la numeración deja fuera de uso
+el metraje mientras se rehace el expediente.
+
+Hilo abierto: `dilema-de-la-firma`, sin resolver.
 
 ## Dossier — notas con fuente y fecha
 

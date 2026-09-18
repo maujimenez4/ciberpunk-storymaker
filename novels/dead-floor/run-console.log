@@ -22,3 +22,33 @@ Dos detalles menores del recorrido: el hook de propiedad rechazó `drafts/ch01-d
 Las tres decisiones abiertas son aprobar, revisar con notas (pone `rewrites` a cero, hasta 3 revisiones humanas) o rollback a un capítulo K.
 
 [panel] proceso terminado · código 0
+Run stops here, cleanly, at the gate.
+
+## Lo que ha pasado
+
+**BOOT** — el estado traía `node: GATE` en ch03 con una decisión válida en disco (`chapter: 3`, `decidedAt` posterior al `createdAt` de la petición): **rollback a ch01**. Aplicada sin rehacer nada.
+
+**ROLLBACK** → `48328b1`
+- ch02 y ch03 archivados en `attic/20260918T012102Z/` (con sus `.draft.md`), no borrados.
+- Biblia restaurada a `8325b72`. El `git checkout` del spec no quita ficheros añadidos después, así que además retiré `bible/summaries/ch02.md`; la biblia quedó idéntica al estado de ch01 (`git diff` vacío).
+
+**ch02 reescrito** → `18deb60` · *La planta que no consta*
+- BEAT sin lagunas → sin ronda de RES1.
+- VAL: 1 `blocker` de `technical-verifier` — la prosa afirmaba como hecho qué implica que un metraje no conste en el catastro. Reescritura (attempt 2) reformulándolo como sospecha del personaje → blocker resuelto.
+- Aprobado sin compuerta: ch02 no cierra acto ni está marcado.
+
+**ch03** — *La firma sin testigos*, 419 palabras
+- Mismo patrón: 1 `blocker` (afirmaba como cierta la consecuencia administrativa de abrir el expediente), reescrito como apuesta del narrador, resuelto.
+- Quedan 2 `warning`, 0 `note`. Sin blockers, no marcado.
+
+**GATE** — ch03 cierra acto y es el último capítulo. `gateChannel: file`, así que escribí `gate-request.json` (`createdAt` 01:41:38Z) y paro. Esa marca de tiempo deja la decisión de rollback anterior correctamente caducada, que es lo que impide que reabra una compuerta ya resuelta.
+
+El panel tiene que enseñar la petición y escribir `gate-decision.json`. Si se aprueba, lo que queda es COMMIT de ch03, COMP y EXPORT.
+
+## Dos cosas que conviene que mires
+
+**`technical-verifier` sigue reportando que la investigación no se ejecutó.** En sus arreglos aparece *"búsqueda no ejecutada por bloqueo de permisos"*. Los cinco blockers y warnings de esta corrida son todos el mismo patrón: huecos declarados en el dossier que nunca se rellenaron. `research.enabled` es `true`, pero parece que `researcher` no llegó a buscar en el RES0 del setup. Vale la pena comprobar los permisos de `WebSearch` para ese agente antes de la siguiente corrida — ahora mismo el sistema está gastando una reescritura por capítulo en suavizar prosa que con fuente podría afirmarse.
+
+**Hay un fichero basura en la raíz del repo:** `console.log('GOT` — untracked, de algún comando mal escapado. No lo he tocado ni commiteado.
+
+[panel] proceso terminado · código 0

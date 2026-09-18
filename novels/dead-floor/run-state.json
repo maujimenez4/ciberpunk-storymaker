@@ -3,8 +3,8 @@
   "novel": "dead-floor",
   "profile": "smoke-dead-floor",
   "phase": "chapter-loop",
-  "node": "WRITE",
-  "chapter": 2,
+  "node": "COMMIT",
+  "chapter": 3,
   "act": 1,
   "counters": {
     "researchRounds": 0,
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 1,
-  "lastApprovedCommit": "8325b72",
+  "lastApprovedChapter": 2,
+  "lastApprovedCommit": "18deb60",
   "flagged": [],
-  "updatedAt": "2026-09-18T01:33:00Z"
+  "updatedAt": "2026-09-18T15:40:00Z"
 }
