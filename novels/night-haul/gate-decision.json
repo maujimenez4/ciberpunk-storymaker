@@ -1,0 +1,9 @@
+{
+  "decision": "storymaker/gate-decision@1",
+  "novel": "night-haul",
+  "chapter": 5,
+  "action": "approve",
+  "notes": "",
+  "rollbackTo": 1,
+  "decidedAt": "2026-09-18T21:02:35.503Z"
+}

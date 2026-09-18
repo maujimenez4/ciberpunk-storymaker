@@ -4,7 +4,7 @@
   "profile": "mini-arc",
   "phase": "chapter-loop",
   "node": "COMMIT",
-  "chapter": 4,
+  "chapter": 5,
   "act": 1,
   "counters": {
     "researchRounds": 0,
@@ -17,8 +17,8 @@
     "maxHumanRevisions": 3
   },
   "dryRun": false,
-  "lastApprovedChapter": 3,
-  "lastApprovedCommit": "71918a3",
+  "lastApprovedChapter": 4,
+  "lastApprovedCommit": "cce1569",
   "flagged": [],
-  "updatedAt": "2026-09-18T20:37:32Z"
+  "updatedAt": "2026-09-18T21:10:00Z"
 }

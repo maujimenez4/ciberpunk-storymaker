@@ -1,0 +1,29 @@
+{
+  "request": "storymaker/gate-request@1",
+  "novel": "night-haul",
+  "chapter": 5,
+  "attempt": 1,
+  "reason": "act-end",
+  "flagged": false,
+  "chapterPath": "chapters/ch05.md",
+  "issuesPath": "notes/ch05-issues.json",
+  "presentUnit": "act",
+  "actChapters": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "counters": {
+    "researchRounds": 0,
+    "rewrites": 0,
+    "humanRevisions": 0
+  },
+  "limits": {
+    "maxResearchRounds": 2,
+    "maxRewrites": 2,
+    "maxHumanRevisions": 3
+  },
+  "createdAt": "2026-09-18T20:45:39Z"
+}
