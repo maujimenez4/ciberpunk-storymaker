@@ -1,36 +1,22 @@
-# El caso con nombre
+# El nombre detrás del número
 
-- **Meta:** Adela quiere saber si la cifra de tolerancia que ella calcula tiene, detrás,
-  un caso real — antes de decidir qué hacer con su propia autoría sobre ese número.
-- **Conflicto:** No hay nadie que se lo impida ni nada que ocultarle; todo lo que pide se
-  le concede. El obstáculo es que confirmar el caso no repara nada ni cambia el criterio:
-  solo la deja sin coartada frente a su propia cifra.
-- **Giro:** Con el detalle desagregado que pidió en el capítulo 2, localiza el expediente
-  de Teodora Nin: el mismo criterio sobrante le denegó la ayuda catorce meses antes,
-  dentro de la misma tolerancia que Adela firma cada mes. El número deja de ser abstracto.
-- **Cierre:** Adela no busca reparar el expediente ni denunciar el criterio; decide, en
-  privado, qué hará de ahora en adelante con la cifra que calcula y firma. La novela
-  cierra en esa decisión personal, no en una resolución del sistema.
-
-## Beats
-
-1. Adela cruza el detalle desagregado con la acreditación por continuidad de registro y
-   llega al expediente de Teodora Nin.
-2. Confirma la coincidencia: el criterio sobrante, la misma tolerancia, catorce meses
-   antes. El caso tiene nombre.
-3. Marcial la ve revisarlo, comenta la coincidencia con su aritmética habitual y no la
-   acompaña más allá de eso.
-4. Consulta a Nuria, que repite que la tanda es válida — sin malicia, el criterio
-   funcionando exactamente como está diseñado para funcionar.
-5. Adela cierra el capítulo con la decisión privada sobre su autoría de la cifra; el
-   criterio sobrante queda vigente, sin reparar, por diseño de la novela.
-
-## Hilos
-
-- `criterio-mal-aplicado`: se cierra deliberadamente sin resolución institucional — sigue
-  vigente, válido por tolerancia; ese es el final del hilo, no un desenlace pendiente.
-- `autoria-de-la-cifra`: se cierra con la decisión privada de Adela sobre qué hacer, en
-  adelante, con el número que firma.
+- **Meta:** Adela consulta, por continuidad de registro, el expediente de la denegación
+  que catorce meses antes aplicó el mismo criterio sobrante, para comprobar si detrás de
+  la cifra que ella firma cada mes hay un caso concreto.
+- **Conflicto:** El expediente confirma el caso, pero no existe cauce desde su puesto de
+  muestreo para reabrirlo: la tanda que lo denegó sigue siendo válida por tolerancia. No
+  hay a quién reclamar ni qué presentar; el coste es asumir que su hallazgo no cambia
+  nada del sistema, solo lo que ella sabe.
+- **Giro:** A mitad de la consulta, Adela comprueba que el expediente es exactamente el
+  mismo criterio sobrante aplicado a nombre de Teodora Nin: la tasa de desvío que hasta
+  ahora trataba como una cifra abstracta tiene, desde este momento, un caso y un nombre
+  concretos detrás.
+- **Cierre:** Adela decide en privado qué hacer con la autoría de la cifra: no reabre el
+  caso ni acusa a nadie —no hay a quién—, sino que resuelve seguir registrando, por su
+  cuenta, cada criterio sobrante y el nombre del caso que encuentre bajo tolerancia,
+  aunque el sistema siga validándolos. Cierra `criterio-mal-aplicado` y
+  `autoria-de-la-cifra`: no se resuelven, se asumen como carga personal de Adela. Fin del
+  acto único.
 
 ## Lagunas de investigación
 

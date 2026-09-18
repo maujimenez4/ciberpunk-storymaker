@@ -1,12 +1,12 @@
 ---
 context: storymaker/node-context@1
 novel: within-tolerance
-node: beat
+node: val-ck
 chapter: 3
-assembledAt: 2026-09-18T16:35:48.459Z
+assembledAt: 2026-09-18T16:38:14.030Z
 ---
 
-# Contexto ensamblado — beat · capítulo 3
+# Contexto ensamblado — val-ck · capítulo 3
 
 Lo ensambla el orquestador en el nodo LOAD. Es **todo** tu contexto de biblia y notas:
 no abras los ficheros originales, ya están aquí y recortados a lo que tu nodo necesita.
@@ -191,23 +191,3 @@ este capítulo.
 ### Resumen del capítulo 2
 
 Nuria confirma en el pasillo que la tanda es válida: el desvío está medido y cae dentro de la tolerancia aceptada. Establece la distinción de que el criterio sobrante sigue vigente porque la tanda es válida, no porque el criterio sea correcto. Marcial explica su falta de sorpresa: ya había hecho la cuenta, es la tercera vez ese trimestre y las tres cayeron dentro de tolerancia — cierra el hilo naturalidad-de-marcial como cálculo, no cinismo. Adela reconoce que la cifra de tolerancia que la contradice es la misma que ella y Marcial producen cada mes en su propio muestreo. Abre el hilo autoria-de-la-cifra: qué hará con esa autoría queda sin resolver. Pide el detalle desagregado del desvío.
-
-## Índice del dossier — qué está YA respaldado
-
-- Muestreo de control y tasa de desvío tolerable
-- La tasa de desvío tolerable es el porcentaje máximo de fallos que se acepta en una muestra de control sin cambiar la valoración del riesgo de ese control
-- Cuanta más confianza se planea depositar en un control, menor es la tasa de desvío tolerable que se exige; a modo orientativo, alta confianza ronda 2-5%, moderada 6-10% y limitada 11-20%
-- La tasa de desvío tolerable y el tamaño de muestra necesario son inversamente proporcionales: cuanto más baja la tolerancia aceptada, más grande tiene que ser la muestra para sostenerla
-- La normativa de auditoría estadounidense (PCAOB, estándar AS 2315) formaliza el muestreo de auditoría como método para evaluar controles, distinguiendo la tasa de desvío esperada de la tasa tolerable
-- Supervisión humana sobre decisiones automatizadas
-- Mantener a una persona en el circuito de una decisión automatizada aumenta la disposición de otros a usar el sistema, pero la investigación advierte que esa supervisión con frecuencia funciona como gesto simbólico y no como salvaguarda funcional
-- Asignar una persona para verificar la salida de un sistema automatizado no basta como salvaguarda si no se establecen las condiciones reales bajo las que ocurre esa verificación
-- Un análisis de 71 causas judiciales en Estados Unidos sobre determinaciones basadas en algoritmos (discapacidad, desempleo, asistencia alimentaria) encontró que las desviaciones respecto al resultado legalmente exigido surgen cuando la traducción de los requisitos normativos a lógica computacional se ve comprometida por datos defectuosos, decisiones de diseño o límites propios del sistema
-- Las propuestas de política pública sobre supervisión de decisiones automatizadas incluyen el derecho a ser informado de la decisión y el derecho a intervención humana, con la advertencia explícita de que esa intervención debe ser "significativa" o no cuenta como supervisión real
-- Vocabulario de oficio útil para la prosa
-- Huecos
-- HUECO: ¿Existe un equivalente en español, en administración pública, al término "tasa de desvío tolerable" de auditoría financiera?
-- HUECO: Normativa real de resolución automática de ayudas sociales en cualquier jurisdicción
-- HUECO: Diseño estadístico del muestreo (tamaño de muestra, nivel de confianza, métodos de selección)
-- HUECO: Cultura de trabajo y rutinas concretas de una oficina de revisión de ayudas municipales (ritmos, jerga informal de pasillo, roles como "responsable de sección")
-- HUECO: Identidad y continuidad de registro como método de acreditación (en vez de documento)

@@ -1,0 +1,27 @@
+{
+  "request": "storymaker/gate-request@1",
+  "novel": "within-tolerance",
+  "chapter": 3,
+  "attempt": 1,
+  "reason": "act-end",
+  "flagged": false,
+  "chapterPath": "chapters/ch03.md",
+  "issuesPath": "notes/ch03-issues.json",
+  "presentUnit": "act",
+  "actChapters": [
+    1,
+    2,
+    3
+  ],
+  "counters": {
+    "researchRounds": 0,
+    "rewrites": 0,
+    "humanRevisions": 0
+  },
+  "limits": {
+    "maxResearchRounds": 3,
+    "maxRewrites": 1,
+    "maxHumanRevisions": 3
+  },
+  "createdAt": "2026-09-18T16:38:18.140Z"
+}
