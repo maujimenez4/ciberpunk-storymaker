@@ -39,6 +39,25 @@ const listProfiles = () => (existsSync(`${ROOT}/config/profiles`)
   ? readdirSync(`${ROOT}/config/profiles`).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
   : []);
 
+const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * El directorio de una novela, o null si el slug no nombra ninguna.
+ *
+ * Dos comprobaciones y no una: el patrón descarta `..` y las barras antes de tocar el
+ * disco, y la pertenencia a `listNovels()` descarta cualquier otra cosa que exista bajo
+ * `novels/`. Antes el slug se interpolaba en la ruta sin mirarlo; que el proceso solo
+ * escuche en localhost no es razón para saltárselo, porque es el mismo proceso que
+ * lanza corridas.
+ */
+function novelDir(slug) {
+  if (typeof slug !== 'string' || !SLUG.test(slug)) return null;
+  if (!listNovels().includes(slug)) return null;
+  const base = resolve(`${ROOT}/novels`).replace(/\\/g, '/');
+  const dir = resolve(`${ROOT}/novels/${slug}`).replace(/\\/g, '/');
+  return dir.startsWith(`${base}/`) ? dir : null;
+}
+
 /** Qué rol corre en cada nodo. VAL lanza dos en paralelo, y por eso son dos entradas. */
 const NODE_AGENTS = {
   RES0: ['researcher'], ARCH: ['plot-architect'], PROF: ['character-profiler'],
@@ -342,8 +361,8 @@ const historyIndex = () => listNovels()
 
 /** Detalle de una novela: capítulos con su resumen de la biblia y sus incidencias. */
 function historyNovel(slug) {
-  const dir = `${ROOT}/novels/${slug}`;
-  if (!existsSync(dir)) return null;
+  const dir = novelDir(slug);
+  if (!dir) return null;
 
   const titles = chapterTitles(dir);
   const stats = callStats(dir);
@@ -373,8 +392,8 @@ function historyNovel(slug) {
 
 /** El texto de un capítulo, o el manuscrito entero con `chapter=all`. Bajo demanda. */
 function historyText(slug, chapter) {
-  const dir = `${ROOT}/novels/${slug}`;
-  if (!existsSync(dir)) return null;
+  const dir = novelDir(slug);
+  if (!dir) return null;
 
   if (chapter === 'all') {
     const path = `${dir}/out/manuscript.md`;
@@ -390,6 +409,58 @@ function historyText(slug, chapter) {
     slug, chapter: n,
     title: chapterTitle(dir, n, chapterTitles(dir)),
     text: readFileSync(path, 'utf8'),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * La biblia, en solo lectura
+ *
+ * Los documentos van en una sola respuesta y no uno por petición. Pesan unos pocos
+ * kilobytes entre todos, y las entradas de canon se citan entre ficheros
+ * —`characters.md#adela-roig` dentro de `threads.md`—: con un endpoint por documento,
+ * seguir un anclaje costaría una petición y un parpadeo.
+ *
+ * `canon.md` se sirve aunque no sea una de las seis secciones que enseña el panel: es la
+ * raíz del canon y hay anclajes que apuntan a él.
+ *
+ * Aquí no se escribe nada. La invariante 2 deja la biblia en manos de
+ * `continuity-keeper`, y un panel que la editara la rompería sin que el hook se enterara.
+ * ------------------------------------------------------------------ */
+
+const BIBLE_DOCS = [
+  { key: 'canon', file: 'canon.md', label: 'Canon' },
+  { key: 'characters', file: 'characters.md', label: 'Personajes' },
+  { key: 'world', file: 'world.md', label: 'Mundo' },
+  { key: 'timeline', file: 'timeline.md', label: 'Línea de tiempo' },
+  { key: 'threads', file: 'threads.md', label: 'Hilos' },
+  { key: 'outline', file: 'outline.md', label: 'Escaleta' },
+];
+
+/**
+ * La biblia entera de una novela.
+ *
+ * Un documento que falta se devuelve con `text: null` en vez de omitirse, para que el
+ * panel pueda decir "todavía no existe" en lugar de esconder la sección: en una novela a
+ * medias, `timeline.md` y `threads.md` no aparecen hasta el primer COMMIT.
+ */
+function bibleOf(slug) {
+  const dir = novelDir(slug);
+  if (!dir) return null;
+
+  const read = (rel) => (existsSync(`${dir}/${rel}`) ? readFileSync(`${dir}/${rel}`, 'utf8') : null);
+
+  const summaries = existsSync(`${dir}/bible/summaries`)
+    ? readdirSync(`${dir}/bible/summaries`)
+      .filter((f) => /^ch\d+\.md$/.test(f))
+      .map((f) => Number(f.slice(2, -3)))
+      .sort((a, b) => a - b)
+      .map((c) => ({ chapter: c, text: read(`bible/summaries/ch${pad(c)}.md`) }))
+    : [];
+
+  return {
+    slug,
+    docs: BIBLE_DOCS.map((d) => ({ ...d, text: read(`bible/${d.file}`) })),
+    summaries,
   };
 }
 
@@ -698,6 +769,13 @@ createServer((req, res) => {
     return text
       ? send(res, 200, text)
       : send(res, 404, { error: 'no hay texto para esa novela y ese capítulo' });
+  }
+
+  if (url.pathname === '/api/novel/bible') {
+    const bible = bibleOf(url.searchParams.get('slug') ?? '');
+    return bible
+      ? send(res, 200, bible)
+      : send(res, 404, { error: 'no hay ninguna novela con ese slug' });
   }
 
   if (url.pathname === '/api/meta') {
