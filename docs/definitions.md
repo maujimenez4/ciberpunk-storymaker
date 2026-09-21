@@ -8,7 +8,7 @@
 
 Este documento define el vocabulario controlado del dominio: qué clases existen, qué atributos tiene cada una, qué relaciones las unen y qué restricciones deben cumplirse. Es la referencia normativa para el esquema de datos, los prompts, las rúbricas de evaluación y la comunicación del equipo.
 
-El documento hermano (`02-ontologia-novelas-diagramas.md`) contiene los mismos contenidos en forma de árboles y grafos Mermaid.
+Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14** de este documento.
 
 ## 2. Convenciones de notación
 
@@ -443,3 +443,294 @@ El validador debe poder comprobar mecánicamente:
 | HEA / HFN | *Happily ever after* / *happy for now*: finales admisibles en romance |
 | Nivel de calor | Escala declarada de explicitud sexual |
 | Muestra ancla | Fragmento de prosa aprobada usado como referencia de voz |
+
+---
+
+## 14. Árboles y grafos de la ontología
+
+Los mismos contenidos de este documento en forma visual. **Los diagramas no declaran nada:** si un diagrama y el texto discrepan, gana el texto y el diagrama está desactualizado.
+
+Sintaxis Mermaid; se renderiza en GitHub, GitLab, Obsidian, Notion y VS Code con la extensión de Mermaid.
+
+### 14.1 Mapa general de las cinco capas
+
+Cada capa falla de forma distinta y se controla con mecanismos distintos, por lo que no se mezclan en la misma estructura de datos (§3).
+
+```mermaid
+flowchart TD
+  ONT["Ontología del dominio<br/>novela generada por IA"]
+  ONT --> H["Capa de HISTORIA<br/>qué ocurre y por qué"]
+  ONT --> D["Capa de DISCURSO<br/>cómo se cuenta"]
+  ONT --> G["Capa de GÉNERO<br/>qué espera el lector"]
+  ONT --> E["Capa de ESTADO<br/>qué es verdad en T"]
+  ONT --> P["Capa de PRODUCCIÓN<br/>cómo se fabrica y acepta"]
+
+  H --> H1["Estructura, agentes,<br/>mundo, eventos"]
+  D --> D1["POV, voz, ritmo,<br/>tipografía"]
+  G --> G1["Beats, tropos,<br/>nivel de calor"]
+  E --> E1["Ledger, contexto,<br/>memoria"]
+  P --> P1["Prompts, métricas,<br/>puertas, versiones"]
+```
+
+### 14.2 Árbol taxonómico de clases
+
+```mermaid
+flowchart LR
+  R["Clase raíz"]
+
+  R --> A["EntidadEstructural"]
+  R --> B["EntidadNarrativa"]
+  R --> C["EntidadDeDiscurso"]
+  R --> D["EntidadDeGenero"]
+  R --> E["EntidadDeContexto"]
+  R --> F["EntidadDeCalidad"]
+  R --> G["EntidadDeProduccion"]
+
+  A --> A1["Serie · Obra · Parte<br/>Capitulo · Escena · Beat"]
+  B --> B1["Personaje · Relacion<br/>Lugar · Objeto · ReglaDeMundo"]
+  B --> B2["Evento · HechoCanon<br/>Plantado · Pago · Revelacion"]
+  B --> B3["Premisa · Tema · Conflicto<br/>Arco · Trama · HiloNarrativo"]
+  C --> C1["PerfilDeVoz · POV · Focalizacion<br/>Ritmo · EstandarTipografico"]
+  D --> D1["BeatDeGenero · Tropo<br/>NivelDeCalor · Subgenero"]
+  E --> E1["PaqueteDeContexto · Ledger<br/>EstadoEnT · MuestraAncla"]
+  F --> F1["DimensionDeCalidad · Metrica<br/>Defecto · PuertaDeCalidad"]
+  G --> G1["Brief · Biblia · Outline<br/>Prompt · Ejecucion · VersionDeTexto"]
+```
+
+### 14.3 Árbol de la capa de Historia
+
+```mermaid
+flowchart TD
+  H["HISTORIA"]
+  H --> H1["Estructura"]
+  H --> H2["Núcleo dramático"]
+  H --> H3["Agentes"]
+  H --> H4["Mundo"]
+  H --> H5["Eventos e información"]
+
+  H1 --> H11["Serie"]
+  H1 --> H12["Obra"]
+  H1 --> H13["Parte / Acto"]
+  H1 --> H14["Capitulo"]
+  H1 --> H15["Escena"]
+  H1 --> H16["Beat"]
+
+  H2 --> H21["Premisa · Logline"]
+  H2 --> H22["Tema"]
+  H2 --> H23["Conflicto"]
+  H2 --> H24["Arco"]
+  H2 --> H25["Trama y subtramas"]
+
+  H3 --> H31["Personaje"]
+  H3 --> H32["Relacion"]
+
+  H4 --> H41["Lugar"]
+  H4 --> H42["Objeto"]
+  H4 --> H43["ReglaDeMundo"]
+  H4 --> H44["Cronologia"]
+
+  H5 --> H51["Evento"]
+  H5 --> H52["HechoCanon"]
+  H5 --> H53["Plantado y Pago"]
+  H5 --> H54["Revelacion"]
+  H5 --> H55["HiloNarrativo"]
+```
+
+### 14.4 Árbol de la capa de Discurso
+
+```mermaid
+flowchart TD
+  D["DISCURSO"]
+  D --> D1["Punto de vista"]
+  D --> D2["Voz"]
+  D --> D3["Ritmo y textura"]
+  D --> D4["Convención editorial"]
+
+  D1 --> D11["Persona: 1ª / 3ª limitada / omnisciente"]
+  D1 --> D12["Focalización y esquema de POV"]
+  D1 --> D13["Distancia psíquica 1-5"]
+  D1 --> D14["Tiempo verbal"]
+
+  D2 --> D21["PerfilDeVoz por personaje"]
+  D2 --> D22["Registro y léxico vetado"]
+  D2 --> D23["MuestraAncla de prosa aprobada"]
+
+  D3 --> D31["Proporción escena / resumen"]
+  D3 --> D32["Densidad de diálogo"]
+  D3 --> D33["Longitud de frase y párrafo"]
+
+  D4 --> D41["Raya de diálogo y acotaciones"]
+  D4 --> D42["Comillas latinas y sangrías"]
+  D4 --> D43["Tratamiento tú / usted"]
+```
+
+### 14.5 Árbol de la capa de Género
+
+```mermaid
+flowchart TD
+  G["GÉNERO"]
+  G --> G1["Contrato con el lector"]
+  G --> G2["Convenciones"]
+  G --> G3["Restricciones"]
+
+  G1 --> G11["PromesaDeApertura"]
+  G1 --> G12["Tipo de final: HEA / HFN"]
+  G1 --> G13["La relación es la trama A"]
+
+  G2 --> G21["BeatDeGenero obligatorios"]
+  G2 --> G22["Tropo declarado"]
+  G2 --> G23["Subgénero"]
+  G2 --> G24["EquilibrioDePOV"]
+
+  G3 --> G31["NivelDeCalor"]
+  G3 --> G32["Advertencias de contenido"]
+  G3 --> G33["Edad mínima y consentimiento"]
+```
+
+### 14.6 Árbol de la capa de Estado y contexto
+
+```mermaid
+flowchart TD
+  E["ESTADO Y CONTEXTO"]
+  E --> E1["Fuentes de verdad"]
+  E --> E2["Derivación"]
+  E --> E3["Ensamblado"]
+  E --> E4["Contención de deriva"]
+
+  E1 --> E11["Grafo de canon"]
+  E1 --> E12["Ledger de eventos"]
+  E1 --> E13["Manuscrito versionado"]
+  E1 --> E14["Índice vectorial"]
+
+  E2 --> E21["EstadoEnT de cada personaje"]
+  E2 --> E22["Resúmenes en cascada"]
+  E2 --> E23["Registro de hilos abiertos"]
+
+  E3 --> E31["PaqueteDeContexto por escena"]
+  E3 --> E32["Presupuesto por capa"]
+  E3 --> E33["Recuperación híbrida"]
+
+  E4 --> E41["MuestraAncla de voz"]
+  E4 --> E42["Lista negra de n-gramas"]
+  E4 --> E43["Curva de tensión planificada"]
+```
+
+### 14.7 Árbol de la capa de Producción
+
+```mermaid
+flowchart TD
+  P["PRODUCCIÓN"]
+  P --> P1["Artefactos"]
+  P --> P2["Roles de agente"]
+  P --> P3["Control"]
+
+  P1 --> P11["Brief"]
+  P1 --> P12["Biblia"]
+  P1 --> P13["Outline"]
+  P1 --> P14["FichaDeEscena"]
+  P1 --> P15["VersionDeTexto"]
+
+  P2 --> P21["Arquitecto"]
+  P2 --> P22["Planificador de escena"]
+  P2 --> P23["Ensamblador de contexto"]
+  P2 --> P24["Escritor"]
+  P2 --> P25["Continuista"]
+  P2 --> P26["Crítico"]
+  P2 --> P27["Editor de línea"]
+  P2 --> P28["Extractor"]
+
+  P3 --> P31["Prompt versionado"]
+  P3 --> P32["Ejecucion con semilla y coste"]
+  P3 --> P33["PuertaDeCalidad"]
+```
+
+> Este árbol recoge qué clases existen. El catálogo operativo de los roles, con sus permisos, está en `architecture.md` §7 y §3.5.
+
+### 14.8 Grafo de relaciones
+
+Los mismos predicados y cardinalidades del §10, en forma de grafo.
+
+```mermaid
+erDiagram
+  OBRA ||--|{ PARTE : contiene
+  PARTE ||--|{ CAPITULO : contiene
+  CAPITULO ||--|{ ESCENA : contiene
+  ESCENA ||--|{ BEAT : contiene
+
+  ESCENA }o--|| LUGAR : ocurre_en
+  ESCENA }o--|| PERSONAJE : narrada_desde
+  ESCENA ||--|{ EVENTO : dramatiza
+  ESCENA }o--o| BEAT_DE_GENERO : cumple
+  ESCENA ||--o{ PLANTADO : planta
+  ESCENA ||--o{ PLANTADO : paga
+  ESCENA ||--o{ REVELACION : revela
+
+  PERSONAJE }o--o{ EVENTO : presencia
+  PERSONAJE ||--o{ REVELACION : sabe_desde
+  PERSONAJE ||--|| PERFIL_DE_VOZ : tiene_voz
+  PERSONAJE }o--o{ RELACION : mantiene
+  PERSONAJE ||--o{ OBJETO : posee
+
+  EVENTO ||--o{ EVENTO : causa
+  EVENTO ||--o{ HECHO_CANON : establece
+  HECHO_CANON ||--o{ HECHO_CANON : contradice
+
+  RELACION ||--|{ ESCENA : evoluciona_en
+  ARCO ||--|{ ESCENA : progresa_en
+  EJECUCION ||--|| VERSION_DE_TEXTO : produce
+```
+
+### 14.9 Composición del paquete de contexto
+
+```mermaid
+flowchart TD
+  FE["FichaDeEscena"] --> ENS["Ensamblador de contexto<br/>código determinista"]
+
+  BIB["Biblia"] --> C1["Constitucional"]
+  OUT["Outline"] --> C2["Estructural"]
+  GRAFO["Grafo de canon"] --> C3["Canon relevante"]
+  LEDGER["Ledger"] --> C4["Estado en T"]
+  MS["Manuscrito"] --> C5["Continuidad local"]
+  VEC["Índice vectorial"] --> C6["Memoria recuperada"]
+  FE --> C7["Instrucción"]
+
+  C1 --> ENS
+  C2 --> ENS
+  C3 --> ENS
+  C4 --> ENS
+  C5 --> ENS
+  C6 --> ENS
+  C7 --> ENS
+
+  ENS --> PK["PaqueteDeContexto<br/>+ reserva para reintento"]
+  PK --> LLM["Escritor"]
+```
+
+> **Los topes por capa no están en el diagrama a propósito.** La tabla normativa en valores absolutos es `architecture.md` §2.1, y la correspondencia entre almacén y capa es `architecture.md` §4.8. Duplicar los números en un diagrama garantiza que se desincronicen.
+
+### 14.10 Árbol de calidad
+
+Qué se juzga en cada nivel y qué código de defecto produce. Detalle en el §8.
+
+```mermaid
+flowchart TD
+  Q["Calidad"]
+  Q --> N1["Nivel ESCENA"]
+  Q --> N2["Nivel CAPÍTULO"]
+  Q --> N3["Nivel MANUSCRITO"]
+
+  N1 --> Q11["Coherencia de canon → CAN-01"]
+  N1 --> Q12["Continuidad física y temporal → CON-01, CON-02"]
+  N1 --> Q13["Coherencia de conocimiento → CON-03"]
+  N1 --> Q14["Consistencia de voz → VOZ-01, VOZ-02"]
+  N1 --> Q15["Calidad de prosa → PRO-01, PRO-02"]
+  N1 --> Q16["Función dramática → EST-01"]
+
+  N2 --> Q21["Ritmo y variedad"]
+  N2 --> Q22["Proporción escena / resumen"]
+
+  N3 --> Q31["Cumplimiento de género → GEN-01, GEN-02"]
+  N3 --> Q32["Arco romántico y curva"]
+  N3 --> Q33["Cabos sueltos"]
+  N3 --> Q34["Contrato con el lector → SEG-01"]
+```

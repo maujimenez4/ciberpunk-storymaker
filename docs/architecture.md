@@ -698,10 +698,12 @@ Al adoptar este fichero, retirar de los otros dos lo siguiente, que ya vive aqu�
 - Toda la sección de producción: `Brief`, `Prompt`, `Ejecucion`, `VersionDeTexto` conservan su definición, pero el detalle de versionado, semillas y comandos se va.
 - La gobernanza operativa (dónde se validan las reglas, qué se registra). *Se queda* la regla de dominio en sí.
 
-**De `domain-knowledge.md`:**
+**De `domain-knowledge.md`:** *(hecho en su versión 2.0, 2026-09-21)*
 
 - Cualquier mención a FastAPI, React, SQLite, tokens, prompts, agentes o pipeline. El conocimiento de dominio describe cómo funciona una novela, no cómo se fabrica.
 - Los diagramas de pipeline, de paquete de contexto y de ciclo de vida de la escena.
 - La tabla de skills de desarrollo.
+
+Los diagramas de ontología que allí vivían se han trasladado al **§14 de `definitions.md`**, junto al texto que ilustran. El ciclo de vida de la escena **no** se ha trasladado: contradecía la máquina de estados del §3.3 y se ha retirado.
 
 **Criterio para el futuro:** si la frase cambia cuando cambias de framework, de modelo o de base de datos, va en `architecture.md`. Si cambiaría aunque escribieras la novela a mano, va en `domain-knowledge.md`. Si es «X significa Y», va en `definitions.md`.
