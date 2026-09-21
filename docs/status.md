@@ -275,6 +275,57 @@ es BOOLEAN y tiene otro id. Conviene borrarlo a mano en la UI, o dejarlo sabiend
 El 200 demuestra que el endpoint no rechaza `metadata` ni el `id` determinista. No demuestra
 que los guarde: eso hay que verlo en la UI.
 
-Las dos marcas de ese envío se borraron de `.trace/sent/`. **Consecuencia:** el próximo
-`--uno` o `--todo` volverá a mandar la raíz, con el mismo `spanId`. Si Langfuse no deduplica
-spans, saldrá una raíz repetida.
+Las dos marcas de ese envío se borraron de `.trace/sent/`.
+
+**Prueba de idempotencia del servidor.** El mismo score BOOLEAN, dos POST seguidos con el
+mismo id, saltándose la marca local a propósito. Los dos con HTTP 200 y los dos devolviendo
+**el id que se envió**, no uno generado por el servidor: el endpoint acepta id de cliente.
+Que además deduplique es compatible con esa respuesta pero no está demostrado desde aquí;
+se ve en la UI, contando cuántos `voice-editor-no-anade` hay en la traza.
+
+## `scores@2`: la traza cambia cuando cambia la codificación
+
+El `evalRunId` no lleva el commit, así que commitear no daba traza nueva y el envío completo
+habría reenviado la raíz de la prueba. Lo que sí cambió es **cómo** se codifican los mismos
+resultados en scores —de 67 a 91, con otros nombres y otros tipos—, y eso sí entra ahora en
+el hash como `SCORES_SCHEMA`. Los mismos números contados de otra forma no pueden convivir en
+una traza: una serie con dos codificaciones no se puede leer.
+
+Con `scores@2` la identidad es otra, y la raíz de la prueba no se toca:
+
+```
+evalRunId  f7a20fdbf477c615
+traceId    c68a0843f27ea339886059ca8d0fa442
+raíz       cd5dd61d1aeed1d1
+```
+
+Hay además una guarda que aborta si la raíz volviera a ser `8abb44f36cf39a9d`, para que sea
+una garantía y no una deducción.
+
+## Tres guardas antes de cualquier envío
+
+1. **La raíz de la prueba no se reenvía**, por id.
+2. **Ningún nombre de score puede mezclar tipos.** Se comprueba sobre los 91 reales, no
+   sobre el razonamiento — que es de donde salió el fallo de `scores@1`.
+3. **El árbol de git tiene que estar limpio.** La raíz lleva el commit como metadata; con
+   cambios sin commitear ese commit describe un código que no produjo estos números, y una
+   traza que miente sobre su origen es peor que no tenerla. Si `git` no se puede consultar,
+   tampoco se envía.
+
+Ninguna aplica a `--selftest`, que no sale a la red.
+
+## El desglose de los 91
+
+| nombre | tipo | n |
+|---|---|---|
+| `canon-resoluble` | BOOLEAN | 34 |
+| `issues-schema-valido` | BOOLEAN | 6 |
+| `issues-violaciones` | NUMERIC | 6 |
+| `longitud-desviacion` | NUMERIC | 9 |
+| `longitud-en-rango` | BOOLEAN | 9 |
+| `sin-terminos-prohibidos` | BOOLEAN | 9 |
+| `voice-editor-delta-palabras` | NUMERIC | 9 |
+| `voice-editor-no-anade` | BOOLEAN | 9 |
+
+67 veredictos, uno por resultado, y 24 medidas. Con `scores@1` eran 67 a secas: un score por
+resultado, con el nombre del evaluator y el tipo cambiando según el evaluator.
