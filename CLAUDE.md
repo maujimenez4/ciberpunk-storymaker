@@ -164,7 +164,7 @@ Es la restricción de diseño más importante del proyecto.
 - El ensamblador devuelve siempre el desglose por capa junto al paquete; se guarda en la tabla `ejecucion`.
 - Si tras recortar no cabe, se lanza `ContextBudgetExceeded`. **Nunca se trunca por el final en silencio.**
 - La reserva del 10 % existe para que el reintento con el defecto añadido siga cabiendo.
-- Ese tope es **por llamada**. Hay además un **techo agregado de 100.000 tokens en vuelo** —el mismo número— para todas las llamadas simultáneas del proceso (`docs/architecture.md` §2.2). Consecuencia: una llamada grande satura el sistema entero, y las demás esperan. Si no hay hueco, la llamada espera; **nunca se recorta el paquete para hacerla caber**.
+- Ese tope es **por llamada**, y es el único techo de tokens. La concurrencia se acota aparte, **contando llamadas en vuelo, no sumando tokens** (`docs/architecture.md` §2.2): una llamada al modelo por proceso. Si no hay turno, la llamada espera; **nunca se recorta el paquete para hacerla caber**.
 
 ### 4.2 SQLite con y sin vectores
 

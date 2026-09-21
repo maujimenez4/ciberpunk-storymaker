@@ -16,7 +16,7 @@ Este documento se apoya en [`architecture.md`](architecture.md) para el **qué**
 verificar, y en `CLAUDE.md` §8 para las reglas de dominio que el código debe respetar.
 Si este documento y `architecture.md` discrepan, gana `architecture.md`.
 
-## Dos sujetos, no uno
+## 1. Dos sujetos, no uno
 
 En este repositorio la palabra «agente» designa dos cosas distintas, y la verificación
 de una no vale para la otra:
@@ -37,7 +37,7 @@ refiere.
 > entrada enlaza a una explicación de la metodología, nunca a una herramienta que la
 > implementa.
 
-## Verificación a nivel de artefacto
+## 2. Verificación a nivel de artefacto
 
 | Metodología | Definición | Estado aquí | Explicación |
 | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ refiere.
 | Tests de mutación | Introducir deliberadamente pequeños fallos para comprobar si la suite de tests los detecta | **Aplazado** — tendrá sentido cuando exista la suite del ensamblador, porque es precisamente la suite en cuya luz verde estaremos tentados de confiar para afirmar que el contexto nunca se recorta a escondidas. Hoy no hay suite que mutar | [Mutation testing](https://en.wikipedia.org/wiki/Mutation_testing) |
 | Tests de contrato | Verificar que la interfaz entre dos servicios se mantiene coherente, con independencia de sus interioridades | **Previsto, y en parte por construcción** — hay tres fronteras de este tipo: el OpenAPI entre backend y frontend (el cliente se genera, no se escribe a mano); el `__init__.py` de cada feature como única superficie importable; y la E/S de cada agente narrativo, que es un contrato real —el Continuista devuelve **códigos de defecto con cita**, nunca prosa corregida— y por tanto se valida con esquema y se prueba | [Contract Test — Martin Fowler](https://martinfowler.com/bliki/ContractTest.html) |
 
-## Verificación a nivel de proceso
+## 3. Verificación a nivel de proceso
 
 | Metodología | Definición | Estado aquí | Explicación |
 | --- | --- | --- | --- |
@@ -58,14 +58,14 @@ refiere.
 | Evals | Pruebas estructuradas del comportamiento del agente contra un conjunto de datos y un método de puntuación | **Previsto (narrativos)** — fase 4 de la hoja de ruta. El criterio de éxito del Crítico es «correlación con el editor humano», y eso *es* una eval: un conjunto de escenas etiquetadas por una persona contra el que se puntúa al juez. Sin él no se distingue un cambio de prompt que mejora de uno que solo desplaza la salida, ni se detecta la descalibración al cambiar de modelo (riesgo abierto del §12) | [HELM — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
 | Ejecución en sandbox | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance (ambos)** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (§3.5). El agente de código corre sin herramientas de fichero; el orquestador lee y escribe por él. En los dos casos se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox, pero deja de ser cierto en cuanto un agente reciba una herramienta | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Guardarraíles | Políticas y filtros que restringen qué acciones puede producir un agente | **Aplicado en código (ambos)** — edad mínima y nivel de calor se validan **en esquema**, no en el prompt (§11); el presupuesto de contexto falla explícitamente en vez de truncar; el reintento dirigido tiene tope de dos; cada agente recibe el mínimo de permisos que su nodo necesita. Regla que lo sostiene: ninguna regla de seguridad depende solo del prompt | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
-| Revisión humana en el bucle | Una persona aprueba, rechaza o edita las acciones de alta consecuencia del agente | **Aplicado (ambos), con puntos definidos** — G1 escala a la persona tras dos reparaciones fallidas; G3 no cierra borrador sin revisión; el arco romántico figura en la tabla de dimensiones de calidad como «revisión humana». En el repositorio, toda escritura del agente de código pasa por una persona | [Human-in-the-loop](https://en.wikipedia.org/wiki/Human-in-the-loop) |
-| Verificación multiagente | Patrones de crítico, debate, autoconsistencia, reflexión o ensamblado que revisan la salida del modelo | **Aplicado (narrativos): es el mecanismo central de calidad, no una opción en estudio** — Continuista y Crítico existen separados del Escritor exactamente por esto (decisión 6 del §12: quien escribe no ve sus contradicciones, y quien juzga no repara). Coste asumido: la puerta G1 gasta dos validaciones por escena además de la escritura. Límite conocido: el juez aún no está calibrado, así que hoy aporta detección de contradicciones más que juicio de calidad fiable | [AI Safety via Debate — Irving et al., 2018](https://arxiv.org/abs/1805.00899) |
+| Revisión humana en el bucle | Una persona aprueba, rechaza o edita las acciones de alta consecuencia del agente | **Aplicado (ambos), con puntos definidos** — G1a escala a la persona tras dos reparaciones fallidas; G3 no cierra borrador sin revisión; el arco romántico figura en la tabla de dimensiones de calidad como «revisión humana». En el repositorio, toda escritura del agente de código pasa por una persona | [Human-in-the-loop](https://en.wikipedia.org/wiki/Human-in-the-loop) |
+| Verificación multiagente | Patrones de crítico, debate, autoconsistencia, reflexión o ensamblado que revisan la salida del modelo | **Aplicado (narrativos): es el mecanismo central de calidad, no una opción en estudio** — Continuista y Crítico existen separados del Escritor exactamente por esto (decisión 6 del §12: quien escribe no ve sus contradicciones, y quien juzga no repara). Coste asumido: la puerta de escena gasta hasta dos validaciones además de la escritura. Límite conocido y ahora explícito en el diseño: el juez no está calibrado, así que **G1b no bloquea** hasta la fase 4 (§8.3); lo que hoy aporta es detección de contradicciones, no juicio de calidad | [AI Safety via Debate — Irving et al., 2018](https://arxiv.org/abs/1805.00899) |
 | Integración en CI/CD | Hacer pasar los cambios generados por el agente por la misma tubería que los escritos por personas | **Previsto (agente de código)** — sin una vía aparte y más débil para los diffs del agente. La tubería es la lista de `CLAUDE.md` §15: `ruff`, `mypy`, `pytest`, `lint-imports`, `pnpm typecheck`, `pnpm lint` y migraciones de Alembic. Exigencia propia de este proyecto: la suite debe correr **en los dos modos de `VectorStore`**; si solo se ejecuta con `sqlite-vec` cargado, el modo degradado que promete el §2 no está verificado | [Continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) |
 | Despliegue progresivo | Enviar un cambio a un pequeño porcentaje del tráfico tras un flag antes de la publicación completa | **No aplicable** — el modo de referencia es local, con un fichero SQLite por obra (§10): no hay tráfico que repartir. Lo que sí cumple la función de comparar variantes sin desplegar son las versiones de texto inmutables y la comparación de estrategias de contexto de la fase 6 | [Feature toggle](https://en.wikipedia.org/wiki/Feature_toggle) |
 | Red teaming / pruebas adversarias | Sondear deliberadamente en busca de fallos bajo un modelo de amenaza adversario | **Previsto (narrativos), con modelo de amenaza concreto** — la vía realista no es un atacante externo, es el propio bucle: el Extractor convierte prosa generada en canon, de modo que un texto con instrucciones incrustadas se realimenta al sistema por un canal legítimo. Segundo objetivo: empujar desde el brief contra los guardarraíles de edad y nivel de calor, para comprobar que lo que aguanta es el esquema y no el prompt | [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) |
-| Comprobación de modelos | Explorar exhaustivamente los estados y transiciones alcanzables del agente para verificar invariantes | **No aplicable, por ahora** — la máquina de estados del orquestador es explícita desde que existe el §3.3: diez estados y transiciones cerradas, más las tres puertas y los dos reintentos. Sigue siendo lo bastante pequeña para que la cubran los tests, y lo que la mantiene tratable es la restricción de **una escena en vuelo por obra** (§3.8). Se reconsidera si esa restricción se levanta o si aparece concurrencia real de escritura sobre una misma obra | [Model checking](https://en.wikipedia.org/wiki/Model_checking) |
+| Comprobación de modelos | Explorar exhaustivamente los estados y transiciones alcanzables del agente para verificar invariantes | **No aplicable, por ahora** — la máquina de estados del orquestador es explícita desde que existe el §3.3: diez estados y transiciones cerradas, más las cuatro puertas y los dos reintentos. Sigue siendo lo bastante pequeña para que la cubran los tests, y lo que la mantiene tratable es la restricción de **una escena en vuelo por obra** (§3.8). Se reconsidera si esa restricción se levanta o si aparece concurrencia real de escritura sobre una misma obra | [Model checking](https://en.wikipedia.org/wiki/Model_checking) |
 
-## Clasificación: T / A / I / D / U
+## 4. Clasificación: T / A / I / D / U
 
 Cada requisito recibe exactamente una letra, para que los que nadie puede comprobar
 queden visibles en vez de darse por supuestos. Véase
@@ -79,14 +79,14 @@ queden visibles en vez de darse por supuestos. Véase
 | **D** — Demostración | Se verifica observando el sistema operar en una ejecución realista | La vertical mínima de la fase 1: un capítulo coherente de principio a fin |
 | **U** — No verificable | Ningún método que estemos dispuestos a pagar lo establece | Véase más abajo |
 
-### Los requisitos del proyecto, clasificados
+### 4.1 Los requisitos del proyecto, clasificados
 
 | Requisito | Origen | Letra | Con qué |
 | --- | --- | --- | --- |
 | Ninguna llamada al modelo supera los 100.000 tokens | arq. §2.1 | **T** | Propiedades y unitarios sobre el ensamblador; `ContextBudgetExceeded` en vez de truncar |
 | El recorte es por capa y no toca las capas vecinas | arq. §2.1 | **T** | Propiedad sobre el desglose devuelto junto al paquete |
 | Las capas constitucional e instrucción nunca se recortan | arq. §2.1 | **A** | No existe ruta de código que las recorte: se lee, no se ejecuta. Un test lo refuerza |
-| El total de tokens en vuelo no supera el techo agregado | arq. §2.2 | **T** | Prueba de concurrencia sobre el reservador: se lanza más carga que hueco y se comprueba que espera, no que recorta |
+| Nunca hay más llamadas al modelo en vuelo de las permitidas | arq. §2.2 | **T** | Prueba de concurrencia: se lanza más carga que turnos y se comprueba que la sobrante **espera**, no que se recorta el paquete |
 | Un trabajo interrumpido se reanuda sin duplicar escrituras | arq. §3.7 | **T** | Matar el proceso en cada estado no terminal y comprobar la idempotencia por `run_id` |
 | Solo el Extractor escribe memoria de largo plazo | arq. §4.3 | **A** | Ninguna otra ruta de código escribe en canon, ledger ni índice; se lee en el repositorio, no se ejecuta |
 | Una escena rechazada no deja rastro en canon | arq. §4.4 | **T** | Provocar un defecto bloqueante y comprobar que canon, ledger e índice quedan intactos |
@@ -104,7 +104,7 @@ queden visibles en vez de darse por supuestos. Véase
 | El juez correlaciona con el editor humano | arq. §7 | **U** hoy → **T** | Pasa a T el día que exista el conjunto de escenas etiquetadas |
 | El relato merece la pena leerse | — | **U** | — |
 
-### Qué es hoy U
+### 4.2 Qué es hoy U
 
 Nombrarlos es el sentido del ejercicio: una U sin marcar es una afirmación que
 hacemos sin pruebas.
@@ -130,7 +130,7 @@ hacemos sin pruebas.
   es verificable; el total de nueve agentes, con G1 gastando dos validaciones por
   escena, lo limita una política y no lo demuestra ningún análisis.
 
-## Advertencias
+## 5. Advertencias
 
 - Los tests basados en propiedades y las evals no tienen una referencia fundacional
   neutra única como sí la tiene la verificación formal. Los enlaces de arriba apuntan

@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 1.0 · **Fecha:** 2026-09-21 · **Dominio:** generación asistida de novela larga, género de referencia: romance
+**Versión:** 1.1 · **Fecha:** 2026-09-21 · **Dominio:** generación asistida de novela larga, género de referencia: romance
 
 ---
 
@@ -9,6 +9,15 @@
 Este documento define el vocabulario controlado del dominio: qué clases existen, qué atributos tiene cada una, qué relaciones las unen y qué restricciones deben cumplirse. Es la referencia normativa para el esquema de datos, los prompts, las rúbricas de evaluación y la comunicación del equipo.
 
 Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14** de este documento.
+
+**Registro de cambios**
+
+| Versión | Qué cambió |
+| --- | --- |
+| 1.0 | Primera versión de la ontología |
+| 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
+
+---
 
 ## 2. Convenciones de notación
 
@@ -248,23 +257,9 @@ El problema central: la novela terminada no cabe en la ventana y, aunque cupiera
 #### `PaqueteDeContexto`
 Lo que se envía al modelo para escribir **una** escena. Se ensambla por código (determinista y auditable), no por modelo.
 
-| Capa de contexto | Contenido | Fuente | Presupuesto |
-| --- | --- | --- | --- |
-| Constitucional | Estilo, POV, tiempo verbal, calor, prohibiciones | Biblia | 5 % |
-| Estructural | Acto, beat de género, qué debe lograr la escena | Outline | 10 % |
-| Canon relevante | Fichas de presentes, lugar, objetos en juego | Grafo, filtrado | 20 % |
-| Estado en T | Qué sabe cada presente, temperatura, heridas, hora | Ledger **[derivado]** | 15 % |
-| Continuidad local | Texto literal de las últimas 1–2 escenas | Ventana deslizante | 20 % |
-| Memoria recuperada | Promesas, motivos, frases que retomar | Búsqueda híbrida | 10 % |
-| Instrucción | Ficha de escena y formato de salida | Plan | 10 % |
-| Reserva | Margen para reparación y reintento | — | 10 % |
+Sus ocho capas, que son vocabulario de todo el sistema: **constitucional**, **estructural**, **canon relevante**, **estado en T**, **continuidad local**, **memoria recuperada**, **instrucción** y **reserva**.
 
-**Reglas de ensamblado:**
-1. Se **selecciona**, no se acumula. Filtro estructural primero (presentes, lugar, hilos abiertos), similitud semántica después.
-2. Lo importante va al **principio y al final** del prompt; el centro es donde más se pierde.
-3. **Resúmenes en cascada:** escena → capítulo → parte.
-4. Texto literal solo para lo contiguo; lo demás entra como hechos, no como prosa.
-5. Lo derivado nunca se escribe a mano.
+> El tope en tokens de cada capa, el orden de recorte y las reglas de ensamblado son mecanismo, no definición: viven en `architecture.md` §2.1, y la correspondencia entre capa y almacén en su §4.8. Aquí no se repiten, para que no diverjan.
 
 #### `MuestraAncla`
 Fragmento de prosa ya aprobada que se inyecta como referencia de voz. Es la contención principal de la deriva estilística.
@@ -273,13 +268,17 @@ Fragmento de prosa ya aprobada que se inyecta como referencia de voz. Es la cont
 Log *append-only* de eventos confirmados. Fuente de la derivación de estado. Con *snapshots* cada N escenas para acelerar la reconstrucción.
 
 #### `Deriva`
-| Tipo | Síntoma | Contención |
-| --- | --- | --- |
-| De voz | El capítulo 20 no suena como el 3 | Muestras ancla + medición de distancia estilística |
-| De hechos | Cambian ojos, apellidos, distancias | Canon como triples + validador post-escena |
-| De ritmo | Todas las escenas duran y acaban igual | Forma y extensión objetivo en la ficha |
-| De tensión | La relación avanza en línea recta | Curva de temperatura con retrocesos obligatorios |
-| De léxico | Reaparecen los mismos gestos y metáforas | Lista negra viva de n-gramas usados |
+Alejamiento progresivo del texto respecto de lo declarado. Cinco tipos:
+
+| Tipo | Síntoma |
+| --- | --- |
+| De voz | El capítulo 20 no suena como el 3 |
+| De hechos | Cambian ojos, apellidos, distancias |
+| De ritmo | Todas las escenas duran y acaban igual |
+| De tensión | La relación avanza en línea recta |
+| De léxico | Reaparecen los mismos gestos y metáforas |
+
+> Cómo se contiene cada una es mecanismo: `architecture.md` §4 y §8.3. Por qué ocurren, `domain-knowledge.md` §10.
 
 ---
 
@@ -289,20 +288,20 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 
 #### `DimensionDeCalidad`
 
-| Dimensión | Nivel | Medición | Puerta |
-| --- | --- | --- | --- |
-| Coherencia de canon | Escena | Extracción de afirmaciones vs. grafo | Bloqueante: 0 contradicciones |
-| Continuidad física y temporal | Escena | Validador de estado y tiempos de viaje | Bloqueante |
-| Coherencia de conocimiento | Escena | ¿Existe `sabe_desde` previo? | Bloqueante |
-| Consistencia de voz | Escena | Distancia a muestras ancla; clasificador de POV | Umbral |
-| Calidad de prosa | Escena | Repetición, muletillas, variedad sintáctica, clichés | Umbral |
-| Función dramática | Escena | Juez LLM con rúbrica: objetivo, obstáculo, giro | Bloqueante |
-| Diálogo | Escena | % dialogado, subtexto, voces distinguibles sin acotación | Umbral |
-| Ritmo y variedad | Capítulo | Longitud de escenas, escena/resumen, curva de tensión | Umbral |
-| Arco romántico | Manuscrito | Curva de temperatura por escena | Revisión humana |
-| Cumplimiento de género | Manuscrito | Cobertura de beats y del tropo | Bloqueante |
-| Cabos sueltos | Manuscrito | Plantados sin pago, hilos vencidos | Bloqueante |
-| Contrato con el lector | Manuscrito | Nivel de calor, temas sensibles, advertencias | Bloqueante |
+| Dimensión | Nivel | Medición |
+| --- | --- | --- |
+| Coherencia de canon | Escena | Extracción de afirmaciones vs. grafo  |
+| Continuidad física y temporal | Escena | Validador de estado y tiempos de viaje  |
+| Coherencia de conocimiento | Escena | ¿Existe `sabe_desde` previo?  |
+| Consistencia de voz | Escena | Distancia a muestras ancla; clasificador de POV  |
+| Calidad de prosa | Escena | Repetición, muletillas, variedad sintáctica, clichés  |
+| Función dramática | Escena | Juez LLM con rúbrica: objetivo, obstáculo, giro  |
+| Diálogo | Escena | % dialogado, subtexto, voces distinguibles sin acotación  |
+| Ritmo y variedad | Capítulo | Longitud de escenas, escena/resumen, curva de tensión  |
+| Arco romántico | Manuscrito | Curva de temperatura por escena  |
+| Cumplimiento de género | Manuscrito | Cobertura de beats y del tropo  |
+| Cabos sueltos | Manuscrito | Plantados sin pago, hilos vencidos  |
+| Contrato con el lector | Manuscrito | Nivel de calor, temas sensibles, advertencias  |
 
 #### `Metrica` — automáticas y baratas
 - **Repetición:** trigramas y cuatrigramas repetidos entre escenas (detecta prosa de plantilla).
@@ -332,7 +331,7 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | SEG-01 | Nivel de calor o tema fuera de contrato | Reescritura obligatoria, sin excepción |
 
 #### `PuertaDeCalidad`
-Condición que una unidad debe cumplir para avanzar de fase. Política de reparación: **reintento dirigido** con el defecto concreto en el prompt (máximo dos), después escalado a humano. Un reintento genérico («mejóralo») degrada el texto casi siempre.
+Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existen, qué bloquea cada una y la política de reparación son mecanismo: `architecture.md` §8.3.
 
 ---
 
@@ -341,27 +340,21 @@ Condición que una unidad debe cumplir para avanzar de fase. Política de repara
 | Clase | Definición | Atributos clave |
 | --- | --- | --- |
 | `Brief` | Encargo inicial | Género, tropo, tono, extensión, referencias |
-| `Biblia` | Conjunto de hechos fijos, decididos antes de escribir | Versionada; cambiarla crea versión nueva de obra |
+| `Biblia` | Conjunto de hechos fijos, decididos antes de escribir | Versionada; cambiarla crea una `VersionDeObra` |
 | `Outline` | Plan jerárquico partes → capítulos → escenas | Cobertura de beats, curva de tensión |
 | `FichaDeEscena` | Contrato de generación de una escena | Ver §4.1 `Escena` |
-| `Prompt` | Plantilla versionada por rol de agente | `prompt_id`, `version`, `rol` |
-| `Ejecucion` | Una llamada al modelo | `run_id`, escena, prompt, modelo, semilla, parámetros, coste, métricas, veredicto |
+| `Prompt` | Plantilla por rol de agente, **versionada como fichero del repositorio** | `prompt_id`, `version`, `rol`, `hash` |
+| `Ejecucion` | Una llamada al modelo | `run_id`, escena, prompt con su `hash`, modelo, semilla, parámetros, coste, métricas, veredicto |
 | `VersionDeTexto` | Texto inmutable de una escena | `version`, `vigente`, `run_id` de origen |
+| `VersionDeObra` | Estado congelado de la biblia con el que se escribió un tramo del manuscrito | `version_obra_id`, `biblia`, `vigente_desde`; cada `Escena` apunta a la suya |
 
-**Roles de agente** (cada uno con prompt, contexto y criterio de éxito propios):
+**Roles de agente.** Nueve, y estos son sus nombres, que es lo que fija este documento:
 
-| Rol | Entrada | Salida | Por qué está separado |
-| --- | --- | --- | --- |
-| Arquitecto | Brief | Premisa, biblia, outline | Piensa en estructura, no en prosa |
-| Planificador de escena | Outline + estado | Ficha de escena | Decide función antes que palabras |
-| Ensamblador de contexto | Ficha + almacenes | Paquete de contexto | Es código: determinista y auditable |
-| Escritor | Paquete | Prosa de escena | Optimiza voz y dramatización |
-| Continuista | Prosa + canon | Lista de defectos | Quien escribe no ve sus contradicciones |
-| Crítico | Prosa + rúbrica | Puntuaciones y diagnóstico | Juicio separado de la reparación |
-| Editor de línea | Prosa aprobada | Prosa pulida | Trabaja frase a frase, sin replantear |
-| Extractor | Prosa aprobada | Hechos, estado, resumen, hilos | Cierra el bucle de memoria |
+`Arquitecto` · `Planificador de escena` · `Ensamblador de contexto` · `Escritor` · `Continuista` · `Crítico` · `Editor de línea` · `Extractor` · **`Auditor de manuscrito`**
 
-**Almacenes:** grafo de canon · ledger de eventos y estado · manuscrito versionado · índice vectorial · registro de plantados e hilos · catálogo de prompts y rúbricas.
+> Qué recibe y qué produce cada uno, qué almacenes puede tocar y por qué están separados es mecanismo: `architecture.md` §7 y §3.5. El **Auditor de manuscrito** revisa el manuscrito cerrado —cobertura de beats, plantados sin pago, curva de temperatura, contrato de género— y **solo produce un informe: no escribe en ningún almacén**.
+
+Los almacenes en los que vive todo esto están enumerados en `architecture.md` §5.5.
 
 ---
 
@@ -414,12 +407,12 @@ El validador debe poder comprobar mecánicamente:
 ## 12. Gobernanza
 
 - **Edad de los personajes:** regla dura, sin excepción narrativa.
-- **Nivel de calor:** declarado en la obra, aplicado por validador.
+- **Nivel de calor:** declarado en la obra y respetado sin excepción.
 - **Consentimiento y dinámicas de poder:** consentimiento explícito y entusiasta en escenas íntimas; atención a desequilibrios (jefe/empleada, médico/paciente).
-- **Advertencias de contenido:** catálogo de temas sensibles (duelo, adicción, violencia, pérdida gestacional) declarado por obra y verificado en el manuscrito.
+- **Advertencias de contenido:** catálogo de temas sensibles (duelo, adicción, violencia, pérdida gestacional) declarado por obra.
 - **Sesgos y representación:** auditar estereotipos en físico, profesiones y acentos; el modelo tiende al promedio del corpus.
 - **Originalidad:** los tropos son libres, la expresión concreta no. Detección de solapamiento léxico alto con obras conocidas.
-- **Trazabilidad de autoría:** registro de qué partes son generadas, editadas o humanas.
+- **Trazabilidad de autoría:** cada parte del texto es atribuible a una persona o a una generación.
 - **Datos de entrada:** si se usan obras del cliente como referencia de estilo, acordar derechos y no incorporarlas a índices compartidos entre proyectos.
 
 ---
@@ -629,6 +622,7 @@ flowchart TD
   P1 --> P13["Outline"]
   P1 --> P14["FichaDeEscena"]
   P1 --> P15["VersionDeTexto"]
+  P1 --> P16["VersionDeObra"]
 
   P2 --> P21["Arquitecto"]
   P2 --> P22["Planificador de escena"]
@@ -638,6 +632,7 @@ flowchart TD
   P2 --> P26["Crítico"]
   P2 --> P27["Editor de línea"]
   P2 --> P28["Extractor"]
+  P2 --> P29["Auditor de manuscrito"]
 
   P3 --> P31["Prompt versionado"]
   P3 --> P32["Ejecucion con semilla y coste"]

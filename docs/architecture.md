@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-**Versión:** 1.1 · **Fecha:** 2026-09-21
+**Versión:** 1.2 · **Fecha:** 2026-09-21
 
 Este documento describe **cómo se construye** el sistema. El **qué significa cada término** vive en [`definitions.md`](definitions.md); el **cómo funciona una novela** vive en [`domain-knowledge.md`](domain-knowledge.md). Si un concepto aparece aquí sin definir, está definido allí.
 
@@ -60,27 +60,28 @@ Reglas de implementación:
 4. El ensamblador devuelve el desglose por capa junto al paquete, y se guarda en `ejecucion`.
 5. La reserva del 10 % garantiza que el reintento con el defecto añadido siga cabiendo.
 
-### 2.2 Presupuesto concurrente
+### 2.2 Llamadas simultáneas
 
-Los 100.000 tokens de §2.1 son el techo **de una llamada**. No dicen nada sobre cuántas llamadas pueden estar vivas a la vez: dos agentes en paralelo serían 200.000 tokens en vuelo sin violar ninguna regla de §2.1. Por eso hay un segundo techo, **agregado**, y es **el mismo número**: 100.000 tokens sumando todas las llamadas simultáneas del proceso.
+Los 100.000 tokens de §2.1 son el techo **de una llamada**, y es el único techo de tokens del sistema. **No hay un presupuesto agregado** que sume las llamadas en vuelo: sumar tokens de llamadas distintas no acota nada que no acote ya un límite de concurrencia, y obliga a mantener una reserva compartida que deja de significar nada en cuanto hay más de un proceso.
 
-| Techo | Valor | Quién lo aplica | Cuándo |
-| --- | --- | --- | --- |
-| Por llamada | 100.000 tokens | Ensamblador | Al construir el paquete |
-| Agregado en vuelo | **100.000 tokens**, el mismo número | Orquestador | Antes de lanzar cada llamada |
-| Llamadas simultáneas | No es un número aparte: sale del techo agregado | Orquestador | — |
+Lo que sí hay es un límite de concurrencia, **contado en llamadas**:
 
-**Consecuencia directa:** como el techo agregado iguala al de una llamada, **una sola llamada grande satura el sistema entero**. Dos agentes solo corren a la vez si sus paquetes suman 100.000 o menos: el Continuista (30–60 k) y el Crítico (20–40 k) a veces caben juntos; el Escritor, que puede llegar al tope, nunca comparte. El sistema es por tanto **secuencial por defecto y concurrente por excepción**. Es deliberado: acota el gasto simultáneo a lo que cuesta una sola llamada.
+| Límite | Valor | Quién lo aplica |
+| --- | --- | --- |
+| Tokens por llamada | 100.000 | Ensamblador, al construir el paquete |
+| Llamadas al modelo en vuelo | **1 por proceso**, configurable | Orquestador, antes de lanzar cada llamada |
+| Escenas en vuelo por obra | 1 | Orquestador (§3.1, punto 4) |
 
 Reglas de implementación:
 
-1. El orquestador **reserva** tokens antes de llamar y los **libera** al recibir respuesta o al fallar. La reserva usa el desglose que ya devuelve el ensamblador; no es una estimación.
-2. Si no hay hueco en el agregado, la llamada **espera**. Nunca se recorta el paquete para hacerla caber: recortar es competencia del ensamblador y obedece a §2.1, no a la carga del sistema.
-3. La espera tiene *timeout*. Si vence, el trabajo pasa a `FALLIDA` con causa `PresupuestoAgregadoAgotado`. No se encola indefinidamente.
-4. El techo agregado es **por proceso**, no por obra. Dos obras generando a la vez comparten los mismos 100.000: la segunda espera.
-5. El límite de tasa del proveedor es un techo distinto y externo. Si el proveedor rechaza por tasa, es fallo de proveedor (§3.6), no un problema de presupuesto.
+1. Si no hay turno, la llamada **espera**. Nunca se recorta el paquete para que quepa antes: recortar obedece a §2.1, no a la carga del sistema.
+2. La espera tiene *timeout*. Si vence, el trabajo pasa a `FALLIDA` con causa `TiempoAgotado` (§3.6).
+3. El límite es **por proceso**, y por eso en modo servidor los trabajos corren en el proceso de la API (§10). Repartirlos en un *worker* aparte duplicaría el límite en silencio.
+4. El límite de tasa del proveedor es un techo distinto y externo. Si el proveedor rechaza por tasa, es fallo de proveedor (§3.6).
 
-La reserva del 10 % de §2.1 protege el reintento **dentro** de una llamada; este techo protege la factura y la latencia **del sistema entero**. Son independientes y se aplican a la vez.
+La reserva del 10 % de §2.1 protege el reintento **dentro** de una llamada; este límite protege la latencia y la factura **del proceso**. Son independientes y se aplican a la vez.
+
+**Lo que este límite no acota:** el coste total de una novela. Sigue siendo un riesgo abierto (§12).
 
 ---
 
@@ -144,7 +145,7 @@ stateDiagram-v2
 | `PLANIFICANDO` | El Planificador produce la ficha de escena | `ENSAMBLANDO` | Sí, se repite el paso |
 | `ENSAMBLANDO` | El Ensamblador construye el paquete y lo presupuesta | `ESCRIBIENDO` | Sí, es determinista: mismo estado, mismo paquete |
 | `ESCRIBIENDO` | El Escritor genera prosa | `VALIDANDO` | Sí, pero **cuesta**: se repite la llamada al modelo |
-| `VALIDANDO` | Continuista y Crítico juzgan la versión | `EXTRAYENDO` o `REPARANDO` | Sí, sobre la versión ya guardada |
+| `VALIDANDO` | Se pasan las puertas G1a y, cuando exista, G1b (§8.3) | `EXTRAYENDO` o `REPARANDO` | Sí, sobre la versión ya guardada |
 | `REPARANDO` | Se prepara el reintento con el defecto y su cita | `ESCRIBIENDO` o `ESCALADA` | Sí |
 | `EXTRAYENDO` | El Extractor escribe canon, ledger, resúmenes e hilos | `INTEGRADA` | Sí, por idempotencia del `run_id` |
 | `INTEGRADA` | La escena forma parte del manuscrito | — | Terminal |
@@ -158,7 +159,7 @@ Ningún estado se salta: `VALIDANDO` no puede llegar a `INTEGRADA` sin pasar por
 
 - Cada paso recibe un modelo Pydantic y devuelve otro. El orquestador no pasa objetos vivos entre pasos: **persiste la salida y vuelve a leerla**. Es lo que hace que reanudar sea idéntico a ejecutar.
 - Ningún paso escribe fuera de lo que su contrato declara. La escritura a canon y ledger es exclusiva del paso `EXTRAYENDO`.
-- Un paso que llama al modelo recibe también el desglose de tokens y lo devuelve en su salida, para `ejecucion` y para el techo agregado de §2.2.
+- Un paso que llama al modelo recibe también el desglose de tokens y lo devuelve en su salida, para `ejecucion` (§9).
 
 ### 3.5 Permisos por agente
 
@@ -186,9 +187,8 @@ Los agentes tampoco leen ni escriben ficheros del repositorio: el paquete llega 
 | --- | --- | --- |
 | `FalloDeProveedor` | Error de red, 5xx, límite de tasa | Reintento con espera creciente, hasta 3. Después, `FALLIDA` |
 | `ContextBudgetExceeded` | El paquete no cabe ni tras recortar (§2.1) | `FALLIDA` inmediata, sin llamar al modelo. Es un fallo de diseño del ensamblado, no de ejecución |
-| `PresupuestoAgregadoAgotado` | No hubo hueco en el techo de §2.2 antes del *timeout* | `FALLIDA`. Relanzable sin coste, porque no se llegó a llamar |
 | `DefectoBloqueante` | El Continuista o el Crítico rechazan | `REPARANDO`, hasta dos veces; luego `ESCALADA` |
-| `TiempoAgotado` | Un paso supera su plazo | `FALLIDA`, con el paso anotado |
+| `TiempoAgotado` | Un paso supera su plazo, o la espera de turno de §2.2 vence | `FALLIDA`, con el paso anotado. Si no se llegó a llamar, es relanzable sin coste |
 | `Cancelacion` | Petición del autor | `CANCELADA` en el primer punto seguro |
 
 Un defecto de calidad **no** es un fallo técnico: `ESCALADA` y `FALLIDA` son estados distintos a propósito, y se cuentan por separado en las métricas de §9.
@@ -202,7 +202,7 @@ El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamad
 ### 3.8 Concurrencia
 
 - **Una escena en vuelo por obra.** Es una restricción de corrección, no de rendimiento (§3.1, punto 4).
-- **Varias obras pueden estar en curso a la vez, pero sus llamadas al modelo se serializan:** comparten los 100.000 del techo agregado (§2.2). El paralelismo entre obras es de trabajo, no de llamadas.
+- **Varias obras pueden estar en curso a la vez, pero sus llamadas al modelo se serializan:** comparten el turno único de §2.2. El paralelismo entre obras es de trabajo, no de llamadas.
 - **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** ensamblado, lectura de almacenes, persistencia y cálculo de embeddings. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
 - **Las escrituras se serializan por obra.** SQLite con WAL admite lectores concurrentes y un solo escritor; el orquestador respeta eso con un cerrojo por obra en vez de confiar en `busy_timeout` para resolver colisiones.
 
@@ -259,9 +259,10 @@ Se **reconstruye entera en cada llamada**. Nada se arrastra de la llamada anteri
 | Estado en T | Quién sabe qué, dónde está cada cual, en el momento T | **Nadie: es una vista derivada** | Derivado, más *snapshots* cada N escenas |
 | Resúmenes en cascada | Escena → capítulo → acto → obra | Extractor | Regenerables desde el texto |
 | Índice vectorial | Fragmentos con su embedding | Extractor | Regenerable; puede reconstruirse entero |
-| Hilos y plantados | Abierto, pagado, vencido | Extractor y Auditor | Estado con ciclo de vida |
+| Hilos y plantados | Abierto, pagado, vencido | Extractor | Estado con ciclo de vida |
+| Lista negra de n-gramas | Secuencias ya gastadas en el manuscrito | Extractor | Crece con la obra; la lee el Editor de línea |
 
-La columna que importa es la tercera: **solo el Extractor escribe memoria de largo plazo**, y solo desde el paso `EXTRAYENDO`. Ningún otro agente puede dejar rastro permanente.
+La columna que importa es la tercera: **solo el Extractor escribe memoria de largo plazo**, y solo desde el paso `EXTRAYENDO`. Ningún otro agente puede dejar rastro permanente. El Auditor, en particular, **lee todo y no escribe nada**: su salida es un informe, y quien actúe sobre él será una persona o un trabajo posterior (§3.5).
 
 ### 4.4 Consolidación
 
@@ -296,6 +297,8 @@ El orden no es negociable: la búsqueda puramente vectorial trae escenas parecid
 Un hecho de canon equivocado **no se edita**: se registra un hecho nuevo que lo sustituye y cita al anterior. El ledger es *append-only*, así que la historia de lo que el sistema creyó en cada momento se conserva.
 
 Esto no es purismo: cuando una escena antigua se apoyó en un hecho que luego resultó falso, hay que poder encontrarla. Si el hecho se hubiera editado en sitio, esa escena quedaría rota y sin rastro de por qué.
+
+**Consecuencia sobre los *snapshots*.** El estado en T se acelera con *snapshots* cada N escenas (§4.3). Un hecho que sustituye a otro **invalida todos los *snapshots* posteriores a la escena de origen del hecho sustituido**: se marcan obsoletos y se recalculan desde el último válido. Sin esta regla, una corrección de canon deja el estado derivado mintiendo hasta el siguiente *snapshot*, que es exactamente el fallo silencioso que el ledger existe para evitar.
 
 ### 4.8 De la memoria al paquete
 
@@ -419,8 +422,11 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Manuscrito | `escena`, `version_texto` (inmutable) | Editar = versión nueva + marcar vigente |
 | Índice vectorial | `vec0` (sqlite-vec) o BLOB + NumPy | Detrás de la interfaz `VectorStore` |
 | Hilos y plantados | `plantado`, `hilo_narrativo` | Estado: abierto, pagado, vencido |
-| Prompts y rúbricas | Ficheros versionados en repo | Nunca se editan en sitio |
-| Ejecuciones | `ejecucion` | Prompt, modelo, semilla, tokens, coste, veredicto |
+| Prompts y rúbricas | **Ficheros versionados en el repositorio** | Nunca se editan en sitio. `ejecucion` guarda `prompt_id`, `version` y el **hash** del fichero: eso hace reproducible la llamada sin un segundo sistema de versionado |
+| Ejecuciones | `ejecucion` | Prompt con su hash, modelo, semilla, tokens, coste, veredicto |
+| Lista negra de n-gramas | Tabla `ngrama_vetado` | Crece con el manuscrito; la escribe el Extractor, la lee el Editor de línea |
+| Versiones de obra | Tabla `version_obra` | Una por versión de biblia; cada escena apunta a la que estaba vigente cuando se escribió |
+| Serie | Tabla `serie`, opcional | Si existe, el canon se comparte entre sus obras **desde el primer día** |
 
 **Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia. La búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes.
 
@@ -621,9 +627,12 @@ sequenceDiagram
 
 | Puerta | Cuándo | Bloqueantes | Umbral | Acción si falla |
 | --- | --- | --- | --- | --- |
-| G1 · Escena | Tras escribir | Canon, continuidad, conocimiento, función dramática | Voz, prosa, diálogo | Reintento dirigido (máx. 2) → humano |
+| **G1a · Escena, mecánica** | Tras escribir | Canon, continuidad, conocimiento, seguridad | — | Reintento dirigido (máx. 2) → humano |
+| **G1b · Escena, de juicio** | Tras superar G1a | Función dramática | Voz, prosa, diálogo | Reintento dirigido (máx. 2) → humano |
 | G2 · Capítulo | Al cerrar capítulo | — | Ritmo, escena/resumen | Replanificar escenas del capítulo |
 | G3 · Manuscrito | Al cerrar borrador | Beats, cabos sueltos, contrato con el lector | Curva de temperatura | Vuelta al outline |
+
+**Por qué G1 está partida.** Lo que se puede **contar** y lo que hay que **juzgar** no se verifican igual ni están disponibles a la vez (`domain-knowledge.md` §11). G1a la resuelve código —contradicciones de canon, tiempos de viaje, `sabe_desde`, edad y nivel de calor— y está disponible desde el primer día. G1b necesita al Crítico con una rúbrica calibrada contra escenas etiquetadas por el editor, que es trabajo de la fase 4 (§13). **Hasta que exista esa calibración, G1b no bloquea**: se registra el diagnóstico y se deja pasar. Fingir que la función dramática se comprueba mecánicamente sería peor que declararla pendiente.
 
 **Política de reparación:** el reintento lleva el **defecto concreto** en el prompt, con cita del pasaje. Un reintento genérico («mejóralo») degrada el texto casi siempre. Tras dos intentos, escalado a humano.
 
@@ -633,14 +642,14 @@ sequenceDiagram
 
 Cada llamada al modelo registra: `run_id`, escena, versión de prompt, versión de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto.
 
-Métricas operativas a vigilar: coste por escena y por novela, tokens medios por capa, tasa de defectos por código, tasa de reintento, escalados a humano por cada cien escenas, latencia por fase, porcentaje de contexto ocupado por cada capa, y —del techo agregado de §2.2— tokens en vuelo, pico alcanzado y tiempo de espera por reserva.
+Métricas operativas a vigilar: coste por escena y por novela, tokens medios por capa, tasa de defectos por código, tasa de reintento, escalados a humano por cada cien escenas, latencia por fase, porcentaje de contexto ocupado por cada capa, y —del límite de §2.2— tiempo de espera por turno y número de esperas vencidas.
 
 ---
 
 ## 10. Modos de despliegue
 
 - **Local**: backend y frontend en la misma máquina, un fichero SQLite por obra. Es el modo de referencia.
-- **Servidor**: un proceso FastAPI, SQLite en volumen persistente con WAL, trabajos en segundo plano en el mismo proceso o en un *worker*. Si la concurrencia de escritura crece, el cuello es SQLite: se resuelve serializando las escrituras por obra, no cambiando de base de datos.
+- **Servidor**: un proceso FastAPI, SQLite en volumen persistente con WAL, trabajos en segundo plano **en el mismo proceso**: el límite de concurrencia de §2.2 es por proceso, así que repartirlos en un *worker* lo duplicaría. Si la concurrencia de escritura crece, el cuello es SQLite: se resuelve serializando las escrituras por obra, no cambiando de base de datos.
 
 ---
 
@@ -668,9 +677,12 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 | 9 | Frontend feature-first (Bulletproof) + 3 reglas de frontera | FSD completo, Nx+DDD, Atomic, carpetas por tipo | Cohesión por feature con coste de adopción bajo; migrable a FSD |
 | 10 | Orquestador determinista en código, con estado en SQLite | Un agente que decide el siguiente paso | Se prueba sin llamar al proveedor, se reanuda tras una caída y su traza es una tabla, no una conversación |
 | 11 | Agentes sin memoria propia: la memoria son los almacenes | Hilo de conversación persistente por agente | Mismo estado de almacenes y misma semilla producen el mismo paquete |
-| 12 | Techo agregado de tokens en vuelo, además del techo por llamada | Solo el límite de 100.000 por llamada | El límite por llamada no acota nada cuando hay varias llamadas simultáneas |
+| 12 | Concurrencia acotada por número de llamadas en vuelo, no por suma de tokens | Un techo agregado de tokens compartido | Un agregado de tokens no acota nada que no acote ya un límite de concurrencia, y deja de significar nada con más de un proceso |
+| 13 | `Serie` y canon compartido **desde el primer día** | Añadir `Serie` cuando llegue la segunda obra | `definitions.md` §4.1: añadirlo después obliga a reescribir todas las referencias de canon |
+| 14 | Prompts como ficheros del repositorio, con su hash en `ejecucion` | Tabla de prompts versionada en la base de datos | Se revisan como código, cambiarlos no exige migración, y el hash basta para reproducir una ejecución |
+| 15 | La puerta de escena se parte en mecánica y de juicio | Una sola puerta que espera al juez calibrado | Lo que se cuenta está disponible hoy; lo que se juzga, en la fase 4 |
 
-**Riesgos abiertos:** coste por novela con nueve agentes, acotado en latencia y gasto simultáneo por §2.2 pero no en total; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra.
+**Riesgos abiertos:** coste total por novela con nueve agentes, acotado en concurrencia por §2.2 pero **no en total**; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra.
 
 ---
 
@@ -689,7 +701,7 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 
 Al adoptar este fichero, retirar de los otros dos lo siguiente, que ya vive aquí:
 
-**De `definitions.md`:**
+**De `definitions.md`:** *(hecho el 2026-09-21)*
 
 - La tabla de capas del paquete de contexto con los porcentajes de presupuesto y las reglas de ensamblado. *Se queda* la definición de `PaqueteDeContexto`, `MuestraAncla`, `Ledger` y `EstadoEnT` como conceptos.
 - Las tablas de contención de deriva. *Se queda* la definición de deriva y sus tipos.
@@ -705,5 +717,13 @@ Al adoptar este fichero, retirar de los otros dos lo siguiente, que ya vive aqu�
 - La tabla de skills de desarrollo.
 
 Los diagramas de ontología que allí vivían se han trasladado al **§14 de `definitions.md`**, junto al texto que ilustran. El ciclo de vida de la escena **no** se ha trasladado: contradecía la máquina de estados del §3.3 y se ha retirado.
+
+### 14.1 Registro de cambios
+
+| Versión | Qué cambió |
+| --- | --- |
+| 1.0 | Primera versión: se recoge aquí el material de fabricación que estaba mezclado en los otros dos documentos |
+| 1.1 | Se añaden §2.2 presupuesto concurrente, §3 orquestación y §4 memoria; se renumera §3–§12 → §5–§14 |
+| 1.2 | El techo agregado de tokens se sustituye por un límite de concurrencia contado en llamadas (§2.2). El Auditor deja de escribir memoria (§4.3). Los prompts son ficheros con hash (§5.5). Aparecen la lista negra de n-gramas, `version_obra` y `serie` (§5.5). La puerta de escena se parte en G1a y G1b (§8.3). Un hecho sustituido invalida los *snapshots* posteriores (§4.7). Ejecutada la limpieza de `definitions.md` de §14 |
 
 **Criterio para el futuro:** si la frase cambia cuando cambias de framework, de modelo o de base de datos, va en `architecture.md`. Si cambiaría aunque escribieras la novela a mano, va en `domain-knowledge.md`. Si es «X significa Y», va en `definitions.md`.

@@ -32,9 +32,10 @@ El objetivo es el de la fase 1 de la hoja de ruta (`architecture.md` §13): **un
 | --- | --- |
 | Obra desde un brief, biblia y outline | Sin outline no hay ficha de escena |
 | Planificar, ensamblar, escribir e integrar una escena | Es el bucle completo; sin él no hay producto |
-| Presupuesto por capa y techo agregado | Restricción no negociable (`CLAUDE.md` §4.1) |
+| Presupuesto por capa y límite de concurrencia | Restricción no negociable (`CLAUDE.md` §4.1) |
 | Orquestador con estado persistido y reanudación | Sin él, una caída pierde trabajo y nada se puede depurar |
 | Memoria de largo plazo: canon, ledger, resúmenes, índice | Es lo que cierra el bucle entre escenas |
+| Esquema preparado para `Serie` desde la migración inicial | Añadirlo después obliga a reescribir el canon (`definitions.md` §4.1) |
 | Validadores **mecánicos** | Son los que se cuentan, no los que se juzgan (`domain-knowledge.md` §11) |
 
 **Ámbito:** backend. El frontend queda fuera.
@@ -51,11 +52,10 @@ El objetivo es el de la fase 1 de la hoja de ruta (`architecture.md` §13): **un
 | Editor de línea | Introduce una segunda escritura sobre texto ya aprobado | Fase 6 |
 | Auditoría de manuscrito: hitos, plantados, curva de temperatura | No tiene sentido con un capítulo | Fase 5 |
 | Puertas G2 (capítulo) y G3 (manuscrito) | Mismo motivo | Fases 4–5 |
-| `Serie` y canon compartido entre obras | Se decide al empezar una segunda obra | Sin fecha |
 | Frontend | Spec aparte | — |
 | Modo servidor multiusuario | El modo de referencia es local | Fase 6 |
 
-**Aviso sobre `Serie`:** `definitions.md` §4.1 advierte que, si existe, el canon debe ser compartido **desde el primer día**. Excluirla es una decisión con coste futuro conocido, no un olvido; RD-10 limita el daño.
+**Sobre `Serie`:** ya **no** está fuera de alcance. `definitions.md` §4.1 advierte que, si existe, el canon debe compartirse **desde el primer día** y que añadirlo después obliga a reescribir referencias, así que el esquema de la v1 lo contempla desde la migración inicial (RD-11). La v1 no expone funcionalidad de serie: solo deja el canon preparado para compartirse.
 
 La exclusión no es «se hará mal»: es «no se hará», y el esquema de datos no debe impedirlo después.
 
@@ -83,12 +83,12 @@ Convenciones de esta sección:
 
 **CU-03 · Escribir una escena** *(caso central)*. *Precondición:* la escena existe en el outline y la anterior está `INTEGRADA`.
 
-*Flujo principal:* `PLANIFICANDO` (ficha) → `ENSAMBLANDO` (paquete presupuestado y recortado) → `ESCRIBIENDO` (reserva agregada, llamada, versión guardada) → `VALIDANDO` (validadores mecánicos) → `EXTRAYENDO` (canon, ledger, resumen, hilos e índice en una transacción) → `INTEGRADA`.
+*Flujo principal:* `PLANIFICANDO` (ficha) → `ENSAMBLANDO` (paquete presupuestado y recortado) → `ESCRIBIENDO` (turno, llamada, versión guardada) → `VALIDANDO` (validadores mecánicos) → `EXTRAYENDO` (canon, ledger, resumen, hilos e índice en una transacción) → `INTEGRADA`.
 
 *Flujos alternativos:*
 - Defecto bloqueante → `REPARANDO` con el defecto y su cita → vuelve a `ESCRIBIENDO`. Máximo dos veces; después `ESCALADA`.
 - El paquete no cabe tras recortar → `FALLIDA` con `ContextBudgetExceeded`, **sin llamar al modelo**.
-- Sin hueco agregado antes del *timeout* → `FALLIDA` con `PresupuestoAgregadoAgotado`, sin coste.
+- Sin turno para llamar antes del *timeout* → `FALLIDA` con `TiempoAgotado`, sin coste porque no se llegó a llamar.
 - Cancelación del autor → `CANCELADA` en el primer punto seguro.
 
 *Postcondición de éxito:* la escena está en el manuscrito y la memoria de largo plazo la incluye. *Postcondición de fracaso:* **la memoria de largo plazo no ha cambiado.** → RI-05, RI-09, RF-ESC-*, RF-CTX-*, RF-ORQ-*, RF-CAL-*, RF-CAN-*.
@@ -119,17 +119,17 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RI-11 | Ningún servicio lanza `HTTPException`: las excepciones de dominio las traduce el handler central. `ContextBudgetExceeded` → 422 con la capa que desbordó; `PresupuestoAgregadoAgotado` → 503 relanzable sin coste; `ReglaDeDominioViolada` → 422 con el axioma incumplido; `RecursoNoEncontrado` → 404; `FalloDeProveedor` agotado → 502 | M | **T**, uno por caso |
+| RI-11 | Ningún servicio lanza `HTTPException`: las excepciones de dominio las traduce el handler central. `ContextBudgetExceeded` → 422 con la capa que desbordó; `TiempoAgotado` en la espera de turno → 503, relanzable sin coste; `ReglaDeDominioViolada` → 422 con el axioma incumplido; `RecursoNoEncontrado` → 404; `FalloDeProveedor` agotado → 502 | M | **T**, uno por caso |
 | RI-12 | Modelos de entrada y de salida distintos; ninguno expone el modelo de base de datos | M | **A** |
 | RI-13 | Cliente de modelo, contador de tokens y reloj se inyectan. Ninguna prueba llama al proveedor real | M | **A** más **T** |
-| RI-14 | Toda llamada registra `run_id`, escena, versión de prompt, versión de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto | M | **T** |
+| RI-14 | Toda llamada registra `run_id`, escena, `prompt_id` con su `version` y **`hash` del fichero**, `version_obra`, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto | M | **T** |
 | RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** más **A** |
 | RI-16 | SQLite con `WAL`, `foreign_keys=ON` y `busy_timeout`. Migraciones con Alembic desde el primer commit | M | **T** |
 | RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial** | M | **T** en ambos modos |
 | RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** | M | **T** |
 | RI-19 | Existe forma de cancelar un trabajo en curso; el efecto es `CANCELADA` en el primer punto seguro, nunca a mitad de una escritura | S | **T** |
 | RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto | M | **A** |
-| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor, modelo, techo agregado, *timeout* de reserva, plazo por paso, N de los *snapshots*, dimensión de los *embeddings* y ruta del fichero | M | **T** |
+| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor, modelo, llamadas simultáneas permitidas, *timeout* de espera de turno, plazo por paso, N de los *snapshots*, dimensión de los *embeddings* y ruta del fichero | M | **T** |
 | RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
 
 *Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3.5, §4.2, §6.*
@@ -164,6 +164,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-ESC-03 | Guardar cada `VersionDeTexto` como **inmutable**, con su `run_id` y una sola versión `vigente` | M | **T** |
 | RF-ESC-04 | Editar **crea versión nueva** y marca la vigente. Ninguna ruta modifica texto en sitio | M | **A** más **T** |
 | RF-ESC-05 | Los dos relojes son campos distintos: `tiempo_historia` y `orden_discurso`. La coherencia se calcula por el primero | M | **A** más **T** |
+| RF-ESC-06 | Cada `Escena` registra la `VersionDeObra` con la que se escribió. Cambiar la biblia crea versión nueva y **no reescribe** las escenas anteriores | M | **T** |
 
 **Feature `contexto`** — el corazón de la v1, y el único componente cuyo fallo es silencioso si no se mide. *Origen: `definitions.md` §7; `architecture.md` §2.1, §4.2 y §4.6; el orden de recuperación, `domain-knowledge.md` §7.*
 
@@ -197,14 +198,14 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-ORQ-09 | Tratar cada causa de fallo de `architecture.md` §3.6 con su acción declarada | M | **T**, una por caso |
 | RF-ORQ-10 | `ESCALADA` y `FALLIDA` son estados distintos y se cuentan por separado | M | **T** |
 | RF-ORQ-11 | Una escena en vuelo por obra; escrituras serializadas con cerrojo por obra, sin confiar en `busy_timeout` | M | **T** de concurrencia |
-| RF-ORQ-13 | Reservar presupuesto agregado antes de llamar y liberarlo al responder o fallar, incluso si el paso lanza excepción | M | **T** |
+| RF-ORQ-13 | Tomar turno antes de llamar al modelo y liberarlo al responder o fallar, **incluso si el paso lanza excepción**. Un turno que no se libera cuelga el proceso entero | M | **T** |
 | RF-ORQ-14 | El orquestador **persiste la salida de cada paso y la vuelve a leer** en vez de encadenar objetos en memoria: es lo que hace que reanudar sea idéntico a ejecutar | M | **A** |
 
 **Feature `calidad` — validadores de la v1.** Solo los mecánicos. *Origen: `definitions.md` §8 y §11; `architecture.md` §8.3; el porqué de cada familia, `domain-knowledge.md` §12.*
 
 | ID | Requisito | Defecto | Pr. | Verif. |
 | --- | --- | --- | --- | --- |
-| RF-CAL-01 | Rechazar la escena sin giro de valor | EST-01 | M | **T** |
+| RF-CAL-01 | Rechazar la escena cuya **ficha** no declara giro de valor (`valor_entrada` = `valor_salida` o nulo). Que la prosa *entregue* el giro es juicio, no cuenta: es G1b y queda fuera (§Fuera de alcance) | EST-01 | M | **T** |
 | RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado | SEG-01 | M | **T** |
 | RF-CAL-03 | Rechazar contenido romántico o sexual con menores de 18, **por esquema** | SEG-01 | M | **T** |
 | RF-CAL-04 | Detectar desplazamiento en menos del `tiempo_de_viaje`, o presencia simultánea en dos lugares | CON-01 | M | **T** |
@@ -212,7 +213,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
 | RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. Un defecto sin cita no es reparable | M | **T** |
-| RF-CAL-09 | Puerta G1: los defectos de RF-CAL-01 a 07 son **bloqueantes** | M | **T** |
+| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | M | **T** |
 | RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | M | **T** |
 
 **Feature `canon` — memoria de largo plazo** — *origen: `architecture.md` §4; `definitions.md` §4.5 y §7; la corrección sin edición, `domain-knowledge.md` §7.1.*
@@ -226,6 +227,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** más **T** |
 | RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada N escenas. No es una tabla editable | M | **A** más **T** |
 | RF-CAN-07 | Corregir un hecho **no lo edita**: registra uno nuevo que lo sustituye y cita al anterior | M | **T** |
+| RF-CAN-13 | Un hecho que sustituye a otro **invalida los *snapshots* posteriores** a la escena de origen del sustituido; se recalculan desde el último válido | M | **T** |
 | RF-CAN-08 | Generar resumen de escena al integrarla y de capítulo al cerrarlo | M | **T** |
 | RF-CAN-09 | No se compactan nunca la capa constitucional, los hechos de canon ni el ledger | M | **A** |
 | RF-CAN-10 | Registrar `Plantado`, `Pago` y `HiloNarrativo` con su estado. La v1 los **registra**; no los audita | S | **T** |
@@ -245,7 +247,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RD-01 | El esquema implementa las clases necesarias en la v1: `Obra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Ejecucion`, `Prompt`, y la tabla `trabajo` | M | **A** |
+| RD-01 | El esquema implementa las clases necesarias en la v1: `Serie`, `Obra`, `VersionDeObra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Ejecucion`, y las tablas `trabajo` y `ngrama_vetado`. `Prompt` **no es una tabla**: es un fichero del repositorio del que `ejecucion` guarda `prompt_id`, `version` y `hash` | M | **A** |
 | RD-02 | Nombres de tablas, columnas y enumeraciones **son los de `definitions.md`**: no se traducen, no se abrevian, no se inventan sinónimos | M | **I** más **A** |
 | RD-03 | Parte fija y parte móvil del `Personaje` en estructuras separadas | M | **A** |
 | RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
@@ -254,7 +256,10 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore` | M | **T** en ambos modos |
 | RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
 | RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado | M | **T** |
-| RD-10 | El esquema **no impide** añadir después `Serie`, la auditoría de plantados ni el arco romántico | S | **A** |
+| RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
+| RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** más **T** |
+| RD-12 | Tabla `version_obra`: una fila por versión de biblia, y cada `Escena` guarda con cuál se escribió | M | **T** |
+| RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor | S | **T** |
 
 ### No funcionales
 
@@ -264,9 +269,9 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | --- | --- | --- | --- |
 | RNF-TOK-01 | Ninguna llamada supera los 100.000 tokens | M | **T** |
 | RNF-TOK-02 | El contador es una dependencia inyectada, **no** una estimación por caracteres | M | **A** |
-| RNF-TOK-03 | El total en vuelo de todas las llamadas simultáneas no supera **100.000** | M | **T** de concurrencia |
-| RNF-TOK-04 | Sin hueco agregado, la llamada **espera**; nunca se recorta por carga del sistema | M | **T** |
-| RNF-TOK-05 | La espera tiene *timeout*; al vencer, `FALLIDA` con `PresupuestoAgregadoAgotado` | M | **T** |
+| RNF-TOK-03 | Nunca hay más llamadas al modelo en vuelo de las configuradas (una por proceso, por defecto) | M | **T** de concurrencia |
+| RNF-TOK-04 | Sin turno, la llamada **espera**; nunca se recorta el paquete por carga del sistema | M | **T** |
+| RNF-TOK-05 | La espera de turno tiene *timeout*; al vencer, `FALLIDA` con `TiempoAgotado` y sin coste | M | **T** |
 | RNF-TOK-06 | Nunca se llama al modelo sin haber contado antes los tokens | M | **A** más **T** |
 
 **Rendimiento.** Objetivos propuestos, **no medidos**; confirmarlos es la pregunta abierta 7.
@@ -287,7 +292,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RNF-FIA-03 | Ninguna ejecución depende de que la extensión vectorial esté cargada | M | **T** en ambos modos |
 | RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado | M | **T** |
 | RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
-| RNF-OBS-02 | Métricas del techo agregado: tokens en vuelo, pico y tiempo de espera por reserva | M | **D** |
+| RNF-OBS-02 | Métricas de concurrencia: tiempo de espera por turno y número de esperas vencidas | M | **D** |
 | RNF-OBS-03 | La traza es **estructural, no textual**: ni prompts de producción ni fragmentos de manuscrito en los logs por defecto | M | **A** |
 | RNF-SEG-01 | Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt | M | **T** |
 | RNF-SEG-02 | Ninguna regla de seguridad depende únicamente del prompt | M | **A** |
@@ -307,7 +312,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-5** — El desglose por capa **suma lo que dice** y respeta los topes.
 - [ ] **CA-6** — Una escena con defecto bloqueante se repara dirigidamente y a la tercera acaba en `ESCALADA`, no en bucle.
 - [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice.
-- [ ] **CA-8** — Con el techo agregado saturado, la llamada nueva **espera**; no se recorta ni se lanza.
+- [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
 - [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
 
 **Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla.
@@ -335,9 +340,9 @@ Los axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no so
 
 ## Impacto técnico
 
-**Presupuesto de contexto (`CLAUDE.md` §4.1).** Esta spec no añade capas ni cambia los topes: los implementa por primera vez. La capa que más riesgo tiene de crecer es **canon relevante** (20.000), porque su tamaño depende de cuántos personajes estén presentes; se recorta por personajes mencionados y no presentes, según `architecture.md` §2.1. El techo agregado se estrena aquí, y su consecuencia —el sistema es secuencial por defecto— es lo que hace que la v1 no necesite paralelismo.
+**Presupuesto de contexto (`CLAUDE.md` §4.1).** Esta spec no añade capas ni cambia los topes: los implementa por primera vez. La capa que más riesgo tiene de crecer es **canon relevante** (20.000), porque su tamaño depende de cuántos personajes estén presentes; se recorta por personajes mencionados y no presentes, según `architecture.md` §2.1. El límite de concurrencia de §2.2 se estrena aquí, y su consecuencia —el sistema es secuencial por defecto— es lo que hace que la v1 no necesite paralelismo.
 
-**Esquema.** Es la migración inicial: no hay esquema previo que migrar. Debe funcionar **con y sin `sqlite-vec`** (RD-08), lo que obliga a que el almacenamiento de *embeddings* sea legible por las dos implementaciones (RD-07). Las claves de canon no deben asumir una sola obra (RD-10), para no bloquear `Serie`.
+**Esquema.** Es la migración inicial: no hay esquema previo que migrar. Debe funcionar **con y sin `sqlite-vec`** (RD-08), lo que obliga a que el almacenamiento de *embeddings* sea legible por las dos implementaciones (RD-07). El canon cuelga de `serie_id` desde el primer día (RD-11), no de la obra.
 
 **Fronteras (`CLAUDE.md` §5).** Features implicadas: `obra`, `outline`, `escena`, `contexto`, `escritura`, `calidad`, `canon`, `manuscrito`, más `commons/` para orquestación, base de datos, cliente de modelo y errores. **Ninguna necesita cruzar una frontera.** Las convenciones permanentes —`import-linter` que falla la build, `commons/domain/` sin framework, `mypy` estricto, promoción al tercer uso, operaciones largas como trabajo en segundo plano— son de `CLAUDE.md` §5, §6 y §13: aplican, pero no son requisitos de esta spec. Tampoco lo es dónde vive cada pieza de código: eso es el plan.
 
@@ -351,7 +356,7 @@ Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí
 
 Términos del dominio usados en esta spec. Todos existen ya en `docs/definitions.md`; **ninguno es nuevo**, así que no hay nada que proponer ni confirmar.
 
-`Obra` · `Parte` · `Capitulo` · `Escena` · `Beat` · `Biblia` · `Brief` · `Outline` · `FichaDeEscena` · `Personaje` · `PerfilDeVoz` · `Relacion` · `Lugar` · `Objeto` · `ReglaDeMundo` · `Evento` · `HechoCanon` · `Plantado` · `Pago` · `Revelacion` · `HiloNarrativo` · `EstadoEnT` · `Ledger` · `PaqueteDeContexto` · `MuestraAncla` · `BeatDeGenero` · `NivelDeCalor` · `Tropo` · `PuertaDeCalidad` · `Defecto` · `Ejecucion` · `VersionDeTexto` · `Prompt` · `Serie`
+`Obra` · `Parte` · `Capitulo` · `Escena` · `Beat` · `Biblia` · `Brief` · `Outline` · `FichaDeEscena` · `Personaje` · `PerfilDeVoz` · `Relacion` · `Lugar` · `Objeto` · `ReglaDeMundo` · `Evento` · `HechoCanon` · `Plantado` · `Pago` · `Revelacion` · `HiloNarrativo` · `EstadoEnT` · `Ledger` · `PaqueteDeContexto` · `MuestraAncla` · `BeatDeGenero` · `NivelDeCalor` · `Tropo` · `PuertaDeCalidad` · `Defecto` · `Ejecucion` · `VersionDeTexto` · `VersionDeObra` · `Prompt` · `Serie`
 
 Atributos citados: `pov` · `lugar` · `presentes[]` · `testigos[]` · `objetivo_del_pov` · `obstaculo` · `valor_entrada` · `valor_salida` · `orden_discurso` · `tiempo_historia` · `tiempo_de_viaje` · `escena_de_origen` · `sabe_desde` · `persona` · `tiempo_verbal` · `esquema_de_pov` · `nivel_de_calor` · `distancia_psiquica` · `densidad_de_dialogo_objetivo` · `extension_objetivo` · `promesa_de_apertura` · `run_id`
 
@@ -365,7 +370,7 @@ Mientras quede una sin cerrar, **esta spec no se aprueba**.
 
 - [ ] **1 — Valor de N para los *snapshots* de `EstadoEnT`.** Bloquea RF-CAN-06 y RI-21.
 - [ ] **2 — Proveedor y dimensión de los *embeddings*, y si coincide con el de generación.** Bloquea RI-17, RI-20 y RD-07.
-- [ ] **3 — *Timeout* de la espera por reserva de presupuesto agregado.** Bloquea RNF-TOK-05 y RI-21.
+- [ ] **3 — *Timeout* de la espera de turno, y cuántas llamadas simultáneas se permiten.** Bloquea RNF-TOK-03, RNF-TOK-05 y RI-21.
 - [ ] **4 — Plazo por paso antes de `TiempoAgotado`.** Bloquea RF-ORQ-09 y RNF-FIA-04.
 - [ ] **5 — Si el nivel de calor se valida por clasificador o por lista de términos.** Bloquea RF-CAL-02.
 - [ ] **6 — Formato de la cita del pasaje: desplazamiento de caracteres o identificador de beat.** Bloquea RF-CAL-08 y RI-18.
@@ -387,7 +392,7 @@ Todo requisito nace de un documento anterior. Ninguno es original de esta spec, 
 | RF-CAL | `definitions.md` §8, §11; `architecture.md` §8.3; `domain-knowledge.md` §11, §12 |
 | RF-CAN | `architecture.md` §4; `definitions.md` §4.5, §7; `domain-knowledge.md` §7.1 |
 | RF-MAN | `architecture.md` §11 |
-| RD-01 a RD-10 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
+| RD-01 a RD-13 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
 | RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
 | RNF-REN | **Propuesta de esta spec, sin medir** |
 | RNF-FIA, RNF-OBS, RNF-SEG | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
