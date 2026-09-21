@@ -22,3 +22,6 @@ novels/**/run.lock
 
 # Rastro de decisiones del lock: diagnostico local, no estado del proyecto.
 novels/**/.run-lock.log
+
+# Sondeo y andamios de telemetria: diagnostico local, nunca estado del proyecto.
+.trace/
