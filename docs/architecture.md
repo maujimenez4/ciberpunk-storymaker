@@ -323,7 +323,7 @@ El motivo es de cohesión: en una arquitectura por capas, añadir una funcionali
 ### 5.1 Estructura
 
 ```
-backend/app/
+src/backend/app/
   features/
     obra/              # brief, premisa, biblia, parámetros de discurso
     outline/           # actos, capítulos, asignación de beats de género
@@ -433,7 +433,7 @@ La debilidad conocida de Bulletproof React es que no define las dependencias ent
 ### 6.1 Estructura
 
 ```
-src/
+src/frontend/src/
   app/                    router, providers, estilos globales
   features/
     escena/
@@ -549,8 +549,8 @@ Instaladas el 2026-09-21 en `.claude/skills/`, copiadas y clavadas a un commit. 
 | `features/*/schemas.py`, `commons/domain/` | `pydantic` (oficial del equipo Pydantic) | Pydantic v2: restricciones, validadores, jerarquías de modelos, coerción |
 | `features/contexto/`, `commons/db/` | `sqlite-vec` | Tablas `vec0`, KNN con `MATCH`, filtrado por metadatos y claves de partición |
 | `commons/db/`, `repository.py`, Alembic | `sqlite-ops` | WAL, `busy_timeout`, `EXPLAIN QUERY PLAN`, índices, tablas STRICT, `aiosqlite`, migraciones |
-| `frontend/src/` | `typescript-best-practices` | Type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
-| `frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
+| `src/frontend/src/` | `typescript-best-practices` | Type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
+| `src/frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
 | — | `feature-sliced-design` | **Referencia de FSD para la migración de §6.5, no la norma vigente.** En decisiones de ubicación y fronteras manda `CLAUDE.md` §5.2 |
 
 Criterio: una skill por requisito técnico de `CLAUDE.md` §4, y ninguna más. Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
