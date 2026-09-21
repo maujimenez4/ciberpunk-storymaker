@@ -28,3 +28,6 @@ novels/**/.run-lock.log
 
 # Salida de los evaluators: se regenera con `npm run evals`.
 evals/out/
+
+# Errores de telemetria: diagnostico local.
+**/.langfuse-errors.log
