@@ -223,7 +223,8 @@ test('la raíz va por OTLP y los scores por el endpoint de scores', async () => 
     const { scores } = scoresOf({ evalRunId, results: [resultado(), resultado({ capitulo: 2 })] });
 
     const raiz = await enviarRaiz({ repoRoot, host: srv.url, authHeader: AUTH, root });
-    const out = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores });
+    // Sin espaciado: aquí se mira el encaminamiento, no el ritmo, que tiene sus propios casos.
+    const out = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores, intervaloMs: 0 });
 
     assert.equal(raiz.ok, true);
     assert.equal(srv.recibido.trazas.length, 1);
@@ -244,10 +245,10 @@ test('idempotencia: repetir el envío no manda nada dos veces', async () => {
     const { scores } = scoresOf({ evalRunId, results: [resultado()] });
 
     await enviarRaiz({ repoRoot, host: srv.url, authHeader: AUTH, root });
-    const primera = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores });
+    const primera = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores, intervaloMs: 0 });
 
     const raizOtraVez = await enviarRaiz({ repoRoot, host: srv.url, authHeader: AUTH, root });
-    const segunda = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores });
+    const segunda = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores, intervaloMs: 0 });
 
     assert.equal(primera.enviados, 1);
     assert.equal(segunda.enviados, 0);
@@ -264,7 +265,7 @@ test('un fallo del servidor no lanza, no marca y queda anotado', async () => {
   const repoRoot = repoFalso();
   try {
     const { scores } = scoresOf({ evalRunId: 'r1', results: [resultado()] });
-    const out = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores });
+    const out = await enviarScores({ repoRoot, host: srv.url, authHeader: AUTH, scores, intervaloMs: 0 });
 
     assert.equal(out.fallidos, 1);
     assert.equal(out.enviados, 0);
@@ -278,8 +279,151 @@ test('si no hay a quién llamar, tampoco se rompe', async () => {
   const repoRoot = repoFalso();
   const { scores } = scoresOf({ evalRunId: 'r1', results: [resultado()] });
   // Puerto cerrado a propósito.
-  const out = await enviarScores({ repoRoot, host: 'http://127.0.0.1:1', authHeader: AUTH, scores, timeoutMs: 1500 });
+  const out = await enviarScores({ repoRoot, host: 'http://127.0.0.1:1', authHeader: AUTH, scores, timeoutMs: 1500, intervaloMs: 0 });
   assert.equal(out.fallidos, 1);
   assert.equal(yaEnviado(repoRoot, scores[0].id), false);
   assert.ok(existsSync(join(repoRoot, '.langfuse-errors.log')));
+});
+
+// ── Control de ritmo ─────────────────────────────────────────────────────────────
+// El endpoint de scores corta a 30 por minuto. Todo esto corre con un reloj simulado:
+// `esperar` no duerme, adelanta el reloj, así que los tests miden minutos en milisegundos
+// reales y son deterministas.
+
+function relojFalso() {
+  let t = 0;
+  return {
+    ahora: () => t,
+    esperar: async (ms) => { t += Math.max(0, ms); },
+    valor: () => t,
+  };
+}
+
+/** Un servidor que decide por petición, y apunta a qué hora simulada le llegó cada una. */
+async function servidorConRitmo({ reloj, responder }) {
+  const llegadas = [];
+  let n = 0;
+  const server = createServer((req, res) => {
+    req.on('data', () => {});
+    req.on('end', () => {
+      n += 1;
+      llegadas.push(reloj.ahora());
+      const { estado, retryAfterSeconds } = responder(n);
+      const cuerpo = estado === 429
+        ? JSON.stringify({ message: 'Rate limit exceeded', code: 'rate_limited', details: { retryAfterSeconds, limit: 30, remaining: 0 } })
+        : '{}';
+      res.writeHead(estado, { 'Content-Type': 'application/json', Connection: 'close' });
+      res.end(cuerpo);
+      res.on('finish', () => req.socket.end());
+    });
+  });
+  server.keepAliveTimeout = 1;
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  server.unref();
+  return { url: `http://127.0.0.1:${server.address().port}`, llegadas, cerrar: () => new Promise((r) => server.close(r)) };
+}
+
+const nScores = (n) => scoresOf({
+  evalRunId: 'ritmo',
+  results: Array.from({ length: n }, (_, i) => resultado({ capitulo: i + 1 })),
+}).scores;
+
+test('un 429 hace esperar retryAfterSeconds + 1 y reintenta ese mismo score', async () => {
+  const reloj = relojFalso();
+  // La primera petición rebota; la segunda —el reintento del mismo score— pasa.
+  const srv = await servidorConRitmo({ reloj, responder: (n) => (n === 1 ? { estado: 429, retryAfterSeconds: 56 } : { estado: 200 }) });
+  const repoRoot = repoFalso();
+  try {
+    const scores = nScores(1);
+    const out = await enviarScores({
+      repoRoot, host: srv.url, authHeader: AUTH, scores,
+      ahora: reloj.ahora, esperar: reloj.esperar,
+    });
+
+    assert.equal(out.enviados, 1);
+    assert.equal(out.fallidos, 0);
+    assert.equal(out.detenido, false);
+    assert.equal(srv.llegadas.length, 2, 'el score se reintenta, no se descarta');
+    // 56 + 1 segundos entre el rebote y el reintento.
+    assert.equal(srv.llegadas[1] - srv.llegadas[0], 57_000);
+    assert.ok(yaEnviado(repoRoot, scores[0].id));
+  } finally { await srv.cerrar(); }
+});
+
+test('nunca se superan 30 envíos en una ventana de un minuto', async () => {
+  const reloj = relojFalso();
+  const srv = await servidorConRitmo({ reloj, responder: () => ({ estado: 200 }) });
+  const repoRoot = repoFalso();
+  try {
+    // Sin espaciado fijo: así el que tiene que sostener el límite es la ventana deslizante.
+    await enviarScores({
+      repoRoot, host: srv.url, authHeader: AUTH, scores: nScores(80),
+      intervaloMs: 0, maxPorVentana: 30,
+      ahora: reloj.ahora, esperar: reloj.esperar,
+    });
+
+    assert.equal(srv.llegadas.length, 80);
+    for (const inicio of srv.llegadas) {
+      const enVentana = srv.llegadas.filter((t) => t >= inicio && t < inicio + 60_000).length;
+      assert.ok(enVentana <= 30, `hubo ${enVentana} envíos en el minuto que empieza en ${inicio}`);
+    }
+  } finally { await srv.cerrar(); }
+});
+
+test('con el espaciado por defecto tampoco se llega al límite', async () => {
+  const reloj = relojFalso();
+  const srv = await servidorConRitmo({ reloj, responder: () => ({ estado: 200 }) });
+  const repoRoot = repoFalso();
+  try {
+    await enviarScores({
+      repoRoot, host: srv.url, authHeader: AUTH, scores: nScores(40),
+      ahora: reloj.ahora, esperar: reloj.esperar,
+    });
+    for (const inicio of srv.llegadas) {
+      const enVentana = srv.llegadas.filter((t) => t >= inicio && t < inicio + 60_000).length;
+      assert.ok(enVentana <= 30, `${enVentana} envíos en un minuto con el espaciado de 2,5 s`);
+    }
+    // 2,5 s entre envíos: 40 scores no caben en un minuto ni de lejos.
+    assert.ok(reloj.valor() >= 39 * 2500, 'el espaciado tiene que haber consumido tiempo');
+  } finally { await srv.cerrar(); }
+});
+
+test('un 429 no deja marca, y tras tres esperas sin progreso se detiene', async () => {
+  const reloj = relojFalso();
+  const srv = await servidorConRitmo({ reloj, responder: () => ({ estado: 429, retryAfterSeconds: 10 }) });
+  const repoRoot = repoFalso();
+  try {
+    const scores = nScores(5);
+    const out = await enviarScores({
+      repoRoot, host: srv.url, authHeader: AUTH, scores,
+      ahora: reloj.ahora, esperar: reloj.esperar,
+    });
+
+    assert.equal(out.detenido, true);
+    assert.equal(out.enviados, 0);
+    assert.match(out.motivo, /esperas seguidas/);
+    // Tres esperas de 11 s y un cuarto intento que ya no espera: cuatro peticiones.
+    assert.equal(srv.llegadas.length, 4);
+    for (const s of scores) {
+      assert.equal(yaEnviado(repoRoot, s.id), false, 'un 429 no puede dejar marca: el score no llegó');
+    }
+    assert.match(readFileSync(join(repoRoot, '.langfuse-errors.log'), 'utf8'), /detenido por ritmo/);
+  } finally { await srv.cerrar(); }
+});
+
+test('un 400 no se reintenta y no bloquea a los siguientes', async () => {
+  const reloj = relojFalso();
+  const srv = await servidorConRitmo({ reloj, responder: (n) => ({ estado: n === 1 ? 400 : 200 }) });
+  const repoRoot = repoFalso();
+  try {
+    const scores = nScores(3);
+    const out = await enviarScores({
+      repoRoot, host: srv.url, authHeader: AUTH, scores,
+      ahora: reloj.ahora, esperar: reloj.esperar,
+    });
+    assert.equal(out.fallidos, 1);
+    assert.equal(out.enviados, 2);
+    assert.equal(srv.llegadas.length, 3, 'el 400 no se reintenta: un 400 vuelve a ser 400');
+    assert.equal(yaEnviado(repoRoot, scores[0].id), false);
+  } finally { await srv.cerrar(); }
 });

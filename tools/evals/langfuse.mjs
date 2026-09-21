@@ -286,10 +286,25 @@ export async function postScore({ host, authHeader, score, timeoutMs = 5000 }) {
       body: JSON.stringify(score),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    return { ok: response.ok, status: response.status, body: (await response.text()).slice(0, 400) };
+    return {
+      ok: response.ok,
+      status: response.status,
+      body: (await response.text()).slice(0, 400),
+      retryAfterHeader: response.headers.get('retry-after'),
+    };
   } catch (error) {
     return { ok: false, status: 0, body: `fallo de red: ${error.message}` };
   }
+}
+
+/** Cuánto pide esperar un 429. El cuerpo lo dice; la cabecera es el respaldo. */
+export function segundosDeEspera(respuesta, porDefecto = 60) {
+  try {
+    const n = JSON.parse(respuesta.body ?? '{}')?.details?.retryAfterSeconds;
+    if (Number.isFinite(n) && n >= 0) return n;
+  } catch { /* seguimos con la cabecera */ }
+  const cabecera = Number(respuesta.retryAfterHeader);
+  return Number.isFinite(cabecera) && cabecera >= 0 ? cabecera : porDefecto;
 }
 
 export async function enviarRaiz({ repoRoot, host, authHeader, root, timeoutMs = 5000 }) {
@@ -300,23 +315,96 @@ export async function enviarRaiz({ repoRoot, host, authHeader, root, timeoutMs =
   return { ...r, saltado: false };
 }
 
-export async function enviarScores({ repoRoot, host, authHeader, scores, timeoutMs = 5000, limite = Infinity }) {
-  const salida = { enviados: 0, saltados: 0, fallidos: 0, detalles: [] };
-  for (const score of scores.slice(0, limite)) {
+/**
+ * Manda los scores por debajo del límite del endpoint.
+ *
+ * El primer envío completo mandó los 91 seguidos y el servidor cortó en el trigésimo:
+ * `{"code":"rate_limited","details":{"retryAfterSeconds":56,"limit":30}}`. Treinta por
+ * minuto. Así que aquí hay dos frenos, y el segundo es el que de verdad garantiza el
+ * límite:
+ *
+ *   - un espaciado fijo entre envíos (2,5 s → 24/min), que evita el 429 en el caso normal;
+ *   - una ventana deslizante que no deja pasar más de `maxPorVentana` en `ventanaMs`,
+ *     que lo garantiza aunque el espaciado se quede corto.
+ *
+ * Ante un 429 se espera lo que pida el servidor más un segundo y se reintenta **ese**
+ * score, porque no llegó. Cualquier otro error no se reintenta: un 400 volvería a ser 400.
+ *
+ * El reloj y la espera se inyectan para poder probar todo esto sin que pase el tiempo.
+ */
+export async function enviarScores({
+  repoRoot, host, authHeader, scores, timeoutMs = 5000, limite = Infinity,
+  intervaloMs = 2500, ventanaMs = 60000, maxPorVentana = 29, maxEsperas = 3,
+  ahora = () => Date.now(),
+  esperar = (ms) => new Promise((r) => setTimeout(r, ms)),
+  progreso = null,
+}) {
+  const salida = { enviados: 0, saltados: 0, fallidos: 0, detenido: false, motivo: null, detalles: [] };
+  const pendientes = scores.slice(0, limite);
+  const ventana = [];
+  let ultimo = null;
+  let esperasSeguidas = 0;
+
+  /** Frena hasta que mandar otra sea seguro, y apunta el envío en la ventana. */
+  async function ritmo() {
+    if (ultimo !== null) {
+      const falta = intervaloMs - (ahora() - ultimo);
+      if (falta > 0) await esperar(falta);
+    }
+    for (;;) {
+      const corte = ahora() - ventanaMs;
+      while (ventana.length && ventana[0] <= corte) ventana.shift();
+      if (ventana.length < maxPorVentana) break;
+      await esperar(ventana[0] + ventanaMs - ahora() + 1);
+    }
+    const t = ahora();
+    ventana.push(t);
+    ultimo = t;
+  }
+
+  for (let i = 0; i < pendientes.length; i += 1) {
+    const score = pendientes[i];
     if (yaEnviado(repoRoot, score.id)) {
       salida.saltados += 1;
       continue;
     }
-    const r = await postScore({ host, authHeader, score, timeoutMs });
-    if (r.ok) {
-      marcarEnviado(repoRoot, score.id);
-      salida.enviados += 1;
-    } else {
+
+    for (;;) {
+      await ritmo();
+      const r = await postScore({ host, authHeader, score, timeoutMs });
+
+      if (r.ok) {
+        marcarEnviado(repoRoot, score.id);   // marca SOLO tras 2xx
+        salida.enviados += 1;
+        esperasSeguidas = 0;
+        salida.detalles.push({ id: score.id, name: score.name, ok: true, status: r.status });
+        break;
+      }
+
+      if (r.status === 429) {
+        if (esperasSeguidas >= maxEsperas) {
+          salida.detenido = true;
+          salida.motivo = `${maxEsperas} esperas seguidas sin pasar del límite; quedan ${pendientes.length - i} por mandar`;
+          anotarError(repoRoot, `detenido por ritmo: ${salida.motivo}`);
+          return salida;
+        }
+        esperasSeguidas += 1;
+        const segundos = segundosDeEspera(r) + 1;
+        progreso?.({ ...salida, restantes: pendientes.length - i, esperando: segundos, name: score.name });
+        await esperar(segundos * 1000);
+        continue;  // el mismo score: no llegó
+      }
+
+      // Cualquier otro error no se reintenta.
       salida.fallidos += 1;
       anotarError(repoRoot, `score ${score.name} ${score.id} HTTP ${r.status}: ${r.body}`);
+      salida.detalles.push({ id: score.id, name: score.name, ok: false, status: r.status, body: r.body });
+      break;
     }
-    salida.detalles.push({ id: score.id, name: score.name, ok: r.ok, status: r.status, body: r.body });
+
+    progreso?.({ ...salida, restantes: pendientes.length - i - 1, esperando: 0, name: score.name });
   }
+
   return salida;
 }
 

@@ -329,3 +329,45 @@ Ninguna aplica a `--selftest`, que no sale a la red.
 
 67 veredictos, uno por resultado, y 24 medidas. Con `scores@1` eran 67 a secas: un score por
 resultado, con el nombre del evaluator y el tipo cambiando según el evaluator.
+
+
+## El envío completo del 21-09-2026, y el límite de ritmo
+
+La raíz entró con HTTP 200 y **29 de los 91 scores**; los otros 62 rebotaron con **429**:
+
+```
+{"code":"rate_limited","details":{"retryAfterSeconds":56,"limit":30,"remaining":0}}
+```
+
+Treinta por minuto en el endpoint de scores. El enviador los mandaba seguidos, sin pausa, así
+que el servidor cortó en el trigésimo. Las marcas se comportaron como debían: 30 escritas,
+exactamente las de los 2xx, y 62 líneas de 429 en `.langfuse-errors.log`.
+
+```
+traceId   c68a0843f27ea339886059ca8d0fa442
+raíz      cd5dd61d1aeed1d1        enviada, con marca
+commit    35f8df33de10ca775f3712cc890cbe68354ebbc6
+```
+
+**La raíz refleja el commit `35f8df3`, y el control de ritmo se añadió después.** No cambia
+ningún resultado: los 91 scores salen de `evals/out/results.json`, que no se ha vuelto a
+generar, y el `evalRunId` no depende del commit sino de la huella de los resultados más
+`scores@2`. Por eso los 62 que faltan van a la misma traza que los 29 que ya entraron, que es
+lo que se quiere. Lo único que cambió es el ritmo al que salen.
+
+### Cómo se respeta el límite
+
+Dos frenos, y el segundo es el que lo garantiza:
+
+- **espaciado fijo** de 2,5 s entre envíos, o sea 24 por minuto, que evita el 429 en el caso
+  normal;
+- **ventana deslizante** que no deja pasar más de 29 en 60 s, que lo sostiene aunque el
+  espaciado se quede corto.
+
+Ante un 429 se espera lo que pida el servidor más un segundo y se reintenta **ese** score,
+porque no llegó a entrar. Cualquier otro error no se reintenta: un 400 volvería a ser 400.
+Tras tres esperas seguidas sin pasar, se detiene y lo dice, en vez de insistir.
+
+El reloj y la espera se inyectan, así que los cuatro casos —el reintento tras 429, el límite
+por ventana, que un 429 no deje marca y que un 400 no se reintente— se prueban con reloj
+simulado y sin que pase el tiempo.

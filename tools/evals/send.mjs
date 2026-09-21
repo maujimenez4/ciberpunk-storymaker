@@ -220,19 +220,39 @@ if (IDEMPOTENCIA) {
 }
 
 const raiz = await enviarRaiz({ repoRoot: REPO, host, authHeader: auth.header, root });
-console.log(`1) raíz  → ${raiz.saltado ? 'ya estaba enviada' : `HTTP ${raiz.status} ${raiz.ok ? 'ok' : 'FALLO'}`}${raiz.body && !raiz.ok ? ` · ${raiz.body}` : ''}`);
+console.log(`1) raíz  → ${raiz.saltado ? `ya estaba enviada (${root.spanId}), no se reenvía` : `HTTP ${raiz.status} ${raiz.ok ? 'ok' : 'FALLO'}`}${raiz.body && !raiz.ok ? ` · ${raiz.body}` : ''}`);
 if (!raiz.ok) {
   console.error('\nLa raíz no entró. No mando scores: quedarían colgando de una traza que no existe.');
   process.exit(1);
 }
 
 const limite = UNO ? 1 : Infinity;
-const out = await enviarScores({ repoRoot: REPO, host, authHeader: auth.header, scores, limite });
-console.log(`2) scores → ${out.enviados} enviados, ${out.saltados} ya estaban, ${out.fallidos} fallidos`);
-for (const d of out.detalles) {
-  console.log(`   ${d.ok ? '✓' : '✗'} ${d.name} ${d.id.slice(0, 12)} HTTP ${d.status}${d.ok ? '' : ` · ${d.body}`}`);
+const porMandar = scores.filter((s) => !yaEnviado(REPO, s.id)).length;
+console.log(`2) scores → ${porMandar} por mandar de ${scores.length}; el resto ya tiene marca.`);
+console.log('   A 2,5 s por envío para no pasar de 30/min, esto tarda unos ' +
+  `${Math.ceil((Math.min(porMandar, limite) * 2.5) / 60)} min.\n`);
+
+const out = await enviarScores({
+  repoRoot: REPO, host, authHeader: auth.header, scores, limite,
+  progreso: ({ enviados, fallidos, restantes, esperando, name }) => {
+    if (esperando) {
+      console.log(`   … 429 en ${name}: espero ${esperando} s y reintento ese mismo score`);
+      return;
+    }
+    // Ni aquí ni en ningún otro sitio se imprime la credencial.
+    if ((enviados + fallidos) % 10 === 0 || restantes === 0) {
+      console.log(`   ${enviados} enviados · ${fallidos} fallidos · ${restantes} pendientes`);
+    }
+  },
+});
+
+console.log(`\n2) scores → ${out.enviados} enviados, ${out.saltados} ya estaban, ${out.fallidos} fallidos`);
+for (const d of out.detalles.filter((x) => !x.ok)) {
+  console.log(`   ✗ ${d.name} ${d.id.slice(0, 12)} HTTP ${d.status} · ${d.body}`);
 }
+if (out.detenido) console.log(`\n⚠ Detenido: ${out.motivo}. Vuelve a lanzarlo y seguirá por donde iba.`);
 
 console.log(`\ntraceId: ${traceId}`);
+console.log(`commit:  ${commit}`);
 if (UNO) console.log('Mandado solo uno. Míralo en la UI antes de lanzar --todo.');
-process.exit(out.fallidos ? 1 : 0);
+process.exit(out.fallidos || out.detenido ? 1 : 0);
