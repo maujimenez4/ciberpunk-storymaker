@@ -30,6 +30,13 @@ De ahí sacas `run.novel`, `scope`, `supervision`, `validation`, `research`, `li
 
 Comprueba que existe `<novel>/brief.md`. Si no, para y dilo.
 
+Barre las trazas que una corrida anterior dejó sin cerrar. No manda nada nuevo: solo emite
+las raíces que faltan, y se salta las que aún tengan actividad reciente.
+
+```
+node .claude/hooks/trace-langfuse.mjs --sweep
+```
+
 Lee `<novel>/run-state.json` si existe. Si no existe o está corrupto, reconstruye desde
 git: `git log --grep "^ch[0-9][0-9]:" -1 --format="%h %s" -- novels/<slug>` te da el
 último capítulo aprobado. **El historial manda sobre el fichero de estado.**
@@ -82,6 +89,15 @@ Si no, ¿existe `<novel>/bible/canon.md`?
    exige que la biblia la escriba `continuity-keeper` y no los dos proponentes.
 
 Comprueba que `bible/canon.md` existe. Commit: `setup: bible seed`.
+
+Cierra la traza del setup. Los spans de los subagentes ya se enviaron uno a uno; esto emite
+la raíz que los agrupa, con la duración real que dan ellos. Langfuse exige raíz y el hook
+de telemetría vive en un proceso que muere tras cada llamada, así que este es el único
+momento en que se puede emitir.
+
+```
+node .claude/hooks/trace-langfuse.mjs --close-trace --novel=<slug> --label=setup
+```
 
 ## 3 · Bucle de capítulo
 
@@ -243,6 +259,15 @@ Incidencias abiertas: <n> warning, <n> note.
 
 Actualiza `run-state.json`: `lastApprovedChapter`, `lastApprovedCommit`, contadores a
 cero.
+
+Y cierra la traza del capítulo, que es lo que agrupa en Langfuse todo lo que costó:
+
+```
+node .claude/hooks/trace-langfuse.mjs --close-trace --novel=<slug> --label=ch<NN>
+```
+
+Si falla, **no reintentes**: sale con 1, lo anota en `.langfuse-errors.log` y la raíz la
+recoge el `--sweep` de la corrida siguiente. La telemetría nunca detiene el bucle.
 
 ## 4 · ROLLBACK
 
