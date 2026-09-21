@@ -32,7 +32,7 @@ Regla: **gana `CLAUDE.md`**. No se edita el texto de las skills; se anota aquí.
 
 ### `feature-sliced-design` — conflicto de arquitectura, no de detalle
 
-1. `docs/architecture.md` §4.5 evaluó Feature-Sliced Design y **lo descartó**
+1. `docs/architecture.md` §6.5 evaluó Feature-Sliced Design y **lo descartó**
    ("7 capas y taxonomía discutible sin experiencia previa"), dejándolo únicamente
    como ruta de migración futura.
 2. `CLAUDE.md` §5.2 fija Bulletproof React: `app/ features/ shared/`, sin capa
@@ -85,7 +85,7 @@ datos de prueba de la propia skill).
 
 - Su texto dice "Follows type-first, functional, and error handling patterns from
   CLAUDE.md". Se refiere al `CLAUDE.md` **del autor**, no al nuestro. Nuestras
-  convenciones de frontend son `CLAUDE.md` §7 y `docs/architecture.md` §4.
+  convenciones de frontend son `CLAUDE.md` §7 y `docs/architecture.md` §6.
 - Pide cargar `react-best-practices` en paralelo: instalada, requisito satisfecho.
 - Procede de un repositorio de configuración personal (dotfiles). Se han copiado
   únicamente los dos `SKILL.md`, sin nada del resto del repositorio.

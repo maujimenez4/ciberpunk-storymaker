@@ -76,6 +76,7 @@ Es la restricción de diseño más importante del proyecto.
 - El ensamblador devuelve siempre el desglose por capa junto al paquete; se guarda en la tabla `ejecucion`.
 - Si tras recortar no cabe, se lanza `ContextBudgetExceeded`. **Nunca se trunca por el final en silencio.**
 - La reserva del 10 % existe para que el reintento con el defecto añadido siga cabiendo.
+- Ese tope es **por llamada**. Hay además un **techo agregado de tokens en vuelo** para todas las llamadas simultáneas del proceso, descrito en `docs/architecture.md` §2.2. Si no hay hueco, la llamada espera; **nunca se recorta el paquete para hacerla caber**.
 
 ### 4.2 SQLite con y sin vectores
 
@@ -240,7 +241,7 @@ Un agente solo puede afirmar algo si procede de: `docs/definitions.md`, el grafo
 
 ## 12. Skills del proyecto
 
-Las skills instaladas viven en `.claude/skills/` (compartidas, commiteadas) o llegan por plugin. Procedencia, commit exacto y licencia de cada una: `.claude/skills/SOURCES.md`. Ver `docs/architecture.md` §5.2 para el detalle por área.
+Las skills instaladas viven en `.claude/skills/` (compartidas, commiteadas) o llegan por plugin. Procedencia, commit exacto y licencia de cada una: `.claude/skills/SOURCES.md`. Ver `docs/architecture.md` §7.2 para el detalle por área.
 
 Hay una skill por requisito técnico de §4, y ninguna más:
 
@@ -254,7 +255,7 @@ Hay una skill por requisito técnico de §4, y ninguna más:
 | `react-best-practices` | Frontend React 19 | `frontend/src/features/*/components/` |
 | `feature-sliced-design` | — (referencia, no norma) | Ver aviso abajo |
 
-**`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §4.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
+**`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §6.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, las reglas de frontera de §5, el ledger append-only— **no lo cubre ninguna skill pública**: vive en este fichero.
 
