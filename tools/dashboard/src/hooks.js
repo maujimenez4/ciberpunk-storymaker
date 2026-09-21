@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { getMeta, getState } from './api.js';
 
+/** Las sub-pestañas de una novela. Cualquier otra cosa en la URL cae en la primera. */
+const SUBS = ['leer', 'biblia', 'incidencias'];
+
 /**
  * Router de hash. Tres rutas y ninguna dependencia.
  *
@@ -11,9 +14,13 @@ import { getMeta, getState } from './api.js';
 export function useRoute() {
   const read = () => {
     const hash = window.location.hash.replace(/^#\/?/, '');
-    const [head, tail] = hash.split('/');
+    const [head, tail, sub] = hash.split('/');
     if (head === 'historial') return { tab: 'historial' };
-    if (head === 'novela' && tail) return { tab: 'novela', slug: decodeURIComponent(tail) };
+    if (head === 'novela') {
+      const slug = tail ? decodeURIComponent(tail) : null;
+      // Sin sub-pestaña en la URL se entra por Leer, que es a lo que se viene.
+      return { tab: 'novela', slug, sub: SUBS.includes(sub) ? sub : 'leer' };
+    }
     return { tab: 'corrida' };
   };
 
@@ -28,6 +35,21 @@ export function useRoute() {
 }
 
 export const go = (path) => { window.location.hash = path; };
+
+/**
+ * La última novela abierta.
+ *
+ * La pestaña Novela necesita un slug y la cabecera no siempre tiene uno a mano: entrar
+ * por la pestaña sin haber pasado por Historial tenía que llevar a alguna parte, y la
+ * última que se miró es mejor apuesta que la primera del directorio.
+ */
+const NOVEL_KEY = 'storymaker.novel';
+export const rememberNovel = (slug) => {
+  try { if (slug) localStorage.setItem(NOVEL_KEY, slug); } catch { /* sin almacenamiento se pierde */ }
+};
+export const lastNovel = () => {
+  try { return localStorage.getItem(NOVEL_KEY); } catch { return null; }
+};
 
 /**
  * Lista de novelas y perfiles, y cuál es la que está corriendo.

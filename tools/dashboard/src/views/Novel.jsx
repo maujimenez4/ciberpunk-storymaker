@@ -1,161 +1,57 @@
+// La pestaña de una novela: su cabecera y tres sub-pestañas.
+//
+// La cabecera —estado, capítulos, palabras, coste— se queda fuera de las sub-pestañas
+// porque describe la novela entera y no cambia al pasar de Leer a Biblia. Lo mismo vale
+// para el coste por agente, que va al pie.
+
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getNovel, getText } from '../api.js';
-import { go } from '../hooks.js';
-import { Pill, Progress, Skeleton, Issues, Prose, Inline, fmt, fecha } from '../components/ui.jsx';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { getNovel } from '../api.js';
+import { go, rememberNovel } from '../hooks.js';
+import { Pill, Progress, Skeleton, Issues as IssueCounts, fmt, fecha } from '../components/ui.jsx';
 import { ESTADOS } from './History.jsx';
+import Read from './novel/Read.jsx';
+import Bible from './novel/Bible.jsx';
+import IssueList from './novel/Issues.jsx';
 
-const SEV = { blocker: 'blocker', warning: 'warn', note: 'faint' };
+const SUBS = [
+  { key: 'leer', label: 'Leer' },
+  { key: 'biblia', label: 'Biblia' },
+  { key: 'incidencias', label: 'Incidencias' },
+];
 
-/**
- * Una fila del acordeón.
- *
- * El resumen que se despliega es el de `bible/summaries/`, no un extracto del capítulo:
- * es lo único que los capítulos siguientes llegaron a saber de este, así que es lo que
- * de verdad explica por qué la novela siguió como siguió.
- */
-function Chapter({ slug, c, open, onToggle }) {
-  const [text, setText] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const leer = async () => {
-    if (text) { setText(null); return; }
-    setLoading(true);
-    try {
-      setText((await getText(slug, c.chapter)).text);
-    } catch (e) {
-      setText(`No se pudo leer el capítulo: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function SubTabs({ slug, active }) {
   return (
-    <div className={`chapter ${open ? 'open' : ''}`}>
-      <button className="chapter-head" onClick={onToggle} aria-expanded={open}>
-        <span className="chapter-n num">{String(c.chapter).padStart(2, '0')}</span>
-        <span className="chapter-title">{c.title ?? <em className="note">sin título en el manuscrito</em>}</span>
-        <span className="chapter-meta">
-          <span className="num">{fmt(c.words)} pal</span>
-          <Issues counts={c.counts} empty="" />
-        </span>
-        <motion.span className="chapter-caret" animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>
-          ›
-        </motion.span>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.2, 0.7, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
+    <div className="subtabs" role="tablist" aria-label="Secciones de la novela">
+      <LayoutGroup id="subtabs">
+        {SUBS.map((s) => (
+          <button
+            key={s.key} role="tab" aria-selected={active === s.key}
+            className={`subtab ${active === s.key ? 'on' : ''}`}
+            onClick={() => go(`/novela/${encodeURIComponent(slug)}/${s.key}`)}
           >
-            <div className="chapter-body">
-              <h4 className="chapter-label">Resumen en la biblia</h4>
-              {c.summary
-                ? <p className="chapter-summary"><Inline text={c.summary} /></p>
-                : <p className="empty">Este capítulo no tiene resumen en <code>bible/summaries/</code>.</p>}
-
-              {c.issues.length > 0 && (
-                <>
-                  <h4 className="chapter-label">Incidencias</h4>
-                  <table className="data">
-                    <thead>
-                      <tr><th>id</th><th>Severidad</th><th>Dónde</th><th>Qué</th></tr>
-                    </thead>
-                    <tbody>
-                      {c.issues.map((i, n) => (
-                        <tr key={i.id ?? n}>
-                          <td className="num">{i.id ?? ''}</td>
-                          <td>
-                            <span className="pill" style={{
-                              borderColor: `var(--${SEV[i.severity] ?? 'faint'})`,
-                              color: `var(--${SEV[i.severity] ?? 'faint'})`,
-                            }}>{i.severity}</span>
-                          </td>
-                          <td>{i.where ?? ''}</td>
-                          <td><Inline text={i.fix ?? i.claim ?? ''} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-
-              <div className="chapter-actions">
-                <button className="btn-secondary" onClick={leer} disabled={loading}>
-                  {loading ? 'Cargando…' : text ? 'Cerrar el capítulo' : 'Leer el capítulo'}
-                </button>
-                {c.hasDraft && <span className="note">hay un <code>.draft.md</code> previo a voice-editor</span>}
-              </div>
-
-              <AnimatePresence>
-                {text && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="reader"
-                  >
-                    <Prose text={text} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {s.label}
+            {active === s.key && (
+              <motion.span
+                className="subtab-ink" layoutId="subtab-ink"
+                transition={{ duration: 0.26, ease: [0.2, 0.7, 0.2, 1] }}
+              />
+            )}
+          </button>
+        ))}
+      </LayoutGroup>
     </div>
   );
 }
 
-function Manuscript({ slug }) {
-  const [text, setText] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const leer = async () => {
-    if (text) { setText(null); return; }
-    setLoading(true);
-    try {
-      setText((await getText(slug, 'all')).text);
-    } catch (e) {
-      setText(`No se pudo leer el manuscrito: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="card" style={{ marginTop: 'var(--sp-4)' }}>
-      <div className="chapter-actions" style={{ marginTop: 0 }}>
-        <button className="btn-secondary" onClick={leer} disabled={loading}>
-          {loading ? 'Cargando…' : text ? 'Cerrar el manuscrito' : 'Leer el manuscrito completo'}
-        </button>
-        <span className="note"><code>out/manuscript.md</code></span>
-      </div>
-      <AnimatePresence>
-        {text && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }} className="reader"
-          >
-            <Prose text={text} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-export default function Novel({ slug }) {
+export default function Novel({ slug, sub = 'leer', novels = [] }) {
   const [n, setN] = useState(null);
   const [error, setError] = useState(null);
-  const [open, setOpen] = useState(null);
+
+  useEffect(() => { rememberNovel(slug); }, [slug]);
 
   useEffect(() => {
+    if (!slug) { setN(null); return undefined; }
     let alive = true;
     setN(null);
     setError(null);
@@ -164,6 +60,29 @@ export default function Novel({ slug }) {
       .catch((e) => { if (alive) setError(e.message); });
     return () => { alive = false; };
   }, [slug]);
+
+  // Entrar por la pestaña sin haber abierto ninguna novela nunca.
+  if (!slug) {
+    return (
+      <section>
+        <div className="head">
+          <h2>Novela</h2>
+          <p>Elige una novela para leerla, consultar su biblia y revisar sus incidencias.</p>
+        </div>
+        <div className="card">
+          {novels.length
+            ? (
+              <div className="chips">
+                {novels.map((s) => (
+                  <button key={s} className="chip" onClick={() => go(`/novela/${encodeURIComponent(s)}`)}>{s}</button>
+                ))}
+              </div>
+            )
+            : <p className="empty">No hay ninguna novela en <code>novels/</code> todavía.</p>}
+        </div>
+      </section>
+    );
+  }
 
   if (error) {
     return (
@@ -183,7 +102,6 @@ export default function Novel({ slug }) {
         <Skeleton h={16} w="28%" style={{ marginTop: 12 }} />
         <div className="card" style={{ marginTop: 'var(--sp-6)' }}>
           <Skeleton h={54} />
-          <Skeleton h={54} style={{ marginTop: 8 }} />
           <Skeleton h={54} style={{ marginTop: 8 }} />
         </div>
       </section>
@@ -231,7 +149,7 @@ export default function Novel({ slug }) {
         <div className="tile">
           <div className="k">Incidencias</div>
           <div className="v num">{n.issues.blocker + n.issues.warning + n.issues.note}</div>
-          <div className="s"><Issues counts={n.issues} /></div>
+          <div className="s"><IssueCounts counts={n.issues} /></div>
         </div>
         <div className="tile">
           <div className="k">Última actividad</div>
@@ -250,26 +168,19 @@ export default function Novel({ slug }) {
         )}
       </div>
 
-      <div className="head" style={{ marginTop: 'var(--sp-8)' }}>
-        <h3>Capítulos</h3>
-        <p>Despliega uno para ver su resumen de la biblia y sus incidencias.</p>
-      </div>
+      <SubTabs slug={n.slug} active={sub} />
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {n.chapters.length ? n.chapters.map((c) => (
-          <Chapter
-            key={c.chapter} slug={n.slug} c={c}
-            open={open === c.chapter}
-            onToggle={() => setOpen(open === c.chapter ? null : c.chapter)}
-          />
-        )) : (
-          <p className="empty" style={{ padding: 'var(--sp-6)' }}>
-            Esta novela no tiene capítulos escritos todavía.
-          </p>
-        )}
-      </div>
-
-      {n.manuscript && <Manuscript slug={n.slug} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={sub}
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}
+        >
+          {sub === 'leer' && <Read slug={n.slug} novel={n} />}
+          {sub === 'biblia' && <Bible slug={n.slug} />}
+          {sub === 'incidencias' && <IssueList novel={n} />}
+        </motion.div>
+      </AnimatePresence>
 
       {n.agents.length > 0 && (
         <>

@@ -1,16 +1,19 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { useMeta, useRunState, useRoute, go } from './hooks.js';
+import { useMeta, useRunState, useRoute, go, lastNovel } from './hooks.js';
 import Run, { runStatus } from './views/Run.jsx';
 import History from './views/History.jsx';
 import Novel from './views/Novel.jsx';
 import Theme from './components/Theme.jsx';
 
 const TABS = [
-  { key: 'corrida', label: 'Corrida', path: '/corrida' },
-  { key: 'historial', label: 'Historial', path: '/historial' },
+  { key: 'corrida', label: 'Corrida', path: () => '/corrida' },
+  { key: 'historial', label: 'Historial', path: () => '/historial' },
+  // Novela necesita un slug: el de la URL si ya se está en ella, y si no el último que
+  // se miró. Sin ninguno la pestaña lleva a un estado que explica que hay que elegir.
+  { key: 'novela', label: 'Novela', path: (ctx) => (ctx.slug ? `/novela/${encodeURIComponent(ctx.slug)}` : '/novela') },
 ];
 
-function Tabs({ active }) {
+function Tabs({ active, ctx }) {
   return (
     <div className="tabs" role="tablist" aria-label="Secciones">
       <LayoutGroup id="tabs">
@@ -18,7 +21,7 @@ function Tabs({ active }) {
           <button
             key={t.key} role="tab" className="tab"
             aria-selected={active === t.key}
-            onClick={() => go(t.path)}
+            onClick={() => go(t.path(ctx))}
           >
             {t.label}
             {active === t.key && (
@@ -44,8 +47,9 @@ export default function App() {
   const { data, offline } = useRunState(meta.novel, route.tab === 'corrida' ? 1000 : 5000);
   const status = runStatus(data, offline);
 
-  // La pestaña de una novela concreta es la de historial: se llega a ella desde ahí.
-  const activeTab = route.tab === 'novela' ? 'historial' : route.tab;
+  // La novela que abre la pestaña: la de la ruta si ya estamos en ella, si no la última
+  // vista, y en último caso la que esté corriendo.
+  const novelSlug = route.slug ?? lastNovel() ?? meta.active ?? meta.novels[0] ?? null;
 
   return (
     <>
@@ -59,7 +63,7 @@ export default function App() {
             StoryMaker
           </span>
 
-          <Tabs active={activeTab} />
+          <Tabs active={route.tab} ctx={{ slug: novelSlug }} />
 
           {route.tab === 'corrida' && (
             <select
@@ -69,6 +73,16 @@ export default function App() {
               {meta.novels.length
                 ? meta.novels.map((n) => <option key={n} value={n}>{n}</option>)
                 : <option value="">sin novelas</option>}
+            </select>
+          )}
+
+          {route.tab === 'novela' && meta.novels.length > 0 && (
+            <select
+              value={novelSlug ?? ''}
+              onChange={(e) => go(`/novela/${encodeURIComponent(e.target.value)}/${route.sub}`)}
+              style={{ width: 'auto', minWidth: 150 }} aria-label="Novela"
+            >
+              {meta.novels.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           )}
 
@@ -86,14 +100,14 @@ export default function App() {
       <main>
         <AnimatePresence mode="wait">
           <motion.div
-            key={route.tab === 'novela' ? `novela:${route.slug}` : route.tab}
+            key={route.tab === 'novela' ? `novela:${novelSlug}` : route.tab}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.24, ease: [0.2, 0.7, 0.2, 1] }}
           >
             {route.tab === 'historial' && <History />}
-            {route.tab === 'novela' && <Novel slug={route.slug} />}
+            {route.tab === 'novela' && <Novel slug={novelSlug} sub={route.sub} novels={meta.novels} />}
             {route.tab === 'corrida' && <Run meta={meta} data={data} offline={offline} />}
           </motion.div>
         </AnimatePresence>

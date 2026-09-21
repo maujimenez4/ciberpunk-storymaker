@@ -202,3 +202,151 @@
   white-space: nowrap;
 }
 .gate-card table.data code { background: #263B4A; border-color: #3A5062; }
+
+/* ---- Sub-pestañas de una novela ---- */
+
+.subtabs {
+  display: flex; gap: var(--sp-1); position: relative;
+  margin: var(--sp-8) 0 var(--sp-6);
+  border-bottom: 1px solid var(--line);
+}
+.subtab {
+  position: relative; background: none; border: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--fg-muted);
+  padding: var(--sp-3) var(--sp-4); border-radius: var(--r-chip) var(--r-chip) 0 0;
+  transition: color .2s var(--ease);
+}
+.subtab:hover { color: var(--fg); }
+.subtab.on { color: var(--fg); }
+.subtab .subtab-ink {
+  position: absolute; left: var(--sp-3); right: var(--sp-3); bottom: -1px; height: 2px;
+  background: var(--q-orange-400); border-radius: 2px;
+}
+
+/* ---- Leer ---- */
+
+.read-bar { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
+.read-nav { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.read-size { display: flex; gap: var(--sp-1); align-items: center; }
+.read-size .chip { min-width: 30px; display: flex; align-items: center; justify-content: center; }
+.read-hint { margin: var(--sp-3) 0 var(--sp-4); }
+
+.read-card { margin-top: 0; }
+.read-head {
+  display: flex; gap: var(--sp-4); align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; padding-bottom: var(--sp-4); border-bottom: 1px solid var(--line);
+}
+.read-n {
+  margin: 0 0 var(--sp-1); font-size: 12px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .12em; color: var(--fg-faint);
+}
+.read-title { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+.read-meta { display: flex; gap: var(--sp-3); align-items: center; font-size: 13px; color: var(--fg-muted); }
+
+/* El cuerpo del lector manda sobre el de `.prose`, que es fijo para el resto del panel. */
+.read-prose { margin-top: var(--sp-6); }
+.read-prose .prose { font-size: var(--read-size, 18px); max-width: 68ch; }
+
+/* ---- Biblia ---- */
+
+.bible { display: grid; grid-template-columns: 220px 1fr; gap: var(--sp-6); align-items: start; }
+@media (max-width: 860px) { .bible { grid-template-columns: 1fr; } }
+
+.bible-nav { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; }
+.bible-doc {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  background: none; border: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: 14px; color: var(--fg-muted);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-chip);
+  transition: background .18s var(--ease), color .18s var(--ease);
+}
+.bible-doc:hover:not(:disabled) { background: var(--surface-2); color: var(--fg); }
+.bible-doc.on { background: var(--surface-2); color: var(--fg); font-weight: 500; }
+.bible-doc.absent { cursor: default; color: var(--fg-faint); }
+.bible-absent { color: var(--fg-faint); }
+
+.bible-outline {
+  margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 1px; max-height: 46vh; overflow-y: auto;
+}
+.bible-jump {
+  background: none; border: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: 12.5px; line-height: 1.4; color: var(--fg-faint);
+  padding: var(--sp-1) var(--sp-2); border-radius: var(--r-chip);
+  transition: color .16s var(--ease);
+}
+.bible-jump:hover { color: var(--fg); background: var(--surface-2); }
+.bible-jump.lvl3 { padding-left: var(--sp-4); }
+.bible-jump.lvl4 { padding-left: var(--sp-6); }
+
+.bible-body { min-width: 0; }
+.bible-path { margin: 0 0 var(--sp-6); font-size: 12.5px; color: var(--fg-faint); }
+
+/* ---- Markdown de la biblia ---- */
+
+.md { max-width: 70ch; }
+.md p { margin: 0 0 var(--sp-4); line-height: 1.62; }
+.md-h { scroll-margin-top: 84px; letter-spacing: -.01em; }
+.md h3.md-h, .md h4.md-h, .md h5.md-h, .md h6.md-h { margin: var(--sp-8) 0 var(--sp-3); }
+.md .md-h1 { font-size: 21px; }
+.md .md-h2 { font-size: 17px; }
+.md .md-h3, .md .md-h4, .md .md-h5, .md .md-h6 {
+  font-size: 13px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--fg-faint);
+}
+.md-list { margin: 0 0 var(--sp-4); padding-left: var(--sp-6); }
+.md-list li { margin-bottom: var(--sp-2); line-height: 1.6; }
+.md-hr { border: none; border-top: 1px solid var(--line); margin: var(--sp-6) 0; }
+
+/* Un encabezado recién saltado parpadea una vez: sin eso, seguir un anclaje dentro de un
+   documento largo deja al lector sin saber en cuál de los diez encabezados ha caído. */
+.md-hit { animation: md-hit 1.6s var(--ease); }
+@keyframes md-hit {
+  0%, 40% { background: color-mix(in srgb, var(--q-orange-400) 22%, transparent); }
+  100% { background: transparent; }
+}
+
+/* ---- Anclajes de canon ---- */
+
+.anchor {
+  font-family: var(--mono); font-size: .86em; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 5px;
+  color: var(--fg-muted); text-decoration: none;
+  transition: border-color .16s var(--ease), color .16s var(--ease);
+}
+.anchor:hover { color: var(--q-orange-500); border-color: var(--q-orange-400); }
+
+/* El que no resuelve no finge ser un enlace: es una cita rota del canon y se ve. */
+.anchor.dead {
+  cursor: help; border-style: dashed; color: var(--fg-faint);
+  border-color: var(--line-strong); background: none;
+}
+
+/* ---- Incidencias ---- */
+
+.issue-group { margin-bottom: var(--sp-8); }
+.issue-group-head {
+  display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap;
+  margin: 0 0 var(--sp-3); font-size: 13px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .12em; color: var(--fg-faint);
+}
+.issue-group-title { text-transform: none; letter-spacing: 0; color: var(--fg-muted); font-size: 14px; }
+
+.issue-card { margin-bottom: var(--sp-3); border-left: 3px solid var(--line-strong); }
+.issue-card.sev-blocker { border-left-color: var(--blocker); }
+.issue-card.sev-warn { border-left-color: var(--warn); }
+.issue-card.sev-faint { border-left-color: var(--line-strong); }
+.issue-card-top {
+  display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;
+  margin-bottom: var(--sp-4); font-size: 13px;
+}
+.issue-id { font-size: 12px; }
+.issue-claim { margin: 0 0 var(--sp-4); line-height: 1.6; }
+.issue-line { margin: 0 0 var(--sp-2); font-size: 14px; line-height: 1.6; color: var(--fg-muted); }
+.issue-label {
+  display: inline-block; margin-right: var(--sp-2); min-width: 62px;
+  font-size: 12px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--fg-faint);
+}
+.issue-card code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: .88em; }
