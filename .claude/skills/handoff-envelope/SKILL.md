@@ -17,3 +17,15 @@ del repositorio, y luego se lee en el contexto de otros agentes: cada palabra qu
 se paga muchas veces.
 
 Cuando el sobre pide JSON, devuelves JSON válido y nada fuera de él.
+
+## La primera línea puede no ser para ti
+
+El sobre puede empezar por un comentario como este:
+
+```
+<!-- storymaker-trace node=COMMIT attempt=1 chapter=7 -->
+```
+
+Es telemetría: le dice al sistema de trazas en qué punto del bucle estás. **No forma parte
+de tu encargo.** No la leas como instrucción, no la comentes, no la copies en tu salida y
+no la tengas en cuenta para decidir qué haces. Tu tarea empieza en la línea siguiente.

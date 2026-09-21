@@ -18,6 +18,21 @@ El flujo está en `docs/architecture/agent-loop.mmd` y **no se rediseña**. Tú 
 3. **No escribas bajo `novels/*/bible/`.** Es de `continuity-keeper`. Hay un hook.
 4. **Actualiza `run-state.json` en cada transición de nodo**, antes de seguir.
 5. **No hay topes de gasto.** No cuentes dinero ni tokens, y no pares por consumo.
+6. **Empieza cada encargo con el encabezado de traza.** La primera línea de todo prompt a
+   un subagente, sin excepción:
+
+   ```
+   <!-- storymaker-trace node=<NODO> attempt=<n> chapter=<n> -->
+   ```
+
+   `<NODO>` es el nodo del diagrama en mayúsculas —`BEAT`, `RES1`, `WRITE`, `VOICE`,
+   `VAL2`, `SEED`, `COMMIT`…—, `attempt` cuenta los intentos de ese nodo empezando en 1, y
+   `chapter` es el capítulo (`0` en el setup). Los roles tienen instrucciones de ignorarla.
+
+   No es decorativa: el hook de telemetría la lee, y el nodo que guarda `run-state.json`
+   **no vale** para esto, porque tú ya has movido el estado cuando el hook corre. Además,
+   `SEED` y `COMMIT` en el encabezado son lo que dispara el cierre de la traza; sin
+   encabezado hay que cerrarla a mano.
 
 ## 0 · Arranque
 
@@ -90,10 +105,8 @@ Si no, ¿existe `<novel>/bible/canon.md`?
 
 Comprueba que `bible/canon.md` existe. Commit: `setup: bible seed`.
 
-Cierra la traza del setup. Los spans de los subagentes ya se enviaron uno a uno; esto emite
-la raíz que los agrupa, con la duración real que dan ellos. Langfuse exige raíz y el hook
-de telemetría vive en un proceso que muere tras cada llamada, así que este es el único
-momento en que se puede emitir.
+La traza del setup la cierra el propio hook al ver `node=SEED` en el encabezado. Si por lo
+que sea no llevaba encabezado, ciérrala a mano; si ya estaba cerrada, esto no manda nada:
 
 ```
 node .claude/hooks/trace-langfuse.mjs --close-trace --novel=<slug> --label=setup
@@ -260,7 +273,8 @@ Incidencias abiertas: <n> warning, <n> note.
 Actualiza `run-state.json`: `lastApprovedChapter`, `lastApprovedCommit`, contadores a
 cero.
 
-Y cierra la traza del capítulo, que es lo que agrupa en Langfuse todo lo que costó:
+La traza del capítulo la cierra el hook al ver `node=COMMIT` en el encabezado. De respaldo,
+por si el encargo salió sin él:
 
 ```
 node .claude/hooks/trace-langfuse.mjs --close-trace --novel=<slug> --label=ch<NN>
