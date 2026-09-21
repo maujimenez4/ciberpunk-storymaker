@@ -179,3 +179,102 @@ párrafo. No he tocado ninguno de los dos.
 - **La cobertura del evaluator de términos prohibidos.** El hook deniega en el primer término
   que encuentra, así que si un capítulo tuviera dos, solo se vería uno. Con 9/9 limpios no
   hay forma de comprobarlo sobre el corpus real.
+
+
+---
+
+# A4 · Scores de los evaluators en Langfuse
+
+Fase 1 cerrada el 21-09-2026: módulo de envío, `--selftest` y tests contra un servidor
+local. **No se ha enviado nada.** Cero marcas en `.trace/sent/`, ningún
+`.langfuse-errors.log`.
+
+```
+npm run evals:send -- --selftest    imprime los cuerpos, no toca la red
+npm run evals:send -- --uno         una traza y UN score
+npm run evals:send -- --todo        la traza y los 67 scores
+npm run evals:send -- --sin-metadata   quita metadata del cuerpo del score
+```
+
+Sin `--selftest`, `--uno` ni `--todo` el comando no hace nada y sale con 2: mandar datos
+fuera no puede ser el comportamiento por defecto de una orden tecleada a medias.
+
+La traza va por OTLP con los constructores de [`otlp.mjs`](../.claude/hooks/otlp.mjs), los
+mismos del hook. Los scores van por `POST /api/public/scores`, que es otro endpoint con otra
+forma. La lógica está en [`tools/evals/langfuse.mjs`](../tools/evals/langfuse.mjs) y el CLI
+en [`send.mjs`](../tools/evals/send.mjs), separados para que los tests carguen la primera sin
+disparar el segundo.
+
+## Tres decisiones que tomé, con su motivo
+
+**El `evalRunId` sale de la huella de los resultados y de la versión de los evaluators.**
+Ni de un reloj ni del commit. Con un reloj, cada ejecución duplicaría 67 scores idénticos.
+Con el commit —que fue el primer intento— tocar un README daría traza nueva y reenviaría los
+mismos 67, que es la duplicación que la idempotencia existe para evitar. Lo que interesa
+comparar es cuándo cambia una medida, no cuándo cambia el repo. El commit viaja igual, como
+metadata de la raíz.
+
+**Las coordenadas van en el `comment` además de en `metadata`.** La guía de migración lista
+`traceId`, `observationId`, `name`, `value`, `dataType` y `comment`; **no lista `metadata`**.
+Se manda igualmente, porque un 4xx respondería la duda en una llamada, pero novela, capítulo
+y target no dependen de que cuaje: el `comment` empieza por `✓/✗ <novela> ch<NN> ·
+target=<rol>`. Si la metadata se cae, se pierde poder filtrar, no el dato.
+
+**Un nombre, un tipo.** *Corregido el 21-09-2026, después del envío de prueba.* La primera
+versión mandaba la medida bajo el nombre del evaluator, así que `voice-editor-no-anade` salía
+NUMERIC y `canon-resoluble` BOOLEAN: el mismo campo con dos tipos según la fila. Un nombre de
+score es una serie y una serie no cambia de tipo. Ahora:
+
+- **el nombre del evaluator es siempre BOOLEAN**, con 1 = pasa, para los 67 resultados;
+- **la medida va en un score NUMERIC aparte**, solo donde dice algo que el veredicto no:
+  `voice-editor-delta-palabras`, `longitud-desviacion` e `issues-violaciones`.
+
+`sin-terminos-prohibidos` y `canon-resoluble` no tienen medida: su valor era 0/1, o sea el
+booleano otra vez con otro nombre. `issues-violaciones` no estaba en el encargo y lo añadí
+porque distingue una incidencia con un campo mal de otra con los cuatro; se quita borrando
+una línea de `MEDIDAS`.
+
+Esto arregla de paso la advertencia de dirección que este documento traía antes: ya no hay
+evaluators donde 1 sea malo. Son **91 scores**: 67 veredictos y 24 medidas.
+
+**El id determinista** lleva evaluator, target, novela, capítulo, nombre del score y
+`dataType`, más el discriminador de origen y cita y un ordinal — sin eso, las varias citas de
+canon de un mismo capítulo colisionarían en un solo id.
+
+## Lo que sigue sin saberse, y lo sabrá la fase 2
+
+- **Si el endpoint acepta `metadata`.** Un 400 lo diría; un 200 no prueba que la guarde, eso
+  hay que verlo en la UI.
+- **Si acepta el `id` determinista** para hacer upsert. Igual: un 400 lo diría. Las marcas
+  locales en `.trace/sent/` no dependen de esto y son la garantía real.
+
+## Una decisión que sigue siendo tuya
+
+`resolveAuth()` tampoco está exportada —vive en `trace-langfuse.mjs`, que al importarse se
+queda escuchando stdin—, así que está **duplicada** en `langfuse.mjs`. Es el segundo caso,
+después de `bannedTerms()`. El arreglo de fondo es sacar los ayudantes compartidos a un
+módulo propio, como ya se hizo con `usage.mjs`, `otlp.mjs` y `handoff.mjs`, y eso es tocar
+hooks. Con dos duplicados ya no es una excepción, es una deuda: dilo y lo hago en un cambio
+aparte.
+
+## El envío de prueba del 21-09-2026
+
+Una raíz y un score, los dos con HTTP 200:
+
+```
+traceId   9b16a40b06f15746d9afde0b8f426edc
+raíz      8abb44f36cf39a9d
+score     ce39076c43a3ac3b35902c77ed54a6db   voice-editor-no-anade · -8 · NUMERIC
+```
+
+Salió con el esquema viejo, el de un nombre con dos tipos. Ese score queda en Langfuse como
+residuo de la prueba y **no se va a reescribir**: con el esquema nuevo, `voice-editor-no-anade`
+es BOOLEAN y tiene otro id. Conviene borrarlo a mano en la UI, o dejarlo sabiendo que es el
+único punto NUMERIC bajo ese nombre.
+
+El 200 demuestra que el endpoint no rechaza `metadata` ni el `id` determinista. No demuestra
+que los guarde: eso hay que verlo en la UI.
+
+Las dos marcas de ese envío se borraron de `.trace/sent/`. **Consecuencia:** el próximo
+`--uno` o `--todo` volverá a mandar la raíz, con el mismo `spanId`. Si Langfuse no deduplica
+spans, saldrá una raíz repetida.
