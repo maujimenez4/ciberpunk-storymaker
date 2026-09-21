@@ -44,6 +44,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { traceIdOf, spanIdOf, rootSpanIdOf, span, envelope, postSpans } from './otlp.mjs';
 import { usageOf } from './usage.mjs';
+import { parseTraceHeader } from './handoff.mjs';
 
 const argv = process.argv.slice(2);
 const has = (flag) => argv.includes(flag);
@@ -503,9 +504,19 @@ process.stdin.on('end', async () => {
   const endMs = Date.now();
   const startMs = durationMs === null ? endMs : endMs - durationMs;
 
+  // El nodo sale del encargo, que no cambia, y no del estado, que el orquestador ya ha
+  // podido mover para cuando corre este hook. Si el encabezado falta o no valida, se cae
+  // al estado y se deja dicho de dónde vino: un dato dudoso disfrazado de bueno es peor
+  // que un hueco declarado.
+  const header = parseTraceHeader(hook.tool_input?.prompt);
+  const node = header?.node ?? state.node ?? null;
+  const attempt = header?.attempt ?? state.attempt ?? null;
+  const nodeSource = header ? 'header' : 'state';
+
   const runId = runIdFor(novelDir, hook.session_id, state);
   const phase = state.phase ?? 'setup';
-  const chapter = state.chapter ?? 0;
+  const chapter = header?.chapter ?? state.chapter ?? 0;
+  const chapterSource = header?.chapter !== null && header?.chapter !== undefined ? 'header' : 'state';
   const label = labelOf(phase, chapter);
   const traceId = traceIdOf(runId, label);
   // Determinista: si el hook se repite sobre la misma llamada, es el mismo span.
@@ -534,12 +545,10 @@ process.stdin.on('end', async () => {
       'langfuse.observation.metadata.agent_type': agentType,
       'langfuse.observation.metadata.agent_id': response.agentId ?? null,
       'langfuse.observation.metadata.tool_use_id': hook.tool_use_id ?? null,
-      // `node` y `attempt` salen todavía del estado, que A0 demostró poco fiable: el
-      // encabezado del encargo es el trabajo de A1. El origen va marcado para que no se
-      // confunda un dato dudoso con uno bueno.
-      'langfuse.observation.metadata.node': state.node ?? null,
-      'langfuse.observation.metadata.attempt': state.attempt ?? null,
-      'langfuse.observation.metadata.node_source': 'state',
+      'langfuse.observation.metadata.node': node,
+      'langfuse.observation.metadata.attempt': attempt,
+      'langfuse.observation.metadata.node_source': nodeSource,
+      'langfuse.observation.metadata.chapter_source': chapterSource,
       'langfuse.observation.metadata.duration_source': durationMs === null ? 'desconocida' : 'totalDurationMs',
       'langfuse.observation.metadata.harness_duration_ms': hook.duration_ms ?? null,
       'langfuse.observation.metadata.tool_uses': response.totalToolUseCount ?? null,
@@ -558,7 +567,10 @@ process.stdin.on('end', async () => {
     process.stdout.write(JSON.stringify({
       resolved: {
         runId, traceId, spanId, parentSpanId: rootSpanIdOf(traceId), label,
-        node: state.node ?? null, node_source: 'state', attempt: state.attempt ?? null,
+        node, node_source: nodeSource, attempt, chapter, chapter_source: chapterSource,
+        header,
+        would_close: nodeSource === 'header' && ['SEED', 'COMMIT'].includes(node)
+          && response.status === 'completed',
         durationMs, startMs, endMs, model, failed, usage, extras,
       },
       would_post_to: `${host()}/api/public/otel/v1/traces`,
@@ -574,7 +586,7 @@ process.stdin.on('end', async () => {
   try {
     appendFileSync(`${novelDir}/agent-calls.jsonl`, JSON.stringify({
       ts: new Date(endMs).toISOString(), runId, agent: agentType, agentId: response.agentId ?? null,
-      model, node: state.node, phase, chapter, attempt: state.attempt ?? null,
+      model, node, nodeSource, phase, chapter, attempt,
       tokens: usage.total, usage, extras, durationMs,
       toolUses: response.totalToolUseCount ?? null, traceId, spanId,
     }) + '\n');
@@ -586,6 +598,17 @@ process.stdin.on('end', async () => {
   });
 
   await deliver(novelDir, [observation], `${agentType} ${label}`);
+
+  // Cierre automático de la traza.
+  //
+  // SEED y COMMIT son los dos nodos donde una fase termina, así que son el único momento
+  // en que se puede emitir la raíz con duración real. Se exige que el nodo venga del
+  // **encabezado**: con el del estado esto dispararía en el nodo equivocado, que es
+  // justamente el fallo que A1 viene a arreglar. Los bloques de `novela.md` siguen ahí de
+  // respaldo, y no duplican nada porque la raíz lleva marca de envío.
+  if (nodeSource === 'header' && ['SEED', 'COMMIT'].includes(node) && response.status === 'completed') {
+    await closeTrace(novelDir, traceId, { quiet: true });
+  }
 
   // Aquí NO se llama a `done()`: un process.exit() con el handle del fetch todavía
   // cerrándose hace que libuv aborte en Windows con "Assertion failed: !(handle->flags
