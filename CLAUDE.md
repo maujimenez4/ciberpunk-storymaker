@@ -34,7 +34,7 @@ Aplica siempre que aparezca uno de estos conceptos: escena, beat, giro de valor,
 
 ---
 
-## 3. Cómo trabajar en este repositorio
+## 3. Gestión de Procesos
 
 1. **Lee antes de escribir.** Ante una tarea de dominio: `docs/definitions.md` → la feature afectada → sus tests.
 2. **Respeta las fronteras.** Backend: una feature solo importa de `commons/` y del `__init__.py` de otra feature. Frontend: solo hacia capas inferiores, nunca entre features, siempre por `index.ts`. Detalle en §5. Si una tarea te obliga a saltarte una frontera, **para y pregunta**: casi siempre significa que el corte está mal.
