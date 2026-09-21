@@ -1,0 +1,33 @@
+{
+  "session_id": "99999999-0000-4444-8888-aaaaaaaaaaaa",
+  "cwd": "__TMP__",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Agent",
+  "tool_use_id": "toolu_MULTI_0001",
+  "duration_ms": 61000,
+  "tool_input": { "prompt": "novels/test-novel/notes/ch01-ctx.md", "subagent_type": "continuity-keeper" },
+  "tool_response": {
+    "status": "completed",
+    "agentId": "bbbb1111cccc2222d",
+    "resolvedModel": "claude-opus-5",
+    "totalDurationMs": 60000,
+    "totalTokens": 3330,
+    "totalToolUseCount": 7,
+    "usage": {
+      "input_tokens": 300,
+      "output_tokens": 630,
+      "cache_read_input_tokens": 2100,
+      "cache_creation_input_tokens": 300,
+      "output_tokens_details": { "thinking_tokens": 180 },
+      "cache_creation": { "ephemeral_5m_input_tokens": 200, "ephemeral_1h_input_tokens": 100 },
+      "service_tier": "standard",
+      "speed": "standard",
+      "iterations": [
+        { "type": "message", "input_tokens": 100, "output_tokens": 210, "cache_read_input_tokens": 700, "cache_creation_input_tokens": 100 },
+        { "type": "message", "input_tokens": 100, "output_tokens": 210, "cache_read_input_tokens": 700, "cache_creation_input_tokens": 100 },
+        { "type": "message", "input_tokens": 100, "output_tokens": 210, "cache_read_input_tokens": 700, "cache_creation_input_tokens": 100 }
+      ]
+    },
+    "toolStats": { "readCount": 4, "otherToolCount": 3 }
+  }
+}

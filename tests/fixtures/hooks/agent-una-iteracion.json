@@ -1,0 +1,37 @@
+{
+  "session_id": "14d38b59-e26a-4144-8669-bd94a6b2aeb0",
+  "cwd": "__TMP__",
+  "permission_mode": "auto",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Agent",
+  "tool_use_id": "toolu_01HrM2eo4zn3uJyvm4FBt2ho",
+  "duration_ms": 12647,
+  "tool_input": {
+    "description": "Escribe el capitulo",
+    "prompt": "SECRETO_QUE_NO_DEBE_VIAJAR: esto es el encargo en crudo. novels/test-novel/notes/ch01-ctx.md",
+    "subagent_type": "scene-writer"
+  },
+  "tool_response": {
+    "status": "completed",
+    "agentId": "a0957f044a53e4dd4",
+    "agentType": "scene-writer",
+    "resolvedModel": "claude-haiku-4-5-20251001",
+    "totalDurationMs": 12643,
+    "totalTokens": 28169,
+    "totalToolUseCount": 3,
+    "usage": {
+      "input_tokens": 10,
+      "output_tokens": 235,
+      "cache_read_input_tokens": 27902,
+      "cache_creation_input_tokens": 22,
+      "output_tokens_details": { "thinking_tokens": 203 },
+      "cache_creation": { "ephemeral_5m_input_tokens": 22, "ephemeral_1h_input_tokens": 0 },
+      "service_tier": "standard",
+      "speed": "standard",
+      "iterations": [
+        { "type": "message", "input_tokens": 10, "output_tokens": 235, "cache_read_input_tokens": 27902, "cache_creation_input_tokens": 22 }
+      ]
+    },
+    "toolStats": { "readCount": 0, "otherToolCount": 3 }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "session_id": "77777777-0000-4444-8888-bbbbbbbbbbbb",
+  "cwd": "__TMP__",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Agent",
+  "tool_use_id": "toolu_FALLO_0001",
+  "duration_ms": 900,
+  "tool_input": { "prompt": "novels/test-novel/notes/ch01-ctx.md", "subagent_type": "technical-verifier" },
+  "tool_response": {
+    "status": "error",
+    "agentId": "dddd3333eeee4444f",
+    "resolvedModel": "claude-sonnet-5",
+    "totalDurationMs": 800,
+    "totalTokens": 12,
+    "usage": { "input_tokens": 5, "output_tokens": 7, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0 }
+  }
+}

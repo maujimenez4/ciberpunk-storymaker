@@ -1,16 +1,19 @@
 {
   "name": "ciberpunk-storymaker",
   "version": "0.2.0",
-  "description": "Sistema agéntico que escribe novelas largas capítulo a capítulo, con Claude como orquestador y nueve subagentes especialistas.",
+  "description": "Sistema ag\u00e9ntico que escribe novelas largas cap\u00edtulo a cap\u00edtulo, con Claude como orquestador y nueve subagentes especialistas.",
   "type": "module",
   "private": true,
   "scripts": {
+    "test": "node --test",
     "invariantes": "node tools/check-invariants.mjs",
     "config": "node tools/config.js",
     "panel": "vite build --config tools/dashboard/vite.config.js && node tools/dashboard.mjs",
     "panel:build": "vite build --config tools/dashboard/vite.config.js",
     "panel:dev": "vite --config tools/dashboard/vite.config.js",
-    "panel:serve": "node tools/dashboard.mjs"
+    "panel:serve": "node tools/dashboard.mjs",
+    "trace:canary": "node .claude/hooks/trace-langfuse.mjs --canary",
+    "trace:sweep": "node .claude/hooks/trace-langfuse.mjs --sweep"
   },
   "engines": {
     "node": ">=20"
