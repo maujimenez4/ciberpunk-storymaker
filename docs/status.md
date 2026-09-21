@@ -1,4 +1,6 @@
-# Estado de la migración de telemetría a Langfuse v4
+# Estado: telemetría y evaluación
+
+## Migración de telemetría a Langfuse v4
 
 Langfuse Cloud apaga `/api/public/ingestion` el **16 de noviembre de 2026**: desde esa
 fecha solo acepta eventos `score-create` y rechaza el resto. El hook
@@ -102,3 +104,78 @@ seguir con A1:
 Jerarquía raíz > generation > hijo correcta con la raíz tardía, tiempos y
 entrada/salida correctos, sin duplicados. Pendiente: canario de caché
 (¿el costo cambia con cache_read_input_tokens?).
+
+
+---
+
+# Evaluators deterministas
+
+`npm run evals` ([tools/evals/run.mjs](../tools/evals/run.mjs)) corre los cinco primeros
+evaluators de §2.4 sobre las novelas de `novels/`. Ninguno llama a un modelo ni sale a la
+red. La lógica está en [`tools/evals/evaluators.mjs`](../tools/evals/evaluators.mjs), aparte
+del CLI, para que los tests la carguen sin montar una corrida.
+
+Cada resultado sale con la forma `{ evaluator, target, novela, capitulo, pass, value,
+detalle }`, más `dataType` y algún campo de origen. `target` es **el agente cuya salida se
+juzga**, no quien detecta el fallo: una longitud fuera de rango es de `scene-writer` aunque
+la mida esto, y un anclaje roto es de `continuity-keeper` porque la biblia es suya. El JSON
+va a `evals/out/results.json`, que está en `.gitignore`.
+
+`pass` puede ser `null` —un capítulo sin borrador, un perfil sin objetivo de longitud—, y
+esos casos no cuentan ni a favor ni en contra pero **se emiten igualmente**: un evaluator
+que descarta casos en silencio miente sobre su propia cobertura.
+
+## Contra las líneas base del diagnóstico
+
+| evaluator | línea base | medido | |
+|---|---|---|---|
+| `voice-editor-no-anade` | 9/9, deltas −5 a −30 | 9/9, deltas −5 a −30 | ✓ |
+| `sin-terminos-prohibidos` | informar | 9/9 limpio, ningún término | ✓ |
+| `issues-schema-valido` | 6/6 | **5/6** | ✗ |
+| `canon-resoluble` (biblia) | 31/32, fallo real en `dead-floor` | 31/32, el mismo fallo | ✓ |
+| `longitud-en-rango` | 350/339/359 · 327/355/317 · 373/386/422 | idénticas | ✓ |
+
+`dead-floor` llega a **+20,6 %** en `ch03`, como decía el diagnóstico. Las tres corridas se
+separan igual que allí: `within-tolerance` ≤3 %, `neon-smoke` ≤10 %, `dead-floor` hasta 21 %.
+
+Sobre `within-tolerance`: entra por defecto. Está marcada como contaminada en el JSON y hay
+`--excluir-contaminadas`, pero **ninguno de estos cinco evaluators mira la secuencia de
+nodos**, que es lo que su contaminación estropea. Sus capítulos y su biblia son ficheros
+terminados y sirven para medir.
+
+## Dos decisiones que necesito de ti
+
+**1. Cómo reutilizar `bannedTerms()`.** No está exportada y vive en un script que escucha
+stdin, así que no se puede importar sin editar `guard-prose.mjs`, y me dijiste que no tocara
+hooks. Lo he resuelto **invocando el propio hook como subproceso** con un sobre sintético:
+reutiliza no solo la lista sino el emparejado real —el `\b` y la bandera unicode viven en el
+cuerpo del hook, no en la función—, así que no puede desincronizarse. Se le pasa la ruta del
+borrador con el texto final dentro, que es la forma de pedirle solo la invariante 9 sin
+arrastrar la 4. Funciona y hay un test que lo prueba con una lista de términos inventada.
+
+La alternativa más limpia es extraer `bannedTerms()` a un módulo compartido, como ya se hizo
+con `usage.mjs`, `otlp.mjs` y `handoff.mjs`. Son dos líneas en `guard-prose.mjs` y las tengo
+prohibidas: dilo y lo cambio.
+
+**2. `where` con localizador de capítulo entero.** El corpus da 5/6 y no 6/6. La que falla es
+`within-tolerance` `ck-01`, con `where: "ch03 (capítulo completo)"`, que no casa
+`/^ch\d+ ¶\d+/`. La regla la fijaste tú y la skill [issue-report](../.claude/skills/issue-report/SKILL.md)
+solo documenta la forma `ch03 ¶4`, así que el evaluator está haciendo lo que se le pidió y la
+línea base de 6/6 del diagnóstico es la que no se sostiene. Caben dos arreglos y son
+distintos: **ampliar el esquema** para admitir un localizador de capítulo entero —un hilo
+abandonado no tiene párrafo—, o **corregir a `continuity-keeper`** para que siempre dé
+párrafo. No he tocado ninguno de los dos.
+
+## Lo que no pude verificar
+
+- **Que el JSON sirva tal cual como score de Langfuse.** Está construido para eso —`value`
+  numérico, `pass` booleano, `dataType`, y `target`/`novela`/`capitulo` como metadata— pero
+  no se ha enviado ninguno: eso es A4, y esta tanda era sin red.
+- **Si `research/dossier.md#eje-1` debería contar.** El evaluator la marca rota y lo está: el
+  dossier numera sus secciones `## 1. Sincronización…`, no `## Eje 1`, así que no hay ningún
+  encabezado al que apuntar. Es un segundo positivo verdadero, del mismo tipo que el de
+  `dead-floor`, pero **no estaba en la línea base de 31/32**, que solo contaba las citas
+  internas de la biblia. Por eso la salida las separa por origen.
+- **La cobertura del evaluator de términos prohibidos.** El hook deniega en el primer término
+  que encuentra, así que si un capítulo tuviera dos, solo se vería uno. Con 9/9 limpios no
+  hay forma de comprobarlo sobre el corpus real.
