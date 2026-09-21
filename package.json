@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "test": "node --test",
+    "evals": "node tools/evals/run.mjs",
     "invariantes": "node tools/check-invariants.mjs",
     "config": "node tools/config.js",
     "panel": "vite build --config tools/dashboard/vite.config.js && node tools/dashboard.mjs",

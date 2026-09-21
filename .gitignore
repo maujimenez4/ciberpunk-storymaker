@@ -25,3 +25,6 @@ novels/**/.run-lock.log
 
 # Sondeo y andamios de telemetria: diagnostico local, nunca estado del proyecto.
 .trace/
+
+# Salida de los evaluators: se regenera con `npm run evals`.
+evals/out/
