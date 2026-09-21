@@ -78,7 +78,7 @@ Toda funcionalidad empieza aquí. Una spec dice **qué** debe ocurrir y **cómo 
 
 > **Antes de escribir una spec, pregunta.** No rellenes huecos por tu cuenta ni deduzcas el alcance del código existente. Una spec con suposiciones no declaradas no se aprueba.
 
-Vive en `specs/NNN-slug/spec.md`, con `NNN` correlativo de tres dígitos. Plantilla en `specs/_plantilla-spec.md`.
+Vive en `specs/NNN-slug/spec.md`, con `NNN` correlativo de tres dígitos. La estructura de referencia es la de la spec vigente, `specs/spec1.md`: problema, alcance, fuera de alcance, requisitos, criterios de aceptación, reglas de dominio afectadas, impacto técnico, vocabulario, preguntas abiertas y cierre.
 
 Antes de salir de borrador, una spec cierra:
 
@@ -95,7 +95,7 @@ Lo que no puedas cerrar preguntando se escribe en **Preguntas abiertas**. Mientr
 
 ### 3.3 Plan de implementación
 
-Vive en `specs/NNN-slug/plan.md`. Plantilla en `specs/_plantilla-plan.md`.
+Vive en `specs/NNN-slug/plan.md`. Su estructura es la que describe el resto de este apartado: enfoque, pasos con su test en rojo, fronteras, esquema y migraciones, presupuesto de contexto, riesgos, qué queda fuera y desviaciones.
 
 **No se escribe un plan si `spec.md` no está en `estado: aprobada`.** Si te piden el plan y la spec no lo está, para y dilo; no lo redactes «mientras tanto».
 

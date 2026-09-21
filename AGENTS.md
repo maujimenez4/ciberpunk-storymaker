@@ -20,4 +20,4 @@ Este fichero no contiene especificaciones. **Todo el manual operativo del reposi
 
 Los documentos de dominio siguen donde estaban: `docs/definitions.md` (fuente de verdad del vocabulario), `docs/domain-knowledge.md`, `docs/architecture.md` (incluye los diagramas y los árboles de ficheros) y `docs/verification.md`.
 
-Las funcionalidades en curso viven en `specs/NNN-slug/`, con `spec.md` y `plan.md`: ver `specs/README.md` y §3 de `CLAUDE.md`.
+Las funcionalidades en curso viven en `specs/`, con su spec y, una vez aprobada, su plan: ver §3 de `CLAUDE.md`.
