@@ -13,7 +13,7 @@ ninguna toca el diagrama del bucle ni `novels/*/bible/`.
 |---|---|---|
 | A0 | reconocimiento del sobre de hook | **cerrada** (20-09-2026, §3.3) |
 | A2 | transporte OTLP + `runId` estable | **código cerrado** (20-09-2026); falta mirar el canario en la UI |
-| A1 | `node` y `attempt` desde el encargo | pendiente |
+| A1 | `node` y `attempt` desde el encargo | **código cerrado** (20-09-2026); falta la sonda real |
 | A3 | entrada y salida por observación | pendiente |
 | A4 | scores de los validadores | pendiente |
 | A5 | registro de lecturas por subagente | pendiente |
@@ -65,6 +65,20 @@ node .claude/hooks/trace-langfuse.mjs --canary                    # única vía 
 usa contra los fixtures de `tests/fixtures/hooks/`, que traen sobres reales capturados en
 A0. Once aserciones, y cada una es la regresión de un agujero concreto del §3.2.
 
+**Nodo del encargo.** Cada prompt a un subagente empieza por
+`<!-- storymaker-trace node=<NODO> attempt=<n> chapter=<n> -->`. Lo emite
+[`novela.md`](../.claude/commands/novela.md) y lo ignoran los roles, que tienen la
+instrucción en [`handoff-envelope`](../.claude/skills/handoff-envelope/SKILL.md). El hook lo
+parsea; si falta o no valida —el nodo tiene que ser mayúsculas del diagrama— cae a
+`run-state.json` y marca `node_source: "state"` en vez de `"header"`, para que un dato
+dudoso no pase por bueno. Esto cierra §3.2(b) y §3.2(c).
+
+**Cierre automático.** Con `node=SEED` o `node=COMMIT` en el encabezado y el subagente
+completado, el hook cierra la traza él mismo. Se exige que el nodo venga del encabezado: con
+el del estado dispararía en el nodo equivocado, que es justo el fallo que A1 arregla. Los
+bloques de `novela.md` siguen como respaldo y no duplican nada, porque la raíz lleva marca
+de envío.
+
 ## El canario del 20-09-2026
 
 `--canary` sustituye al viejo `--ping`. Se lanzó una vez, con tag
@@ -83,3 +97,8 @@ seguir con A1:
 4. La metadata filtrable en los tres spans (`tag`, `purpose`).
 5. Si el coste del `generation` contempla las claves de caché, que la documentación no
    aclara y aquí cambia la aritmética por cinco.
+
+## Canario A2 (verificado en la UI)
+Jerarquía raíz > generation > hijo correcta con la raíz tardía, tiempos y
+entrada/salida correctos, sin duplicados. Pendiente: canario de caché
+(¿el costo cambia con cache_read_input_tokens?).
