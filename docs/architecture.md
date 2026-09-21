@@ -62,20 +62,22 @@ Reglas de implementación:
 
 ### 2.2 Presupuesto concurrente
 
-Los 100.000 tokens de §2.1 son el techo **de una llamada**. No dicen nada sobre cuántas llamadas pueden estar vivas a la vez: dos agentes en paralelo son 200.000 tokens en vuelo sin violar ninguna regla de §2.1. Por eso hay un segundo techo, **agregado**.
+Los 100.000 tokens de §2.1 son el techo **de una llamada**. No dicen nada sobre cuántas llamadas pueden estar vivas a la vez: dos agentes en paralelo serían 200.000 tokens en vuelo sin violar ninguna regla de §2.1. Por eso hay un segundo techo, **agregado**, y es **el mismo número**: 100.000 tokens sumando todas las llamadas simultáneas del proceso.
 
 | Techo | Valor | Quién lo aplica | Cuándo |
 | --- | --- | --- | --- |
 | Por llamada | 100.000 tokens | Ensamblador | Al construir el paquete |
-| Agregado en vuelo | Configurable; por defecto **200.000 tokens** | Orquestador | Antes de lanzar cada llamada |
+| Agregado en vuelo | **100.000 tokens**, el mismo número | Orquestador | Antes de lanzar cada llamada |
 | Llamadas simultáneas | No es un número aparte: sale del techo agregado | Orquestador | — |
+
+**Consecuencia directa:** como el techo agregado iguala al de una llamada, **una sola llamada grande satura el sistema entero**. Dos agentes solo corren a la vez si sus paquetes suman 100.000 o menos: el Continuista (30–60 k) y el Crítico (20–40 k) a veces caben juntos; el Escritor, que puede llegar al tope, nunca comparte. El sistema es por tanto **secuencial por defecto y concurrente por excepción**. Es deliberado: acota el gasto simultáneo a lo que cuesta una sola llamada.
 
 Reglas de implementación:
 
 1. El orquestador **reserva** tokens antes de llamar y los **libera** al recibir respuesta o al fallar. La reserva usa el desglose que ya devuelve el ensamblador; no es una estimación.
 2. Si no hay hueco en el agregado, la llamada **espera**. Nunca se recorta el paquete para hacerla caber: recortar es competencia del ensamblador y obedece a §2.1, no a la carga del sistema.
 3. La espera tiene *timeout*. Si vence, el trabajo pasa a `FALLIDA` con causa `PresupuestoAgregadoAgotado`. No se encola indefinidamente.
-4. El techo agregado es **por proceso**, no por obra. Dos obras generando a la vez comparten el mismo presupuesto.
+4. El techo agregado es **por proceso**, no por obra. Dos obras generando a la vez comparten los mismos 100.000: la segunda espera.
 5. El límite de tasa del proveedor es un techo distinto y externo. Si el proveedor rechaza por tasa, es fallo de proveedor (§3.6), no un problema de presupuesto.
 
 La reserva del 10 % de §2.1 protege el reintento **dentro** de una llamada; este techo protege la factura y la latencia **del sistema entero**. Son independientes y se aplican a la vez.
@@ -200,8 +202,8 @@ El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamad
 ### 3.8 Concurrencia
 
 - **Una escena en vuelo por obra.** Es una restricción de corrección, no de rendimiento (§3.1, punto 4).
-- **Varias obras sí corren en paralelo**, limitadas por el techo agregado de §2.2.
-- **El paralelismo de verdad está donde no hay dependencia:** auditoría de manuscrito por lotes, cálculo de embeddings, revisión de escenas ya aprobadas.
+- **Varias obras pueden estar en curso a la vez, pero sus llamadas al modelo se serializan:** comparten los 100.000 del techo agregado (§2.2). El paralelismo entre obras es de trabajo, no de llamadas.
+- **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** ensamblado, lectura de almacenes, persistencia y cálculo de embeddings. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
 - **Las escrituras se serializan por obra.** SQLite con WAL admite lectores concurrentes y un solo escritor; el orquestador respeta eso con un cerrojo por obra en vez de confiar en `busy_timeout` para resolver colisiones.
 
 ### 3.9 Dónde vive el código
