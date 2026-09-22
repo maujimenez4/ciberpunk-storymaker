@@ -308,4 +308,4 @@ Se anotan **antes** de seguir, no al final.
 
 | Fecha | Paso | Qué cambió y por qué |
 | --- | --- | --- |
-| — | — | — |
+| 2026-09-22 | P-06 | **Se parte en tres commits, dentro de una sola revisión de Alembic.** Dieciséis tablas no caben en un cambio verificable de una pieza: si el test falla, el fallo no se atribuye. Se mantiene `0001_inicial` como única revisión —lo que el plan exige— y lo que se parte es la entrega: (a) obra y manuscrito, (b) canon, (c) orquestación y trazas. Cada commit añade sus tablas a la misma revisión con su test. |
