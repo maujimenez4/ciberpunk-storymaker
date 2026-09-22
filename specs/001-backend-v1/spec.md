@@ -394,7 +394,7 @@ Los doce axiomas de `definitions.md` §11. Las dos diferidas lo están porque **
 
 Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí por primera vez. Lo que sí se fija y no debe relajarse después: el **Escritor no accede a la base de datos**, solo ve el paquete recibido (`architecture.md` §3.5), y el **Extractor es el único que escribe memoria de largo plazo** (RF-CAN-01).
 
-**Verificación (`verification.md`).** Los métodos a los que esta spec se compromete, cada uno con la fila que lo respalda:
+**Verificación (`verification.md`).** Los métodos a los que esta spec se compromete, cada uno con la fila que lo respalda. **Los `§` de la primera columna son de `verification.md`**, no de esta spec:
 
 | Método | Dónde aterriza aquí |
 | --- | --- |
@@ -507,7 +507,11 @@ Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y
 
 ## Cierre
 
-Se rellena al implementar (`CLAUDE.md` §3.5).
+Se rellena al implementar (`CLAUDE.md` §3.5). Las dos últimas entradas no son burocracia:
+son el sitio donde aterrizan D-07 y D-09, y sin ellas esas dos decisiones no tienen dónde
+comprobarse.
 
 - **Commits:**
 - **Documentos actualizados en `docs/`:**
+- **Objetivos de rendimiento medidos** (D-07) — valor real de RNF-REN-01 a 04 sobre el capítulo de CA-1, y si se confirman o se sustituyen:
+- **Inspección (I) firmada** (D-09) — nombre y fecha del autor que leyó el capítulo de CA-1 para nivel de calor (RF-CAL-02) y edad (RF-CAL-03):
