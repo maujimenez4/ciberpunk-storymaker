@@ -1,6 +1,26 @@
 """API publica de la feature `escena`.
 
-Lo unico importable desde fuera (§5.2 regla 1). Vacia hasta que su fase la llene.
+Lo unico importable desde fuera (§5.2 regla 1).
 """
 
-__all__: list[str] = []
+from app.features.escena.repository import (
+    EscenaPersistida,
+    RepositorioDeEscenas,
+    VersionDeTexto,
+)
+from app.features.escena.schemas import (
+    FichaDeEscena,
+    FichaInvalida,
+    PropuestaDeFicha,
+)
+from app.features.escena.service import planificar_escena
+
+__all__ = [
+    "EscenaPersistida",
+    "FichaDeEscena",
+    "FichaInvalida",
+    "PropuestaDeFicha",
+    "RepositorioDeEscenas",
+    "VersionDeTexto",
+    "planificar_escena",
+]
