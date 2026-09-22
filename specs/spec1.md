@@ -3,7 +3,7 @@ id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
 estado: borrador          # borrador | en-revision | aprobada | implementada
 aprobada_por:             # lo rellena una persona, nunca un agente
-fecha: 2026-09-21
+fecha: 2026-09-22
 ---
 
 # 001-backend-v1 — Backend, versión 1
@@ -54,6 +54,7 @@ El objetivo es el de la fase 1 de la hoja de ruta (`architecture.md` §13): **un
 | Puertas G2 (capítulo) y G3 (manuscrito) | Mismo motivo | Fases 4–5 |
 | Frontend | Spec aparte | — |
 | Modo servidor multiusuario | El modo de referencia es local | Fase 6 |
+| Tests de mutación automatizados | Hoy no hay suite que mutar; tendrán sentido sobre la del ensamblador (`verification.md` §2) | Cuando exista esa suite |
 
 **Sobre `Serie`:** ya **no** está fuera de alcance. `definitions.md` §4.1 advierte que, si existe, el canon debe compartirse **desde el primer día** y que añadirlo después obliga a reescribir referencias, así que el esquema de la v1 lo contempla desde la migración inicial (RD-11). La v1 no expone funcionalidad de serie: solo deja el canon preparado para compartirse.
 
@@ -69,11 +70,13 @@ Convenciones de esta sección:
 | --- | --- | --- | --- | --- |
 | `CU-` | Caso de uso | | `M` | Imprescindible: si falta, no se cumple un criterio de aceptación |
 | `RI-` | Interfaz externa | | `S` | Necesario pero degradable sin invalidar la entrega |
-| `RF-` | Funcional | | **T/A/I/D** | Prueba / Análisis / Inspección / Demostración (`verification.md`) |
+| `RF-` | Funcional | | **T/A/I/D/U** | Prueba / Análisis / Inspección / Demostración / No verificable (`verification.md` §4) |
 | `RD-` | Datos | | | |
 | `RNF-` | No funcional | | | |
 
 **Todo requisito cita su origen.** Uno sin origen es una invención y se rechaza en revisión. Las palabras **debe**, **no debe** y **puede** se usan en sentido normativo.
+
+**Una letra por requisito.** `verification.md` §4 exige exactamente una: la del método que **establece** el requisito. Cuando un segundo método lo refuerza sin establecerlo se anota entre paréntesis —`**A** (+T)` se lee «se verifica leyendo el código, y un test lo refuerza»— y no sustituye a la letra. **Ningún requisito de esta spec lleva U:** lo que hoy nadie puede comprobar no es requisito, y está enumerado en «Lo que esta spec no verifica».
 
 ### Casos de uso
 
@@ -117,22 +120,25 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 
 *Origen: `architecture.md` §5.4. Verificación: **T**.*
 
+*RI-10 no existe: era `POST /obras/{id}/auditoria`, y la auditoría de manuscrito quedó fuera de alcance. Los identificadores no se renumeran.*
+
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
 | RI-11 | Ningún servicio lanza `HTTPException`: las excepciones de dominio las traduce el handler central. `ContextBudgetExceeded` → 422 con la capa que desbordó; `TiempoAgotado` en la espera de turno → 503, relanzable sin coste; `ReglaDeDominioViolada` → 422 con el axioma incumplido; `RecursoNoEncontrado` → 404; `FalloDeProveedor` agotado → 502 | M | **T**, uno por caso |
 | RI-12 | Modelos de entrada y de salida distintos; ninguno expone el modelo de base de datos | M | **A** |
-| RI-13 | Cliente de modelo, contador de tokens y reloj se inyectan. Ninguna prueba llama al proveedor real | M | **A** más **T** |
+| RI-13 | Cliente de modelo, contador de tokens y reloj se inyectan. Ninguna prueba llama al proveedor real | M | **A** (+T) |
 | RI-14 | Toda llamada registra `run_id`, escena, `prompt_id` con su `version` y **`hash` del fichero**, `version_obra`, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto | M | **T** |
-| RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** más **A** |
+| RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** (+A) |
 | RI-16 | SQLite con `WAL`, `foreign_keys=ON` y `busy_timeout`. Migraciones con Alembic desde el primer commit | M | **T** |
-| RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial** | M | **T** en ambos modos |
+| RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial.** Además del paso de la suite en ambos modos, se demuestra un **arranque real con la extensión ausente** | M | **T** en ambos modos (+D) |
 | RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** | M | **T** |
 | RI-19 | Existe forma de cancelar un trabajo en curso; el efecto es `CANCELADA` en el primer punto seguro, nunca a mitad de una escritura | S | **T** |
 | RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto | M | **A** |
 | RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor, modelo, llamadas simultáneas permitidas, *timeout* de espera de turno, plazo por paso, N de los *snapshots*, dimensión de los *embeddings* y ruta del fichero | M | **T** |
 | RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
+| RI-23 | El backend **publica su esquema OpenAPI** y toda ruta declara su modelo de respuesta: el contrato con cualquier cliente es el esquema generado, no una descripción escrita aparte | M | **A** (+T) |
 
-*Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3.5, §4.2, §6.*
+*Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3.5, §4.2, §4 (OpenAPI como contrato), §6; RI-23 y la parte **D** de RI-17, `verification.md` §2 (tests de contrato) y §4.1.*
 
 ### Funcionales
 
@@ -162,8 +168,8 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-ESC-01 | Producir la `FichaDeEscena` desde el outline y el estado en T | M | **T** |
 | RF-ESC-02 | La ficha declara las restricciones duras: `pov`, `presentes[]`, `lugar`, `distancia_psiquica`, `densidad_de_dialogo_objetivo`, `extension_objetivo` y el `nivel_de_calor` heredado | M | **T** |
 | RF-ESC-03 | Guardar cada `VersionDeTexto` como **inmutable**, con su `run_id` y una sola versión `vigente` | M | **T** |
-| RF-ESC-04 | Editar **crea versión nueva** y marca la vigente. Ninguna ruta modifica texto en sitio | M | **A** más **T** |
-| RF-ESC-05 | Los dos relojes son campos distintos: `tiempo_historia` y `orden_discurso`. La coherencia se calcula por el primero | M | **A** más **T** |
+| RF-ESC-04 | Editar **crea versión nueva** y marca la vigente. Ninguna ruta modifica texto en sitio | M | **A** (+T) |
+| RF-ESC-05 | Los dos relojes son campos distintos: `tiempo_historia` y `orden_discurso`. La coherencia se calcula por el primero | M | **A** (+T) |
 | RF-ESC-06 | Cada `Escena` registra la `VersionDeObra` con la que se escribió. Cambiar la biblia crea versión nueva y **no reescribe** las escenas anteriores | M | **T** |
 
 **Feature `contexto`** — el corazón de la v1, y el único componente cuyo fallo es silencioso si no se mide. *Origen: `definitions.md` §7; `architecture.md` §2.1, §4.2 y §4.6; el orden de recuperación, `domain-knowledge.md` §7.*
@@ -173,15 +179,25 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-CTX-01 | Ensamblar el `PaqueteDeContexto` **por código**: mismo estado de almacenes y misma semilla producen el mismo paquete | M | **T**, propiedad |
 | RF-CTX-02 | Respetar los topes por capa de `architecture.md` §2.1 (5.000 / 10.000 / 20.000 / 15.000 / 20.000 / 10.000 / 10.000 / 10.000) | M | **T** |
 | RF-CTX-03 | El recorte es **por capa**: si una se pasa, se recorta esa y no las vecinas, en el orden declarado | M | **T**, propiedad |
-| RF-CTX-04 | Las capas **constitucional** e **instrucción** no se recortan nunca | M | **A** más **T** |
-| RF-CTX-05 | Si tras recortar no cabe, lanzar `ContextBudgetExceeded`. **Nunca truncar por el final** | M | **T** |
-| RF-CTX-06 | Devolver el desglose por capa junto al paquete y persistirlo en `ejecucion` | M | **T** |
+| RF-CTX-04 | Las capas **constitucional** e **instrucción** no se recortan nunca | M | **A** (+T, propiedad) |
+| RF-CTX-05 | Si tras recortar no cabe, lanzar `ContextBudgetExceeded`. **Nunca truncar por el final** | M | **T**, propiedad |
+| RF-CTX-06 | Devolver el desglose por capa junto al paquete y persistirlo en `ejecucion`; el desglose **suma el total contado** | M | **T**, propiedad |
 | RF-CTX-07 | Recuperación **híbrida en este orden**: filtro estructural → similitud semántica sobre lo ya filtrado → fusión con recencia | M | **T** |
 | RF-CTX-08 | Inyectar `MuestraAncla` de prosa aprobada del mismo POV | M | **T** |
 | RF-CTX-09 | Colocar lo importante al **principio y al final** | S | **I** |
 | RF-CTX-10 | Exponer paquete y desglose para depuración | M | **D** |
 | RF-CTX-11 | La reserva del 10 % permanece libre en la primera llamada: el reintento con el defecto añadido debe caber | M | **T** |
-| RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** más **T** |
+| RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** (+T) |
+| RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa** | M | **D** |
+
+**Las cuatro propiedades mínimas del ensamblador** (`verification.md` §2, fila de tests basados en propiedades). Son el conjunto que no puede faltar, no el conjunto completo:
+
+1. El desglose por capa **suma el total contado** (RF-CTX-06).
+2. Recortar una capa **no altera** las demás (RF-CTX-03).
+3. Las capas constitucional e instrucción **nunca encogen** (RF-CTX-04).
+4. O el paquete cabe en 100.000 tokens, **o** se lanza `ContextBudgetExceeded`: nunca un truncado silencioso (RF-CTX-05).
+
+Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede reproducir» como **D, no T**, y la razón es justo la de RF-CTX-01 —el ensamblador es código— frente al modelo, que no es determinista. Lo que se demuestra reproducible es el paquete; la prosa no se promete.
 
 **Feature `escritura` — el orquestador** — *origen: `architecture.md` §3.*
 
@@ -200,39 +216,50 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-ORQ-11 | Una escena en vuelo por obra; escrituras serializadas con cerrojo por obra, sin confiar en `busy_timeout` | M | **T** de concurrencia |
 | RF-ORQ-13 | Tomar turno antes de llamar al modelo y liberarlo al responder o fallar, **incluso si el paso lanza excepción**. Un turno que no se libera cuelga el proceso entero | M | **T** |
 | RF-ORQ-14 | El orquestador **persiste la salida de cada paso y la vuelve a leer** en vez de encadenar objetos en memoria: es lo que hace que reanudar sea idéntico a ejecutar | M | **A** |
+| RF-ORQ-15 | Cada paso recibe y devuelve un **modelo validado** (`architecture.md` §3.4). Una salida de agente que no valida contra su esquema es **fallo del paso**, no texto que se arrastre al siguiente | M | **T** |
+| RF-ORQ-16 | Ningún agente narrativo dispone de herramientas: no accede a los almacenes, ni al sistema de ficheros, ni a la red fuera del cliente de modelo. Los prompts los **carga el orquestador**, y el Escritor solo ve el paquete recibido (`architecture.md` §3.5) | M | **A** |
+
+*RF-ORQ-12 no existe: se retiró en revisión por ser una convención permanente de `CLAUDE.md` §6 —el `router.py` no contiene lógica— y no un requisito de esta spec. Los identificadores no se renumeran.*
 
 **Feature `calidad` — validadores de la v1.** Solo los mecánicos. *Origen: `definitions.md` §8 y §11; `architecture.md` §8.3; el porqué de cada familia, `domain-knowledge.md` §12.*
 
 | ID | Requisito | Defecto | Pr. | Verif. |
 | --- | --- | --- | --- | --- |
 | RF-CAL-01 | Rechazar la escena cuya **ficha** no declara giro de valor (`valor_entrada` = `valor_salida` o nulo). Que la prosa *entregue* el giro es juicio, no cuenta: es G1b y queda fuera (§Fuera de alcance) | EST-01 | M | **T** |
-| RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado | SEG-01 | M | **T** |
-| RF-CAL-03 | Rechazar contenido romántico o sexual con menores de 18, **por esquema** | SEG-01 | M | **T** |
+| RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado en la `Obra`, con el mecanismo que cierre la pregunta abierta 5. Cobertura **parcial**: véase la nota bajo esta tabla | SEG-01 | M | **T** parcial (+I) |
+| RF-CAL-03 | Rechazar contenido romántico o sexual con menores de 18, **por esquema**: bloquea por construcción | SEG-01 | M | **T** (+I) |
 | RF-CAL-04 | Detectar desplazamiento en menos del `tiempo_de_viaje`, o presencia simultánea en dos lugares | CON-01 | M | **T** |
 | RF-CAL-05 | Detectar uso de información sin `sabe_desde` de escena anterior | CON-03 | M | **T** |
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
-| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. Un defecto sin cita no es reparable | M | **T** |
-| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | M | **T** |
-| RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | M | **T** |
+| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
+| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
+| RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
+
+**Cobertura parcial reconocida.** `verification.md` §4.1 asigna a dos de estos requisitos un método de refuerzo porque lo mecánico solo cubre una parte, y callarlo sería dar por verificado lo que no lo está:
+
+- **RF-CAL-02** — el código comprueba el nivel **declarado**; que la prosa se mantenga dentro lo juzga el Crítico, que está fuera de alcance, y en última instancia una lectura humana. La v1 entrega la parte **T**; la **I** queda pendiente de la pregunta abierta 9.
+- **RF-CAL-03** — la edad se valida en esquema y bloquea por construcción (**T**); que la prosa no lo insinúe se **inspecciona**, y esa inspección no la hace la suite.
+
+Ninguna de las dos partes pendientes es **U**: son verificables, solo que por lectura humana y no por `pytest`.
 
 **Feature `canon` — memoria de largo plazo** — *origen: `architecture.md` §4; `definitions.md` §4.5 y §7; la corrección sin edición, `domain-knowledge.md` §7.1.*
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-CAN-01 | **Solo el Extractor** escribe memoria de largo plazo, y solo desde `EXTRAYENDO` | M | **A** más **T** |
+| RF-CAN-01 | **Solo el Extractor** escribe memoria de largo plazo, y solo desde `EXTRAYENDO` | M | **A** (+T) |
 | RF-CAN-02 | Una escena rechazada **no deja rastro**: ni canon, ni ledger, ni índice | M | **T** |
 | RF-CAN-03 | Escribir en una transacción por escena: canon → ledger → resumen → hilos → *embeddings*. O entra todo, o nada | M | **T** |
 | RF-CAN-04 | Todo `HechoCanon` cita la `escena_de_origen` | M | **T** |
-| RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** más **T** |
-| RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada N escenas. No es una tabla editable | M | **A** más **T** |
+| RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** (+T) |
+| RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada N escenas. No es una tabla editable | M | **A** (+T) |
 | RF-CAN-07 | Corregir un hecho **no lo edita**: registra uno nuevo que lo sustituye y cita al anterior | M | **T** |
-| RF-CAN-13 | Un hecho que sustituye a otro **invalida los *snapshots* posteriores** a la escena de origen del sustituido; se recalculan desde el último válido | M | **T** |
 | RF-CAN-08 | Generar resumen de escena al integrarla y de capítulo al cerrarlo | M | **T** |
 | RF-CAN-09 | No se compactan nunca la capa constitucional, los hechos de canon ni el ledger | M | **A** |
 | RF-CAN-10 | Registrar `Plantado`, `Pago` y `HiloNarrativo` con su estado. La v1 los **registra**; no los audita | S | **T** |
 | RF-CAN-11 | Derivar el conocimiento de los `testigos[]` de cada `Evento`: es lo que alimenta RF-CAL-05 | M | **T** |
 | RF-CAN-12 | El índice vectorial es **reconstruible entero** desde el texto aprobado | S | **T** |
+| RF-CAN-13 | Un hecho que sustituye a otro **invalida los *snapshots* posteriores** a la escena de origen del sustituido; se recalculan desde el último válido | M | **T** |
 
 **Feature `manuscrito`** — *origen: `architecture.md` §11.*
 
@@ -248,7 +275,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
 | RD-01 | El esquema implementa las clases necesarias en la v1: `Serie`, `Obra`, `VersionDeObra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Ejecucion`, y las tablas `trabajo` y `ngrama_vetado`. `Prompt` **no es una tabla**: es un fichero del repositorio del que `ejecucion` guarda `prompt_id`, `version` y `hash` | M | **A** |
-| RD-02 | Nombres de tablas, columnas y enumeraciones **son los de `definitions.md`**: no se traducen, no se abrevian, no se inventan sinónimos | M | **I** más **A** |
+| RD-02 | Nombres de tablas, columnas y enumeraciones **son los de `definitions.md`**: no se traducen, no se abrevian, no se inventan sinónimos | M | **I** (+A) |
 | RD-03 | Parte fija y parte móvil del `Personaje` en estructuras separadas | M | **A** |
 | RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
 | RD-05 | Tabla `trabajo` con los campos de `architecture.md` §3.2 | M | **T** |
@@ -257,7 +284,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
 | RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado | M | **T** |
 | RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
-| RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** más **T** |
+| RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** (+T) |
 | RD-12 | Tabla `version_obra`: una fila por versión de biblia, y cada `Escena` guarda con cuál se escribió | M | **T** |
 | RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor | S | **T** |
 
@@ -272,7 +299,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RNF-TOK-03 | Nunca hay más llamadas al modelo en vuelo de las configuradas (una por proceso, por defecto) | M | **T** de concurrencia |
 | RNF-TOK-04 | Sin turno, la llamada **espera**; nunca se recorta el paquete por carga del sistema | M | **T** |
 | RNF-TOK-05 | La espera de turno tiene *timeout*; al vencer, `FALLIDA` con `TiempoAgotado` y sin coste | M | **T** |
-| RNF-TOK-06 | Nunca se llama al modelo sin haber contado antes los tokens | M | **A** más **T** |
+| RNF-TOK-06 | Nunca se llama al modelo sin haber contado antes los tokens | M | **A** (+T) |
 
 **Rendimiento.** Objetivos propuestos, **no medidos**; confirmarlos es la pregunta abierta 7.
 
@@ -283,7 +310,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RNF-REN-03 | `GET /trabajos/{id}` y `GET /escenas/{id}/contexto` responden en **menos de 300 ms** | S | **T** |
 | RNF-REN-04 | La búsqueda por fuerza bruta se mantiene utilizable hasta **10.000 fragmentos**; por encima, se avisa | S | **T** |
 
-**Fiabilidad, observabilidad y seguridad** — *origen: `architecture.md` §3.6, §3.7, §9 y §11; `domain-knowledge.md` §13.*
+**Fiabilidad, observabilidad y seguridad** — *origen: `architecture.md` §3.6, §3.7, §9 y §11; `domain-knowledge.md` §13; RNF-SEG-05 y RNF-SEG-06, `verification.md` §3 (red teaming).*
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
@@ -297,7 +324,9 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RNF-SEG-01 | Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt | M | **T** |
 | RNF-SEG-02 | Ninguna regla de seguridad depende únicamente del prompt | M | **A** |
 | RNF-SEG-03 | Claves de proveedor solo desde entorno | M | **I** |
-| RNF-SEG-04 | El repositorio no contiene claves, prompts de producción ni fragmentos de manuscrito | M | **A** más **I** |
+| RNF-SEG-04 | El repositorio no contiene claves, prompts de producción ni fragmentos de manuscrito | M | **A** (+I) |
+| RNF-SEG-05 | Todo lo recuperado de los almacenes —canon, resúmenes, continuidad local, muestras ancla— entra en el paquete como **datos delimitados, nunca como instrucciones**: ninguna capa recuperada puede alterar las restricciones duras de la capa constitucional ni de la de instrucción | M | **T**, con casos adversarios |
+| RNF-SEG-06 | Un `Brief` que empuje contra la edad mínima o el `nivel_de_calor` lo rechaza el **esquema**, no el prompt | M | **T**, con casos adversarios |
 
 ---
 
@@ -314,8 +343,11 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice.
 - [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
 - [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
+- [ ] **CA-10** — Desde una fila de `ejecucion` se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
+- [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
+- [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
 
-**Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla.
+**Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
 
 ---
 
@@ -350,6 +382,20 @@ Los axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no so
 
 Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí por primera vez. Lo que sí se fija y no debe relajarse después: el **Escritor no accede a la base de datos**, solo ve el paquete recibido (`architecture.md` §3.5), y el **Extractor es el único que escribe memoria de largo plazo** (RF-CAN-01).
 
+**Verificación (`verification.md`).** Los métodos a los que esta spec se compromete, cada uno con la fila que lo respalda:
+
+| Método | Dónde aterriza aquí |
+| --- | --- |
+| Tests basados en propiedades (§2) | Las cuatro propiedades mínimas del ensamblador, bajo la tabla de `contexto` |
+| Análisis estático (§2) | `import-linter` falla la build: es la verificación de las fronteras, y por eso no hay requisito que las repita (CA-9) |
+| Tests de contrato (§2) | Esquema OpenAPI (RI-23), `__init__.py` como única superficie importable (CA-9) y E/S de cada agente validada por esquema (RF-ORQ-15) |
+| CI/CD en los dos modos (§3) | CA-2, y CA-11 para el arranque real sin la extensión. Si la suite solo corre con `sqlite-vec` cargado, el modo degradado **no está verificado** |
+| Demostración de la vertical mínima (§4) | CA-1: un capítulo coherente de principio a fin |
+| Supresión de alcance en vez de *sandbox* (§3) | RF-ORQ-16. `verification.md` §5 advierte que esa fila deja de ser cierta el día que un agente reciba una herramienta de fichero o de red: se reabre **antes** de concederla, no después |
+| Red teaming, con el modelo de amenaza del bucle (§3) | RNF-SEG-05 y RNF-SEG-06, más CA-12. La vía realista no es un atacante externo: es el Extractor convirtiendo en canon prosa que el propio sistema generó |
+| Comprobación de modelos: **no aplicable** (§3) | Lo es mientras se mantenga **una escena en vuelo por obra** (RF-ORQ-11). Levantar esa restricción no es subir un número: obliga a reabrir la decisión |
+| Tests de mutación: **aplazados** (§2) | Fuera de alcance; CA-4 hace su trabajo a mano mientras tanto |
+
 ---
 
 ## Vocabulario
@@ -376,6 +422,7 @@ Mientras quede una sin cerrar, **esta spec no se aprueba**.
 - [ ] **6 — Formato de la cita del pasaje: desplazamiento de caracteres o identificador de beat.** Bloquea RF-CAL-08 y RI-18.
 - [ ] **7 — Confirmar o sustituir los objetivos de rendimiento**, hoy propuestos sin medir. Bloquea RNF-REN-01 a 04.
 - [ ] **8 — Si un trabajo `ESCALADA`, tras la edición humana, entra por `EXTRAYENDO` o vuelve a validar.** Bloquea CU-04.
+- [ ] **9 — Quién firma la inspección (I) de prosa para nivel de calor y edad, y en qué momento**, dado que el Crítico está fuera de alcance. Bloquea la parte no mecánica de RF-CAL-02 y RF-CAL-03.
 
 ---
 
@@ -395,10 +442,29 @@ Todo requisito nace de un documento anterior. Ninguno es original de esta spec, 
 | RD-01 a RD-13 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
 | RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
 | RNF-REN | **Propuesta de esta spec, sin medir** |
-| RNF-FIA, RNF-OBS, RNF-SEG | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
+| RNF-FIA, RNF-OBS | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
+| RNF-SEG-01 a 04 | `architecture.md` §11; `CLAUDE.md` §10 |
+| RI-17 (parte **D**), RI-23, RF-CTX-13, RF-ORQ-15, RF-ORQ-16, RNF-SEG-05, RNF-SEG-06 | `verification.md` §2, §3 y §4.1 |
 | RG-01 a RG-10 | `definitions.md` §11 |
 
-Lo que `docs/verification.md` clasifica como **U — no verificable** (calidad narrativa, ausencia de fallos semánticos sutiles, comportamiento del modelo entre versiones) **no aparece como requisito**: un requisito que nadie puede comprobar no es un requisito, es un deseo.
+Lo que `docs/verification.md` clasifica como **U — no verificable** no aparece como requisito, y se enumera en el apartado siguiente.
+
+---
+
+## Lo que esta spec no verifica
+
+`verification.md` §4.2 nombra lo que hoy nadie puede comprobar. **Ninguna de estas afirmaciones es un requisito de esta spec:** un requisito que nadie puede comprobar no es un requisito, es un deseo. Se listan porque una U sin marcar es una afirmación que se hace sin pruebas.
+
+| No verificable | Qué toca de la v1 | Qué se entrega en su lugar |
+| --- | --- | --- |
+| Calidad narrativa | Nada: ningún requisito la afirma | El juicio humano sobre la demostración de CA-1 |
+| Pertinencia de la memoria recuperada | **RF-CTX-07**: se verifica el **orden** de la recuperación híbrida, no que lo recuperado sea lo pertinente | Nada. El único síntoma observable llega después, como defecto del Continuista |
+| Calibración del Crítico | Nada: el Crítico está fuera de alcance, y por eso G1b no bloquea (RF-CAL-09) | — |
+| Ausencia de fallos semánticos sutiles | Toda la suite: detecta aquello para lo que se escribió | CA-4, a mano, mientras los tests de mutación siguen aplazados |
+| Comportamiento del modelo entre versiones | El veredicto de los validadores depende del modelo que los ejecuta | `ejecucion` registra modelo y parámetros (RI-14): la regresión se detecta después, no se previene |
+| Coste total de una novela | RNF-OBS-01 lo **mide**; ningún requisito lo acota | Los topes por llamada (RNF-TOK-01) y por proceso (RNF-TOK-03) acotan la llamada y la concurrencia, no el total |
+
+Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y prosa que no insinúe lo prohibido (RF-CAL-03)— **no están en esta tabla**: son verificables por lectura humana, y lo que falta es decidir quién firma esa lectura (pregunta abierta 9).
 
 ---
 
