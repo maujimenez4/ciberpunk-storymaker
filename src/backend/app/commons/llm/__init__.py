@@ -8,14 +8,17 @@ from app.commons.llm.cliente import (
     RespuestaDeModelo,
 )
 from app.commons.llm.contador import CODIFICACION, ContadorBPE, ContadorDeTokens
+from app.commons.llm.prompts import CargadorDePrompts, PromptCargado
 
 __all__ = [
     "CODIFICACION",
+    "CargadorDePrompts",
     "ClienteDeModelo",
     "ClienteNoConfigurado",
     "ContadorBPE",
     "ContadorDeTokens",
     "DobleDeModelo",
+    "PromptCargado",
     "ProveedorSinConectar",
     "RespuestaDeModelo",
 ]
