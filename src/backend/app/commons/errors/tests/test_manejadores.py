@@ -94,5 +94,13 @@ def test_toda_excepcion_de_dominio_tiene_traduccion() -> None:
         hijas = set(clase.__subclasses__())
         return hijas.union(*(descendientes(h) for h in hijas)) if hijas else hijas
 
-    sin_traducir = {c.__name__ for c in descendientes(ErrorDeDominio) - registradas}
+    # Una subclase de una excepcion registrada **si** esta traducida: Starlette
+    # busca el manejador recorriendo el MRO. Exigir registro explicito seria mas
+    # estricto que la realidad y obligaria a duplicar filas por cada matiz.
+    def traducida(clase: type) -> bool:
+        return any(base in registradas for base in clase.__mro__)
+
+    sin_traducir = {
+        c.__name__ for c in descendientes(ErrorDeDominio) if not traducida(c)
+    }
     assert not sin_traducir, f"excepciones sin traduccion HTTP: {sin_traducir}"
