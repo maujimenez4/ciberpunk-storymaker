@@ -5,9 +5,11 @@ clavadas al commit indicado. Sin instalación global ni de usuario; no se ha
 registrado ningún marketplace.
 
 Criterio de selección: **una skill por requisito técnico no negociable de
-`CLAUDE.md` §4**, más `feature-sliced-design` por decisión explícita. Nada más.
+`CLAUDE.md` §4**, más `feature-sliced-design` y `coherencia-docs` por decisión
+explícita. Nada más.
 
-Fecha de instalación de todas las filas: **2026-09-21**.
+Fecha de instalación: **2026-09-21** para todas las filas salvo `coherencia-docs`,
+instalada el **2026-09-22**.
 
 ## Instaladas
 
@@ -21,6 +23,7 @@ Fecha de instalación de todas las filas: **2026-09-21**.
 | `react-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: React 19 — los efectos como vía de escape, `useEffectEvent`, cuándo *no* usar `useEffect` |
 | `feature-sliced-design` | `feature-sliced/skills` | `fd71da42a89e916f2ced63e5349fd865c87070a6` | **Sin licencia declarada** | Instalada por decisión explícita del equipo (2026-09-21). Ver el aviso de conflicto más abajo |
 | `verification-methods` | Propia de este repositorio | — | — | Metodologías de verificación; origen de `docs/verification.md` |
+| `coherencia-docs` | `maujimenez4/MyFactory` | `4ca2652f900a3d3586f3aa7980f5f3f5165bc899` | **Sin licencia declarada** | Instalada por decisión explícita (2026-09-22). Revisa la coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica e invariantes condicionales caducadas. No es un requisito de §4 |
 
 La licencia de cada origen se ha copiado como `LICENSE.upstream` dentro de la
 carpeta de la skill, salvo en `feature-sliced-design`, cuyo repositorio no publica
@@ -95,6 +98,26 @@ datos de prueba de la propia skill).
 Sin conflicto. Nota a favor: desaconseja usar Pydantic para clases instanciadas
 desde el propio código, lo que concuerda con `CLAUDE.md` §5.1 regla 3
 (`commons/domain/` se prueba sin base de datos y sin framework).
+
+### `coherencia-docs` — resuelto el conflicto con `CLAUDE.md` §12
+
+`CLAUDE.md` §12 afirmaba «una skill por requisito técnico de §4, y ninguna más» y
+su tabla enumeraba siete. `coherencia-docs` no responde a ningún requisito de §4:
+es una skill de proceso sobre la documentación. **Resuelto el 2026-09-22**
+ampliando el criterio a «una skill por requisito de §4, más tres por decisión
+explícita» en `CLAUDE.md` §12 y en `docs/architecture.md` §7.2. En la misma
+revisión se añadió `verification-methods`, que estaba instalada desde el
+2026-09-21 y no figuraba en ninguna de las dos tablas.
+
+Además: el repositorio de origen **no declara licencia**, igual que
+`feature-sliced-design`. La skill es un único fichero (`SKILL.md`, 14,9 KB); el
+repositorio no contiene `references/`, `scripts/` ni `evals/`, así que no hay nada
+excluido ni punteros muertos.
+
+No hay conflicto de contenido: su jerarquía de autoridad reproduce la de
+`CLAUDE.md` §3.1 (`definitions.md` manda sobre vocabulario, `architecture.md`
+sobre estructura y decisiones) y su regla de no editar sin aprobación explícita
+concuerda con §3.2 y §14.
 
 ## Evaluadas y descartadas
 

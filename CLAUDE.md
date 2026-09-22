@@ -331,7 +331,7 @@ Un agente solo puede afirmar algo si procede de: `docs/definitions.md`, el grafo
 
 Las skills instaladas viven en `.claude/skills/` (compartidas, commiteadas) o llegan por plugin. Procedencia, commit exacto y licencia de cada una: `.claude/skills/SOURCES.md`. Ver `docs/architecture.md` §7.2 para el detalle por área.
 
-Hay una skill por requisito técnico de §4, más dos instaladas por decisión explícita. Estas últimas llevan «—» en la columna de requisito:
+Hay una skill por requisito técnico de §4, más tres instaladas por decisión explícita. Estas últimas llevan «—» en la columna de requisito y aviso propio debajo de la tabla:
 
 | Skill | Requisito de §4 | Área del repo |
 | --- | --- | --- |
@@ -343,8 +343,11 @@ Hay una skill por requisito técnico de §4, más dos instaladas por decisión e
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
 | `feature-sliced-design` | — (referencia, no norma) | Ver aviso abajo |
 | `verification-methods` | — (propia del repositorio) | `docs/verification.md` |
+| `coherencia-docs` | — (proceso de §3 sobre la documentación) | `docs/`, este fichero |
 
 **`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §6.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
+
+**`coherencia-docs` no decide nada por su cuenta.** Compara `docs/` y este fichero entre sí y produce informe, plan y edición en tres pasos separados, con parada en cada uno; solo aplica lo aprobado. No rellena huecos escribiendo contenido nuevo ni reclasifica las letras de `docs/verification.md`: eso es §3.2 y §14.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, las reglas de frontera de §5, el ledger append-only— **no lo cubre ninguna skill pública**: vive en este fichero.
 
