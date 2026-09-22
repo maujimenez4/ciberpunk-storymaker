@@ -10,6 +10,16 @@ from app.commons.jobs.estados import (
     exigir,
     puede_ir,
 )
+from app.commons.jobs.plazos import (
+    INTENTOS_DE_PROVEEDOR,
+    PASOS_CON_MODELO,
+    PLAZO_CODIGO_S,
+    PLAZO_MODELO_S,
+    CerrojoPorObra,
+    con_reintentos,
+    ejecutar_con_plazo,
+    plazo_de,
+)
 from app.commons.jobs.proceso import (
     EjecutorDeTrabajos,
     TurnoDeModelo,
@@ -24,6 +34,14 @@ from app.commons.jobs.trabajos import (
 
 __all__ = [
     "EN_CURSO",
+    "INTENTOS_DE_PROVEEDOR",
+    "PASOS_CON_MODELO",
+    "PLAZO_CODIGO_S",
+    "PLAZO_MODELO_S",
+    "CerrojoPorObra",
+    "con_reintentos",
+    "ejecutar_con_plazo",
+    "plazo_de",
     "MAXIMO_DE_REPARACIONES",
     "TERMINALES",
     "TERMINALES_DEFINITIVOS",
