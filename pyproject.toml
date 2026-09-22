@@ -12,6 +12,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "alembic>=1.14",
     "numpy>=2.1",
+    "tiktoken>=0.14.0",
 ]
 
 [dependency-groups]
