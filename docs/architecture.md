@@ -571,7 +571,7 @@ Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-
 | `docs/verification.md` | `verification-methods` | Metodologías de verificación y la clasificación T/A/I/D/U; origen del documento |
 | `docs/`, `CLAUDE.md` | `coherencia-docs` | Revisión de coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica, invariantes condicionales caducadas. Informe, plan y edición en pasos separados; **no edita sin aprobación explícita** |
 
-Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más tres instaladas por decisión explícita (las tres últimas filas, sin área de código asociada). Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
+Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más tres instaladas por decisión explícita (las tres últimas filas, sin área de código asociada). `sqlite-vec` se retiró el 2026-09-22 al retirarse la búsqueda vectorial (D-02): ya no había requisito que cubriera. Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, reglas de frontera (`import-linter`, `import/no-restricted-paths`), ledger append-only— **no lo cubre ninguna skill pública**: vive en `CLAUDE.md`.
 

@@ -343,7 +343,7 @@ Hay una skill por requisito técnico de §4, más tres instaladas por decisión 
 | --- | --- | --- |
 | `python-fastapi-ops` | Backend FastAPI | `src/backend/app/features/*/router.py`, `service.py` |
 | `pydantic` | Pydantic v2 | `schemas.py`, `commons/domain/` |
-| `sqlite-ops` | Persistencia **sin** extensión: WAL, índices, migraciones | `commons/db/`, `repository.py`, Alembic |
+| `sqlite-ops` | Persistencia: WAL, índices, migraciones | `commons/db/`, `repository.py`, Alembic |
 | `typescript-best-practices` | Frontend TypeScript estricto | `src/frontend/src/` |
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
 | `feature-sliced-design` | — (referencia, no norma) | Ver aviso abajo |

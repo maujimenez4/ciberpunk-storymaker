@@ -17,7 +17,6 @@ instalada el **2026-09-22**.
 | --- | --- | --- | --- | --- |
 | `python-fastapi-ops` | `0xDarkMatter/claude-mods` | `a339d71272d12e88ed0503ffa4de50e9b9a030a3` | MIT | §4 Backend: patrones FastAPI (lifespan, `Depends()` con `Annotated`, `response_model`, routers). Es generativa, no de revisión |
 | `pydantic` | `pydantic/skills` (oficial del equipo Pydantic) | `238d97102650c1caa51f35027aee13c469c59542` | MIT | §4 Backend: Pydantic v2 — restricciones, validadores, jerarquías de modelos, coerción |
-| `sqlite-vec` | `existential-birds/beagle` | `065636181813e287cae8fe91060401c0d99c0553` | Apache-2.0 | §4 Persistencia: tablas `vec0`, KNN con `MATCH`, filtrado por metadatos y claves de partición |
 | `sqlite-ops` | `0xDarkMatter/claude-mods` | `a339d71272d12e88ed0503ffa4de50e9b9a030a3` | MIT | §4 Persistencia: WAL, `busy_timeout`/`SQLITE_BUSY`, `EXPLAIN QUERY PLAN`, índices, tablas STRICT, `aiosqlite`, migraciones. Cubre el modo **sin** extensión vectorial |
 | `typescript-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: TypeScript estricto — type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
 | `react-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: React 19 — los efectos como vía de escape, `useEffectEvent`, cuándo *no* usar `useEffect` |
@@ -52,17 +51,21 @@ Además: el repositorio de origen **no declara licencia**. Se ha copiado el
 `SKILL.md` y sus 9 ficheros de `references/`; se han excluido `evals/` (25 KB de
 datos de prueba de la propia skill).
 
-### `sqlite-vec` — sin requisito que cubrir desde el 2026-09-22
+### `sqlite-vec` — **retirada** el 2026-09-22
 
-D-02 de la spec 001 retiro la busqueda vectorial: no hay extension, ni almacen
-de vectores, ni proveedor de *embeddings*. La ordenacion semantica la resuelve el
+D-02 de la spec 001 retiró la búsqueda vectorial: no hay extensión, ni almacén de
+vectores, ni proveedor de *embeddings*. La ordenación semántica la resuelve el
 proveedor de modelo (`CLAUDE.md` §4.2, `architecture.md` §4.6).
 
-La skill **se queda instalada** y sale de la tabla de §12 de `CLAUDE.md`: no
-cubre ningun requisito vigente. Se conserva porque la decision es reversible
-—`fragmento` guarda el texto y RF-CAN-12 lo hace reconstruible—, y si algun dia
-aparece una credencial de *embeddings*, volver cuesta un reindexado. Borrarla
-obligaria a reinstalarla y a repetir la anotacion de procedencia.
+**Se desinstala, no se conserva.** Una skill no es documentación inerte: se carga
+sola cuando alguien toca el área que su `description` describe —aquí,
+`features/contexto/` y `commons/db/`— y enseñaría a construir tablas `vec0` y
+consultas `MATCH` contra un diseño que ya no existe. Dejarla instalada es peor
+que no tenerla: no sobra, engaña.
+
+Si algún día aparece una credencial de *embeddings*, se reinstala desde el commit
+que esta entrada conserva. `fragmento` guarda el texto y RF-CAN-12 lo hace
+reconstruible, así que volver costaría un reindexado.
 
 ### `python-fastapi-ops`
 
