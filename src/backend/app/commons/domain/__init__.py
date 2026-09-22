@@ -4,6 +4,7 @@ from app.commons.domain.escena import (
     EDAD_MINIMA_PARA_CONTENIDO_ROMANTICO,
     EscenaPlanificada,
     NivelDeCalor,
+    ParametrosDeDiscurso,
     PersonajeEnEscena,
     RolNarrativo,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "EDAD_MINIMA_PARA_CONTENIDO_ROMANTICO",
     "EscenaPlanificada",
     "NivelDeCalor",
+    "ParametrosDeDiscurso",
     "PersonajeEnEscena",
     "Reloj",
     "RelojDelSistema",

@@ -43,6 +43,21 @@ class RolNarrativo(StrEnum):
     FIGURANTE = "figurante"
 
 
+class ParametrosDeDiscurso(BaseModel):
+    """Se declaran una vez en la `Obra` y se imponen en cada escena.
+
+    `definitions.md` §5: son restriccion dura, no preferencia de estilo. Que
+    viajen juntos evita el fallo tipico de heredar tres de los cuatro.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    persona: str = Field(min_length=1)
+    tiempo_verbal: str = Field(min_length=1)
+    esquema_de_pov: str = Field(min_length=1)
+    nivel_de_calor: NivelDeCalor
+
+
 class PersonajeEnEscena(BaseModel):
     """Lo que la escena necesita saber de quien aparece en ella."""
 
