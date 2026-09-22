@@ -93,7 +93,7 @@ EXTRACCION_FALSA = json.dumps(
                 "participantes": ["pj-ada", "pj-noe"],
             }
         ],
-        "resumen": "Ada intenta cerrar el trato y Noe se niega: control pasa a amenaza.",
+        "resumen": "Ada intenta cerrar el trato y Noe se niega.",
         "hilos": [{"pregunta": "Por que Noe no firma?", "estado": "abierto"}],
         "plantados": [{"importancia": "alta", "descripcion": "los planos"}],
         "ngramas_gastados": ["el olor a ozono"],
