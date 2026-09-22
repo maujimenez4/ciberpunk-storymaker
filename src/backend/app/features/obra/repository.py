@@ -11,6 +11,7 @@ from pathlib import Path
 
 from app.commons.domain import NivelDeCalor
 from app.commons.errors import RecursoNoEncontrado
+from app.features.obra.biblia import Biblia, VersionDeBiblia
 from app.features.obra.schemas import Brief, ObraCreada
 
 SERIE_IMPLICITA = "serie-unica"
@@ -76,3 +77,55 @@ class RepositorioDeObras:
             esquema_de_pov=fila[5],
             nivel_de_calor=NivelDeCalor(fila[6]),
         )
+
+    def crear_version_de_biblia(
+        self, obra_id: str, biblia: Biblia, creada_en: datetime
+    ) -> VersionDeBiblia:
+        """RD-12 y RF-OBR-03: version nueva, nunca edicion en sitio."""
+        version_id = f"vobra-{uuid.uuid4().hex[:12]}"
+        with self._conexion() as conexion:
+            siguiente = conexion.execute(
+                "SELECT COALESCE(MAX(numero), 0) + 1 FROM version_obra"
+                " WHERE obra_id = ?",
+                (obra_id,),
+            ).fetchone()[0]
+            conexion.execute(
+                "INSERT INTO version_obra (version_obra_id, obra_id, numero, biblia,"
+                " creada_en) VALUES (?,?,?,?,?)",
+                (
+                    version_id,
+                    obra_id,
+                    siguiente,
+                    biblia.model_dump_json(),
+                    creada_en.isoformat(),
+                ),
+            )
+        return self.leer_version(version_id)
+
+    def leer_version(self, version_obra_id: str) -> VersionDeBiblia:
+        with self._conexion() as conexion:
+            fila = conexion.execute(
+                "SELECT version_obra_id, obra_id, numero, biblia FROM version_obra"
+                " WHERE version_obra_id = ?",
+                (version_obra_id,),
+            ).fetchone()
+        if fila is None:
+            raise RecursoNoEncontrado("VersionDeObra", version_obra_id)
+        return VersionDeBiblia(
+            version_obra_id=fila[0],
+            obra_id=fila[1],
+            numero=fila[2],
+            biblia=Biblia.model_validate_json(fila[3]),
+        )
+
+    def versiones_de(self, obra_id: str) -> list[VersionDeBiblia]:
+        with self._conexion() as conexion:
+            ids = [
+                f[0]
+                for f in conexion.execute(
+                    "SELECT version_obra_id FROM version_obra WHERE obra_id = ?"
+                    " ORDER BY numero",
+                    (obra_id,),
+                )
+            ]
+        return [self.leer_version(i) for i in ids]
