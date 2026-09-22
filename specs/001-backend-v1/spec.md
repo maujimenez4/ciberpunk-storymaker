@@ -1,7 +1,7 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: borrador          # borrador | en-revision | aprobada | implementada
+estado: en-revision       # borrador | en-revision | aprobada | implementada
 aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 ---
@@ -96,7 +96,9 @@ Convenciones de esta sección:
 
 *Postcondición de éxito:* la escena está en el manuscrito y la memoria de largo plazo la incluye. *Postcondición de fracaso:* **la memoria de largo plazo no ha cambiado.** → RI-05, RI-09, RF-ESC-*, RF-CTX-*, RF-ORQ-*, RF-CAL-*, RF-CAN-*.
 
-**CU-04 · Resolver un escalado.** *Precondición:* un trabajo en `ESCALADA`. *Flujo:* el autor consulta el defecto con su cita, edita o acepta → versión nueva marcada vigente → se reanuda. *Postcondición:* la escena acaba `INTEGRADA` o `CANCELADA`, nunca indefinidamente en `ESCALADA`. → RI-07, RI-09, RF-ESC-03, RF-ESC-04. *(Por dónde se reanuda: pregunta abierta 8.)*
+**CU-04 · Resolver un escalado.** *Precondición:* un trabajo en `ESCALADA`. *Flujo:* el autor consulta el defecto con su cita, edita o acepta → versión nueva marcada vigente → se reanuda. *Postcondición:* la escena acaba `INTEGRADA` o `CANCELADA`, nunca indefinidamente en `ESCALADA`. → RI-07, RI-09, RF-ESC-03, RF-ESC-04, RF-ORQ-17, RF-ORQ-18.
+
+*Reentrada (D-08):* el trabajo vuelve a **`VALIDANDO`**, no entra por `EXTRAYENDO`. Revalidar es barato; escribir en canon un error introducido a mano cuesta un hecho sustitutorio y la invalidación de *snapshots* (RF-CAN-07, RF-CAN-13). Esa revalidación **no consume** el contador de RF-ORQ-07, y un fallo devuelve a `ESCALADA`, nunca a `REPARANDO`: no hay nada que reparar con el modelo en un texto humano. El autor puede además **aceptar** la versión pese al defecto, y entonces queda registrado cuál se anuló (RF-ORQ-18).
 
 **CU-05 · Inspeccionar el contexto enviado.** *Precondición:* al menos una ejecución. *Flujo:* se consulta paquete y desglose. *Postcondición:* el desglose suma lo que dice y respeta los topes. → RI-06, RF-CTX-06, RF-CTX-10.
 
@@ -131,10 +133,11 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** (+A) |
 | RI-16 | SQLite con `WAL`, `foreign_keys=ON` y `busy_timeout`. Migraciones con Alembic desde el primer commit | M | **T** |
 | RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial.** Además del paso de la suite en ambos modos, se demuestra un **arranque real con la extensión ausente** | M | **T** en ambos modos (+D) |
-| RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** | M | **T** |
+| RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** en el formato de RF-CAL-08 | M | **T** |
 | RI-19 | Existe forma de cancelar un trabajo en curso; el efecto es `CANCELADA` en el primer punto seguro, nunca a mitad de una escritura | S | **T** |
-| RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto | M | **A** |
-| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor, modelo, llamadas simultáneas permitidas, *timeout* de espera de turno, plazo por paso, N de los *snapshots*, dimensión de los *embeddings* y ruta del fichero | M | **T** |
+| RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto. La v1 usa **Voyage AI `voyage-3`, 1024 dimensiones** (D-02); **no** coincide con el de generación porque la API de Anthropic no ofrece *embeddings* | M | **A** |
+| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor de generación, modelo, clave del proveedor de *embeddings*, llamadas simultáneas permitidas (**1**, D-03), *timeout* de espera de turno (**300 s**, D-03), **plazo por paso de código (30 s) y plazo por paso con llamada al modelo (600 s)** (D-04), N de los *snapshots* (**5**, D-01), dimensión de los *embeddings* (**1024**, D-02) y ruta del fichero | M | **T** |
+| RI-24 | El plazo de un paso con llamada al modelo **debe superar** el *timeout* de espera de turno más la duración de la llamada; el arranque rechaza una configuración que no lo cumpla. Si el plazo del paso vence antes, RNF-TOK-05 no llega a ejecutarse nunca y queda como código muerto | M | **T** |
 | RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
 | RI-23 | El backend **publica su esquema OpenAPI** y toda ruta declara su modelo de respuesta: el contrato con cualquier cliente es el esquema generado, no una descripción escrita aparte | M | **A** (+T) |
 
@@ -218,6 +221,8 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | RF-ORQ-14 | El orquestador **persiste la salida de cada paso y la vuelve a leer** en vez de encadenar objetos en memoria: es lo que hace que reanudar sea idéntico a ejecutar | M | **A** |
 | RF-ORQ-15 | Cada paso recibe y devuelve un **modelo validado** (`architecture.md` §3.4). Una salida de agente que no valida contra su esquema es **fallo del paso**, no texto que se arrastre al siguiente | M | **T** |
 | RF-ORQ-16 | Ningún agente narrativo dispone de herramientas: no accede a los almacenes, ni al sistema de ficheros, ni a la red fuera del cliente de modelo. Los prompts los **carga el orquestador**, y el Escritor solo ve el paquete recibido (`architecture.md` §3.5) | M | **A** |
+| RF-ORQ-17 | Tras la edición humana de un trabajo en `ESCALADA`, el trabajo reentra por **`VALIDANDO`** (D-08). Esa revalidación **no incrementa** el contador de RF-ORQ-07, y un fallo devuelve a `ESCALADA`, nunca a `REPARANDO` | M | **T** |
+| RF-ORQ-18 | El autor puede **aceptar** una versión pese a un defecto bloqueante. La aceptación registra en el `trabajo` qué defecto se anuló y quién lo anuló; sin ese registro no se avanza a `EXTRAYENDO`. Es lo que impide que un validador equivocado deje el trabajo atrapado, contra la postcondición de CU-04 | M | **T** |
 
 *RF-ORQ-12 no existe: se retiró en revisión por ser una convención permanente de `CLAUDE.md` §6 —el `router.py` no contiene lógica— y no un requisito de esta spec. Los identificadores no se renumeran.*
 
@@ -226,19 +231,19 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | ID | Requisito | Defecto | Pr. | Verif. |
 | --- | --- | --- | --- | --- |
 | RF-CAL-01 | Rechazar la escena cuya **ficha** no declara giro de valor (`valor_entrada` = `valor_salida` o nulo). Que la prosa *entregue* el giro es juicio, no cuenta: es G1b y queda fuera (§Fuera de alcance) | EST-01 | M | **T** |
-| RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado en la `Obra`, con el mecanismo que cierre la pregunta abierta 5. Cobertura **parcial**: véase la nota bajo esta tabla | SEG-01 | M | **T** parcial (+I) |
+| RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado en la `Obra`, mediante **lista de términos versionada por nivel** (D-05): mecánica, determinista y sin llamada al modelo. Cobertura **parcial**: véase la nota bajo esta tabla | SEG-01 | M | **T** parcial (+I) |
 | RF-CAL-03 | Rechazar contenido romántico o sexual con menores de 18, **por esquema**: bloquea por construcción | SEG-01 | M | **T** (+I) |
 | RF-CAL-04 | Detectar desplazamiento en menos del `tiempo_de_viaje`, o presencia simultánea en dos lugares | CON-01 | M | **T** |
 | RF-CAL-05 | Detectar uso de información sin `sabe_desde` de escena anterior | CON-03 | M | **T** |
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
-| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
+| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_de_texto_id, inicio, fin)` en desplazamiento de caracteres **más el texto literal recortado** (D-06): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
 | RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
 | RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
 
 **Cobertura parcial reconocida.** `verification.md` §4.1 asigna a dos de estos requisitos un método de refuerzo porque lo mecánico solo cubre una parte, y callarlo sería dar por verificado lo que no lo está:
 
-- **RF-CAL-02** — el código comprueba el nivel **declarado**; que la prosa se mantenga dentro lo juzga el Crítico, que está fuera de alcance, y en última instancia una lectura humana. La v1 entrega la parte **T**; la **I** queda pendiente de la pregunta abierta 9.
+- **RF-CAL-02** — el código comprueba el nivel **declarado**; que la prosa se mantenga dentro lo juzga el Crítico, que está fuera de alcance, y en última instancia una lectura humana. La v1 entrega la parte **T**; la **I** la firma el autor sobre el capítulo de CA-1 (D-09).
 - **RF-CAL-03** — la edad se valida en esquema y bloquea por construcción (**T**); que la prosa no lo insinúe se **inspecciona**, y esa inspección no la hace la suite.
 
 Ninguna de las dos partes pendientes es **U**: son verificables, solo que por lectura humana y no por `pytest`.
@@ -252,7 +257,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RF-CAN-03 | Escribir en una transacción por escena: canon → ledger → resumen → hilos → *embeddings*. O entra todo, o nada | M | **T** |
 | RF-CAN-04 | Todo `HechoCanon` cita la `escena_de_origen` | M | **T** |
 | RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** (+T) |
-| RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada N escenas. No es una tabla editable | M | **A** (+T) |
+| RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada **N = 5** escenas (D-01; configurable por RI-21). No es una tabla editable | M | **A** (+T) |
 | RF-CAN-07 | Corregir un hecho **no lo edita**: registra uno nuevo que lo sustituye y cita al anterior | M | **T** |
 | RF-CAN-08 | Generar resumen de escena al integrarla y de capítulo al cerrarlo | M | **T** |
 | RF-CAN-09 | No se compactan nunca la capa constitucional, los hechos de canon ni el ledger | M | **A** |
@@ -280,7 +285,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
 | RD-05 | Tabla `trabajo` con los campos de `architecture.md` §3.2 | M | **T** |
 | RD-06 | Tabla `ejecucion` con el registro completo de RI-14, una fila por llamada | M | **T** |
-| RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore` | M | **T** en ambos modos |
+| RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore`, a **1024 dimensiones** (D-02): `float[1024]` en `vec0`, BLOB legible por NumPy en `BruteForceStore` | M | **T** en ambos modos |
 | RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
 | RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado | M | **T** |
 | RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
@@ -295,13 +300,13 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
 | RNF-TOK-01 | Ninguna llamada supera los 100.000 tokens | M | **T** |
-| RNF-TOK-02 | El contador es una dependencia inyectada, **no** una estimación por caracteres | M | **A** |
-| RNF-TOK-03 | Nunca hay más llamadas al modelo en vuelo de las configuradas (una por proceso, por defecto) | M | **T** de concurrencia |
+| RNF-TOK-02 | El contador es una dependencia inyectada, **no** una estimación por caracteres, y es **local**: confirmar RNF-REN-01 (ensamblar en menos de 2 s) excluye un contador remoto (D-07) | M | **A** |
+| RNF-TOK-03 | Nunca hay más llamadas al modelo en vuelo de las configuradas (**1 por proceso**, confirmado en D-03 sobre `architecture.md` §2.2) | M | **T** de concurrencia |
 | RNF-TOK-04 | Sin turno, la llamada **espera**; nunca se recorta el paquete por carga del sistema | M | **T** |
-| RNF-TOK-05 | La espera de turno tiene *timeout*; al vencer, `FALLIDA` con `TiempoAgotado` y sin coste | M | **T** |
+| RNF-TOK-05 | La espera de turno tiene *timeout* (**300 s**, D-03); al vencer, `FALLIDA` con `TiempoAgotado` y sin coste | M | **T** |
 | RNF-TOK-06 | Nunca se llama al modelo sin haber contado antes los tokens | M | **A** (+T) |
 
-**Rendimiento.** Objetivos propuestos, **no medidos**; confirmarlos es la pregunta abierta 7.
+**Rendimiento.** Objetivos **confirmados como provisionales** (D-07): se miden en la v1 y los valores reales se anotan en el Cierre. Los cuatro son `S`, así que ninguno invalida la entrega.
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
@@ -317,7 +322,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RNF-FIA-01 | Una caída no pierde trabajo: se reanuda desde el último estado persistido | M | **T** |
 | RNF-FIA-02 | `FalloDeProveedor` se reintenta con espera creciente, hasta 3 veces; después `FALLIDA` | M | **T** |
 | RNF-FIA-03 | Ninguna ejecución depende de que la extensión vectorial esté cargada | M | **T** en ambos modos |
-| RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado | M | **T** |
+| RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado. El plazo **depende del tipo de paso** (D-04): 30 s los de código (`ENSAMBLANDO`, `VALIDANDO`, `REPARANDO`), 600 s los que llaman al modelo (`PLANIFICANDO`, `ESCRIBIENDO`, `EXTRAYENDO`) | M | **T** |
 | RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
 | RNF-OBS-02 | Métricas de concurrencia: tiempo de espera por turno y número de esperas vencidas | M | **D** |
 | RNF-OBS-03 | La traza es **estructural, no textual**: ni prompts de producción ni fragmentos de manuscrito en los logs por defecto | M | **A** |
@@ -346,6 +351,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-10** — Desde una fila de `ejecucion`, **y con el estado de almacenes de esa escena**, se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
 - [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
 - [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
+- [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
 
 **Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
 
@@ -410,25 +416,45 @@ Un término que aquí no aparece y conviene no confundir: `trabajo` es una tabla
 
 ---
 
-## Preguntas abiertas
+## Decisiones
 
-Mientras quede una sin cerrar, **esta spec no se aprueba**.
+Las nueve preguntas abiertas quedaron **cerradas el 2026-09-22**. Se conservan aquí con su decisión y su porqué: un valor sin motivo es un número que nadie se atreve a cambiar después.
 
-- [ ] **1 — Valor de N para los *snapshots* de `EstadoEnT`.** Bloquea RF-CAN-06 y RI-21.
-- [ ] **2 — Proveedor y dimensión de los *embeddings*, y si coincide con el de generación.** Bloquea RI-17, RI-20 y RD-07.
-- [ ] **3 — *Timeout* de la espera de turno, y cuántas llamadas simultáneas se permiten.** Bloquea RNF-TOK-03, RNF-TOK-05 y RI-21.
-- [ ] **4 — Plazo por paso antes de `TiempoAgotado`.** Bloquea RF-ORQ-09 y RNF-FIA-04.
-- [ ] **5 — Si el nivel de calor se valida por clasificador o por lista de términos.** Bloquea RF-CAL-02.
-- [ ] **6 — Formato de la cita del pasaje: desplazamiento de caracteres o identificador de beat.** Bloquea RF-CAL-08 y RI-18.
-- [ ] **7 — Confirmar o sustituir los objetivos de rendimiento**, hoy propuestos sin medir. Bloquea RNF-REN-01 a 04.
-- [ ] **8 — Si un trabajo `ESCALADA`, tras la edición humana, entra por `EXTRAYENDO` o vuelve a validar.** Bloquea CU-04.
-- [ ] **9 — Quién firma la inspección (I) de prosa para nivel de calor y edad, y en qué momento**, dado que el Crítico está fuera de alcance. Bloquea la parte no mecánica de RF-CAL-02 y RF-CAL-03.
+| ID | Decisión | Aterriza en |
+| --- | --- | --- |
+| D-01 | N de los *snapshots* de `EstadoEnT` = **5** | RF-CAN-06, RI-21 |
+| D-02 | *Embeddings*: **Voyage AI `voyage-3`, 1024 dimensiones**, distinto del proveedor de generación | RI-17, RI-20, RD-07 |
+| D-03 | **1** llamada en vuelo por proceso; *timeout* de turno **300 s** | RNF-TOK-03, RNF-TOK-05, RI-21 |
+| D-04 | Plazo por paso **en dos valores**: 30 s los de código, 600 s los que llaman al modelo | RF-ORQ-09, RNF-FIA-04, RI-21, RI-24 |
+| D-05 | Nivel de calor por **lista de términos versionada**, no por clasificador | RF-CAL-02 |
+| D-06 | Cita del pasaje: **desplazamiento de caracteres sobre la `VersionDeTexto` más el literal** | RF-CAL-08, RI-18 |
+| D-07 | Objetivos de rendimiento **confirmados como provisionales**; se miden y se anotan en el Cierre | RNF-REN-01 a 04, RNF-TOK-02 |
+| D-08 | Un `ESCALADA` editado reentra por **`VALIDANDO`**; el autor puede aceptar registrando el defecto anulado | CU-04, RF-ORQ-17, RF-ORQ-18, CA-13 |
+| D-09 | La inspección **(I)** la firma el **autor**, sobre el capítulo de CA-1, por nombre y fecha en el Cierre | RF-CAL-02, RF-CAL-03 |
+
+**D-01 — N = 5.** El compromiso es entre derivación rápida (N bajo) y menos recálculo al corregir un hecho (N alto), porque RF-CAN-13 invalida los *snapshots* posteriores al hecho sustituido. La v1 es **un capítulo**: con N = 10 o N = 20 el camino del *snapshot* se dispararía una vez o ninguna, y sería código entregado sin ejercitar. Con N = 5 hay dos o tres en el capítulo y RF-CAN-13 se prueba de verdad. Se sube cuando haya medición contra RNF-REN-02.
+
+**D-02 — Voyage `voyage-3` a 1024.** La pregunta incluía «si coincide con el de generación», y no puede: **la API de Anthropic no ofrece endpoint de *embeddings***. Voyage es el proveedor que Anthropic documenta para esto y es multilingüe, que hace falta porque el corpus es castellano. 1024 deja `BruteForceStore` en ~40 MB para los 10.000 fragmentos de RNF-REN-04 y es `float[1024]` nativo en `vec0`. **Introduce una dependencia nueva y una segunda clave de proveedor** (`CLAUDE.md` §3, punto 7). El riesgo es bajo: RF-CAN-12 hace el índice reconstruible entero, así que cambiar de proveedor cuesta un reindexado, no una migración rota.
+
+**D-03 — 1 llamada, 300 s.** La concurrencia no se decide aquí: `architecture.md` §2.2 ya fija «1 por proceso, configurable», y esta spec solo lo confirma. Lo decidido es el *timeout*: con concurrencia 1 y un paso de escritura de 1–2 min, 300 s dejan encolarse dos o tres llamadas sin que una cola legítima se confunda con un fallo.
+
+**D-04 — dos plazos, no uno.** Un único número global no sirve: `ENSAMBLANDO` es código puro y debe terminar en menos de 2 s (RNF-REN-01), mientras `ESCRIBIENDO` es una llamada al modelo que tarda minutos. Un plazo que tolere al segundo no vigila al primero. De aquí sale **RI-24**: el plazo de un paso con llamada debe superar el *timeout* de turno más la llamada (300 + ~120 < 600), o RNF-TOK-05 nunca llega a ejecutarse.
+
+**D-05 — lista de términos.** No es preferencia: la spec ya marcó RF-CAL-02 como **T**, y un clasificador LLM no puede entregar una T —no es determinista y, además, es el Crítico, que está fuera de alcance—. La lista es la única opción compatible con la letra que el requisito ya tenía. Lo que la lista no cubre es exactamente la parte **I** de D-09.
+
+**D-06 — desplazamiento más literal.** El identificador de beat **no es viable en la v1**: el outline asigna beats a escenas, no a pasajes, así que dentro de una escena no existe esa estructura a la que apuntar. Los desplazamientos no se pudren porque la `VersionDeTexto` es inmutable (RF-ESC-03). El literal va además porque RI-18 expone los defectos a una persona en `ESCALADA`, y el prompt de reparación necesita el pasaje, no dos números.
+
+**D-07 — objetivos confirmados, y una consecuencia.** Los cuatro son `S` y salen holgados: la derivación con N = 5 es trivial, y 10.000 fragmentos a 1024 dimensiones son ~40 MB de producto matricial. La consecuencia que nadie había escrito: confirmar RNF-REN-01 decide que **el contador de tokens es local**, porque con un contador remoto no se cumplen 2 s. Queda anotado en RNF-TOK-02.
+
+**D-08 — reentra por `VALIDANDO`.** Si una edición humana mete un CON-01 y el trabajo entra por `EXTRAYENDO`, ese error se escribe en canon, y deshacerlo cuesta un hecho sustitutorio más la invalidación de *snapshots* (RF-CAN-07, RF-CAN-13). Revalidar es barato; deshacer no. Dos cautelas para que no sea un bucle: la revalidación **no consume** el contador de RF-ORQ-07, y un fallo vuelve a `ESCALADA`, nunca a `REPARANDO`, porque RF-ORQ-08 prohíbe el reintento genérico y no hay nada que reparar con el modelo en un texto humano. Y como un validador puede equivocarse, el autor puede **aceptar** registrando qué defecto anuló (RF-ORQ-18): sin esa salida, la postcondición de CU-04 —nunca indefinidamente en `ESCALADA`— no se puede prometer.
+
+**D-09 — firma el autor.** Con el Crítico fuera de alcance y un modo de referencia local de un solo autor, no hay otro candidato. Lo que importa no es quién, sino que tenga dueño y fecha: una **I** sin firma es una afirmación hecha sin pruebas, que es justo lo que esta spec dice evitar. No es **U**: es verificable por lectura humana.
 
 ---
 
 ## Trazabilidad
 
-Todo requisito nace de un documento anterior. Ninguno es original de esta spec, salvo los objetivos de rendimiento, que están marcados como propuestos.
+Todo requisito nace de un documento anterior. Solo son originales de esta spec los objetivos de rendimiento, marcados como propuestos, y lo que fijan las nueve decisiones D-01 a D-09.
 
 | Bloque | Origen |
 | --- | --- |
@@ -441,7 +467,8 @@ Todo requisito nace de un documento anterior. Ninguno es original de esta spec, 
 | RF-MAN | `architecture.md` §11 |
 | RD-01 a RD-13 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
 | RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
-| RNF-REN | **Propuesta de esta spec, sin medir** |
+| RNF-REN | **Propuesta de esta spec, sin medir** (D-07) |
+| RI-24, RF-ORQ-17, RF-ORQ-18, CA-13 | **Decisiones D-03, D-04 y D-08 de esta spec** |
 | RNF-FIA, RNF-OBS | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
 | RNF-SEG-01 a 04 | `architecture.md` §11; `CLAUDE.md` §10 |
 | RI-17 (parte **D**), RI-23, RF-CTX-13, RF-ORQ-15, RF-ORQ-16, RNF-SEG-05, RNF-SEG-06 | `verification.md` §2, §3 y §4.1 |
@@ -465,7 +492,7 @@ Lo que `docs/verification.md` clasifica como **U — no verificable** no aparece
 | Comportamiento del modelo entre versiones | El veredicto de los validadores depende del modelo que los ejecuta | `ejecucion` registra modelo y parámetros (RI-14): la regresión se detecta después, no se previene |
 | Coste total de una novela | RNF-OBS-01 lo **mide**; ningún requisito lo acota | Los topes por llamada (RNF-TOK-01) y por proceso (RNF-TOK-03) acotan la llamada y la concurrencia, no el total |
 
-Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y prosa que no insinúe lo prohibido (RF-CAL-03)— **no están en esta tabla**: son verificables por lectura humana, y lo que falta es decidir quién firma esa lectura (pregunta abierta 9).
+Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y prosa que no insinúe lo prohibido (RF-CAL-03)— **no están en esta tabla**: son verificables por lectura humana, y quien la firma es el autor, sobre el capítulo completo de CA-1, por nombre y fecha en el Cierre (D-09).
 
 ---
 

@@ -79,7 +79,7 @@ Toda funcionalidad empieza aquí. Una spec dice **qué** debe ocurrir y **cómo 
 
 > **Antes de escribir una spec, pregunta.** No rellenes huecos por tu cuenta ni deduzcas el alcance del código existente. Una spec con suposiciones no declaradas no se aprueba.
 
-Vive en `specs/NNN-slug/spec.md`, con `NNN` correlativo de tres dígitos. La estructura de referencia es la de la spec vigente, `specs/spec1.md`: problema, alcance, fuera de alcance, requisitos, criterios de aceptación, reglas de dominio afectadas, impacto técnico, vocabulario, preguntas abiertas y cierre.
+Vive en `specs/NNN-slug/spec.md`, con `NNN` correlativo de tres dígitos. La estructura de referencia es la de la spec vigente, `specs/001-backend-v1/spec.md`: problema, alcance, fuera de alcance, requisitos, criterios de aceptación, reglas de dominio afectadas, impacto técnico, vocabulario, preguntas abiertas y cierre. Al cerrarse todas, el apartado de preguntas abiertas pasa a titularse **Decisiones** y conserva cada respuesta con su porqué.
 
 Antes de salir de borrador, una spec cierra:
 
