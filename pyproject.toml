@@ -52,6 +52,10 @@ strict = true
 files = ["src/backend/app"]
 
 [[tool.mypy.overrides]]
+module = "sqlite_vec"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "app.commons.domain.*"
 disallow_any_explicit = true
 

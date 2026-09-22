@@ -129,7 +129,7 @@ class SqliteVecStore(_AlmacenBase):
     def _conexion(self) -> sqlite3.Connection:
         conexion = sqlite3.connect(self.ruta)
         conexion.enable_load_extension(True)
-        import sqlite_vec  # type: ignore[import-untyped]
+        import sqlite_vec
 
         sqlite_vec.load(conexion)
         conexion.enable_load_extension(False)
@@ -208,7 +208,7 @@ def extension_disponible() -> bool:
     try:
         conexion = sqlite3.connect(":memory:")
         conexion.enable_load_extension(True)
-        import sqlite_vec  # type: ignore[import-untyped]
+        import sqlite_vec
 
         sqlite_vec.load(conexion)
         return True
