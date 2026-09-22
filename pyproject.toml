@@ -55,13 +55,180 @@ files = ["src/backend/app"]
 module = "sqlite_vec"
 ignore_missing_imports = true
 
-# Reglas de frontera de CLAUDE.md §5.1 y architecture.md §5.2.
-# P-16 las completa; aqui solo el contrato que P-01 necesita para no romper la build.
+# Las seis reglas de dependencia de architecture.md §5.2. Fallan la build (CA-9).
 [tool.importlinter]
 root_packages = ["app"]
+# Necesario para prohibir paquetes externos como fastapi o sqlalchemy.
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "commons no importa de ninguna feature"
+name = "regla 2: commons no importa de ninguna feature"
 type = "forbidden"
 source_modules = ["app.commons"]
 forbidden_modules = ["app.features"]
+
+[[tool.importlinter.contracts]]
+name = "regla 3: commons/domain no conoce framework ni base de datos"
+type = "forbidden"
+source_modules = ["app.commons.domain"]
+forbidden_modules = ["fastapi", "sqlalchemy", "httpx", "app.commons.db"]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a obra se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.obra.router",
+    "app.features.obra.schemas",
+    "app.features.obra.service",
+    "app.features.obra.repository",
+    "app.features.obra.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a outline se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.outline.router",
+    "app.features.outline.schemas",
+    "app.features.outline.service",
+    "app.features.outline.repository",
+    "app.features.outline.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a escena se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.escena.router",
+    "app.features.escena.schemas",
+    "app.features.escena.service",
+    "app.features.escena.repository",
+    "app.features.escena.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a contexto se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.contexto.router",
+    "app.features.contexto.schemas",
+    "app.features.contexto.service",
+    "app.features.contexto.repository",
+    "app.features.contexto.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a escritura se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.calidad",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.escritura.router",
+    "app.features.escritura.schemas",
+    "app.features.escritura.service",
+    "app.features.escritura.repository",
+    "app.features.escritura.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a calidad se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.canon",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.calidad.router",
+    "app.features.calidad.schemas",
+    "app.features.calidad.service",
+    "app.features.calidad.repository",
+    "app.features.calidad.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a canon se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.manuscrito",
+]
+forbidden_modules = [
+    "app.features.canon.router",
+    "app.features.canon.schemas",
+    "app.features.canon.service",
+    "app.features.canon.repository",
+    "app.features.canon.agents",
+]
+
+[[tool.importlinter.contracts]]
+name = "regla 1: a manuscrito se entra por su __init__, no por sus ficheros"
+type = "forbidden"
+source_modules = [
+    "app.features.obra",
+    "app.features.outline",
+    "app.features.escena",
+    "app.features.contexto",
+    "app.features.escritura",
+    "app.features.calidad",
+    "app.features.canon",
+]
+forbidden_modules = [
+    "app.features.manuscrito.router",
+    "app.features.manuscrito.schemas",
+    "app.features.manuscrito.service",
+    "app.features.manuscrito.repository",
+    "app.features.manuscrito.agents",
+]
