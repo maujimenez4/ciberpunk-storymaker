@@ -1,5 +1,9 @@
 """API publica de commons/llm."""
 
+from app.commons.llm.claude_code import (
+    HERRAMIENTAS_PROHIBIDAS,
+    ClienteDeClaudeCode,
+)
 from app.commons.llm.cliente import (
     ClienteDeModelo,
     ClienteNoConfigurado,
@@ -19,7 +23,9 @@ from app.commons.llm.prompts import CargadorDePrompts, PromptCargado
 __all__ = [
     "CODIFICACION",
     "TOPE_DE_CANDIDATOS",
+    "HERRAMIENTAS_PROHIBIDAS",
     "CargadorDePrompts",
+    "ClienteDeClaudeCode",
     "ClienteDeModelo",
     "ClienteNoConfigurado",
     "ContadorBPE",
