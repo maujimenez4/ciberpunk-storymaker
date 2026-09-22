@@ -17,7 +17,7 @@ transaccion**, y la validacion entera ocurre **antes** de abrirla.
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.commons.domain import Reloj
-from app.commons.llm import ClienteDeModelo
+from app.commons.llm import ClienteDeModelo, extraer_json
 from app.features.canon.repository import RepositorioDeCanon
 
 # §4.4 fija este orden. No es estetico: los hilos citan escenas y los fragmentos
@@ -96,7 +96,7 @@ def extraer_de_escena(
     """RF-CAN-01 a RF-CAN-03: el unico camino por el que crece la memoria."""
     respuesta = cliente.generar(prompt)
     try:
-        extraccion = Extraccion.model_validate_json(respuesta.texto)
+        extraccion = Extraccion.model_validate_json(extraer_json(respuesta.texto))
     except ValidationError as error:
         raise ExtraccionInvalida(
             f"la salida del Extractor no valida contra Extraccion: {error}"

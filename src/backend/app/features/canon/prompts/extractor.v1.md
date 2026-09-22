@@ -16,7 +16,22 @@ escribas aquí se vuelve canon, así que afirma solo lo que el texto sostiene.
 
 ## Salida
 
-Solo un objeto JSON con esas seis claves.
+Solo un objeto JSON con **exactamente** estas claves y estos nombres de campo.
+El esquema los comprueba y una salida con otros nombres se descarta entera:
+
+```
+{
+  "hechos":    [{"entidad": "", "atributo": "", "valor": ""}],
+  "eventos":   [{"descripcion": "", "testigos": [], "participantes": []}],
+  "resumen":   "",
+  "hilos":     [{"pregunta": "", "estado": "abierto"}],
+  "plantados": [{"importancia": "alta", "descripcion": ""}],
+  "ngramas_gastados": []
+}
+```
+
+No renombres nada: `descripcion` no es `que_ocurre` ni `dato`; `resumen` es una
+cadena, no un objeto.
 
 ## Qué no debes hacer
 
@@ -26,4 +41,5 @@ Solo un objeto JSON con esas seis claves.
 
 ## Recordatorio
 
-Solo lo que el texto sostiene, `testigos` es quien se entera, solo JSON.
+Solo lo que el texto sostiene, `testigos` es quien se entera, los nombres de
+campo **exactos** de la plantilla, y solo JSON.

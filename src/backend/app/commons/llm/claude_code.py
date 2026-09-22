@@ -22,11 +22,26 @@ Conviene saberlo al leer una factura y no confundirlo con un desbordamiento.
 """
 
 import json
+import shutil
 import subprocess
 from dataclasses import dataclass
 
-from app.commons.errors import FalloDeProveedor
 from app.commons.llm.cliente import RespuestaDeModelo
+
+
+class ErrorTransitorioDeProveedor(RuntimeError):
+    """El CLI fallo en **esta** llamada: 5xx, limite de tasa, salida ilegible.
+
+    No es `FalloDeProveedor`, y la distincion es la que hace alcanzable
+    RNF-FIA-02. `con_reintentos` reintenta esto con espera creciente y solo
+    despues de tres intentos lo convierte en `FalloDeProveedor`; si el cliente
+    lanzara `FalloDeProveedor` de entrada, el reintento lo trataria como ya
+    agotado y no reintentaria nunca. Eso es exactamente lo que paso en la
+    primera corrida real: el requisito estaba implementado y era inalcanzable.
+
+    Lleva la salida de error del CLI, porque sin ella un fallo de proveedor es
+    indistinguible de una cuota agotada o de un prompt demasiado largo.
+    """
 
 # RF-ORQ-16: ninguna de estas llega al agente narrativo.
 HERRAMIENTAS_PROHIBIDAS = (
@@ -61,11 +76,27 @@ class ClienteDeClaudeCode:
     sistema: str = SISTEMA_POR_DEFECTO
     plazo_s: int = 600
 
+    @staticmethod
+    def _ejecutable() -> list[str]:
+        """Resuelve el CLI. En Windows es un `.cmd` de npm, y CreateProcess no
+        sabe ejecutarlo: hay que pasarlo por `cmd /c`. Sin esto, `subprocess`
+        falla con «no se encuentra el archivo» aunque el comando exista en el
+        PATH y funcione desde la terminal."""
+        ruta = shutil.which("claude")
+        if ruta is None:
+            raise ErrorTransitorioDeProveedor("no se encuentra el CLI `claude`")
+        if ruta.lower().endswith((".cmd", ".bat")):
+            return ["cmd", "/c", ruta]
+        return [ruta]
+
     def generar(self, prompt: str) -> RespuestaDeModelo:
+        # El prompt va por **entrada estandar**, no como argumento. Un paquete
+        # de contexto puede acercarse a 100.000 tokens y la linea de comandos de
+        # Windows se corta en 8.191 caracteres; ademas `cmd /c` reinterpreta
+        # comillas y saltos de linea, que en prosa aparecen constantemente.
         orden = [
-            "claude",
+            *self._ejecutable(),
             "-p",
-            prompt,
             "--model",
             self.modelo,
             "--system-prompt",
@@ -78,6 +109,7 @@ class ClienteDeClaudeCode:
         try:
             proceso = subprocess.run(
                 orden,
+                input=prompt,
                 capture_output=True,
                 text=True,
                 timeout=self.plazo_s,
@@ -85,15 +117,20 @@ class ClienteDeClaudeCode:
                 errors="replace",
             )
         except subprocess.TimeoutExpired as error:
-            raise FalloDeProveedor(intentos=1) from error
+            raise ErrorTransitorioDeProveedor("el CLI agoto el plazo") from error
 
         if proceso.returncode != 0:
-            raise FalloDeProveedor(intentos=1)
+            raise ErrorTransitorioDeProveedor(
+                f"el CLI devolvio {proceso.returncode}: "
+                f"{(proceso.stderr or proceso.stdout or "").strip()[:400]}"
+            )
 
         try:
             datos = json.loads(proceso.stdout)
         except json.JSONDecodeError as error:
-            raise FalloDeProveedor(intentos=1) from error
+            raise ErrorTransitorioDeProveedor(
+                f"salida ilegible: {proceso.stdout.strip()[:400]}"
+            ) from error
 
         uso = datos.get("usage", {})
         return RespuestaDeModelo(

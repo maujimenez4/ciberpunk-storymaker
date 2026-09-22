@@ -3,7 +3,7 @@
 from pydantic import ValidationError
 
 from app.commons.domain import Reloj
-from app.commons.llm import ClienteDeModelo
+from app.commons.llm import ClienteDeModelo, extraer_json
 from app.features.outline.repository import RepositorioDeOutline
 from app.features.outline.schemas import Outline, OutlineInvalido
 
@@ -23,7 +23,7 @@ def generar_outline(
     """
     respuesta = cliente.generar(prompt)
     try:
-        outline = Outline.model_validate_json(respuesta.texto)
+        outline = Outline.model_validate_json(extraer_json(respuesta.texto))
     except ValidationError as error:
         raise OutlineInvalido(str(error)) from error
     repositorio.guardar(obra_id, outline)

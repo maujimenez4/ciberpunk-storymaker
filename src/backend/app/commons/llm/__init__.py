@@ -3,6 +3,7 @@
 from app.commons.llm.claude_code import (
     HERRAMIENTAS_PROHIBIDAS,
     ClienteDeClaudeCode,
+    ErrorTransitorioDeProveedor,
 )
 from app.commons.llm.cliente import (
     ClienteDeModelo,
@@ -12,6 +13,7 @@ from app.commons.llm.cliente import (
     RespuestaDeModelo,
 )
 from app.commons.llm.contador import CODIFICACION, ContadorBPE, ContadorDeTokens
+from app.commons.llm.json_de_modelo import extraer_json
 from app.commons.llm.ordenador import (
     TOPE_DE_CANDIDATOS,
     DobleDeOrdenador,
@@ -26,6 +28,7 @@ __all__ = [
     "HERRAMIENTAS_PROHIBIDAS",
     "CargadorDePrompts",
     "ClienteDeClaudeCode",
+    "ErrorTransitorioDeProveedor",
     "ClienteDeModelo",
     "ClienteNoConfigurado",
     "ContadorBPE",
@@ -36,5 +39,6 @@ __all__ = [
     "OrdenadorSemantico",
     "PromptCargado",
     "ProveedorSinConectar",
+    "extraer_json",
     "RespuestaDeModelo",
 ]

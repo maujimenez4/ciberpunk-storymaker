@@ -30,6 +30,7 @@ from app.commons.db import RegistroDeEjecucion, RepositorioDeEjecuciones  # noqa
 from app.commons.domain import RelojDelSistema  # noqa: E402
 from app.commons.jobs import (  # noqa: E402
     CerrojoPorObra,
+    con_reintentos,
     Estado,
     RepositorioDeTrabajos,
     TurnoDeModelo,
@@ -223,13 +224,37 @@ def correr(real: bool) -> int:
             trabajo = trabajos.crear("o1", escena_id, "escribir_escena", reloj)
             run_id = trabajo.run_id
 
-            # PLANIFICANDO
+            # PLANIFICANDO. El prompt de rol **no basta**: hay que adjuntar
+            # el material. El doble ignora el prompt, asi que la corrida en seco
+            # no podia detectar esto; el modelo real contesta "espero el outline"
+            # y el paso falla con una salida que no valida.
             p_plan = cargador.cargar("planificador")
+            material = "\n".join(
+                [
+                    "## Material",
+                    "",
+                    "Obra: Ceniza y neon, romantasy. Tercera persona, pasado,",
+                    "nivel de calor sensual.",
+                    "Personajes: pj-ada (protagonista), pj-noe (coprotagonista).",
+                    "Lugares: lug-taller, lug-puerto.",
+                    f"Escena {numero} de {ESCENAS} del capitulo 1, La tregua.",
+                    "Escena anterior: " + (anterior[:300] if anterior else "ninguna"),
+                    "",
+                    "Produce ahora la ficha de esta escena.",
+                ]
+            )
+            encargo_plan = p_plan.texto + "\n\n" + material
             with turno.en_uso(espera_s=300) as hay_turno:
                 if not hay_turno:
                     raise SystemExit("sin turno")
-                ficha = planificar_escena(
-                    escena_id, parametros, cliente_planificador, p_plan.texto, reloj
+                ficha = con_reintentos(
+                    lambda: planificar_escena(
+                        escena_id,
+                        parametros,
+                        cliente_planificador,
+                        encargo_plan,
+                        reloj,
+                    )
                 )
             trabajos.transitar(trabajo.trabajo_id, Estado.ENSAMBLANDO, reloj)
 
@@ -249,7 +274,9 @@ def correr(real: bool) -> int:
             with turno.en_uso(espera_s=300) as hay_turno:
                 if not hay_turno:
                     raise SystemExit("sin turno")
-                respuesta = cliente_escritor.generar(paquete.texto)
+                respuesta = con_reintentos(
+                    lambda: cliente_escritor.generar(paquete.texto)
+                )
             prosa = respuesta.texto
             version = escenas.guardar_version(escena_id, prosa, run_id, reloj)
             coste = float(respuesta.parametros.get("coste_usd") or 0)
@@ -319,14 +346,20 @@ def correr(real: bool) -> int:
             with turno.en_uso(espera_s=300) as hay_turno:
                 if not hay_turno:
                     raise SystemExit("sin turno")
-                extraer_de_escena(
-                    serie_id="s1",
-                    escena_id=escena_id,
-                    version_texto_id=version.version_texto_id,
-                    cliente=cliente_extractor,
-                    prompt=cargador.cargar("extractor").texto,
-                    repositorio=canon,
-                    reloj=reloj,
+                p_extractor = cargador.cargar("extractor")
+                encargo_extractor = (
+                    p_extractor.texto + "\n\n## Escena aprobada\n\n" + prosa
+                )
+                con_reintentos(
+                    lambda: extraer_de_escena(
+                        serie_id="s1",
+                        escena_id=escena_id,
+                        version_texto_id=version.version_texto_id,
+                        cliente=cliente_extractor,
+                        prompt=encargo_extractor,
+                        repositorio=canon,
+                        reloj=reloj,
+                    )
                 )
             canon.crear_snapshot_si_toca(escena_id, 5, reloj)
             trabajos.transitar(trabajo.trabajo_id, Estado.INTEGRADA, reloj)
