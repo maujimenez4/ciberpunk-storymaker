@@ -5,7 +5,7 @@ una variable obligatoria. RI-15: las claves se leen de entorno, nunca del
 repositorio ni de la base de datos.
 """
 
-from pydantic import ValidationError, model_validator
+from pydantic import SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PREFIJO = "STORYMAKER_"
@@ -21,10 +21,10 @@ class Ajustes(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=PREFIJO, frozen=True)
 
     # Sin valor por defecto: sin estas no se arranca.
-    proveedor_generacion_clave: str
+    proveedor_generacion_clave: SecretStr
     proveedor_generacion_url: str
     modelo: str
-    proveedor_embeddings_clave: str
+    proveedor_embeddings_clave: SecretStr
     ruta_base_datos: str
 
     # Con valor por defecto explicito.
