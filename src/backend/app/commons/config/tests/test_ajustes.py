@@ -1,4 +1,8 @@
-"""P-01: el arranque falla si falta una variable obligatoria (RI-21)."""
+"""P-01 y P-02: el arranque falla si la configuracion no permite arrancar.
+
+RI-21 (falta una variable obligatoria) y RI-24 (el plazo de un paso con llamada
+al modelo debe superar el timeout de espera de turno).
+"""
 
 import pytest
 
@@ -46,3 +50,18 @@ def test_los_valores_por_defecto_son_los_de_las_decisiones(
     assert ajustes.plazo_paso_modelo_s == 600  # D-04
     assert ajustes.snapshot_cada_n_escenas == 5  # D-01
     assert ajustes.dimension_embeddings == 1024  # D-02
+
+
+def test_arranque_rechaza_plazo_de_paso_menor_que_timeout_de_turno(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RI-24: si el plazo del paso vence antes, RNF-TOK-05 es codigo muerto."""
+    for nombre, valor in ENTORNO_COMPLETO.items():
+        monkeypatch.setenv(nombre, valor)
+    monkeypatch.setenv("STORYMAKER_TIMEOUT_TURNO_S", "600")
+    monkeypatch.setenv("STORYMAKER_PLAZO_PASO_MODELO_S", "300")
+
+    with pytest.raises(AjustesInvalidos) as error:
+        cargar_ajustes()
+
+    assert "plazo_paso_modelo_s" in str(error.value)

@@ -5,7 +5,7 @@ una variable obligatoria. RI-15: las claves se leen de entorno, nunca del
 repositorio ni de la base de datos.
 """
 
-from pydantic import ValidationError
+from pydantic import ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PREFIJO = "STORYMAKER_"
@@ -34,6 +34,17 @@ class Ajustes(BaseSettings):
     plazo_paso_modelo_s: int = 600  # D-04
     snapshot_cada_n_escenas: int = 5  # D-01
     dimension_embeddings: int = 1024  # D-02
+
+    @model_validator(mode="after")
+    def el_plazo_del_paso_supera_la_espera_de_turno(self) -> "Ajustes":
+        """RI-24: si el plazo vence antes que el turno, RNF-TOK-05 no se ejecuta."""
+        if self.plazo_paso_modelo_s <= self.timeout_turno_s:
+            raise ValueError(
+                f"plazo_paso_modelo_s ({self.plazo_paso_modelo_s}) debe superar "
+                f"timeout_turno_s ({self.timeout_turno_s}): si no, la espera de "
+                f"turno nunca llega a vencer y RNF-TOK-05 queda sin efecto"
+            )
+        return self
 
 
 def _nombre_de_entorno(campo: object) -> str:
