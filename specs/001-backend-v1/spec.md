@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: en-revision       # borrador | en-revision | aprobada | implementada
-aprobada_por:             # lo rellena una persona, nunca un agente
+estado: aprobada          # borrador | en-revision | aprobada | implementada
+aprobada_por: maujimenez4 # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 ---
 
