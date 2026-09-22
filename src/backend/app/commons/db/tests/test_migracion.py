@@ -314,3 +314,42 @@ def test_estan_las_veintiuna_clases_de_rd_01(esquema: dict[str, set[str]]) -> No
     assert "prompt" not in esquema
     for columna in ("prompt_id", "prompt_version", "prompt_hash"):
         assert columna in esquema["ejecucion"]
+
+
+def test_la_migracion_no_depende_de_la_extension_vectorial() -> None:
+    """P-07, RD-08 y RNF-FIA-03.
+
+    La migracion **no** crea tablas virtuales `vec0`: si lo hiciera, aplicarla
+    sin la extension cargada fallaria y el modo degradado no existiria. Los
+    vectores viven en un BLOB de `fragmento`, que las dos implementaciones de
+    VectorStore saben leer (RD-07). La tabla `vec0`, cuando se use, la crea
+    SqliteVecStore en arranque, no el esquema.
+    """
+    revision = (RAIZ / "alembic" / "versions" / "0001_inicial.py").read_text(
+        encoding="utf-8"
+    )
+    for senal in ("vec0", "USING vec", "sqlite_vec", "load_extension"):
+        assert senal not in revision, f"la migracion depende de {senal}"
+
+
+def test_upgrade_y_downgrade_completos_sin_extension(tmp_path: Path) -> None:
+    """Un downgrade que nadie ejecuta es un downgrade que no funciona."""
+    fichero = tmp_path / "obra.db"
+    url = f"sqlite:///{fichero}"
+
+    def alembic(*orden: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-m", "alembic", "-x", f"url={url}", *orden],
+            cwd=RAIZ,
+            capture_output=True,
+            text=True,
+        )
+
+    assert alembic("upgrade", "head").returncode == 0
+    inspector = inspect(create_engine(url))
+    assert len(inspector.get_table_names()) > 20
+
+    vuelta = alembic("downgrade", "base")
+    assert vuelta.returncode == 0, vuelta.stderr
+    restantes = set(inspect(create_engine(url)).get_table_names()) - {"alembic_version"}
+    assert not restantes, f"el downgrade dejo tablas sueltas: {sorted(restantes)}"
