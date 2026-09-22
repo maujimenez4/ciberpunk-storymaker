@@ -154,7 +154,54 @@ CANON: dict[str, set[str]] = {
     },
 }
 
-TABLAS = {**OBRA_Y_MANUSCRITO, **BIBLIA_Y_MUNDO, **CANON}
+# P-06d - orquestacion y trazas.
+ORQUESTACION: dict[str, set[str]] = {
+    # RD-05: los campos de architecture.md §3.2, uno a uno.
+    "trabajo": {
+        "trabajo_id",
+        "obra_id",
+        "escena_id",
+        "tipo",
+        "estado",
+        "intento",
+        "run_id",
+        "causa_fallo",
+        "creado_en",
+        "actualizado_en",
+    },
+    # RD-06 y RI-14: el registro completo, una fila por llamada.
+    "ejecucion": {
+        "ejecucion_id",
+        "run_id",
+        "escena_id",
+        "prompt_id",
+        "prompt_version",
+        "prompt_hash",
+        "version_obra_id",
+        "ids_recuperados",
+        "modelo",
+        "parametros",
+        "semilla",
+        "tokens_por_capa",
+        "coste",
+        "veredicto",
+        "creada_en",
+    },
+    # RD-14: la salida del Continuista, con la cita anclada.
+    "defecto": {
+        "defecto_id",
+        "codigo",
+        "version_texto_id",
+        "cita",
+        "desplazamiento_inicio",
+        "desplazamiento_fin",
+        "hecho_canon_id",
+        "bien_formado",
+    },
+    "ngrama_vetado": {"ngrama", "obra_id", "veces"},
+}
+
+TABLAS = {**OBRA_Y_MANUSCRITO, **BIBLIA_Y_MUNDO, **CANON, **ORQUESTACION}
 
 
 @pytest.fixture(scope="module")
@@ -255,3 +302,15 @@ def test_el_ledger_rechaza_actualizar_y_borrar_por_construccion(
             continue
         raise AssertionError(f"el ledger acepto: {sentencia}")
     conexion.close()
+
+
+def test_estan_las_veintiuna_clases_de_rd_01(esquema: dict[str, set[str]]) -> None:
+    """RD-01: el esquema implementa las clases necesarias en la v1.
+
+    `Prompt` **no** es tabla: es un fichero del repositorio del que `ejecucion`
+    guarda `prompt_id`, `version` y `hash`. Comprobarlo aqui evita que alguien
+    lo "arregle" anadiendola.
+    """
+    assert "prompt" not in esquema
+    for columna in ("prompt_id", "prompt_version", "prompt_hash"):
+        assert columna in esquema["ejecucion"]

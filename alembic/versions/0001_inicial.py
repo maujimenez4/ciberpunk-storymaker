@@ -7,9 +7,9 @@ RD-01 y RD-02: los nombres de tablas y columnas son los de `definitions.md`, sin
 traducir ni abreviar. RD-11: `serie_id` existe desde aqui aunque la v1 maneje una
 sola obra, porque anadirlo despues obliga a reescribir el canon entero.
 
-Se construye en cuatro entregas (desviacion anotada en el plan): obra y
+Construida en cuatro entregas (desviacion anotada en el plan): obra y
 manuscrito, biblia y mundo, canon, y orquestacion con trazas. La revision es
-una sola.
+una sola: veintiseis tablas y dos disparadores.
 """
 
 import sqlalchemy as sa
@@ -336,6 +336,93 @@ def upgrade() -> None:
         sa.Column("dimension", sa.Integer),
     )
 
+
+    # --- orquestacion y trazas ---------------------------------------------
+    # RD-05: los campos de architecture.md §3.2. `estado` es uno de los diez
+    # de §3.3 y `intento` el contador de reparacion dirigida (maximo 2).
+    op.create_table(
+        "trabajo",
+        sa.Column("trabajo_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        # Nulo en trabajos de manuscrito, que no son de una escena.
+        sa.Column("escena_id", sa.String, sa.ForeignKey("escena.escena_id")),
+        sa.Column("tipo", sa.String, nullable=False),
+        sa.Column("estado", sa.String, nullable=False),
+        sa.Column("intento", sa.Integer, nullable=False, server_default=sa.text("0")),
+        # Clave de idempotencia: repetir un paso con el mismo run_id no duplica
+        # escrituras (RF-ORQ-06).
+        sa.Column("run_id", sa.String, nullable=False),
+        sa.Column("causa_fallo", sa.String),
+        # RF-ORQ-18: que defecto se anulo al aceptar, y quien lo anulo.
+        sa.Column("defecto_anulado_id", sa.String),
+        sa.Column("anulado_por", sa.String),
+        sa.Column("creado_en", sa.DateTime, nullable=False),
+        sa.Column("actualizado_en", sa.DateTime, nullable=False),
+        sa.CheckConstraint("intento <= 2", name="ck_trabajo_maximo_dos_reparaciones"),
+    )
+    op.create_index("ix_trabajo_estado", "trabajo", ["estado"])
+    # RD-06 y RI-14. `Prompt` no es tabla (RD-01): es un fichero del repositorio
+    # del que aqui se guardan identificador, version y hash. Con eso se
+    # reconstruye el paquete (RF-CTX-13) sin un segundo sistema de versionado.
+    op.create_table(
+        "ejecucion",
+        sa.Column("ejecucion_id", sa.String, primary_key=True),
+        sa.Column("run_id", sa.String, nullable=False),
+        sa.Column("escena_id", sa.String, sa.ForeignKey("escena.escena_id")),
+        sa.Column("prompt_id", sa.String, nullable=False),
+        sa.Column("prompt_version", sa.String, nullable=False),
+        sa.Column("prompt_hash", sa.String, nullable=False),
+        sa.Column(
+            "version_obra_id", sa.String, sa.ForeignKey("version_obra.version_obra_id")
+        ),
+        sa.Column("ids_recuperados", sa.JSON, nullable=False),
+        sa.Column("modelo", sa.String, nullable=False),
+        sa.Column("parametros", sa.JSON, nullable=False),
+        sa.Column("semilla", sa.Integer),
+        # RF-CTX-06: el desglose por capa se persiste aqui, no solo se devuelve.
+        sa.Column("tokens_por_capa", sa.JSON, nullable=False),
+        sa.Column("coste", sa.Float),
+        sa.Column("veredicto", sa.String),
+        sa.Column("creada_en", sa.DateTime, nullable=False),
+    )
+    op.create_index("ix_ejecucion_run_id", "ejecucion", ["run_id"])
+    # RD-14 y D-06: la cita se ancla por desplazamiento sobre una version de
+    # texto inmutable, y va con su literal para que sea legible sin la base.
+    op.create_table(
+        "defecto",
+        sa.Column("defecto_id", sa.String, primary_key=True),
+        sa.Column("codigo", sa.String, nullable=False),
+        sa.Column(
+            "version_texto_id",
+            sa.String,
+            sa.ForeignKey("version_texto.version_texto_id"),
+            nullable=False,
+        ),
+        sa.Column("cita", sa.Text, nullable=False),
+        sa.Column("desplazamiento_inicio", sa.Integer, nullable=False),
+        sa.Column("desplazamiento_fin", sa.Integer, nullable=False),
+        # Axioma 12: obligatorio cuando el codigo es CAN-01. Lo comprueba
+        # RF-CAL-11 en codigo, porque SQLite no valida condicionales por columna.
+        sa.Column("hecho_canon_id", sa.String, sa.ForeignKey("hecho_canon.hc_id")),
+        # architecture.md §8.3: un defecto mal formado no bloquea ni consume
+        # reintento, pero se registra: es la unica senal que mide al Continuista.
+        sa.Column(
+            "bien_formado", sa.Boolean, nullable=False, server_default=sa.text("1")
+        ),
+        sa.CheckConstraint(
+            "desplazamiento_fin > desplazamiento_inicio",
+            name="ck_defecto_cita_no_vacia",
+        ),
+    )
+    # RD-13. La escribe el Extractor; en la v1 no la lee nadie, porque su unico
+    # consumidor es el Editor de linea, que esta fuera de alcance.
+    op.create_table(
+        "ngrama_vetado",
+        sa.Column("ngrama", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), primary_key=True),
+        sa.Column("veces", sa.Integer, nullable=False, server_default=sa.text("1")),
+    )
+
     # Una sola version vigente por escena (RF-ESC-03).
     op.create_index(
         "ix_version_texto_una_vigente_por_escena",
@@ -351,6 +438,10 @@ def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS evento_sin_update")
     op.execute("DROP TRIGGER IF EXISTS evento_sin_delete")
     for tabla in (
+        "ngrama_vetado",
+        "defecto",
+        "ejecucion",
+        "trabajo",
         "fragmento",
         "snapshot_estado_en_t",
         "resumen",
