@@ -331,7 +331,7 @@ Un agente solo puede afirmar algo si procede de: `docs/definitions.md`, el grafo
 
 Las skills instaladas viven en `.claude/skills/` (compartidas, commiteadas) o llegan por plugin. Procedencia, commit exacto y licencia de cada una: `.claude/skills/SOURCES.md`. Ver `docs/architecture.md` §7.2 para el detalle por área.
 
-Hay una skill por requisito técnico de §4, y ninguna más:
+Hay una skill por requisito técnico de §4, más dos instaladas por decisión explícita. Estas últimas llevan «—» en la columna de requisito:
 
 | Skill | Requisito de §4 | Área del repo |
 | --- | --- | --- |
@@ -342,6 +342,7 @@ Hay una skill por requisito técnico de §4, y ninguna más:
 | `typescript-best-practices` | Frontend TypeScript estricto | `src/frontend/src/` |
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
 | `feature-sliced-design` | — (referencia, no norma) | Ver aviso abajo |
+| `verification-methods` | — (propia del repositorio) | `docs/verification.md` |
 
 **`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §6.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
 
