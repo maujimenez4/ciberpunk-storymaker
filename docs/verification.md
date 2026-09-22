@@ -81,7 +81,8 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 | --- | --- | --- | --- |
 | Observabilidad / trazas en ejecución | Instrumentar el agente para que su trayectoria sea visible y consultable a posteriori | **Aplicado por diseño (narrativos)** — cada llamada registra `run_id`, escena, versión de prompt y de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto (arq. §9). Matiz: arq. §11 prohíbe registrar por defecto los prompts de producción y los fragmentos de manuscrito, así que la traza es **estructural, no textual**: dice qué se envió y cuánto costó, no qué decía | [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) |
 | Evals | Pruebas estructuradas del comportamiento del agente contra un conjunto de datos y un método de puntuación | **Previsto (narrativos)** — fase 4 de la hoja de ruta. El criterio de éxito del Crítico es «correlación con el editor humano», y eso *es* una eval: un conjunto de escenas etiquetadas por una persona contra el que se puntúa al juez. Sin él no se distingue un cambio de prompt que mejora de uno que solo desplaza la salida, ni se detecta la descalibración al cambiar de modelo (riesgo abierto de arq. §12) | [HELM — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
-| Ejecución en sandbox | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance (ambos)** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (arq. §3.5). El agente de código corre sin herramientas de fichero; el orquestador lee y escribe por él. En los dos casos se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox, pero deja de ser cierto en cuanto un agente reciba una herramienta | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
+| Ejecución en sandbox *(narrativos)* | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (arq. §3.5). Se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox, y cierto mientras ningún agente reciba una herramienta | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
+| Ejecución en sandbox *(agente de código)* | Lo mismo, aplicado al asistente que escribe este repositorio | **No aplicado** — el agente de código lee y escribe ficheros y ejecuta órdenes directamente: no hay entorno aislado ni intermediario que lo haga por él. Lo que acota el daño es otra cosa, y está dos filas más abajo: toda escritura pasa por una persona, y por la tubería de `CLAUDE.md` §15. Hasta el 2026-09-22 esta fila afirmaba lo contrario —que corría sin herramientas de fichero— y siguió afirmándolo después de dejar de ser cierto | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Guardarraíles | Políticas y filtros que restringen qué acciones puede producir un agente | **Aplicado en código (ambos)** — edad mínima y nivel de calor se validan **en esquema**, no en el prompt (arq. §11); el presupuesto de contexto falla explícitamente en vez de truncar; el reintento dirigido tiene tope de dos; cada agente recibe el mínimo de permisos que su nodo necesita. Regla que lo sostiene: ninguna regla de seguridad depende solo del prompt | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
 | Revisión humana en el bucle | Una persona aprueba, rechaza o edita las acciones de alta consecuencia del agente | **Aplicado (ambos), con puntos definidos** — G1a escala a la persona tras dos reparaciones fallidas; G3 no cierra borrador sin revisión; el arco romántico figura en la tabla de dimensiones de calidad como «revisión humana». En el repositorio, toda escritura del agente de código pasa por una persona | [Human-in-the-loop](https://en.wikipedia.org/wiki/Human-in-the-loop) |
 | Verificación multiagente | Patrones de crítico, debate, autoconsistencia, reflexión o ensamblado que revisan la salida del modelo | **Aplicado (narrativos): es el mecanismo central de calidad, no una opción en estudio** — Continuista y Crítico existen separados del Escritor exactamente por esto (decisión 6 de arq. §12: quien escribe no ve sus contradicciones, y quien juzga no repara). Coste asumido: la puerta de escena gasta hasta dos validaciones además de la escritura. Límite conocido y ahora explícito en el diseño: el juez no está calibrado, así que **G1b no bloquea** hasta la fase 4 (arq. §8.3); lo que hoy aporta es detección de contradicciones, no juicio de calidad | [AI Safety via Debate — Irving et al., 2018](https://arxiv.org/abs/1805.00899) |
@@ -125,6 +126,10 @@ la letra principal deja pendiente. Véase
 
 ### 4.1 Los requisitos del proyecto, clasificados
 
+`CLAUDE.md` §3 y §8 no tienen subsecciones numeradas: sus puntos son listas. Por eso la
+columna de origen cita «§8, regla 2» y «§3, principio 6», y no «§8.2» ni «§3.6», que en §3
+chocarían con subsecciones reales —§3.5 es «Cierre», no el quinto principio—.
+
 | Requisito | Origen | Letra | Con qué |
 | --- | --- | --- | --- |
 | Ninguna llamada al modelo supera los 100.000 tokens | arq. §2.1 | **T** | Propiedades y unitarios sobre el ensamblador; `ContextBudgetExceeded` en vez de truncar |
@@ -135,16 +140,16 @@ la letra principal deja pendiente. Véase
 | Solo el Extractor escribe memoria de largo plazo | arq. §4.3 | **A** | Ninguna otra ruta de código escribe en canon, ledger ni índice; se lee en el repositorio, no se ejecuta |
 | Una escena rechazada no deja rastro en canon | arq. §4.4 | **T** | Provocar un defecto bloqueante y comprobar que canon, ledger e índice quedan intactos |
 | Las fronteras entre features no se cruzan | arq. §5.2 y §6.2 | **A** | `import-linter` e `import/no-restricted-paths`; falla la build |
-| Una escena tiene un POV y un giro de valor no nulo | CLAUDE §8.1 | **T** | Esquema Pydantic con su test |
-| Ningún personaje usa información sin `sabe_desde` anterior | CLAUDE §8.2 | **T** | Validador de conocimiento (defecto CON-03) sobre casos conocidos |
-| El estado en T se deriva del ledger y no se edita | CLAUDE §8.3 | **A + T** | No hay repositorio que escriba sobre la vista; un test reconstruye el estado desde el ledger |
-| Todo hecho de canon cita la escena que lo estableció | CLAUDE §8.4 | **T** | El campo de origen es obligatorio en el esquema |
-| Cada ejecución guarda prompt, biblia, IDs, modelo, semilla y coste | CLAUDE §8.7 | **T** | Test de la escritura en `ejecucion` |
+| Una escena tiene un POV y un giro de valor no nulo | CLAUDE §8, regla 1 | **T** | Esquema Pydantic con su test |
+| Ningún personaje usa información sin `sabe_desde` anterior | CLAUDE §8, regla 2 | **T** | Validador de conocimiento (defecto CON-03) sobre casos conocidos |
+| El estado en T se deriva del ledger y no se edita | CLAUDE §8, regla 3 | **A + T** | No hay repositorio que escriba sobre la vista; un test reconstruye el estado desde el ledger |
+| Todo hecho de canon cita la escena que lo estableció | CLAUDE §8, regla 4 | **T** | El campo de origen es obligatorio en el esquema |
+| Cada ejecución guarda prompt, biblia, IDs, modelo, semilla y coste | CLAUDE §8, regla 7 | **T** | Test de la escritura en `ejecucion` |
 | El sistema funciona con y sin extensión vectorial | arq. §2 | **T + D** | La suite corre en los dos modos; además, arranque real con la extensión ausente |
-| Una ejecución se puede reproducir | CLAUDE §3.6 | **D**, no T | Se reproduce el **paquete de contexto**, que es determinista; la prosa no, porque el modelo no lo es. Es justo la razón de que el ensamblador sea código: lo reproducible es lo auditable. **Con fecha de caducidad:** el paquete se reproduce mientras el estado de almacenes sea el de entonces, y el canon crece en cada escena, así que reconstruir una escena antigua desde los almacenes de hoy da otro paquete |
-| Ninguna escena excede el nivel de calor declarado | CLAUDE §8.5 | **T** parcial **+ I** | El esquema comprueba el nivel declarado; que la prosa se mantenga dentro lo juzga el Crítico (defecto SEG-01) y, en última instancia, una lectura humana |
-| Ningún contenido romántico o sexual con personajes menores de 18 | CLAUDE §8.6 | **T + I** | La edad se valida en esquema y bloquea por construcción; que la prosa no lo insinúe se inspecciona |
-| El coste por novela se mantiene acotado | arq. §12 | **A** hoy, **D** al ejecutar | El presupuesto por llamada y el límite de concurrencia acotan **la llamada y el proceso**, no el total: nada impide que la suma de escenas, reintentos y validaciones crezca sin techo. El total no existe hasta la primera corrida completa |
+| Una ejecución se puede reproducir | CLAUDE §3, principio 6 | **D**, no T | Se reproduce el **paquete de contexto**, que es determinista; la prosa no, porque el modelo no lo es. Es justo la razón de que el ensamblador sea código: lo reproducible es lo auditable. **Con fecha de caducidad:** el paquete se reproduce mientras el estado de almacenes sea el de entonces, y el canon crece en cada escena, así que reconstruir una escena antigua desde los almacenes de hoy da otro paquete |
+| Ninguna escena excede el nivel de calor declarado | CLAUDE §8, regla 5 | **T** parcial **+ I** | El esquema comprueba el nivel declarado; que la prosa se mantenga dentro lo juzga el Crítico (defecto SEG-01) y, en última instancia, una lectura humana |
+| Ningún contenido romántico o sexual con personajes menores de 18 | CLAUDE §8, regla 6 | **T + I** | La edad se valida en esquema y bloquea por construcción; que la prosa no lo insinúe se inspecciona |
+| El coste **por llamada** se mantiene acotado | arq. §2.1 y §2.2 | **T** | El contador inyectado y los topes por capa lo acotan antes de llamar, y el límite de concurrencia acota el proceso. **El total de una novela no lo acota nada**: por eso figura como U en §4.2 y como descubierto en §7, y no como un requisito verificado aquí |
 | El juez correlaciona con el editor humano | arq. §7 | **U** hoy → **T** | Pasa a T el día que exista el conjunto de escenas etiquetadas |
 | El relato merece la pena leerse | — | **U** | — |
 
@@ -193,7 +198,11 @@ hacemos sin pruebas.
 - Varios «Aplicado por diseño» son fuertes precisamente porque la capacidad no existe:
   no hay sandbox porque no hay herramienta que aislar. Si algún día un agente recibe
   acceso de fichero o de red, esas filas dejan de ser ciertas el mismo día, y hay que
-  reabrirlas **antes** de conceder el permiso, no después.
+  reabrirlas **antes** de conceder el permiso, no después. **Ya ocurrió una vez:** la
+  fila de sandbox afirmaba que el agente de código corría sin herramientas de fichero, y
+  lo siguió afirmando mucho después de dejar de ser verdad. De ahí que §3 separe ahora
+  los dos sujetos en filas distintas: una fila que los mezcla puede caducar por la mitad
+  sin que se note.
 - Ninguna fila de §2 y §3 declara criterio de paso: cuántas propiedades, qué proporción
   de casos adversarios, qué cobertura. Un «Previsto» sin umbral no se puede incumplir, y
   lo que no se puede incumplir no verifica. Los umbrales son requisitos y viven en una
@@ -298,9 +307,9 @@ de los puntos ciegos de §2.1 y §3.1. Tres estados:
 | Prosa con instrucciones incrustadas realimentada como canon | Red teaming, **previsto** y no ejecutado | **Descubierto** hoy |
 | El modo sin extensión vectorial no es el que se prueba | Suite declarada en los dos modos | **Parcial** — §3.1: una prueba omitida se ve igual que el verde |
 | El ledger deja de ser *append-only*, o el estado en T se edita | Lectura del repositorio (**A**) | **Parcial** — un solo validador, y humano |
-| Un agente recibe una herramienta y las filas «Aplicado por diseño» caducan | La advertencia del §5 | **Descubierto** — nada lo detecta el día que ocurre |
+| Un agente recibe una herramienta y las filas «Aplicado por diseño» caducan | La advertencia del §5 | **Descubierto** — nada lo detecta el día que ocurre, y de hecho ya ocurrió con el agente de código sin que nada lo señalara (§3) |
 | La revisión humana se degrada por volumen | Métrica de escalados por cada cien escenas (`architecture.md` §9), sin umbral declarado | **Parcial** |
-| El coste total de la novela se dispara | Techo por llamada y límite de concurrencia | **Descubierto** en el total: acotan la llamada y el proceso, no la suma |
+| El coste total de la novela se dispara | Techo por llamada y límite de concurrencia | **Descubierto** en el total: acotan la llamada y el proceso, no la suma. §4.1 solo afirma el techo por llamada; el total es U (§4.2) |
 | Un cambio de modelo descalibra a los validadores | Evals, previstas para la fase 4 | **Descubierto** hoy |
 | Este documento deja de describir el repositorio | Revisión manual al aterrizar el código | **Descubierto** |
 
