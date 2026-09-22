@@ -23,228 +23,282 @@ Tres ideas gobiernan el orden de todo lo que sigue.
 
 **Una capa horizontal antes que nada.** Configuración, errores, base de datos, migración inicial e inyección de dependencias son de `commons/` y las necesitan todas las features. Sin ellas no hay ni primer test.
 
-Cada paso cabe en un commit verificable por separado, empieza por un test que se ve fallar y nombra los ficheros que toca. Un paso que no quepa en un commit está mal cortado y se parte.
+Cada paso cabe en un commit verificable por separado, empieza por un test que se ve fallar y dice dónde vive. Un paso que no quepa en un commit está mal cortado y se parte.
 
 ---
 
 ## Fases y pasos
 
-Notación: cada paso lleva **el test que falla primero**, el cambio mínimo que lo pone en verde y la feature donde vive. Los requisitos entre paréntesis son los de la spec.
+**Dónde** es la ruta bajo `src/backend/app/`. La correspondencia pieza ↔ carpeta es la de `architecture.md` §3.9 y §5.1.
 
 ### Fase 0 · Cimientos (`commons/`)
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-01 | `test_arranque_falla_si_falta_una_variable_obligatoria` | `commons/config/`: ajustes Pydantic v2, sin valores mágicos | RI-21 |
-| P-02 | `test_arranque_rechaza_plazo_de_paso_menor_que_timeout_de_turno` | Validador cruzado en los ajustes | RI-24, D-04 |
-| P-03 | `test_context_budget_exceeded_se_traduce_a_422_con_la_capa` (uno por caso) | `commons/errors/`: excepciones de dominio y handler central | RI-11 |
-| P-04 | `test_conexion_tiene_wal_foreign_keys_y_busy_timeout` | `commons/db/`: fábrica de conexión | RI-16 |
-| P-05 | `test_migracion_inicial_crea_el_esquema_declarado` | Revisión Alembic `0001_inicial` | RD-01 a RD-14 |
-| P-06 | `test_migracion_funciona_sin_extension_vectorial` | La misma revisión, sin `vec0` | RD-08, RNF-FIA-03 |
-| P-07 | `test_contador_de_tokens_es_local_y_no_estima_por_caracteres` | `commons/llm/`: contador inyectado | RNF-TOK-02, D-07 |
-| P-08 | `test_el_doble_de_modelo_sustituye_al_proveedor_en_toda_la_suite` | Cliente de modelo y reloj por `Depends()` | RI-13 |
-| P-09 | `test_vector_store_degrada_a_fuerza_bruta_si_la_extension_no_carga` | `VectorStore` + `SqliteVecStore` + `BruteForceStore` | RI-17, RI-22 |
-| P-10 | `test_embeddings_legibles_por_ambas_implementaciones` | Formato común, 1024 dimensiones | RD-07, D-02 |
-| P-11 | `test_proveedor_de_embeddings_no_cuenta_contra_el_presupuesto` | Interfaz propia de *embeddings* | RI-20 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-01 | `test_arranque_falla_si_falta_una_variable_obligatoria` | Ajustes Pydantic v2, sin valores mágicos | `commons/config/` | RI-21 |
+| P-02 | `test_arranque_rechaza_plazo_de_paso_menor_que_timeout_de_turno` | Validador cruzado | `commons/config/` | RI-24, D-04 |
+| P-03 | `test_ninguna_clave_se_lee_del_repositorio_ni_de_la_base_de_datos` | Claves solo de entorno | `commons/config/` | RI-15, RNF-SEG-03 |
+| P-04 | `test_cada_excepcion_de_dominio_se_traduce_a_su_http` (una por caso) | Excepciones y handler central | `commons/errors/` | RI-11 |
+| P-05 | `test_conexion_tiene_wal_foreign_keys_y_busy_timeout` | Fábrica de conexión | `commons/db/` | RI-16 |
+| P-06 | `test_migracion_inicial_crea_el_esquema_declarado` | Revisión `0001_inicial` | `alembic/versions/` | RD-01 a RD-14 |
+| P-07 | `test_migracion_funciona_sin_extension_vectorial` | La misma revisión, sin `vec0` | `alembic/versions/` | RD-08, RNF-FIA-03 |
+| P-08 | `test_contador_de_tokens_es_local_y_no_estima_por_caracteres` | Contador inyectado | `commons/llm/` | RNF-TOK-02, D-07 |
+| P-09 | `test_el_doble_de_modelo_sustituye_al_proveedor_en_toda_la_suite` | Cliente y reloj por `Depends()` | `commons/llm/` | RI-13 |
+| P-10 | `test_vector_store_degrada_a_fuerza_bruta_si_la_extension_no_carga` | `VectorStore` + dos implementaciones | `commons/db/` | RI-17, RI-22 |
+| P-11 | `test_embeddings_legibles_por_ambas_implementaciones` | Formato común, 1024 dimensiones | `commons/db/` | RD-07, D-02 |
+| P-12 | `test_embeddings_no_cuentan_contra_ningun_presupuesto` | Interfaz propia de *embeddings* | `commons/llm/` | RI-20 |
+| P-13 | `test_los_trabajos_corren_en_el_proceso_de_la_api` | Sin *worker* aparte: el turno es por proceso y repartirlo lo duplicaría | `commons/jobs/` | §2.2 r3, §10 |
 
-### Fase 1 · Dominio puro (`commons/domain/`)
+### Fase 1 · Dominio y fronteras
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-12 | `test_escena_exige_un_pov_y_un_giro_de_valor_no_nulo` | Modelos de dominio sin framework | RG-08 |
-| P-13 | `test_esquema_rechaza_contenido_romantico_con_menor_de_18` | Restricción en el esquema, no en el prompt | RG-09, RNF-SEG-01 |
-| P-14 | `lint_imports` falla con un import entre features | Contratos de `import-linter` en `pyproject.toml` | CA-9, §5.1 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-14 | `test_escena_exige_un_pov_y_un_giro_de_valor_no_nulo` | Modelos de dominio sin framework | `commons/domain/` | RG-08 |
+| P-15 | `test_esquema_rechaza_contenido_romantico_con_menor_de_18` | Restricción en esquema, no en prompt | `commons/domain/` | RG-09, RNF-SEG-01 |
+| P-16 | `lint_imports` falla con un import entre features, con `commons/` importando una feature, y con `commons/domain/` importando FastAPI o SQLAlchemy | Los seis contratos de `architecture.md` §5.2 | `pyproject.toml` | CA-9, §5.2 |
+| P-17 | `test_toda_feature_expone_solo_su_init_y_tiene_los_segmentos_declarados` | Esqueleto de las ocho features con los nombres de §5.1 | `features/*/` | §5.1 |
 
 ### Fase 2 · `obra` y `outline`
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-15 | `test_obra_hereda_persona_tiempo_verbal_pov_y_calor_a_sus_escenas` | Servicio de creación desde `Brief` | RF-OBR-01 |
-| P-16 | `test_brief_que_empuja_contra_la_edad_o_el_calor_es_rechazado` | Validación adversaria en esquema | RNF-SEG-06 |
-| P-17 | `test_cambiar_la_biblia_crea_version_nueva_y_no_reescribe_escenas` | `VersionDeObra` | RF-OBR-02, 03, RD-12 |
-| P-18 | `test_outline_produce_parte_capitulo_escena` | Agente Arquitecto + esquema de salida | RF-OUT-01 |
-| P-19 | `test_cada_beat_obligatorio_cae_en_exactamente_una_escena` | Comprobación al generar | RF-OUT-02, RG-06 |
-| P-20 | `test_ningun_hito_se_asigna_antes_que_el_que_lo_precede` | Comprobación de orden | RF-OUT-05 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-18 | `test_obra_hereda_persona_tiempo_verbal_pov_y_calor_a_sus_escenas` | Creación desde `Brief` | `features/obra/` | RF-OBR-01 |
+| P-19 | `test_brief_que_empuja_contra_la_edad_o_el_calor_es_rechazado` | Validación adversaria | `features/obra/` | RNF-SEG-06 |
+| P-20 | `test_cambiar_la_biblia_crea_version_nueva_y_no_reescribe_escenas` | `VersionDeObra` | `features/obra/` | RF-OBR-02, 03, RD-12 |
+| P-21 | `test_el_prompt_se_carga_del_fichero_y_su_hash_coincide_con_el_registrado` | Prompts versionados como ficheros; los **carga el orquestador** | `features/*/prompts/` | §5.5, RI-14, CLAUDE §10 |
+| P-22 | `test_outline_produce_parte_capitulo_escena` | Arquitecto + esquema de salida | `features/outline/` | RF-OUT-01 |
+| P-23 | `test_cada_beat_obligatorio_cae_en_exactamente_una_escena` | Comprobación al generar | `features/outline/` | RF-OUT-02, RG-06 |
+| P-24 | `test_ningun_hito_se_asigna_antes_que_el_que_lo_precede` | Comprobación de orden | `features/outline/` | RF-OUT-05 |
 
 ### Fase 3 · `escena`
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-21 | `test_ficha_declara_las_restricciones_duras` | Planificador + `FichaDeEscena` | RF-ESC-01, 02 |
-| P-22 | `test_editar_crea_version_nueva_y_marca_la_vigente` | `VersionDeTexto` inmutable | RF-ESC-03, 04 |
-| P-23 | `test_tiempo_historia_y_orden_discurso_son_campos_distintos` | Dos relojes | RF-ESC-05, RD-04 |
-| P-24 | `test_escena_registra_la_version_de_obra_con_la_que_se_escribio` | Referencia a `VersionDeObra` | RF-ESC-06 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-25 | `test_ficha_declara_las_restricciones_duras` | Planificador + `FichaDeEscena` | `features/escena/` | RF-ESC-01, 02 |
+| P-26 | `test_editar_crea_version_nueva_y_marca_la_vigente` | `VersionDeTexto` inmutable | `features/escena/` | RF-ESC-03, 04 |
+| P-27 | `test_tiempo_historia_y_orden_discurso_son_campos_distintos` | Dos relojes | `features/escena/` | RF-ESC-05, RD-04 |
+| P-28 | `test_escena_registra_la_version_de_obra_con_la_que_se_escribio` | Referencia a `VersionDeObra` | `features/escena/` | RF-ESC-06 |
 
 ### Fase 4 · `canon` — la memoria de largo plazo
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-25 | `test_ninguna_ruta_actualiza_ni_borra_un_evento_del_ledger` | Ledger *append-only* | RF-CAN-05 |
-| P-26 | `test_estado_en_t_se_deriva_y_no_se_escribe_a_mano` | Vista derivada | RF-CAN-06 |
-| P-27 | `test_snapshot_cada_cinco_escenas` | *Snapshots* con N = 5 | RF-CAN-06, D-01 |
-| P-28 | `test_todo_hecho_de_canon_cita_su_escena_de_origen` | Extractor + grafo | RF-CAN-04 |
-| P-29 | `test_corregir_un_hecho_registra_uno_nuevo_y_cita_al_anterior` | Sustitución sin edición | RF-CAN-07 |
-| P-30 | `test_un_hecho_sustituido_invalida_los_snapshots_posteriores` | Recálculo desde el último válido | RF-CAN-13 |
-| P-31 | `test_escena_rechazada_no_deja_rastro_en_canon_ledger_ni_indice` | Transacción por escena | RF-CAN-02, 03 |
-| P-32 | `test_el_conocimiento_se_deriva_de_los_testigos_del_evento` | Derivación de `sabe_desde` | RF-CAN-11 |
-| P-33 | `test_resumen_de_escena_al_integrar_y_de_capitulo_al_cerrar` | Cascada de resúmenes | RF-CAN-08 |
-| P-34 | `test_el_indice_vectorial_se_reconstruye_entero_desde_el_texto` | Reindexado | RF-CAN-12 |
-| P-35 | `test_solo_el_extractor_escribe_memoria_de_largo_plazo` | Permisos por agente | RF-CAN-01 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-29 | `test_ninguna_ruta_actualiza_ni_borra_un_evento_del_ledger` | Ledger *append-only* | `features/canon/` | RF-CAN-05 |
+| P-30 | `test_estado_en_t_se_deriva_y_no_se_escribe_a_mano` | Vista derivada | `features/canon/` | RF-CAN-06 |
+| P-31 | `test_snapshot_cada_cinco_escenas` | *Snapshots*, N = 5 | `features/canon/` | RF-CAN-06, D-01 |
+| P-32 | `test_todo_hecho_de_canon_cita_su_escena_de_origen` | Extractor + grafo | `features/canon/` | RF-CAN-04 |
+| P-33 | `test_corregir_un_hecho_registra_uno_nuevo_y_cita_al_anterior` | Sustitución sin edición | `features/canon/` | RF-CAN-07 |
+| P-34 | `test_un_hecho_sustituido_invalida_los_snapshots_posteriores` | Recálculo desde el último válido | `features/canon/` | RF-CAN-13 |
+| P-35 | `test_escena_rechazada_no_deja_rastro_en_canon_ledger_ni_indice` | Transacción por escena | `features/canon/` | RF-CAN-02, 03 |
+| P-36 | `test_extrayendo_escribe_en_el_orden_declarado` | Canon → ledger → resumen → hilos → *embeddings*, en una transacción | `features/canon/` | §4.4, RF-CAN-03 |
+| P-37 | `test_no_se_compactan_constitucional_hechos_de_canon_ni_ledger` | El olvido es de selección, no de destrucción | `features/canon/` | RF-CAN-09, §4.5 |
+| P-38 | `test_el_conocimiento_se_deriva_de_los_testigos_del_evento` | Derivación de `sabe_desde` | `features/canon/` | RF-CAN-11 |
+| P-39 | `test_resumen_de_escena_al_integrar_y_de_capitulo_al_cerrar` | Cascada de resúmenes | `features/canon/` | RF-CAN-08 |
+| P-40 | `test_el_indice_vectorial_se_reconstruye_entero_desde_el_texto` | Reindexado | `features/canon/` | RF-CAN-12 |
+| P-41 | `test_el_extractor_escribe_la_lista_negra_de_ngramas` | Tabla `ngrama_vetado`. **Nadie la lee en la v1**: su consumidor es el Editor de línea | `features/canon/` | RD-13, §4.3 |
+| P-42 | `test_solo_el_extractor_escribe_memoria_de_largo_plazo` | Permisos de escritura | `features/canon/` | RF-CAN-01 |
 
 ### Fase 5 · `contexto` — el ensamblador
 
-Es la fase con más riesgo y la única con **tests basados en propiedades**. Las cuatro propiedades mínimas de la spec son P-39 a P-42.
+La fase con más riesgo y la única con **tests basados en propiedades**. Las cuatro propiedades mínimas de la spec son P-48, P-49, P-51 y P-52.
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-36 | `test_nunca_se_llama_al_modelo_sin_contar_antes_los_tokens` | Contador obligatorio en el camino | RNF-TOK-06 |
-| P-37 | `test_ninguna_llamada_supera_los_cien_mil_tokens` | Tope duro | RNF-TOK-01 |
-| P-38 | `test_cada_capa_respeta_su_tope` | Ensamblado por capas | RF-CTX-02 |
-| P-39 | `prop_el_desglose_por_capa_suma_el_total_contado` | Desglose devuelto y persistido | RF-CTX-06 |
-| P-40 | `prop_recortar_una_capa_no_altera_las_demas` | Recorte por capa, en el orden declarado | RF-CTX-03 |
-| P-41 | `prop_constitucional_e_instruccion_nunca_encogen` | Capas protegidas | RF-CTX-04 |
-| P-42 | `prop_o_cabe_o_lanza_context_budget_exceeded` | Nunca truncar por el final | RF-CTX-05 |
-| P-43 | `test_una_capa_vacia_falla_antes_de_llamar_al_modelo` | Comprobación de origen por capa | **RF-CTX-14** |
-| P-44 | `test_la_reserva_del_diez_por_ciento_queda_libre` | Reserva para el reintento | RF-CTX-11 |
-| P-45 | `test_el_paquete_se_reconstruye_entero_en_cada_reintento` | Nada se arrastra | RF-CTX-12 |
-| P-46 | `prop_mismo_estado_y_misma_semilla_dan_el_mismo_paquete` | Determinismo | RF-CTX-01 |
-| P-47 | `test_recuperacion_filtra_luego_similitud_luego_recencia` | Orden híbrido | RF-CTX-07 |
-| P-48 | `test_se_inyecta_muestra_ancla_del_mismo_pov` | `MuestraAncla` | RF-CTX-08 |
-| P-49 | `test_lo_recuperado_entra_como_datos_delimitados_no_instrucciones` | Delimitación, con casos adversarios | RNF-SEG-05, CA-12 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-43 | `test_nunca_se_llama_al_modelo_sin_contar_antes_los_tokens` | Contador obligatorio en el camino | `features/contexto/` | RNF-TOK-06 |
+| P-44 | `test_ninguna_llamada_supera_los_cien_mil_tokens` | Tope duro | `features/contexto/` | RNF-TOK-01 |
+| P-45 | `test_cada_capa_respeta_su_tope` | Ensamblado por capas | `features/contexto/` | RF-CTX-02 |
+| P-46 | `test_cada_capa_sale_del_almacen_que_le_corresponde` | Correspondencia capa ↔ almacén | `features/contexto/` | §4.8 |
+| P-47 | `test_continuidad_local_lleva_la_n_menos_1_integra_y_la_n_menos_2_resumida` | Ventana de trabajo | `features/contexto/` | §4.2 |
+| P-48 | `prop_el_desglose_por_capa_suma_el_total_contado` | Desglose devuelto y persistido | `features/contexto/` | RF-CTX-06 |
+| P-49 | `prop_recortar_una_capa_no_altera_las_demas` | Recorte por capa | `features/contexto/` | RF-CTX-03 |
+| P-50 | `test_dentro_de_cada_capa_se_recorta_lo_declarado_primero` | Beats lejanos; mencionados no presentes; conocimientos ya usados; N-2 antes que N-1; menor puntuación | `features/contexto/` | §2.1, RF-CTX-03 |
+| P-51 | `prop_constitucional_e_instruccion_nunca_encogen` | Capas protegidas | `features/contexto/` | RF-CTX-04 |
+| P-52 | `prop_o_cabe_o_lanza_context_budget_exceeded` | Nunca truncar por el final | `features/contexto/` | RF-CTX-05 |
+| P-53 | `test_una_capa_vacia_falla_antes_de_llamar_al_modelo` | Comprobación de origen por capa | `features/contexto/` | **RF-CTX-14** |
+| P-54 | `test_la_reserva_del_diez_por_ciento_queda_libre` | Reserva para el reintento | `features/contexto/` | RF-CTX-11 |
+| P-55 | `test_el_paquete_se_reconstruye_entero_en_cada_reintento` | Nada se arrastra | `features/contexto/` | RF-CTX-12 |
+| P-56 | `prop_mismo_estado_y_misma_semilla_dan_el_mismo_paquete` | Determinismo | `features/contexto/` | RF-CTX-01 |
+| P-57 | `test_recuperacion_filtra_luego_similitud_luego_recencia` | Orden híbrido | `features/contexto/` | RF-CTX-07 |
+| P-58 | `test_se_inyecta_muestra_ancla_del_mismo_pov` | `MuestraAncla` | `features/contexto/` | RF-CTX-08 |
+| P-59 | `test_lo_recuperado_entra_como_datos_delimitados_no_instrucciones` | Delimitación, casos adversarios | `features/contexto/` | RNF-SEG-05, CA-12 |
 
 ### Fase 6 · `calidad` — los validadores
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-50 | `test_ficha_sin_giro_de_valor_es_rechazada` | EST-01 | RF-CAL-01 |
-| P-51 | `test_prosa_que_excede_el_nivel_de_calor_es_rechazada` | SEG-01, lista de términos | RF-CAL-02, D-05 |
-| P-52 | `test_desplazamiento_imposible_o_dos_lugares_a_la_vez` | CON-01 | RF-CAL-04 |
-| P-53 | `test_personaje_usa_informacion_sin_sabe_desde_anterior` | CON-03 | RF-CAL-05 |
-| P-54 | `test_contradiccion_de_canon_gana_el_de_menor_orden_discurso` | CAN-01 | RF-CAL-06 |
-| P-55 | `test_objeto_perdido_roto_o_destruido_no_se_usa` | CON-02 | RF-CAL-07 |
-| P-56 | `test_defecto_lleva_codigo_y_cita_con_desplazamiento_y_literal` | Emisión de `Defecto` | RF-CAL-08, D-06 |
-| P-57 | `test_defecto_mal_formado_no_bloquea_ni_consume_reintento` | Comprobación de forma | RF-CAL-11 |
-| P-58 | `test_prosa_en_persona_o_tiempo_verbal_distintos_es_rechazada` | **VOZ-03** | **RF-CAL-12** |
-| P-59 | `test_g1a_bloquea_y_g1b_no_se_implementa` | Puerta G1a | RF-CAL-09 |
-| P-60 | `test_defecto_de_calidad_produce_reparando_nunca_fallida` | Separación defecto/fallo | RF-CAL-10 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-60 | `test_ficha_sin_giro_de_valor_es_rechazada` | EST-01 | `features/calidad/` | RF-CAL-01 |
+| P-61 | `test_prosa_que_excede_el_nivel_de_calor_es_rechazada` | SEG-01, lista de términos | `features/calidad/` | RF-CAL-02, D-05 |
+| P-62 | `test_desplazamiento_imposible_o_dos_lugares_a_la_vez` | CON-01 | `features/calidad/` | RF-CAL-04 |
+| P-63 | `test_personaje_usa_informacion_sin_sabe_desde_anterior` | CON-03 | `features/calidad/` | RF-CAL-05 |
+| P-64 | `test_contradiccion_de_canon_gana_el_de_menor_orden_discurso` | CAN-01 | `features/calidad/` | RF-CAL-06 |
+| P-65 | `test_objeto_perdido_roto_o_destruido_no_se_usa` | CON-02 | `features/calidad/` | RF-CAL-07 |
+| P-66 | `test_defecto_lleva_codigo_y_cita_con_desplazamiento_y_literal` | Emisión de `Defecto` | `features/calidad/` | RF-CAL-08, D-06 |
+| P-67 | `test_defecto_mal_formado_no_bloquea_ni_consume_reintento` | Comprobación de forma | `features/calidad/` | RF-CAL-11 |
+| P-68 | `test_prosa_en_persona_o_tiempo_verbal_distintos_es_rechazada` | **VOZ-03**, solo sobre narración | `features/calidad/` | **RF-CAL-12** |
+| P-69 | `test_g1a_bloquea_y_g1b_no_se_implementa` | Puerta G1a | `features/calidad/` | RF-CAL-09 |
+| P-70 | `test_defecto_de_calidad_produce_reparando_nunca_fallida` | Defecto ≠ fallo técnico | `features/calidad/` | RF-CAL-10 |
 
 ### Fase 7 · `escritura` — el orquestador
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-61 | `test_los_diez_estados_y_ninguno_se_salta` | Máquina de estados explícita | RF-ORQ-03 |
-| P-62 | `test_el_estado_se_persiste_tras_cada_paso` | Persistir y releer | RF-ORQ-04, 14 |
-| P-63 | `test_un_paso_interrumpido_se_repite_entero_sin_duplicar` | Idempotencia por `run_id` | RF-ORQ-06, RNF-FIA-01 |
-| P-64 | `test_al_arrancar_se_retoman_los_trabajos_no_terminales` | Reanudación | RF-ORQ-05, CA-3 |
-| P-65 | `test_solo_una_llamada_al_modelo_en_vuelo` | Turno único | RNF-TOK-03, RF-ORQ-13 |
-| P-66 | `test_sin_turno_la_llamada_espera_y_no_se_recorta_el_paquete` | Espera, no recorte | RNF-TOK-04, CA-8 |
-| P-67 | `test_el_turno_se_libera_aunque_el_paso_lance_excepcion` | `finally` en el turno | RF-ORQ-13 |
-| P-68 | `test_timeout_de_turno_deja_fallida_sin_coste` | 300 s | RNF-TOK-05, D-03 |
-| P-69 | `test_plazo_por_tipo_de_paso` | 30 s / 600 s | RNF-FIA-04, D-04 |
-| P-70 | `test_dos_reparaciones_y_a_la_tercera_escalada` | Reparación dirigida | RF-ORQ-07, CA-6 |
-| P-71 | `test_escalada_editada_reentra_por_validando` | Reentrada | RF-ORQ-17, D-08 |
-| P-72 | `test_aceptar_con_defecto_registra_cual_se_anulo_y_quien` | Aceptación explícita | RF-ORQ-18, CA-13 |
-| P-73 | `test_salida_de_agente_que_no_valida_es_fallo_del_paso` | Contrato entre pasos | RF-ORQ-15 |
-| P-74 | `test_una_escena_en_vuelo_por_obra_con_cerrojo` | Cerrojo por obra | RF-ORQ-11 |
-| P-75 | `test_fallo_de_proveedor_reintenta_tres_veces_con_espera_creciente` | Espera creciente | RNF-FIA-02 |
-| P-76 | `test_cancelacion_para_en_el_primer_punto_seguro` | Cancelación | RI-19 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-71 | `test_los_diez_estados_y_ninguno_se_salta` | Máquina de estados explícita | `commons/jobs/` | RF-ORQ-03 |
+| P-72 | `test_ningun_agente_invoca_a_otro` | Topología en estrella | `features/escritura/` | RF-ORQ-02, §3.1 |
+| P-73 | `test_ningun_agente_accede_a_almacenes_ficheros_ni_red` | Permisos de §3.5; el Escritor solo ve el paquete | `features/escritura/` | RF-ORQ-16, §3.5 |
+| P-74 | `test_el_estado_se_persiste_tras_cada_paso_y_se_vuelve_a_leer` | Persistir y releer, no encadenar objetos | `commons/jobs/` | RF-ORQ-04, 14 |
+| P-75 | `test_un_paso_interrumpido_se_repite_entero_sin_duplicar` | Idempotencia por `run_id` | `commons/jobs/` | RF-ORQ-06, RNF-FIA-01 |
+| P-76 | `test_al_arrancar_se_retoman_los_trabajos_no_terminales` | Reanudación | `commons/jobs/` | RF-ORQ-05, CA-3 |
+| P-77 | `test_solo_una_llamada_al_modelo_en_vuelo` | Turno único | `commons/jobs/` | RNF-TOK-03, RF-ORQ-13 |
+| P-78 | `test_sin_turno_la_llamada_espera_y_no_se_recorta_el_paquete` | Espera, no recorte | `commons/jobs/` | RNF-TOK-04, CA-8 |
+| P-79 | `test_el_turno_se_libera_aunque_el_paso_lance_excepcion` | Liberación garantizada | `commons/jobs/` | RF-ORQ-13 |
+| P-80 | `test_timeout_de_turno_deja_fallida_sin_coste` | 300 s | `commons/jobs/` | RNF-TOK-05, D-03 |
+| P-81 | `test_plazo_por_tipo_de_paso` | 30 s código / 600 s modelo | `commons/jobs/` | RNF-FIA-04, D-04 |
+| P-82 | `test_dos_obras_a_la_vez_serializan_sus_llamadas_al_modelo` | Paralelismo de trabajo, no de llamadas | `commons/jobs/` | §3.8 |
+| P-83 | `test_dos_reparaciones_y_a_la_tercera_escalada` | Reparación dirigida con cita | `features/escritura/` | RF-ORQ-07, 08, CA-6 |
+| P-84 | `test_escalada_editada_reentra_por_validando` | Reentrada | `features/escritura/` | RF-ORQ-17, D-08 |
+| P-85 | `test_aceptar_con_defecto_registra_cual_se_anulo_y_quien` | Aceptación explícita | `features/escritura/` | RF-ORQ-18, CA-13 |
+| P-86 | `test_salida_de_agente_que_no_valida_es_fallo_del_paso` | Contrato entre pasos | `features/escritura/` | RF-ORQ-15 |
+| P-87 | `test_una_escena_en_vuelo_por_obra_con_cerrojo` | Cerrojo por obra, sin fiar en `busy_timeout` | `commons/jobs/` | RF-ORQ-11 |
+| P-88 | `test_fallo_de_proveedor_reintenta_tres_veces_con_espera_creciente` | Espera creciente; el límite de tasa es fallo de proveedor | `commons/llm/` | RNF-FIA-02, §2.2 r4 |
+| P-89 | `test_cancelacion_para_en_el_primer_punto_seguro` | Cancelación | `commons/jobs/` | RI-19 |
 
-### Fase 8 · `manuscrito` y la API
+### Fase 8 · `manuscrito`, API y observabilidad
 
-| # | Test en rojo | Cambio mínimo | Requisitos |
-| --- | --- | --- | --- |
-| P-77 | `test_manuscrito_ensambla_vigentes_en_orden_discurso` | Ensamblado | RF-MAN-01, 02 |
-| P-78 | `test_toda_operacion_larga_devuelve_trabajo_y_no_bloquea` | Routers y trabajos | RI-01 a RI-09 |
-| P-79 | `test_ningun_servicio_lanza_http_exception` | Errores por handler | RI-11 |
-| P-80 | `test_toda_ruta_declara_su_modelo_de_respuesta` | OpenAPI como contrato | RI-23, RI-12 |
-| P-81 | `test_ejecucion_registra_el_conjunto_completo` | Fila de `ejecucion` | RI-14, RD-06 |
-| P-82 | `test_trabajo_expone_estado_intento_causa_y_defectos_con_cita` | Respuesta de RI-09 | RI-18 |
-| P-83 | `test_la_traza_no_contiene_prompts_ni_fragmentos_de_manuscrito` | Traza estructural | RNF-OBS-03 |
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-90 | `test_manuscrito_ensambla_vigentes_en_orden_discurso` | Ensamblado y autoría | `features/manuscrito/` | RF-MAN-01, 02 |
+| P-91 | `test_toda_operacion_larga_devuelve_trabajo_y_no_bloquea` | Routers que solo crean el trabajo | `features/*/router.py` | RI-01 a RI-09 |
+| P-92 | `test_ningun_servicio_lanza_http_exception` | Errores por handler | `features/*/service.py` | RI-11, §5.2 r4 |
+| P-93 | `test_toda_ruta_declara_su_modelo_de_respuesta` | OpenAPI como contrato; entrada ≠ salida | `features/*/` | RI-23, RI-12 |
+| P-94 | `test_ejecucion_registra_el_conjunto_completo` | Fila por llamada | `commons/db/` | RI-14, RD-06 |
+| P-95 | `test_trabajo_expone_estado_intento_causa_y_defectos_con_cita` | Respuesta de RI-09 | `features/escritura/` | RI-18 |
+| P-96 | `test_la_traza_no_contiene_prompts_ni_fragmentos_de_manuscrito` | Traza estructural | `commons/config/` | RNF-OBS-03 |
+| P-97 | `test_se_cuenta_la_tasa_de_defectos_mal_formados` | Es hoy la **única** señal que mide al Continuista (`verification.md` §6.3) | `commons/config/` | §9, RF-CAL-11 |
+| P-98 | `test_se_miden_el_tiempo_de_espera_por_turno_y_las_esperas_vencidas` | Métricas de concurrencia | `commons/jobs/` | RNF-OBS-02, §9 |
 
 ### Fase 9 · Demostraciones y cierre
 
-Son los criterios marcados **D** en la spec: no los cubre `pytest` solo.
+Los criterios marcados **D** en la spec: no los cubre `pytest` solo.
 
-| # | Qué se demuestra | Requisitos |
+| # | Qué se demuestra | Req. |
 | --- | --- | --- |
-| P-84 | Un capítulo completo, todas las escenas `INTEGRADA` | CA-1, RF-OUT-04 |
-| P-85 | Desde una fila de `ejecucion` se reconstruye el mismo paquete | CA-10, RF-CTX-13 |
-| P-86 | Con la extensión **ausente del sistema**: arranca, avisa y escribe una escena | CA-11, RI-17 |
-| P-87 | Se desactiva cada validación y su test **se ve fallar** | CA-4 |
-| P-88 | Métricas de coste, tokens por capa, defectos y latencia | RNF-OBS-01, 02 |
-| P-89 | Firma de la inspección de prosa, por nombre y fecha en el Cierre | D-09 |
+| P-99 | Un capítulo completo, todas las escenas `INTEGRADA` | CA-1, RF-OUT-04 |
+| P-100 | Desde una fila de `ejecucion` se reconstruye el mismo paquete | CA-10, RF-CTX-13 |
+| P-101 | Con la extensión **ausente del sistema**: arranca, avisa y escribe una escena | CA-11, RI-17 |
+| P-102 | Se desactiva cada validación y su test **se ve fallar** | CA-4 |
+| P-103 | Coste por escena, tokens medios por capa, defectos por código, latencia por fase | RNF-OBS-01 |
+| P-104 | Firma de la inspección de prosa, por nombre y fecha en el Cierre | D-09 |
+
+---
+
+## Cobertura de `architecture.md`
+
+La razón de esta tabla: el plan se puede quedar corto respecto a la arquitectura **en silencio**, porque la spec cita la arquitectura pero no la agota. Cada sección con contenido implementable tiene aquí su paso.
+
+| Sección | Qué manda | Pasos |
+| --- | --- | --- |
+| §2 Stack | WAL, Alembic, degradación vectorial, 100 k | P-05 a P-07, P-10, P-44 |
+| §2.1 Presupuesto | Ocho topes, **y qué se recorta primero en cada capa** | P-45, P-48 a P-52 |
+| §2.2 Concurrencia | 1 llamada, espera, *timeout*, por proceso, tasa del proveedor | P-13, P-77, P-78, P-80, P-88 |
+| §3.1 Principios | Estrella, estado en SQLite, idempotencia, una escena, permiso mínimo | P-72 a P-76, P-87 |
+| §3.2 Unidad de trabajo | Campos de `trabajo` | P-06, P-95 |
+| §3.3 Estados | Diez estados, ninguno se salta | P-71 |
+| §3.4 Contrato entre pasos | Pydantic, persistir y releer, desglose en la salida | P-74, P-86, P-94 |
+| §3.5 Permisos por agente | Cada uno solo sus almacenes; el Escritor solo el paquete | P-42, P-73 |
+| §3.6 Fallos | Cinco causas con su acción | P-52, P-80, P-81, P-83, P-88, P-89 |
+| §3.7 Reanudación | Repetir el paso entero | P-75, P-76 |
+| §3.8 Concurrencia | Varias obras, llamadas serializadas, cerrojo por obra | P-82, P-87 |
+| §3.9 Dónde vive el código | `commons/jobs/`, `features/escritura/`, `commons/llm/`, `agents.py` | Columna **Dónde** |
+| §4.2 Corto plazo | N-1 íntegra, N-2 resumida, ancla, hilos | P-47, P-58 |
+| §4.3 Almacenes | Siete, con quién escribe cada uno | P-29 a P-42 |
+| §4.4 Consolidación | Solo tras aprobar, en orden, en una transacción | P-35, P-36 |
+| §4.5 Compactación | Cascada; **nunca** constitucional, canon ni ledger | P-37, P-39 |
+| §4.6 Recuperación | Filtro → similitud → recencia | P-57 |
+| §4.7 Corrección sin edición | Hecho nuevo; invalida *snapshots* | P-33, P-34 |
+| §4.8 Memoria → paquete | Cada capa, su almacén; capa vacía es fallo | P-46, P-53 |
+| §5.1 Estructura | Ocho features, segmentos con nombre fijo | P-17 |
+| §5.2 Dependencias | Seis reglas, verificadas por build | P-16, P-92 |
+| §5.4 Endpoints | Nueve de los diez; `/auditoria` queda fuera | P-91, P-93 |
+| §5.5 Persistencia | Tablas, y prompts como ficheros con hash | P-06, P-21, P-94 |
+| §8.3 Puertas | G1a bloquea, G1b no; comprobación de forma | P-67, P-69 |
+| §9 Trazabilidad | Registro por llamada y ocho métricas | P-94, P-97, P-98, P-103 |
+| §10 Despliegue | Local es el modo de referencia; trabajos en el proceso de la API | P-13, P-101 |
+| §11 Seguridad | Esquema, logs, claves, autoría | P-03, P-15, P-90, P-96 |
+
+**Secciones sin paso, a propósito:** §6 (frontend, fuera de alcance), §7 salvo permisos (catálogo descriptivo), §12 (decisiones ya tomadas), §13 (hoja de ruta), §14 (mantenimiento documental). §7.2 describe las skills del agente de código, no del producto.
 
 ---
 
 ## Fronteras implicadas (`CLAUDE.md` §5)
 
-Features tocadas: `obra`, `outline`, `escena`, `contexto`, `escritura`, `calidad`, `canon`, `manuscrito`, más `commons/`.
+Features tocadas: las ocho de `architecture.md` §5.1 menos `auditoria`, que queda fuera de alcance, más `commons/`.
 
-**Ningún paso de este plan cruza una frontera.** Todo lo compartido —configuración, errores, base de datos, cliente de modelo, contador, `VectorStore`, modelos de dominio— nace en `commons/` porque lo usan tres o más features desde el primer día, no por anticipación. Lo que una feature necesite de otra entra por su `__init__.py`.
+**Ningún paso de este plan cruza una frontera.** Lo compartido —configuración, errores, base de datos, cliente de modelo, contador, `VectorStore`, dominio y el motor de trabajos— nace en `commons/` porque lo usan tres o más features desde el primer día, no por anticipación.
 
-El contrato de `import-linter` se declara en P-14, **antes** que cualquier feature, para que la primera violación rompa la build en vez de descubrirse al final.
+El contrato de `import-linter` se declara en P-16, **antes** que ninguna feature, y cubre las seis reglas de §5.2 —incluida la tercera, que `commons/domain/` no importe FastAPI ni SQLAlchemy—, para que la primera violación rompa la build en vez de descubrirse al final.
 
 Dos puntos donde la tentación de cruzar aparecerá:
 
-- `calidad` necesita canon para contrastar (RF-CAL-06). Entra por el `__init__.py` de `canon`, nunca por su `repository.py`.
-- `escritura` orquesta a todas. Es la única que las conoce a todas, y solo por sus índices.
+- `calidad` necesita canon para contrastar (P-64). Entra por el `__init__.py` de `canon`, nunca por su `repository.py`.
+- `escritura` orquesta a todas. Es la única que las conoce a todas, y solo por sus índices. El **motor** de la máquina de estados no vive ahí sino en `commons/jobs/` (§3.9): en `features/escritura/` viven los pasos.
 
 ---
 
 ## Esquema y migraciones
 
-**Una sola revisión de Alembic**, `0001_inicial`, en P-05. No hay esquema previo que migrar.
+**Una sola revisión de Alembic**, `0001_inicial`, en P-06. No hay esquema previo que migrar.
 
-Decisiones que la migración debe respetar desde el primer día, porque añadirlas después obliga a reescribir:
+Tablas de `architecture.md` §5.5 que entran desde el primer día: `serie`, `obra`, `version_obra`, `parte`, `capitulo`, `escena`, `version_texto`, `entidad`, `hecho_canon`, `evento`, `plantado`, `hilo_narrativo`, `defecto`, `ejecucion`, `trabajo`, `ngrama_vetado`.
+
+Decisiones que la migración debe respetar, porque añadirlas después obliga a reescribir:
 
 - `serie_id` en el canon (RD-11), aunque la v1 maneje una sola obra.
 - `version_obra` (RD-12) y la referencia desde `Escena` (RF-ESC-06).
-- Tabla `defecto` con `desplazamiento_inicio`, `desplazamiento_fin` y `hecho_canon_id` (RD-14).
-- `trabajo` (RD-05), `ejecucion` (RD-06) y `ngrama_vetado` (RD-13).
+- `defecto` con `desplazamiento_inicio`, `desplazamiento_fin` y `hecho_canon_id` (RD-14).
 - Nombres **exactamente** los de `definitions.md` (RD-02).
 
-P-06 la ejecuta **sin** `sqlite-vec` cargado. Si la migración solo pasa con la extensión, el modo degradado no está verificado y la casilla de `verification.md` §7 sigue en parcial.
+P-07 la ejecuta **sin** `sqlite-vec` cargado. Si la migración solo pasa con la extensión, el modo degradado no está verificado y la casilla de `verification.md` §7 sigue en parcial.
 
 ---
 
 ## Presupuesto de contexto
 
-Este plan **no cambia ningún tope**: los implementa por primera vez, tal como están en `CLAUDE.md` §4.1.
+Este plan **no cambia ningún tope**: los implementa por primera vez, tal como están en `architecture.md` §2.1.
 
-| Capa | Tope | Paso que lo prueba |
-| --- | --- | --- |
-| Constitucional | 5.000 | P-38, P-41 |
-| Estructural | 10.000 | P-38 |
-| Canon relevante | 20.000 | P-38, P-40 |
-| Estado en T | 15.000 | P-38 |
-| Continuidad local | 20.000 | P-38 |
-| Memoria recuperada | 10.000 | P-38, P-47 |
-| Instrucción | 10.000 | P-41 |
-| Reserva | 10.000 | P-44 |
+| Capa | Tope | Qué se recorta primero | Pasos |
+| --- | --- | --- | --- |
+| Constitucional | 5.000 | No se recorta | P-45, P-51 |
+| Estructural | 10.000 | Detalle de beats lejanos | P-45, P-50 |
+| Canon relevante | 20.000 | Personajes mencionados, no presentes | P-45, P-50 |
+| Estado en T | 15.000 | Conocimientos antiguos ya usados | P-45, P-50 |
+| Continuidad local | 20.000 | Escena N-2 antes que N-1 | P-47, P-50 |
+| Memoria recuperada | 10.000 | Resultados de menor puntuación | P-50, P-57 |
+| Instrucción | 10.000 | No se recorta | P-51 |
+| Reserva | 10.000 | — | P-54 |
 
-Total 100.000. El desglose se persiste en `ejecucion` (P-39, P-81).
+Total 100.000. El desglose se persiste en `ejecucion` (P-48, P-94).
 
 ---
 
 ## Riesgos
 
-**El contador local puede no coincidir con el del proveedor.** D-07 obliga a un contador local para cumplir RNF-REN-01. Si tokeniza distinto que el proveedor, RNF-TOK-01 se puede incumplir *en silencio*: el paquete cabe según nosotros y no según quien factura. Mitigación en P-07: margen explícito y una comprobación periódica contra el recuento que devuelve el proveedor en la respuesta. **Es el riesgo con peor relación entre probabilidad y visibilidad de todo el plan.**
+**El contador local puede no coincidir con el del proveedor.** D-07 obliga a un contador local para cumplir RNF-REN-01. Si tokeniza distinto, RNF-TOK-01 se incumple *en silencio*: el paquete cabe según nosotros y no según quien factura. Mitigación en P-08: margen explícito y contraste periódico contra el recuento que devuelve el proveedor. **Es el riesgo con peor relación entre probabilidad y visibilidad de todo el plan.**
 
-**VOZ-03 puede dar falsos positivos.** Detectar persona y tiempo verbal en castellano por morfología falla con diálogo —un personaje puede hablar en primera persona dentro de una narración en tercera—. Si el validador no excluye lo entrecomillado, bloqueará escenas correctas. Mitigación en P-58: se mide solo sobre narración, y el caso del diálogo es un test propio.
+**VOZ-03 puede dar falsos positivos.** Detectar persona y tiempo verbal en castellano falla con el diálogo: un personaje habla en primera dentro de una narración en tercera. P-68 mide solo sobre narración, y el diálogo es un test propio.
 
-**La extracción del Continuista es probabilística.** `verification.md` §6.2: G1a es mecánica en el contraste, no en la extracción. Ningún paso de este plan mide sus falsos negativos, porque no hay conjunto etiquetado. Queda como está, declarado.
+**La extracción del Continuista es probabilística.** `verification.md` §6.2: G1a es mecánica en el contraste, no en la extracción. P-97 mide lo único medible hoy —los defectos mal formados—; los **falsos negativos siguen sin medirse**, y ningún paso de este plan los alcanza.
 
-**Voyage añade proveedor y clave.** Si no hay red o falta la clave, P-09 a P-11 y toda la fase 4 dependen de un doble. El arranque falla de inmediato si falta (RI-21), que es lo correcto, pero hace que la puesta en marcha necesite dos claves.
+**Voyage añade proveedor y clave.** Sin red o sin clave, P-10 a P-12 y la fase 4 dependen de un doble. El arranque falla de inmediato si falta (P-01), que es lo correcto, pero la puesta en marcha necesita dos claves.
 
-**El orden de las fases concentra el riesgo al final.** El orquestador es la fase 7 y es donde aparecen los fallos de integración. Mitigación: P-84 (capítulo completo) no es el último paso posible sino el primero de la fase 9, y si obliga a volver atrás, se vuelve.
+**El orden concentra el riesgo al final.** El orquestador es la fase 7 y es donde aparecen los fallos de integración. Mitigación: P-99 es el primer paso de la fase 9, no el último posible; si obliga a volver atrás, se vuelve.
 
 ---
 
 ## Qué queda fuera de este plan
 
-Lo de «Fuera de alcance» de la spec, sin excepción: Crítico y G1b, métricas de prosa, validación de voz por muestras ancla, Editor de línea, auditoría de manuscrito, puertas G2 y G3, frontend, modo servidor y tests de mutación.
+Lo de «Fuera de alcance» de la spec, sin excepción: Crítico y G1b, métricas de prosa, validación de voz por muestras ancla, Editor de línea, auditoría de manuscrito y su endpoint, puertas G2 y G3, frontend, modo servidor multiusuario y tests de mutación.
 
-Tampoco entra aquí nada que la spec no pida. Si al implementar aparece algo necesario que no esté en la spec, **se para y se corrige la spec** (§3.4), no se añade un paso.
+Tampoco entra nada que la spec no pida. Si al implementar aparece algo necesario que no esté en la spec, **se para y se corrige la spec** (§3.4), no se añade un paso.
 
 ---
 
