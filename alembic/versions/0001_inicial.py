@@ -7,8 +7,9 @@ RD-01 y RD-02: los nombres de tablas y columnas son los de `definitions.md`, sin
 traducir ni abreviar. RD-11: `serie_id` existe desde aqui aunque la v1 maneje una
 sola obra, porque anadirlo despues obliga a reescribir el canon entero.
 
-Se construye en tres entregas (desviacion anotada en el plan): obra y manuscrito,
-canon, y orquestacion con trazas. La revision es una sola.
+Se construye en cuatro entregas (desviacion anotada en el plan): obra y
+manuscrito, biblia y mundo, canon, y orquestacion con trazas. La revision es
+una sola.
 """
 
 import sqlalchemy as sa
@@ -128,6 +129,98 @@ def upgrade() -> None:
         sa.Column("autoria", sa.String, nullable=False),
         sa.Column("creada_en", sa.DateTime, nullable=False),
     )
+
+    # --- biblia y mundo ----------------------------------------------------
+    # RD-03: del Personaje vive aqui **solo la parte fija**. La movil
+    # -ubicacion, estado emocional, que sabe y desde cuando- se deriva del
+    # ledger (RF-CAN-06) y no tiene tabla propia: tenerla la desincronizaria
+    # del texto ya escrito, que es justo lo que definitions.md §4.5 previene.
+    op.create_table(
+        "personaje",
+        sa.Column("pj_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        sa.Column("nombre", sa.String, nullable=False),
+        sa.Column("apodos", sa.JSON),
+        sa.Column("edad", sa.Integer, nullable=False),
+        sa.Column("fisico_invariable", sa.String),
+        sa.Column("profesion", sa.String),
+        sa.Column("familia", sa.String),
+        sa.Column("historia_previa", sa.String),
+        sa.Column("herida_original", sa.String),
+        sa.Column("mentira_que_se_cree", sa.String),
+        sa.Column("deseo_consciente", sa.String),
+        sa.Column("necesidad_inconsciente", sa.String),
+        sa.Column("miedo_central", sa.String),
+        sa.Column("competencias", sa.JSON),
+        sa.Column("limitaciones", sa.JSON),
+        sa.Column("rol_narrativo", sa.String, nullable=False),
+        # RG-09 por esquema: ningun personaje menor entra en contenido
+        # romantico. El validador de RF-CAL-03 se apoya en esta columna.
+        sa.CheckConstraint("edad >= 0", name="ck_personaje_edad_no_negativa"),
+    )
+    op.create_table(
+        "perfil_de_voz",
+        sa.Column("perfil_de_voz_id", sa.String, primary_key=True),
+        sa.Column("pj_id", sa.String, sa.ForeignKey("personaje.pj_id"), nullable=False),
+        sa.Column("lexico_propio", sa.JSON),
+        sa.Column("muletillas", sa.JSON),
+        sa.Column("longitud_media_de_frase", sa.Float),
+        sa.Column("registro", sa.String),
+        sa.Column("uso_de_tacos", sa.String),
+        sa.Column("temas_que_evita", sa.JSON),
+        sa.Column("modo_de_mentir", sa.String),
+        sa.Column("humor", sa.String),
+        sa.Column("ritmo_de_pensamiento", sa.String),
+        sa.UniqueConstraint("pj_id"),
+    )
+    op.create_table(
+        "relacion",
+        sa.Column("rel_id", sa.String, primary_key=True),
+        sa.Column("personaje_a", sa.String, sa.ForeignKey("personaje.pj_id"), nullable=False),
+        sa.Column("personaje_b", sa.String, sa.ForeignKey("personaje.pj_id"), nullable=False),
+        sa.Column("tipo", sa.String, nullable=False),
+        sa.Column("conflicto_central", sa.String),
+        sa.Column("deuda_emocional", sa.String),
+        sa.Column("historia_compartida", sa.String),
+        # `temperatura` es [movil]: se deriva del ledger, no se guarda aqui.
+    )
+    op.create_table(
+        "lugar",
+        sa.Column("lug_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        sa.Column("nombre", sa.String, nullable=False),
+        sa.Column("tipo", sa.String),
+        sa.Column("sensorialidad_fija", sa.JSON),
+        sa.Column("accesos", sa.JSON),
+    )
+    # `distancias_a[]` con `tiempo_de_viaje` es una relacion entre lugares, no
+    # un atributo: es lo que hace comprobable RG-04 (RF-CAL-04, teletransporte).
+    op.create_table(
+        "distancia_entre_lugares",
+        sa.Column("origen_id", sa.String, sa.ForeignKey("lugar.lug_id"), primary_key=True),
+        sa.Column("destino_id", sa.String, sa.ForeignKey("lugar.lug_id"), primary_key=True),
+        sa.Column("tiempo_de_viaje", sa.String, nullable=False),
+    )
+    op.create_table(
+        "objeto",
+        sa.Column("obj_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        sa.Column("nombre", sa.String, nullable=False),
+        sa.Column("carga_simbolica", sa.String),
+        sa.Column("escena_de_plantado", sa.String, sa.ForeignKey("escena.escena_id")),
+        sa.Column("escena_de_pago", sa.String, sa.ForeignKey("escena.escena_id")),
+        # `dueno_actual`, `ubicacion_actual` y `estado` son [movil]: ledger.
+    )
+    op.create_table(
+        "regla_de_mundo",
+        sa.Column("regla_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        sa.Column("enunciado", sa.String, nullable=False),
+        sa.Column("alcance", sa.String),
+        sa.Column("excepciones", sa.JSON),
+        sa.Column("escena_en_que_se_establece", sa.String, sa.ForeignKey("escena.escena_id")),
+    )
+
     # Una sola version vigente por escena (RF-ESC-03).
     op.create_index(
         "ix_version_texto_una_vigente_por_escena",
@@ -141,6 +234,13 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_version_texto_una_vigente_por_escena", "version_texto")
     for tabla in (
+        "regla_de_mundo",
+        "objeto",
+        "distancia_entre_lugares",
+        "lugar",
+        "relacion",
+        "perfil_de_voz",
+        "personaje",
         "version_texto",
         "escena",
         "capitulo",

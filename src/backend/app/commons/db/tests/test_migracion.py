@@ -64,6 +64,44 @@ OBRA_Y_MANUSCRITO: dict[str, set[str]] = {
     },
 }
 
+# P-06b - biblia y mundo. RD-03: parte fija y parte movil del Personaje en
+# estructuras separadas; aqui solo vive la fija. La movil se deriva del ledger.
+BIBLIA_Y_MUNDO: dict[str, set[str]] = {
+    "personaje": {
+        "pj_id",
+        "obra_id",
+        "nombre",
+        "edad",
+        "fisico_invariable",
+        "herida_original",
+        "mentira_que_se_cree",
+        "deseo_consciente",
+        "necesidad_inconsciente",
+        "miedo_central",
+        "rol_narrativo",
+    },
+    "perfil_de_voz": {"perfil_de_voz_id", "pj_id", "registro", "muletillas"},
+    "relacion": {
+        "rel_id",
+        "personaje_a",
+        "personaje_b",
+        "tipo",
+        "conflicto_central",
+    },
+    "lugar": {"lug_id", "obra_id", "nombre", "sensorialidad_fija"},
+    "distancia_entre_lugares": {"origen_id", "destino_id", "tiempo_de_viaje"},
+    "objeto": {"obj_id", "obra_id", "nombre", "carga_simbolica"},
+    "regla_de_mundo": {
+        "regla_id",
+        "obra_id",
+        "enunciado",
+        "alcance",
+        "escena_en_que_se_establece",
+    },
+}
+
+TABLAS = {**OBRA_Y_MANUSCRITO, **BIBLIA_Y_MUNDO}
+
 
 @pytest.fixture(scope="module")
 def esquema(tmp_path_factory: pytest.TempPathFactory) -> dict[str, set[str]]:
@@ -91,17 +129,17 @@ def esquema(tmp_path_factory: pytest.TempPathFactory) -> dict[str, set[str]]:
     }
 
 
-@pytest.mark.parametrize("tabla", sorted(OBRA_Y_MANUSCRITO))
+@pytest.mark.parametrize("tabla", sorted(TABLAS))
 def test_la_migracion_crea_la_tabla(tabla: str, esquema: dict[str, set[str]]) -> None:
     assert tabla in esquema, f"falta la tabla {tabla}"
 
 
-@pytest.mark.parametrize("tabla", sorted(OBRA_Y_MANUSCRITO))
+@pytest.mark.parametrize("tabla", sorted(TABLAS))
 def test_las_columnas_llevan_los_nombres_de_definitions(
     tabla: str, esquema: dict[str, set[str]]
 ) -> None:
     """RD-02: no se traducen, no se abrevian, no se inventan sinonimos."""
-    faltan = OBRA_Y_MANUSCRITO[tabla] - esquema.get(tabla, set())
+    faltan = TABLAS[tabla] - esquema.get(tabla, set())
     assert not faltan, f"{tabla}: faltan columnas {sorted(faltan)}"
 
 
