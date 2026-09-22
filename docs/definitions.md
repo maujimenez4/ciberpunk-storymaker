@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 1.2 · **Fecha:** 2026-09-22 · **Dominio:** generación asistida de novela larga, género de referencia: romance
+**Versión:** 1.3 · **Fecha:** 2026-09-22 · **Dominio:** generación asistida de novela larga, género de referencia: romance
 
 ---
 
@@ -16,6 +16,7 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | --- | --- |
 | 1.0 | Primera versión de la ontología |
 | 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
+| 1.3 | Entra el código `VOZ-03` en la taxonomía (§8) y el axioma 13 (§11): la prosa debe usar la `persona` y el `tiempo_verbal` declarados en la `Obra`. Cubre un hueco detectado al cruzar las restricciones duras contra sus validadores —las dos se fijaban en la obra, se heredaban a la ficha y se repetían en el prompt, pero ningún validador las comprobaba en el texto |
 | 1.2 | `Defecto` deja de ser una tabla de códigos y pasa a clase con atributos (§8): la `cita` se ancla por desplazamiento a una `VersionDeTexto` y `hecho_canon_id` es obligatorio en `CAN-01`. Entran el término `Cita` (§8 y §13), los predicados `señala` y `choca_con` (§10) y los axiomas 11 y 12 (§11) |
 
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
@@ -326,6 +327,7 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | CON-03 | Personaje sabe lo que no debería | Reescribir el diálogo o adelantar la revelación |
 | VOZ-01 | POV que percibe lo imposible | Recortar a lo perceptible por el POV |
 | VOZ-02 | Salto de cabeza | Dividir en dos escenas o reencuadrar |
+| VOZ-03 | Persona o tiempo verbal fuera de lo declarado | Reescritura al parámetro de discurso de la `Obra` |
 | PRO-01 | Muletilla o cliché recurrente | Sustitución dirigida; ampliar lista negra |
 | PRO-02 | Resumen donde tocaba escena | Dramatizar el pasaje |
 | EST-01 | Escena sin giro de valor | Reescribir con objetivo y obstáculo, o eliminarla |
@@ -431,6 +433,7 @@ El validador debe poder comprobar mecánicamente:
 11. La `cita` de un `Defecto` es subcadena exacta de la `VersionDeTexto` que señala, en el
     `desplazamiento_inicio`–`desplazamiento_fin` declarado.
 12. Todo `Defecto` con `codigo` `CAN-01` declara un `hecho_canon_id` que existe en el grafo de canon.
+13. La prosa de una `Escena` usa la `persona` y el `tiempo_verbal` declarados en su `Obra`. Son restricciones duras heredadas, no preferencias de estilo: se comprueban en el texto, no solo se piden en el prompt.
 
 ---
 

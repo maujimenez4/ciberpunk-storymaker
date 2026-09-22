@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: aprobada          # borrador | en-revision | aprobada | implementada
-aprobada_por: maujimenez4 # lo rellena una persona, nunca un agente
+estado: en-revision       # borrador | en-revision | aprobada | implementada
+aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 ---
 
@@ -193,6 +193,8 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** (+T) |
 | RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa**, y **caduca**: reconstruir una escena antigua desde los almacenes de hoy da otro paquete (`verification.md` §4.1) | M | **D** |
 
+| RF-CTX-14 | Ninguna capa con origen declarado en `architecture.md` §4.8 llega **vacía** al paquete. Si una lo hace, es fallo del almacén que la surte y se lanza **antes de llamar al modelo**, como `ContextBudgetExceeded`. Sin esto, un paquete puede estar dentro de presupuesto y con el desglose cuadrado, y a la vez dejar al Escritor sin canon: el fallo de ensamblado que `verification.md` §6.1 señala como la correlación más fuerte, porque ciega a la vez al Escritor y al Continuista | M | **T** |
+
 **Las cuatro propiedades mínimas del ensamblador** (`verification.md` §2, fila de tests basados en propiedades). Son el conjunto que no puede faltar, no el conjunto completo:
 
 1. El desglose por capa **suma el total contado** (RF-CTX-06).
@@ -239,9 +241,10 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
 | RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_texto_id, desplazamiento_inicio, desplazamiento_fin)` **más el texto literal recortado** (D-06, `definitions.md` §8): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Si el código es `CAN-01`, el defecto declara además el `hecho_canon_id` con el que choca. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
-| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
+| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 y de RF-CAL-12 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
 | RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
 | RF-CAL-11 | Comprobar la **forma** de cada defecto en código y **sin volver a llamar al modelo** (`architecture.md` §8.3): el `codigo` está en la taxonomía, la `cita` es subcadena exacta de la `VersionDeTexto` que señala en el desplazamiento declarado (axioma 11), y si el `codigo` es `CAN-01` el `hecho_canon_id` existe en el grafo (axioma 12). El que no pasa las tres está **mal formado** | — | M | **T** |
+| RF-CAL-12 | Rechazar la prosa cuya **persona** o **tiempo verbal** no sean los declarados en la `Obra` (axioma 13). Es mecánico: persona gramatical y tiempo verbal se detectan por morfología, sin llamar al modelo. Cierra una restricción dura que hasta ahora sostenía **solo el prompt**, pese a que `CLAUDE.md` §10 exige que ninguna dependa solo de él | VOZ-03 | M | **T** |
 
 **Cobertura parcial reconocida.** `verification.md` §4.1 asigna a dos de estos requisitos un método de refuerzo porque lo mecánico solo cubre una parte, y callarlo sería dar por verificado lo que no lo está:
 
@@ -289,11 +292,11 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RD-06 | Tabla `ejecucion` con el registro completo de RI-14, una fila por llamada | M | **T** |
 | RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore`, a **1024 dimensiones** (D-02): `float[1024]` en `vec0`, BLOB legible por NumPy en `BruteForceStore` | M | **T** en ambos modos |
 | RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
-| RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado | M | **T** |
+| RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado. **En la v1 nada borra** —ledger *append-only*, versiones inmutables, canon por sustitución—, así que lo que se prueba es el **generador de identificadores**, no un ciclo de borrado y realta que no existe. El requisito se mantiene porque el esquema no debe impedirlo después | M | **T** |
 | RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
 | RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** (+T) |
 | RD-12 | Tabla `version_obra`: una fila por versión de biblia, y cada `Escena` guarda con cuál se escribió | M | **T** |
-| RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor | S | **T** |
+| RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor. **Ningún componente de la v1 la lee**: su único consumidor es el Editor de línea, que está fuera de alcance. Se escribe desde el primer día porque reconstruirla después exigiría releer el manuscrito entero; lo que la v1 verifica es que se escribe, no que sirva | S | **T** |
 | RD-14 | Tabla `defecto` con la forma de `definitions.md` §8: `defecto_id`, `codigo`, `version_texto_id`, `cita`, `desplazamiento_inicio`, `desplazamiento_fin` y `hecho_canon_id` (0..1, **obligatorio en `CAN-01`**). Es la salida del Continuista y lo que hace comprobable RF-CAL-11 | M | **T** |
 
 ### No funcionales
@@ -355,6 +358,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
 - [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
 - [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
+- [ ] **CA-14** — Una escena escrita en una persona o un tiempo verbal distintos de los de la `Obra` se **rechaza con `VOZ-03`**, y un paquete con una capa vacía **falla antes de llamar al modelo**.
 - [ ] **CA-14** — Un defecto con la **cita inventada** —que no es subcadena del texto— no bloquea la escena, no gasta intento y queda contado como mal formado.
 
 **Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
@@ -379,6 +383,7 @@ Los doce axiomas de `definitions.md` §11. Las dos diferidas lo están porque **
 | RG-10 · Ninguna escena excede el `nivel_de_calor` declarado | RF-CAL-02, contra el valor fijado en RF-OBR-01 |
 | RG-11 · La `cita` de un `Defecto` es subcadena exacta de la `VersionDeTexto` que señala | RF-CAL-11, en la comprobación de forma previa a G1a |
 | RG-12 · Todo `Defecto` con código `CAN-01` declara un `hecho_canon_id` que existe | RF-CAL-11, contra el grafo de canon |
+| RG-13 · La prosa usa la `persona` y el `tiempo_verbal` declarados en la `Obra` | RF-CAL-12, en G1a |
 
 ---
 
@@ -477,6 +482,8 @@ Todo requisito nace de un documento anterior. Solo son originales de esta spec l
 | RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
 | RNF-REN | **Propuesta de esta spec, sin medir** (D-07) |
 | RI-24, RF-ORQ-17, RF-ORQ-18, CA-13 | **Decisiones D-03, D-04 y D-08 de esta spec** |
+| RF-CAL-12, RG-13, CA-14 | `definitions.md` §8 y §11 (código `VOZ-03` y axioma 13, desde su v1.3); `CLAUDE.md` §8, regla 10 |
+| RF-CTX-14 | `architecture.md` §4.8; `verification.md` §6.1 |
 | RNF-FIA, RNF-OBS | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
 | RNF-SEG-01 a 04 | `architecture.md` §11; `CLAUDE.md` §10 |
 | RI-17 (parte **D**), RI-23, RF-CTX-13, RF-ORQ-15, RF-ORQ-16, RNF-SEG-05, RNF-SEG-06 | `verification.md` §2, §3 y §4.1 |

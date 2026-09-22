@@ -258,8 +258,9 @@ No usamos Atomic Design: `primitives` = sin lógica de negocio, reutilizable en 
 7. Cada ejecución guarda prompt, versión de biblia, IDs recuperados, modelo, semilla y coste.
 8. La `cita` de un defecto es subcadena exacta de la versión de texto que señala, en el desplazamiento declarado.
 9. Todo defecto con código `CAN-01` declara un `hecho_canon_id` que existe en el grafo de canon.
+10. La prosa de una escena usa la `persona` y el `tiempo_verbal` declarados en la obra: se comprueba en el texto, no solo se pide en el prompt.
 
-Las reglas 8 y 9 son los axiomas 11 y 12 de `docs/definitions.md` §11, y entraron con su v1.2: son las que hacen comprobable la forma de un defecto sin volver a llamar al modelo (`docs/architecture.md` §8.3).
+Las reglas 8 y 9 son los axiomas 11 y 12 de `docs/definitions.md` §11, y entraron con su v1.2: son las que hacen comprobable la forma de un defecto sin volver a llamar al modelo (`docs/architecture.md` §8.3). La regla 10 es el axioma 13, de su v1.3: cierra una restricción dura que hasta ahora sostenía solo el prompt.
 
 Si el código y `docs/definitions.md` no coinciden, **gana el documento**.
 
