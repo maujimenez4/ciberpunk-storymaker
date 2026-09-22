@@ -145,13 +145,8 @@ CANON: dict[str, set[str]] = {
         "valido",
         "creado_en",
     },
-    "fragmento": {
-        "fragmento_id",
-        "version_texto_id",
-        "texto",
-        "embedding",
-        "dimension",
-    },
+    # D-02: solo texto. Sin `embedding` ni `dimension`.
+    "fragmento": {"fragmento_id", "version_texto_id", "texto"},
 }
 
 # P-06d - orquestacion y trazas.
@@ -328,7 +323,7 @@ def test_la_migracion_no_depende_de_la_extension_vectorial() -> None:
     revision = (RAIZ / "alembic" / "versions" / "0001_inicial.py").read_text(
         encoding="utf-8"
     )
-    for senal in ("vec0", "USING vec", "sqlite_vec", "load_extension"):
+    for senal in ("vec0", "USING vec", "sqlite_vec", "load_extension", "embedding"):
         assert senal not in revision, f"la migracion depende de {senal}"
 
 

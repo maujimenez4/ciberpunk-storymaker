@@ -52,6 +52,18 @@ Además: el repositorio de origen **no declara licencia**. Se ha copiado el
 `SKILL.md` y sus 9 ficheros de `references/`; se han excluido `evals/` (25 KB de
 datos de prueba de la propia skill).
 
+### `sqlite-vec` — sin requisito que cubrir desde el 2026-09-22
+
+D-02 de la spec 001 retiro la busqueda vectorial: no hay extension, ni almacen
+de vectores, ni proveedor de *embeddings*. La ordenacion semantica la resuelve el
+proveedor de modelo (`CLAUDE.md` §4.2, `architecture.md` §4.6).
+
+La skill **se queda instalada** y sale de la tabla de §12 de `CLAUDE.md`: no
+cubre ningun requisito vigente. Se conserva porque la decision es reversible
+—`fragmento` guarda el texto y RF-CAN-12 lo hace reconstruible—, y si algun dia
+aparece una credencial de *embeddings*, volver cuesta un reindexado. Borrarla
+obligaria a reinstalarla y a repetir la anotacion de procedencia.
+
 ### `python-fastapi-ops`
 
 - Declara `depends-on: python-typing-ops, python-async-ops`. **No se han

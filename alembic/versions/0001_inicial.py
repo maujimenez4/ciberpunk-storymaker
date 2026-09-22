@@ -319,9 +319,9 @@ def upgrade() -> None:
         sa.Column("creado_en", sa.DateTime, nullable=False),
         sa.UniqueConstraint("escena_id"),
     )
-    # RD-07: el embedding se guarda como BLOB, legible por las dos
-    # implementaciones de VectorStore. `dimension` viaja con el vector para que
-    # cambiar de proveedor sea un reindexado detectable, no un fallo silencioso.
+    # RD-07, desde D-02: `fragmento` guarda **solo texto**. No hay vectores
+    # porque no hay proveedor de vectores; la ordenacion semantica la resuelve
+    # el proveedor de modelo sobre estos textos (architecture.md §4.6).
     op.create_table(
         "fragmento",
         sa.Column("fragmento_id", sa.String, primary_key=True),
@@ -332,8 +332,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("texto", sa.Text, nullable=False),
-        sa.Column("embedding", sa.LargeBinary),
-        sa.Column("dimension", sa.Integer),
     )
 
 

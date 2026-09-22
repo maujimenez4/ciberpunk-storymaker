@@ -23,7 +23,6 @@ dev = [
     "mypy>=1.13",
     "import-linter>=2.1",
     "httpx>=0.27",
-    "sqlite-vec>=0.1.9",
 ]
 
 [build-system]
@@ -50,10 +49,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 files = ["src/backend/app"]
-
-[[tool.mypy.overrides]]
-module = "sqlite_vec"
-ignore_missing_imports = true
 
 # Las seis reglas de dependencia de architecture.md §5.2. Fallan la build (CA-9).
 [tool.importlinter]

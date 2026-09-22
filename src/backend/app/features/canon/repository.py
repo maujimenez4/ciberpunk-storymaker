@@ -27,7 +27,6 @@ from pydantic import BaseModel, ConfigDict
 from app.commons.domain import Reloj
 
 if TYPE_CHECKING:
-    from app.commons.db import ProveedorDeEmbeddings
     from app.features.canon.service import Extraccion
 
 
@@ -266,14 +265,13 @@ class RepositorioDeCanon:
         escena_id: str,
         version_texto_id: str,
         extraccion: "Extraccion",
-        embeddings: "ProveedorDeEmbeddings",
         reloj: Reloj,
     ) -> None:
         """RF-CAN-03: o entra el conjunto, o no entra nada.
 
         Una sola conexion y una sola transaccion. Si algo revienta a mitad
-        -por ejemplo al calcular los embeddings, que van los ultimos-, el canon
-        y el ledger ya escritos se deshacen con ella.
+        -en el ultimo paso, al fragmentar-, el canon y el ledger ya escritos se
+        deshacen con ella.
         """
         import json
 
@@ -354,17 +352,10 @@ class RepositorioDeCanon:
                     "SELECT texto FROM version_texto WHERE version_texto_id = ?",
                     (version_texto_id,),
                 ).fetchone()[0]
-                vector = embeddings.incrustar(texto)  # 5. embeddings
-                conexion.execute(
-                    "INSERT INTO fragmento (fragmento_id, version_texto_id, texto,"
-                    " embedding, dimension) VALUES (?,?,?,?,?)",
-                    (
-                        f"frag-{uuid.uuid4().hex[:10]}",
-                        version_texto_id,
-                        texto,
-                        vector.tobytes(),
-                        len(vector),
-                    ),
+                conexion.execute(  # 5. fragmentos
+                    "INSERT INTO fragmento (fragmento_id, version_texto_id, texto)"
+                    " VALUES (?,?,?)",
+                    (f"frag-{uuid.uuid4().hex[:10]}", version_texto_id, texto),
                 )
         finally:
             conexion.close()
@@ -432,24 +423,40 @@ class RepositorioDeCanon:
                 )
             ]
 
-    def reconstruir_indice(self, embeddings: "ProveedorDeEmbeddings") -> int:
-        """RF-CAN-12: el indice se rehace entero desde el texto aprobado.
+    def reconstruir_fragmentos(self) -> int:
+        """RF-CAN-12: los fragmentos se rehacen enteros desde el texto aprobado.
 
-        Es lo que hace barato cambiar de proveedor de embeddings: el coste es un
-        reindexado, no una migracion rota.
+        Sigue valiendo sin vectores: garantiza que el indice nunca es una fuente
+        de verdad paralela al manuscrito.
         """
         with self._conexion() as conexion:
-            filas = conexion.execute(
-                "SELECT fragmento_id, texto FROM fragmento"
+            vigentes = conexion.execute(
+                "SELECT version_texto_id, texto FROM version_texto WHERE vigente = 1"
             ).fetchall()
-            for fragmento_id, texto in filas:
-                vector = embeddings.incrustar(texto)
+            conexion.execute("DELETE FROM fragmento")
+            for version_texto_id, texto in vigentes:
                 conexion.execute(
-                    "UPDATE fragmento SET embedding = ?, dimension = ?"
-                    " WHERE fragmento_id = ?",
-                    (vector.tobytes(), len(vector), fragmento_id),
+                    "INSERT INTO fragmento (fragmento_id, version_texto_id, texto)"
+                    " VALUES (?,?,?)",
+                    (f"frag-{uuid.uuid4().hex[:10]}", version_texto_id, texto),
                 )
-        return len(filas)
+        return len(vigentes)
+
+    def candidatos_para_ordenar(self, tope: int) -> dict[str, str]:
+        """Los fragmentos que vera el ordenador semantico (RNF-REN-04).
+
+        El filtro estructural va antes y hace el trabajo pesado; esto solo pone
+        el techo, para que el coste del ensamblado no crezca con la obra.
+        """
+        with self._conexion() as conexion:
+            return {
+                f[0]: f[1]
+                for f in conexion.execute(
+                    "SELECT fragmento_id, texto FROM fragmento"
+                    " ORDER BY rowid DESC LIMIT ?",
+                    (tope,),
+                )
+            }
 
 
 class EstadoEnT(BaseModel):

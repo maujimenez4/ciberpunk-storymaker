@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 
-from app.commons.db import DobleDeEmbeddings
 from app.commons.domain import RelojFijo
 from app.commons.llm import DobleDeModelo
 from app.features.canon import (
@@ -102,7 +101,6 @@ def _extraer(
         cliente=DobleDeModelo([texto]),
         prompt="prompt del extractor",
         repositorio=repositorio,
-        embeddings=DobleDeEmbeddings(8),
         reloj=reloj,
     )
 
@@ -122,9 +120,9 @@ def test_todo_hecho_cita_su_escena_de_origen(
 def test_la_escritura_ocurre_en_el_orden_declarado(
     repositorio: RepositorioDeCanon, escena: str, reloj: RelojFijo
 ) -> None:
-    """P-36, §4.4: canon -> ledger -> resumen -> hilos -> embeddings.
+    """P-36, §4.4: canon -> ledger -> resumen -> hilos -> fragmentos.
 
-    El orden importa porque los hilos citan escenas y los embeddings citan
+    El orden importa porque los hilos citan escenas y los fragmentos citan
     versiones de texto: invertirlo dejaria referencias colgando dentro de la
     misma transaccion.
     """
@@ -135,20 +133,8 @@ def test_la_escritura_ocurre_en_el_orden_declarado(
         "ledger",
         "resumen",
         "hilos",
-        "embeddings",
+        "fragmentos",
     ]
-
-
-class EmbeddingsQueFallan:
-    """Revienta al incrustar: es el **ultimo** paso de la consolidacion.
-
-    Es el unico doble que prueba de verdad RF-CAN-03. Un fallo de validacion no
-    sirve: se detecta antes de abrir la transaccion, asi que el test pasaria sin
-    que hubiera transaccion ninguna.
-    """
-
-    def incrustar(self, texto: str) -> object:
-        raise RuntimeError("el proveedor de embeddings se cayo")
 
 
 def test_una_escena_rechazada_no_deja_rastro(
@@ -156,20 +142,20 @@ def test_una_escena_rechazada_no_deja_rastro(
 ) -> None:
     """RF-CAN-02 y RF-CAN-03: o entra todo, o no entra nada.
 
-    El fallo se fuerza en el ultimo paso, cuando el canon, el ledger, el resumen
-    y los hilos **ya estan escritos**. Es el caso peligroso: sin transaccion, la
-    escena rechazada dejaria hechos en el canon y el sintoma apareceria capitulos
-    despues como una contradiccion que nadie sabe explicar.
+    El fallo se fuerza en el **ultimo** paso, cuando el canon, el ledger, el
+    resumen y los hilos ya estan escritos: se apunta a una version de texto que
+    no existe, asi que la consolidacion revienta al ir a fragmentarla. Es el
+    caso peligroso, y el unico que prueba de verdad que hay transaccion. Un
+    fallo de validacion no serviria: se detecta antes de abrirla.
     """
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         extraer_de_escena(
             serie_id="s1",
             escena_id=escena,
-            version_texto_id="vt1",
+            version_texto_id="vt-que-no-existe",
             cliente=DobleDeModelo([json.dumps(EXTRACCION)]),
             prompt="p",
             repositorio=repositorio,
-            embeddings=EmbeddingsQueFallan(),  # type: ignore[arg-type]
             reloj=reloj,
         )
 
@@ -217,17 +203,27 @@ def test_el_extractor_escribe_la_lista_negra_de_ngramas(
     assert "la grieta del muro" in repositorio.ngramas_vetados("o1")
 
 
-def test_el_indice_vectorial_se_reconstruye_entero_desde_el_texto(
+def test_los_fragmentos_se_reconstruyen_enteros_desde_el_texto(
     repositorio: RepositorioDeCanon, escena: str, reloj: RelojFijo
 ) -> None:
-    """RF-CAN-12. Es lo que hace barato cambiar de proveedor de embeddings: el
-    coste es un reindexado, no una migracion rota."""
+    """RF-CAN-12. Sin vectores sigue valiendo: garantiza que el indice nunca es
+    una fuente de verdad paralela al manuscrito."""
     _extraer(repositorio, escena, reloj)
     antes = repositorio.fragmentos_de(escena)
 
-    repositorio.reconstruir_indice(DobleDeEmbeddings(8))
+    repositorio.reconstruir_fragmentos()
 
     assert repositorio.fragmentos_de(escena) == antes
+
+
+def test_los_candidatos_a_ordenar_respetan_el_tope(
+    repositorio: RepositorioDeCanon, escena: str, reloj: RelojFijo
+) -> None:
+    """RNF-REN-04: sin techo, el coste del ensamblado creceria con la obra."""
+    _extraer(repositorio, escena, reloj)
+
+    assert len(repositorio.candidatos_para_ordenar(tope=50)) <= 50
+    assert repositorio.candidatos_para_ordenar(tope=0) == {}
 
 
 def test_corregir_un_hecho_registra_uno_nuevo_y_cita_al_anterior(

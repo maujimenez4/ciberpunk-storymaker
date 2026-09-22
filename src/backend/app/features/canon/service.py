@@ -16,15 +16,14 @@ transaccion**, y la validacion entera ocurre **antes** de abrirla.
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from app.commons.db import ProveedorDeEmbeddings
 from app.commons.domain import Reloj
 from app.commons.llm import ClienteDeModelo
 from app.features.canon.repository import RepositorioDeCanon
 
-# §4.4 fija este orden. No es estetico: los hilos citan escenas y los embeddings
+# §4.4 fija este orden. No es estetico: los hilos citan escenas y los fragmentos
 # citan versiones de texto, asi que invertirlo dejaria referencias colgando
 # dentro de la propia transaccion.
-ORDEN_DE_ESCRITURA = ("canon", "ledger", "resumen", "hilos", "embeddings")
+ORDEN_DE_ESCRITURA = ("canon", "ledger", "resumen", "hilos", "fragmentos")
 
 
 class ExtraccionInvalida(ValueError):
@@ -92,7 +91,6 @@ def extraer_de_escena(
     cliente: ClienteDeModelo,
     prompt: str,
     repositorio: RepositorioDeCanon,
-    embeddings: ProveedorDeEmbeddings,
     reloj: Reloj,
 ) -> ResultadoDeExtraccion:
     """RF-CAN-01 a RF-CAN-03: el unico camino por el que crece la memoria."""
@@ -109,7 +107,6 @@ def extraer_de_escena(
         escena_id=escena_id,
         version_texto_id=version_texto_id,
         extraccion=extraccion,
-        embeddings=embeddings,
         reloj=reloj,
     )
     return ResultadoDeExtraccion(
