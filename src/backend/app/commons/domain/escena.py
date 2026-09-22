@@ -16,7 +16,7 @@ Sin framework (§5.2 regla 3): esto se prueba sin base de datos y sin FastAPI.
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 EDAD_MINIMA_PARA_CONTENIDO_ROMANTICO = 18
 
@@ -46,7 +46,7 @@ class RolNarrativo(StrEnum):
 class PersonajeEnEscena(BaseModel):
     """Lo que la escena necesita saber de quien aparece en ella."""
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(frozen=True)
 
     pj_id: str = Field(min_length=1)
     nombre: str = Field(min_length=1)
@@ -57,7 +57,7 @@ class PersonajeEnEscena(BaseModel):
 class EscenaPlanificada(BaseModel):
     """Una escena tal como sale del outline, antes de tener prosa."""
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(frozen=True)
 
     escena_id: str = Field(min_length=1)
     # Axioma 8: exactamente un POV. La cadena vacia no es un POV.
