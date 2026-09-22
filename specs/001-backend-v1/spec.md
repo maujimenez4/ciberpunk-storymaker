@@ -223,6 +223,7 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | RF-ORQ-16 | Ningún agente narrativo dispone de herramientas: no accede a los almacenes, ni al sistema de ficheros, ni a la red fuera del cliente de modelo. Los prompts los **carga el orquestador**, y el Escritor solo ve el paquete recibido (`architecture.md` §3.5) | M | **A** |
 | RF-ORQ-17 | Tras la edición humana de un trabajo en `ESCALADA`, el trabajo reentra por **`VALIDANDO`** (D-08). Esa revalidación **no incrementa** el contador de RF-ORQ-07, y un fallo devuelve a `ESCALADA`, nunca a `REPARANDO` | M | **T** |
 | RF-ORQ-18 | El autor puede **aceptar** una versión pese a un defecto bloqueante. La aceptación registra en el `trabajo` qué defecto se anuló y quién lo anuló; sin ese registro no se avanza a `EXTRAYENDO`. Es lo que impide que un validador equivocado deje el trabajo atrapado, contra la postcondición de CU-04 | M | **T** |
+| RF-ORQ-19 | Un defecto **mal formado** (RF-CAL-11) no bloquea, **no consume reintento** y no entra en el prompt de reparación. Tampoco se descarta en silencio: se registra y se cuenta aparte (`architecture.md` §8.3 y §9) | M | **T** |
 
 *RF-ORQ-12 no existe: se retiró en revisión por ser una convención permanente de `CLAUDE.md` §6 —el `router.py` no contiene lógica— y no un requisito de esta spec. Los identificadores no se renumeran.*
 
@@ -237,9 +238,10 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | RF-CAL-05 | Detectar uso de información sin `sabe_desde` de escena anterior | CON-03 | M | **T** |
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
-| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_de_texto_id, inicio, fin)` en desplazamiento de caracteres **más el texto literal recortado** (D-06): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
+| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_texto_id, desplazamiento_inicio, desplazamiento_fin)` **más el texto literal recortado** (D-06, `definitions.md` §8): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Si el código es `CAN-01`, el defecto declara además el `hecho_canon_id` con el que choca. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
 | RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
 | RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
+| RF-CAL-11 | Comprobar la **forma** de cada defecto en código y **sin volver a llamar al modelo** (`architecture.md` §8.3): el `codigo` está en la taxonomía, la `cita` es subcadena exacta de la `VersionDeTexto` que señala en el desplazamiento declarado (axioma 11), y si el `codigo` es `CAN-01` el `hecho_canon_id` existe en el grafo (axioma 12). El que no pasa las tres está **mal formado** | — | M | **T** |
 
 **Cobertura parcial reconocida.** `verification.md` §4.1 asigna a dos de estos requisitos un método de refuerzo porque lo mecánico solo cubre una parte, y callarlo sería dar por verificado lo que no lo está:
 
@@ -279,7 +281,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RD-01 | El esquema implementa las clases necesarias en la v1: `Serie`, `Obra`, `VersionDeObra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Ejecucion`, y las tablas `trabajo` y `ngrama_vetado`. `Prompt` **no es una tabla**: es un fichero del repositorio del que `ejecucion` guarda `prompt_id`, `version` y `hash` | M | **A** |
+| RD-01 | El esquema implementa las clases necesarias en la v1: `Serie`, `Obra`, `VersionDeObra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Defecto`, `Ejecucion`, y las tablas `trabajo` y `ngrama_vetado`. `Prompt` **no es una tabla**: es un fichero del repositorio del que `ejecucion` guarda `prompt_id`, `version` y `hash` | M | **A** |
 | RD-02 | Nombres de tablas, columnas y enumeraciones **son los de `definitions.md`**: no se traducen, no se abrevian, no se inventan sinónimos | M | **I** (+A) |
 | RD-03 | Parte fija y parte móvil del `Personaje` en estructuras separadas | M | **A** |
 | RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
@@ -292,6 +294,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** (+T) |
 | RD-12 | Tabla `version_obra`: una fila por versión de biblia, y cada `Escena` guarda con cuál se escribió | M | **T** |
 | RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor | S | **T** |
+| RD-14 | Tabla `defecto` con la forma de `definitions.md` §8: `defecto_id`, `codigo`, `version_texto_id`, `cita`, `desplazamiento_inicio`, `desplazamiento_fin` y `hecho_canon_id` (0..1, **obligatorio en `CAN-01`**). Es la salida del Continuista y lo que hace comprobable RF-CAL-11 | M | **T** |
 
 ### No funcionales
 
@@ -323,7 +326,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RNF-FIA-02 | `FalloDeProveedor` se reintenta con espera creciente, hasta 3 veces; después `FALLIDA` | M | **T** |
 | RNF-FIA-03 | Ninguna ejecución depende de que la extensión vectorial esté cargada | M | **T** en ambos modos |
 | RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado. El plazo **depende del tipo de paso** (D-04): 30 s los de código (`ENSAMBLANDO`, `VALIDANDO`, `REPARANDO`), 600 s los que llaman al modelo (`PLANIFICANDO`, `ESCRIBIENDO`, `EXTRAYENDO`) | M | **T** |
-| RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
+| RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, **tasa de defectos mal formados** (`architecture.md` §9), tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
 | RNF-OBS-02 | Métricas de concurrencia: tiempo de espera por turno y número de esperas vencidas | M | **D** |
 | RNF-OBS-03 | La traza es **estructural, no textual**: ni prompts de producción ni fragmentos de manuscrito en los logs por defecto | M | **A** |
 | RNF-SEG-01 | Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt | M | **T** |
@@ -352,6 +355,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
 - [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
 - [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
+- [ ] **CA-14** — Un defecto con la **cita inventada** —que no es subcadena del texto— no bloquea la escena, no gasta intento y queda contado como mal formado.
 
 **Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
 
@@ -359,7 +363,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 
 ## Reglas de dominio afectadas
 
-Los axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no son comprobables con un solo capítulo**, no porque sean opcionales.
+Los doce axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no son comprobables con un solo capítulo**, no porque sean opcionales; las dos últimas entraron con la v1.2 del documento y son las que dan forma comprobable al defecto.
 
 | Regla | Cómo se respeta |
 | --- | --- |
@@ -373,6 +377,8 @@ Los axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no so
 | RG-08 · Toda `Escena` tiene un `pov` y un giro de valor no nulo | RF-OUT-03 al planificar y RF-CAL-01 al validar |
 | RG-09 · Ningún contenido romántico o sexual con menores de 18 | RF-CAL-03, **por esquema**, sin excepción |
 | RG-10 · Ninguna escena excede el `nivel_de_calor` declarado | RF-CAL-02, contra el valor fijado en RF-OBR-01 |
+| RG-11 · La `cita` de un `Defecto` es subcadena exacta de la `VersionDeTexto` que señala | RF-CAL-11, en la comprobación de forma previa a G1a |
+| RG-12 · Todo `Defecto` con código `CAN-01` declara un `hecho_canon_id` que existe | RF-CAL-11, contra el grafo de canon |
 
 ---
 
@@ -401,6 +407,8 @@ Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí
 | Red teaming, con el modelo de amenaza del bucle (§3) | RNF-SEG-05 y RNF-SEG-06, más CA-12. La vía realista no es un atacante externo: es el Extractor convirtiendo en canon prosa que el propio sistema generó |
 | Comprobación de modelos: **no aplicable** (§3) | Lo es mientras se mantenga **una escena en vuelo por obra** (RF-ORQ-11). Levantar esa restricción no es subir un número: obliga a reabrir la decisión |
 | Tests de mutación: **aplazados** (§2) | Fuera de alcance; CA-4 hace su trabajo a mano mientras tanto |
+| Puntos ciegos declarados (§2.1 y §3.1) | Ningún método de esta spec se lee solo: la comprobación de forma de RF-CAL-11 cierra el punto ciego que §2.1 atribuía a los tests de contrato —el defecto bien formado con la cita inventada— y no alcanza el resto |
+| Matriz de riesgo × validadores (§7) | La v1 deja **siete riesgos descubiertos**. Dos no tienen método en ninguna fase: el hecho nuevo que entra en el canon y el dato que le faltó al paquete. Ni RF-CAL-11 ni RNF-SEG-05 los alcanzan |
 
 ---
 
@@ -408,9 +416,9 @@ Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí
 
 Términos del dominio usados en esta spec. Todos existen ya en `docs/definitions.md`; **ninguno es nuevo**, así que no hay nada que proponer ni confirmar.
 
-`Obra` · `Parte` · `Capitulo` · `Escena` · `Beat` · `Biblia` · `Brief` · `Outline` · `FichaDeEscena` · `Personaje` · `PerfilDeVoz` · `Relacion` · `Lugar` · `Objeto` · `ReglaDeMundo` · `Evento` · `HechoCanon` · `Plantado` · `Pago` · `Revelacion` · `HiloNarrativo` · `EstadoEnT` · `Ledger` · `PaqueteDeContexto` · `MuestraAncla` · `BeatDeGenero` · `NivelDeCalor` · `Tropo` · `PuertaDeCalidad` · `Defecto` · `Ejecucion` · `VersionDeTexto` · `VersionDeObra` · `Prompt` · `Serie`
+`Obra` · `Parte` · `Capitulo` · `Escena` · `Beat` · `Biblia` · `Brief` · `Outline` · `FichaDeEscena` · `Personaje` · `PerfilDeVoz` · `Relacion` · `Lugar` · `Objeto` · `ReglaDeMundo` · `Evento` · `HechoCanon` · `Plantado` · `Pago` · `Revelacion` · `HiloNarrativo` · `EstadoEnT` · `Ledger` · `PaqueteDeContexto` · `MuestraAncla` · `BeatDeGenero` · `NivelDeCalor` · `Tropo` · `PuertaDeCalidad` · `Defecto` · `Cita` · `Ejecucion` · `VersionDeTexto` · `VersionDeObra` · `Prompt` · `Serie`
 
-Atributos citados: `pov` · `lugar` · `presentes[]` · `testigos[]` · `objetivo_del_pov` · `obstaculo` · `valor_entrada` · `valor_salida` · `orden_discurso` · `tiempo_historia` · `tiempo_de_viaje` · `escena_de_origen` · `sabe_desde` · `persona` · `tiempo_verbal` · `esquema_de_pov` · `nivel_de_calor` · `distancia_psiquica` · `densidad_de_dialogo_objetivo` · `extension_objetivo` · `promesa_de_apertura` · `run_id`
+Atributos citados: `pov` · `lugar` · `presentes[]` · `testigos[]` · `objetivo_del_pov` · `obstaculo` · `valor_entrada` · `valor_salida` · `orden_discurso` · `tiempo_historia` · `tiempo_de_viaje` · `escena_de_origen` · `sabe_desde` · `persona` · `tiempo_verbal` · `esquema_de_pov` · `nivel_de_calor` · `distancia_psiquica` · `densidad_de_dialogo_objetivo` · `extension_objetivo` · `promesa_de_apertura` · `run_id` · `codigo` · `version_texto_id` · `cita` · `desplazamiento_inicio` · `desplazamiento_fin` · `hecho_canon_id`
 
 Un término que aquí no aparece y conviene no confundir: `trabajo` es una tabla de orquestación (`architecture.md` §3.2), **no** una clase del dominio.
 
@@ -465,14 +473,15 @@ Todo requisito nace de un documento anterior. Solo son originales de esta spec l
 | RF-CAL | `definitions.md` §8, §11; `architecture.md` §8.3; `domain-knowledge.md` §11, §12 |
 | RF-CAN | `architecture.md` §4; `definitions.md` §4.5, §7; `domain-knowledge.md` §7.1 |
 | RF-MAN | `architecture.md` §11 |
-| RD-01 a RD-13 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
+| RD-01 a RD-14 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
 | RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
 | RNF-REN | **Propuesta de esta spec, sin medir** (D-07) |
 | RI-24, RF-ORQ-17, RF-ORQ-18, CA-13 | **Decisiones D-03, D-04 y D-08 de esta spec** |
 | RNF-FIA, RNF-OBS | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
 | RNF-SEG-01 a 04 | `architecture.md` §11; `CLAUDE.md` §10 |
 | RI-17 (parte **D**), RI-23, RF-CTX-13, RF-ORQ-15, RF-ORQ-16, RNF-SEG-05, RNF-SEG-06 | `verification.md` §2, §3 y §4.1 |
-| RG-01 a RG-10 | `definitions.md` §11 |
+| RG-01 a RG-12 | `definitions.md` §11; los axiomas 11 y 12, desde su v1.2 |
+| RF-CAL-08, RF-CAL-11, RF-ORQ-19, RD-14, RG-11, RG-12 | `definitions.md` §8 y §10 (predicados `señala` y `choca_con`); `architecture.md` §8.3 y §9 |
 
 Lo que `docs/verification.md` clasifica como **U — no verificable** no aparece como requisito, y se enumera en el apartado siguiente.
 
