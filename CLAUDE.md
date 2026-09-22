@@ -87,7 +87,7 @@ Antes de salir de borrador, una spec cierra:
 2. **Alcance y fuera de alcance.** Lo segundo importa tanto como lo primero.
 3. **Criterios de aceptación observables.** Cada uno acabará siendo un test; si no se puede comprobar, no es un criterio.
 4. **Reglas de dominio de §8 afectadas** y cómo se respetan.
-5. **Impacto técnico.** Qué capa del presupuesto de §4.1 crece, si hay migración de esquema y si el cambio funciona con y sin extensión vectorial.
+5. **Impacto técnico.** Qué capa del presupuesto de §4.1 crece y si hay migración de esquema.
 6. **Vocabulario.** Todos los términos usados existen en `docs/definitions.md`.
 
 Lo que no puedas cerrar preguntando se escribe en **Preguntas abiertas**. Mientras quede una, la spec no se aprueba: no se aprueba a medias ni se deja «para decidir durante la implementación».
@@ -142,7 +142,7 @@ Cada paso del plan, en este orden:
 | Backend | **FastAPI** (Python 3.12+), Pydantic v2 | Async por defecto, OpenAPI como contrato |
 | Frontend | **React 19 + TypeScript + Vite** | SPA; cliente de API generado del OpenAPI |
 | Contexto del modelo | **Límite duro de 100.000 tokens** | Presupuesto por capa, contador obligatorio, fallo antes de llamar |
-| Persistencia | **SQLite**, con o sin extensión vectorial | El código debe funcionar en ambos modos |
+| Persistencia | **SQLite**, un fichero por obra | Sin segunda base de datos y sin extensiones |
 
 ### 4.1 El límite de 100.000 tokens
 
@@ -167,12 +167,12 @@ Es la restricción de diseño más importante del proyecto.
 - La reserva del 10 % existe para que el reintento con el defecto añadido siga cabiendo.
 - Ese tope es **por llamada**, y es el único techo de tokens. La concurrencia se acota aparte, **contando llamadas en vuelo, no sumando tokens** (`docs/architecture.md` §2.2): una llamada al modelo por proceso. Si no hay turno, la llamada espera; **nunca se recorta el paquete para hacerla caber**.
 
-### 4.2 SQLite con y sin vectores
+### 4.2 Persistencia y recuperación semántica
 
-- La búsqueda semántica vive detrás de la interfaz `VectorStore`, con dos implementaciones: `SqliteVecStore` (extensión `sqlite-vec` cargada) y `BruteForceStore` (NumPy sobre embeddings en BLOB).
-- En arranque se detecta si la extensión carga; si no, se degrada y se registra un aviso. **El sistema nunca falla por falta de extensión vectorial.**
-- Recuperación **híbrida y en este orden**: filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia.
-- WAL activado, `foreign_keys=ON`, `busy_timeout`. Migraciones con Alembic desde el primer commit.
+- SQLite, un fichero por obra. WAL activado, `foreign_keys=ON`, `busy_timeout`. Migraciones con Alembic desde el primer commit.
+- Recuperación **híbrida y en este orden**: filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → **ordenación semántica** sobre el conjunto ya filtrado → fusión con recencia. El orden no es negociable: ordenar por parecido sin filtrar antes trae escenas parecidas, no pertinentes.
+- **El paso semántico lo resuelve el mismo proveedor que genera**, a través del cliente de modelo. No hay extensión vectorial, ni almacén de vectores, ni proveedor de *embeddings*: el sistema funciona con una sola credencial y sin descargar ningún modelo.
+- **Consecuencia aceptada, y conviene que esté escrita.** La ordenación semántica pasa a ser una señal con varianza, así que el paquete deja de ser reproducible: dos ensamblados del mismo estado pueden devolver otro orden en la capa de memoria recuperada. Las otras siete capas siguen siendo deterministas, y `ejecucion` guarda los IDs recuperados, de modo que **una ejecución concreta sigue siendo auditable aunque no repetible**. Se cambió a propósito el 2026-09-22, sabiendo lo que costaba.
 - Toda escritura de estado pasa por el ledger *append-only*; `estado_en_t` es una vista derivada, **jamás** una tabla que se edita.
 
 ---
@@ -343,7 +343,6 @@ Hay una skill por requisito técnico de §4, más tres instaladas por decisión 
 | --- | --- | --- |
 | `python-fastapi-ops` | Backend FastAPI | `src/backend/app/features/*/router.py`, `service.py` |
 | `pydantic` | Pydantic v2 | `schemas.py`, `commons/domain/` |
-| `sqlite-vec` | Persistencia **con** extensión vectorial | `features/contexto/`, `commons/db/` |
 | `sqlite-ops` | Persistencia **sin** extensión: WAL, índices, migraciones | `commons/db/`, `repository.py`, Alembic |
 | `typescript-best-practices` | Frontend TypeScript estricto | `src/frontend/src/` |
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
@@ -401,7 +400,7 @@ pnpm lint                            # incluye import/no-restricted-paths
 - [ ] Frontend: `pnpm typecheck` y `pnpm lint` pasan (incluye las reglas de frontera).
 - [ ] No se ha creado ningún import entre features, ni de `shared`/`commons` hacia una feature.
 - [ ] Si se tocó el contexto: el desglose de tokens por capa sigue dentro de los topes de §4.1.
-- [ ] Si se tocó el esquema: hay migración de Alembic y funciona con y sin extensión vectorial.
+- [ ] Si se tocó el esquema: hay migración de Alembic.
 - [ ] La spec y el plan reflejan lo que de verdad se implementó, y la spec queda en `implementada`.
 - [ ] `docs/` está al día si cambió el vocabulario, la arquitectura o la verificación.
 - [ ] Ningún cambio de estado de aprobación lo ha hecho un agente por su cuenta.

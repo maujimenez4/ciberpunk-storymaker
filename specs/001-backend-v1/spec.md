@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: aprobada          # borrador | en-revision | aprobada | implementada
-aprobada_por: maujimenez4 # lo rellena una persona, nunca un agente
+estado: en-revision       # borrador | en-revision | aprobada | implementada
+aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 ---
 
@@ -132,13 +132,13 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RI-14 | Toda llamada registra `run_id`, escena, `prompt_id` con su `version` y **`hash` del fichero**, `version_obra`, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto | M | **T** |
 | RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** (+A) |
 | RI-16 | SQLite con `WAL`, `foreign_keys=ON` y `busy_timeout`. Migraciones con Alembic desde el primer commit | M | **T** |
-| RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial.** Además del paso de la suite en ambos modos, se demuestra un **arranque real con la extensión ausente** | M | **T** en ambos modos (+D) |
+| RI-17 | La **ordenación semántica** vive tras una interfaz propia y la resuelve el proveedor de modelo sobre el conjunto ya filtrado. No hay extensión vectorial ni almacén de vectores: el sistema funciona con una sola credencial (D-02) | M | **T**, con un doble |
 | RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** en el formato de RF-CAL-08 | M | **T** |
 | RI-19 | Existe forma de cancelar un trabajo en curso; el efecto es `CANCELADA` en el primer punto seguro, nunca a mitad de una escritura | S | **T** |
-| RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto. La v1 usa **Voyage AI `voyage-3`, 1024 dimensiones** (D-02); **no** coincide con el de generación porque la API de Anthropic no ofrece *embeddings* | M | **A** |
-| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor de generación, modelo, clave del proveedor de *embeddings*, llamadas simultáneas permitidas (**1**, D-03), *timeout* de espera de turno (**300 s**, D-03), **plazo por paso de código (30 s) y plazo por paso con llamada al modelo (600 s)** (D-04), N de los *snapshots* (**5**, D-01), dimensión de los *embeddings* (**1024**, D-02) y ruta del fichero | M | **T** |
+| RI-20 | El ordenador semántico está tras una interfaz propia. **Su consumo sí cuenta**: es una llamada al modelo, pasa por el turno único de §2.2 y se registra en `ejecucion` como cualquier otra | M | **A** (+T) |
+| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor, modelo, llamadas simultáneas permitidas (**1**, D-03), *timeout* de espera de turno (**300 s**, D-03), **plazo por paso de código (30 s) y plazo por paso con llamada al modelo (600 s)** (D-04), N de los *snapshots* (**5**, D-01), tope de candidatos a ordenar (**50**, RNF-REN-04) y ruta del fichero. Desde D-02 **no hay segunda credencial**: la de generación es la única | M | **T** |
 | RI-24 | El plazo de un paso con llamada al modelo **debe superar** el *timeout* de espera de turno más la duración de la llamada; el arranque rechaza una configuración que no lo cumpla. Si el plazo del paso vence antes, RNF-TOK-05 no llega a ejecutarse nunca y queda como código muerto | M | **T** |
-| RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
+| RI-22 | El arranque registra, una vez, qué implementación del ordenador semántico quedó activa: la real o el doble | M | **T** |
 | RI-23 | El backend **publica su esquema OpenAPI** y toda ruta declara su modelo de respuesta: el contrato con cualquier cliente es el esquema generado, no una descripción escrita aparte | M | **A** (+T) |
 
 *Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3 (principio 5), §4.2, §4 (OpenAPI como contrato), §6; RI-23 y la parte **D** de RI-17, `verification.md` §2 (tests de contrato) y §4.1.*
@@ -179,19 +179,19 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-CTX-01 | Ensamblar el `PaqueteDeContexto` **por código**: mismo estado de almacenes y misma semilla producen el mismo paquete | M | **T**, propiedad |
+| RF-CTX-01 | ~~Ensamblar el `PaqueteDeContexto` por código, reproducible~~. **Retirado por D-02.** La ordenación semántica es una señal con varianza, así que el paquete no se puede prometer reproducible. Lo que sigue siendo determinista —y es donde un fallo hace daño en silencio— es el presupuesto, el recorte y el orden de las capas: RF-CTX-02 a RF-CTX-06 | — | — |
 | RF-CTX-02 | Respetar los topes por capa de `architecture.md` §2.1 (5.000 / 10.000 / 20.000 / 15.000 / 20.000 / 10.000 / 10.000 / 10.000) | M | **T** |
 | RF-CTX-03 | El recorte es **por capa**: si una se pasa, se recorta esa y no las vecinas, en el orden declarado | M | **T**, propiedad |
 | RF-CTX-04 | Las capas **constitucional** e **instrucción** no se recortan nunca | M | **A** (+T, propiedad) |
 | RF-CTX-05 | Si tras recortar no cabe, lanzar `ContextBudgetExceeded`. **Nunca truncar por el final** | M | **T**, propiedad |
 | RF-CTX-06 | Devolver el desglose por capa junto al paquete y persistirlo en `ejecucion`; el desglose **suma el total contado** | M | **T**, propiedad |
-| RF-CTX-07 | Recuperación **híbrida en este orden**: filtro estructural → similitud semántica sobre lo ya filtrado → fusión con recencia | M | **T** |
+| RF-CTX-07 | Recuperación **híbrida en este orden**: filtro estructural → ordenación semántica sobre lo ya filtrado → fusión con recencia | M | **T** |
 | RF-CTX-08 | Inyectar `MuestraAncla` de prosa aprobada del mismo POV | M | **T** |
 | RF-CTX-09 | Colocar lo importante al **principio y al final** | S | **I** |
 | RF-CTX-10 | Exponer paquete y desglose para depuración | M | **D** |
 | RF-CTX-11 | La reserva del 10 % permanece libre en la primera llamada: el reintento con el defecto añadido debe caber | M | **T** |
 | RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** (+T) |
-| RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa**, y **caduca**: reconstruir una escena antigua desde los almacenes de hoy da otro paquete (`verification.md` §4.1) | M | **D** |
+| RF-CTX-13 | Desde una fila de `ejecucion` se reconstruye **qué se envió**: prompt por su `hash`, IDs recuperados y desglose por capa. Lo reproducible es la **auditoría** de una ejecución concreta, no el paquete de una nueva: la ordenación semántica puede devolver otro orden | M | **D** |
 
 | RF-CTX-14 | Ninguna capa con origen declarado en `architecture.md` §4.8 llega **vacía** al paquete. Si una lo hace, es fallo del almacén que la surte y se lanza **antes de llamar al modelo**, como `ContextBudgetExceeded`. Sin esto, un paquete puede estar dentro de presupuesto y con el desglose cuadrado, y a la vez dejar al Escritor sin canon: el fallo de ensamblado que `verification.md` §6.1 señala como la correlación más fuerte, porque ciega a la vez al Escritor y al Continuista | M | **T** |
 
@@ -259,7 +259,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | --- | --- | --- | --- |
 | RF-CAN-01 | **Solo el Extractor** escribe memoria de largo plazo, y solo desde `EXTRAYENDO` | M | **A** (+T) |
 | RF-CAN-02 | Una escena rechazada **no deja rastro**: ni canon, ni ledger, ni índice | M | **T** |
-| RF-CAN-03 | Escribir en una transacción por escena: canon → ledger → resumen → hilos → *embeddings*. O entra todo, o nada | M | **T** |
+| RF-CAN-03 | Escribir en una transacción por escena: canon → ledger → resumen → hilos → fragmentos. O entra todo, o nada | M | **T** |
 | RF-CAN-04 | Todo `HechoCanon` cita la `escena_de_origen` | M | **T** |
 | RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** (+T) |
 | RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada **N = 5** escenas (D-01; configurable por RI-21). No es una tabla editable | M | **A** (+T) |
@@ -268,7 +268,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RF-CAN-09 | No se compactan nunca la capa constitucional, los hechos de canon ni el ledger | M | **A** |
 | RF-CAN-10 | Registrar `Plantado`, `Pago` y `HiloNarrativo` con su estado. La v1 los **registra**; no los audita | S | **T** |
 | RF-CAN-11 | Derivar el conocimiento de los `testigos[]` de cada `Evento`: es lo que alimenta RF-CAL-05 | M | **T** |
-| RF-CAN-12 | El índice vectorial es **reconstruible entero** desde el texto aprobado | S | **T** |
+| RF-CAN-12 | Los `fragmento` son **reconstruibles enteros** desde el texto aprobado | S | **T** |
 | RF-CAN-13 | Un hecho que sustituye a otro **invalida los *snapshots* posteriores** a la escena de origen del sustituido; se recalculan desde el último válido | M | **T** |
 
 **Feature `manuscrito`** — *origen: `architecture.md` §11.*
@@ -290,8 +290,8 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
 | RD-05 | Tabla `trabajo` con los campos de `architecture.md` §3.2 | M | **T** |
 | RD-06 | Tabla `ejecucion` con el registro completo de RI-14, una fila por llamada | M | **T** |
-| RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore`, a **1024 dimensiones** (D-02): `float[1024]` en `vec0`, BLOB legible por NumPy en `BruteForceStore` | M | **T** en ambos modos |
-| RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
+| RD-07 | La tabla `fragmento` guarda **solo texto**, sin vectores ni dimensión. Es reconstruible desde el manuscrito (RF-CAN-12) | M | **T** |
+| RD-08 | Toda migración lleva su revisión de Alembic y **no depende de ninguna extensión de SQLite** | M | **T** |
 | RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado. **En la v1 nada borra** —ledger *append-only*, versiones inmutables, canon por sustitución—, así que lo que se prueba es el **generador de identificadores**, no un ciclo de borrado y realta que no existe. El requisito se mantiene porque el esquema no debe impedirlo después | M | **T** |
 | RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
 | RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** (+T) |
@@ -319,7 +319,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | RNF-REN-01 | El ensamblado de un paquete, sin la llamada al modelo, termina en **menos de 2 s** para una obra de 40 escenas | S | **T** |
 | RNF-REN-02 | La derivación del estado en T desde el último *snapshot* termina en **menos de 1 s** | S | **T** |
 | RNF-REN-03 | `GET /trabajos/{id}` y `GET /escenas/{id}/contexto` responden en **menos de 300 ms** | S | **T** |
-| RNF-REN-04 | La búsqueda por fuerza bruta se mantiene utilizable hasta **10.000 fragmentos**; por encima, se avisa | S | **T** |
+| RNF-REN-04 | La ordenación semántica opera sobre el conjunto **ya filtrado**: si el filtro estructural devuelve más de 50 candidatos, se recorta por recencia antes de llamar. Sin ese tope, el coste del ensamblado crece con la obra | M | **T** |
 
 **Fiabilidad, observabilidad y seguridad** — *origen: `architecture.md` §3.6, §3.7, §9 y §11; `domain-knowledge.md` §13; RNF-SEG-05 y RNF-SEG-06, `verification.md` §3 (red teaming).*
 
@@ -327,7 +327,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 | --- | --- | --- | --- |
 | RNF-FIA-01 | Una caída no pierde trabajo: se reanuda desde el último estado persistido | M | **T** |
 | RNF-FIA-02 | `FalloDeProveedor` se reintenta con espera creciente, hasta 3 veces; después `FALLIDA` | M | **T** |
-| RNF-FIA-03 | Ninguna ejecución depende de que la extensión vectorial esté cargada | M | **T** en ambos modos |
+| RNF-FIA-03 | Ninguna ejecución depende de una extensión de SQLite | M | **T** |
 | RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado. El plazo **depende del tipo de paso** (D-04): 30 s los de código (`ENSAMBLANDO`, `VALIDANDO`, `REPARANDO`), 600 s los que llaman al modelo (`PLANIFICANDO`, `ESCRIBIENDO`, `EXTRAYENDO`) | M | **T** |
 | RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, **tasa de defectos mal formados** (`architecture.md` §9), tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
 | RNF-OBS-02 | Métricas de concurrencia: tiempo de espera por turno y número de esperas vencidas | M | **D** |
@@ -346,7 +346,7 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 Observables y comprobables: cada uno acabará siendo un test.
 
 - [ ] **CA-1** — Un **capítulo completo** se genera de principio a fin, con todas sus escenas en `INTEGRADA`. *(Demostración)*
-- [ ] **CA-2** — La suite pasa **en los dos modos de `VectorStore`**, con y sin extensión cargada.
+- [ ] **CA-2** — La suite pasa **sin red y sin credenciales**: el ordenador semántico se sustituye por un doble determinista (RI-13).
 - [ ] **CA-3** — Se puede matar el proceso en cualquier estado no terminal y el trabajo se reanuda **sin duplicar escrituras**.
 - [ ] **CA-4** — Toda regla de dominio marcada «Sí» tiene test, y el test **falla** si se quita la validación.
 - [ ] **CA-5** — El desglose por capa **suma lo que dice** y respeta los topes.
@@ -355,7 +355,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
 - [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
 - [ ] **CA-10** — Desde una fila de `ejecucion`, **y con el estado de almacenes de esa escena**, se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
-- [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
+- [ ] **CA-11** — El proceso arranca y escribe una escena completa **sin más credencial que la del proveedor de generación**. *(Demostración)*
 - [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
 - [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
 - [ ] **CA-14** — Una escena escrita en una persona o un tiempo verbal distintos de los de la `Obra` se **rechaza con `VOZ-03`**, y un paquete con una capa vacía **falla antes de llamar al modelo**.
@@ -391,7 +391,7 @@ Los doce axiomas de `definitions.md` §11. Las dos diferidas lo están porque **
 
 **Presupuesto de contexto (`CLAUDE.md` §4.1).** Esta spec no añade capas ni cambia los topes: los implementa por primera vez. La capa que más riesgo tiene de crecer es **canon relevante** (20.000), porque su tamaño depende de cuántos personajes estén presentes; se recorta por personajes mencionados y no presentes, según `architecture.md` §2.1. El límite de concurrencia de §2.2 se estrena aquí, y su consecuencia —el sistema es secuencial por defecto— es lo que hace que la v1 no necesite paralelismo.
 
-**Esquema.** Es la migración inicial: no hay esquema previo que migrar. Debe funcionar **con y sin `sqlite-vec`** (RD-08), lo que obliga a que el almacenamiento de *embeddings* sea legible por las dos implementaciones (RD-07). El canon cuelga de `serie_id` desde el primer día (RD-11), no de la obra.
+**Esquema.** Es la migración inicial: no hay esquema previo que migrar. **No depende de ninguna extensión de SQLite** (RD-08), y `fragmento` guarda solo texto (RD-07). El canon cuelga de `serie_id` desde el primer día (RD-11), no de la obra.
 
 **Fronteras (`CLAUDE.md` §5).** Features implicadas: `obra`, `outline`, `escena`, `contexto`, `escritura`, `calidad`, `canon`, `manuscrito`, más `commons/` para orquestación, base de datos, cliente de modelo y errores. **Ninguna necesita cruzar una frontera.** Las convenciones permanentes —`import-linter` que falla la build, `commons/domain/` sin framework, `mypy` estricto, promoción al tercer uso, operaciones largas como trabajo en segundo plano— son de `CLAUDE.md` §5, §6 y §13: aplican, pero no son requisitos de esta spec. Tampoco lo es dónde vive cada pieza de código: eso es el plan.
 
@@ -406,7 +406,7 @@ Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí
 | Tests basados en propiedades (§2) | Las cuatro propiedades mínimas del ensamblador, bajo la tabla de `contexto` |
 | Análisis estático (§2) | `import-linter` falla la build: es la verificación de las fronteras, y por eso no hay requisito que las repita (CA-9) |
 | Tests de contrato (§2) | Esquema OpenAPI (RI-23), `__init__.py` como única superficie importable (CA-9) y E/S de cada agente validada por esquema (RF-ORQ-15) |
-| CI/CD en los dos modos (§3) | CA-2, y CA-11 para el arranque real sin la extensión. Si la suite solo corre con `sqlite-vec` cargado, el modo degradado **no está verificado** |
+| CI/CD sin credenciales (§3) | CA-2: la suite corre sin red y con dobles (RI-13). CA-11 demuestra el arranque real con una sola credencial |
 | Demostración de la vertical mínima (§4) | CA-1: un capítulo coherente de principio a fin |
 | Supresión de alcance en vez de *sandbox* (§3) | RF-ORQ-16. `verification.md` §5 advierte que esa fila deja de ser cierta el día que un agente reciba una herramienta de fichero o de red: se reabre **antes** de concederla, no después |
 | Red teaming, con el modelo de amenaza del bucle (§3) | RNF-SEG-05 y RNF-SEG-06, más CA-12. La vía realista no es un atacante externo: es el Extractor convirtiendo en canon prosa que el propio sistema generó |
@@ -436,7 +436,7 @@ Las nueve preguntas abiertas quedaron **cerradas el 2026-09-22**. Se conservan a
 | ID | Decisión | Aterriza en |
 | --- | --- | --- |
 | D-01 | N de los *snapshots* de `EstadoEnT` = **5** | RF-CAN-06, RI-21 |
-| D-02 | *Embeddings*: **Voyage AI `voyage-3`, 1024 dimensiones**, distinto del proveedor de generación | RI-17, RI-20, RD-07 |
+| D-02 | **Sin embeddings ni índice vectorial.** La ordenación semántica la resuelve el proveedor de generación sobre el conjunto ya filtrado | RI-17, RI-20, RI-22, RD-07, RD-08, RF-CTX-01, RF-CTX-07, RF-CTX-13, RF-CAN-12, RNF-REN-04, RNF-FIA-03, CA-2, CA-11 |
 | D-03 | **1** llamada en vuelo por proceso; *timeout* de turno **300 s** | RNF-TOK-03, RNF-TOK-05, RI-21 |
 | D-04 | Plazo por paso **en dos valores**: 30 s los de código, 600 s los que llaman al modelo | RF-ORQ-09, RNF-FIA-04, RI-21, RI-24 |
 | D-05 | Nivel de calor por **lista de términos versionada**, no por clasificador | RF-CAL-02 |
@@ -447,7 +447,19 @@ Las nueve preguntas abiertas quedaron **cerradas el 2026-09-22**. Se conservan a
 
 **D-01 — N = 5.** El compromiso es entre derivación rápida (N bajo) y menos recálculo al corregir un hecho (N alto), porque RF-CAN-13 invalida los *snapshots* posteriores al hecho sustituido. La v1 es **un capítulo**: con N = 10 o N = 20 el camino del *snapshot* se dispararía una vez o ninguna, y sería código entregado sin ejercitar. Con N = 5 hay dos o tres en el capítulo y RF-CAN-13 se prueba de verdad. Se sube cuando haya medición contra RNF-REN-02.
 
-**D-02 — Voyage `voyage-3` a 1024.** La pregunta incluía «si coincide con el de generación», y no puede: **la API de Anthropic no ofrece endpoint de *embeddings***. Voyage es el proveedor que Anthropic documenta para esto y es multilingüe, que hace falta porque el corpus es castellano. 1024 deja `BruteForceStore` en ~40 MB para los 10.000 fragmentos de RNF-REN-04 y es `float[1024]` nativo en `vec0`. **Introduce una dependencia nueva y una segunda clave de proveedor** (`CLAUDE.md` §3, punto 7). El riesgo es bajo: RF-CAN-12 hace el índice reconstruible entero, así que cambiar de proveedor cuesta un reindexado, no una migración rota.
+**D-02 — sin embeddings: ordena el proveedor de generación.** *Revisada el 2026-09-22; antes decía Voyage `voyage-3` a 1024 dimensiones.*
+
+El motivo es de entorno y no de diseño: **la única credencial disponible es la del CLI de Claude, y esa API no ofrece endpoint de *embeddings***. Cualquier alternativa exigía o una segunda clave de pago o descargar un modelo local, y ninguna de las dos se quiso. La ordenación semántica pasa a resolverla el mismo proveedor que escribe, sobre el conjunto que el filtro estructural ya redujo.
+
+**Lo que esto retira.** `VectorStore` y sus dos implementaciones, `sqlite-vec`, el proveedor de *embeddings* y la columna `embedding` de `fragmento`. Con ellos se va el requisito de `CLAUDE.md` §4.2 que exigía funcionar con y sin extensión vectorial, que era **no negociable** hasta esta revisión: se cambió a propósito, no se incumplió.
+
+**Lo que cuesta, y conviene no descubrirlo por sorpresa.**
+
+1. **Se retira RF-CTX-01.** El paquete deja de ser reproducible, porque la ordenación es una señal con varianza. Era una de las cuatro propiedades mínimas del ensamblador y el argumento central de la decisión 2 de `architecture.md`. Lo que **sí** sigue siendo determinista es el presupuesto, el recorte y el orden de las capas (RF-CTX-02 a RF-CTX-06), que es donde un fallo hace daño en silencio; la selección, no.
+2. **El ensamblado deja de ser gratis.** Cada escena suma una llamada antes de la de escritura, y pasa por el mismo turno único de §2.2. RNF-REN-01 —ensamblar en menos de 2 s— **no se puede cumplir** cuando esa llamada ocurre, así que se lee como el coste del ensamblado *sin* la ordenación.
+3. **RI-20 se invierte.** Decía que el consumo de *embeddings* no contaba contra ningún presupuesto; ahora sí cuenta, porque es una llamada al modelo como cualquier otra.
+
+**Lo que lo hace tolerable.** El filtro estructural sigue haciendo el trabajo pesado: presentes, lugar, hilos abiertos y rango de capítulos reducen el manuscrito a decenas de candidatos antes de que el modelo vea nada, y RNF-REN-04 pone un tope de 50. La ordenación opera sobre eso, no sobre la obra. Y `ejecucion` guarda los IDs recuperados, así que **una ejecución concreta sigue siendo auditable aunque no sea repetible** (RF-CTX-13).
 
 **D-03 — 1 llamada, 300 s.** La concurrencia no se decide aquí: `architecture.md` §2.2 ya fija «1 por proceso, configurable», y esta spec solo lo confirma. Lo decidido es el *timeout*: con concurrencia 1 y un paso de escritura de 1–2 min, 300 s dejan encolarse dos o tres llamadas sin que una cola legítima se confunda con un fallo.
 

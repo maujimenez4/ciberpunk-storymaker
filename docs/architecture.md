@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-**Versión:** 1.3 · **Fecha:** 2026-09-22
+**Versión:** 1.4 · **Fecha:** 2026-09-22
 
 Este documento describe **cómo se construye** el sistema. El **qué significa cada término** vive en [`definitions.md`](definitions.md); el **cómo funciona una novela** vive en [`domain-knowledge.md`](domain-knowledge.md). Si un concepto aparece aquí sin definir, está definido allí.
 
@@ -19,7 +19,7 @@ flowchart TD
   BE --> ORQ["Orquestador de agentes"]
   ORQ --> ENS["Ensamblador de contexto<br/>determinista"]
   ENS --> DB[("SQLite<br/>canon · ledger · manuscrito")]
-  ENS --> VEC[("Índice vectorial<br/>sqlite-vec o fuerza bruta")]
+  ENS --> REC["Ordenación semántica<br/>del proveedor de modelo"]
   ORQ --> LLM["Proveedor de modelo<br/>límite 100.000 tokens"]
   ORQ --> VAL["Validadores<br/>y puertas de calidad"]
   VAL --> DB
@@ -36,7 +36,7 @@ flowchart TD
 | Frontend | React 19 + TypeScript + Vite | SPA; cliente de API generado del OpenAPI |
 | Backend | FastAPI, Python 3.12+, Pydantic v2 | Async por defecto; OpenAPI como contrato |
 | Persistencia | SQLite (WAL) + Alembic | Fichero único por obra; sin segunda base de datos |
-| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | El sistema nunca falla por falta de extensión |
+| Búsqueda semántica | Ordenación por el proveedor de modelo, tras el filtro estructural | Una sola credencial; el paquete deja de ser reproducible (§4.6) |
 | Modelo | Límite **duro** de 100.000 tokens por llamada | Presupuesto por capa; fallo explícito, nunca truncado silencioso |
 
 ### 2.1 Presupuesto de contexto
@@ -169,7 +169,7 @@ Cada agente recibe exactamente los almacenes que su rol necesita. Lo que no apar
 | --- | --- | --- | --- |
 | Arquitecto | Brief | Biblia, outline | Sí |
 | Planificador | Outline, estado en T, hilos | Ficha de escena | Sí |
-| Ensamblador | Canon, ledger, manuscrito, índice vectorial | Nada | No |
+| Ensamblador | Canon, ledger, manuscrito, resúmenes | Nada | **Sí, solo para ordenar** (§4.6) |
 | Escritor | **Solo el paquete recibido** | Versión de texto | Sí |
 | Continuista | Canon, prosa nueva | Defectos | Sí |
 | Crítico | Prosa, rúbrica | Puntuaciones | Sí |
@@ -203,7 +203,7 @@ El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamad
 
 - **Una escena en vuelo por obra.** Es una restricción de corrección, no de rendimiento (§3.1, punto 4).
 - **Varias obras pueden estar en curso a la vez, pero sus llamadas al modelo se serializan:** comparten el turno único de §2.2. El paralelismo entre obras es de trabajo, no de llamadas.
-- **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** ensamblado, lectura de almacenes, persistencia y cálculo de embeddings. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
+- **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** lectura de almacenes y persistencia. El ensamblado ya no entra en esa lista: desde que la ordenación semántica llama al modelo (§4.6), pasa por el mismo turno único. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
 - **Las escrituras se serializan por obra.** SQLite con WAL admite lectores concurrentes y un solo escritor; el orquestador respeta eso con un cerrojo por obra en vez de confiar en `busy_timeout` para resolver colisiones.
 
 ### 3.9 Dónde vive el código
@@ -230,7 +230,7 @@ Es lo que hace reproducible una ejecución: dos ejecuciones con el mismo estado 
 | | Corto plazo | Largo plazo |
 | --- | --- | --- |
 | Qué es | La ventana de trabajo de **una** escena | El conocimiento acumulado de la obra |
-| Dónde vive | En el paquete, en memoria, durante la llamada | En SQLite: canon, ledger, resúmenes, índice vectorial |
+| Dónde vive | En el paquete, en memoria, durante la llamada | En SQLite: canon, ledger, resúmenes, fragmentos |
 | Cuánto dura | Una llamada | Toda la obra |
 | Quién la construye | El Ensamblador, en cada llamada, desde cero | El Extractor, tras cada escena aprobada |
 | Si se pierde | No pasa nada: se reconstruye | Se pierde la novela |
@@ -258,7 +258,7 @@ Se **reconstruye entera en cada llamada**. Nada se arrastra de la llamada anteri
 | Ledger | Eventos de estado, *append-only* | Extractor | Nunca se actualiza ni se borra |
 | Estado en T | Quién sabe qué, dónde está cada cual, en el momento T | **Nadie: es una vista derivada** | Derivado, más *snapshots* cada N escenas |
 | Resúmenes en cascada | Escena → capítulo → acto → obra | Extractor | Regenerables desde el texto |
-| Índice vectorial | Fragmentos con su embedding | Extractor | Regenerable; puede reconstruirse entero |
+| Fragmentos de texto | Trozos de prosa aprobada, sin vectores | Extractor | Regenerable desde el manuscrito |
 | Hilos y plantados | Abierto, pagado, vencido | Extractor | Estado con ciclo de vida |
 | Lista negra de n-gramas | Secuencias ya gastadas en el manuscrito | Extractor | Crece con la obra; la lee el Editor de línea |
 
@@ -268,7 +268,7 @@ La columna que importa es la tercera: **solo el Extractor escribe memoria de lar
 
 Una escena pasa a memoria de largo plazo **solo tras ser aprobada**. Un borrador rechazado no deja hechos en canon, ni eventos en el ledger, ni fragmentos en el índice. De lo contrario, el canon se contaminaría con afirmaciones de texto que nunca llegó al manuscrito.
 
-Orden dentro del paso `EXTRAYENDO`: hechos de canon → eventos del ledger → resumen de escena → hilos → embeddings. Todo en una transacción por escena: o entra el conjunto, o no entra nada.
+Orden dentro del paso `EXTRAYENDO`: hechos de canon → eventos del ledger → resumen de escena → hilos → fragmentos de texto. Todo en una transacción por escena: o entra el conjunto, o no entra nada.
 
 ### 4.5 Compactación y olvido
 
@@ -287,10 +287,18 @@ La memoria de largo plazo crece con la obra; el presupuesto de §2.1 no. La casc
 Para construir la capa de memoria recuperada, en este orden:
 
 1. **Filtro estructural**: presentes, lugar, hilos abiertos, rango de capítulos.
-2. **Similitud semántica** sobre el conjunto ya filtrado.
+2. **Ordenación semántica** sobre el conjunto ya filtrado, resuelta por el proveedor de modelo.
 3. **Fusión con recencia**.
 
-El orden no es negociable: la búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes. Una escena de hace veinte capítulos con un beso puede parecerse mucho a la actual y no tener nada que ver con ella.
+El orden no es negociable: ordenar por parecido sin filtrar antes trae escenas parecidas, no escenas pertinentes. Una escena de hace veinte capítulos con un beso puede parecerse mucho a la actual y no tener nada que ver con ella. El filtro estructural sigue haciendo el trabajo pesado, y por eso el paso semántico opera sobre decenas de candidatos y no sobre el manuscrito entero.
+
+**Quién ordena, y qué cuesta.** No hay índice vectorial ni proveedor de *embeddings*: la ordenación la hace el mismo proveedor que escribe, con una llamada acotada a los candidatos ya filtrados. La ventaja es operativa —una sola credencial, ningún modelo que descargar, ninguna extensión de SQLite que pueda no cargar—. El precio son tres cosas, y conviene no descubrirlas por sorpresa:
+
+- **El paquete deja de ser reproducible.** Dos ensamblados del mismo estado pueden devolver otro orden en esta capa. Las otras siete siguen siendo deterministas.
+- **El ensamblado deja de ser gratis.** Cada escena suma una llamada al modelo antes de la de escritura, y esa llamada pasa por el mismo turno único de §2.2.
+- **El Ensamblador deja de ser código puro.** Sigue siendo determinista en el presupuesto, el recorte y el orden de las capas —que es donde un fallo silencioso hace daño—, pero ya no en la selección.
+
+Se decidió así el 2026-09-22, a sabiendas: el sistema tiene que funcionar con la cuenta que hay.
 
 ### 4.7 Corrección sin edición
 
@@ -311,7 +319,7 @@ La correspondencia entre los almacenes de §4.3 y las capas de §2.1, que es lo 
 | Canon relevante | Grafo de canon, filtrado por la ficha | Largo |
 | Estado en T | Vista derivada del ledger | Largo |
 | Continuidad local | Escenas N-1 y N-2 | Corto |
-| Memoria recuperada | Índice vectorial + resúmenes, tras §4.6 | Largo |
+| Memoria recuperada | Fragmentos + resúmenes, tras §4.6 | Largo |
 | Instrucción | Ficha de escena y prompt versionado | Corto |
 | Reserva | — | — |
 
@@ -341,7 +349,7 @@ src/backend/app/
     auditoria/         # beats, plantados, curva de temperatura
   commons/
     domain/            # entidades y reglas puras del dominio compartido
-    db/                # sesión, unidad de trabajo, migraciones, VectorStore
+    db/                # sesión, unidad de trabajo, migraciones
     llm/               # cliente de modelo, contador de tokens, reintentos
     errors/            # excepciones de dominio y handler HTTP central
     jobs/              # trabajos en segundo plano y su estado
@@ -420,7 +428,7 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Ledger de eventos | Tabla `evento` *append-only* | Nunca se actualiza ni se borra |
 | Estado en T | Vista derivada + *snapshots* cada N escenas | **Nunca se edita a mano** |
 | Manuscrito | `escena`, `version_texto` (inmutable) | Editar = versión nueva + marcar vigente |
-| Índice vectorial | `vec0` (sqlite-vec) o BLOB + NumPy | Detrás de la interfaz `VectorStore` |
+| Fragmentos | Tabla `fragmento`, solo texto | Los ordena el proveedor de modelo (§4.6) |
 | Hilos y plantados | `plantado`, `hilo_narrativo` | Estado: abierto, pagado, vencido |
 | Prompts y rúbricas | **Ficheros versionados en el repositorio** | Nunca se editan en sitio. `ejecucion` guarda `prompt_id`, `version` y el **hash** del fichero: eso hace reproducible la llamada sin un segundo sistema de versionado |
 | Ejecuciones | `ejecucion` | Prompt con su hash, modelo, semilla, tokens, coste, veredicto |
@@ -429,7 +437,7 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Versiones de obra | Tabla `version_obra` | Una por versión de biblia; cada escena apunta a la que estaba vigente cuando se escribió |
 | Serie | Tabla `serie`, opcional | Si existe, el canon se comparte entre sus obras **desde el primer día** |
 
-**Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia. La búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes.
+**Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → ordenación semántica sobre el conjunto ya filtrado → fusión con recencia. Ordenar por parecido sin filtrar antes trae escenas parecidas, no escenas pertinentes. El detalle de quién ordena y qué cuesta, en §4.6.
 
 ---
 
@@ -556,7 +564,6 @@ Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-
 | --- | --- | --- |
 | `features/*/router.py`, `service.py` | `python-fastapi-ops` | Lifespan, `Depends()` con `Annotated`, `response_model`, organización de routers |
 | `features/*/schemas.py`, `commons/domain/` | `pydantic` (oficial del equipo Pydantic) | Pydantic v2: restricciones, validadores, jerarquías de modelos, coerción |
-| `features/contexto/`, `commons/db/` | `sqlite-vec` | Tablas `vec0`, KNN con `MATCH`, filtrado por metadatos y claves de partición |
 | `commons/db/`, `repository.py`, Alembic | `sqlite-ops` | WAL, `busy_timeout`, `EXPLAIN QUERY PLAN`, índices, tablas STRICT, `aiosqlite`, migraciones |
 | `src/frontend/src/` | `typescript-best-practices` | Type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
 | `src/frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
@@ -610,7 +617,7 @@ sequenceDiagram
   API->>PL: ficha de escena
   PL->>DB: lee outline y estado en T
   PL-->>EN: ficha
-  EN->>DB: canon, ledger, vecinos, índice vectorial
+  EN->>DB: canon, ledger, vecinos, fragmentos
   EN->>EN: presupuesta y recorta por capa
   EN-->>ES: paquete + desglose de tokens
   ES->>ES: genera prosa
@@ -693,7 +700,7 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 | 1 | Escena como unidad de generación | Capítulo completo | Cabe en contexto y permite validación atómica |
 | 2 | Ensamblador determinista en código | Agente que decide qué recuperar | Reproducibilidad y auditoría |
 | 3 | Estado derivado del ledger | Tabla de estado editable | Evita desincronización con el texto |
-| 4 | SQLite único con vectores opcionales | Postgres + base vectorial | Simplicidad operativa; fichero portable por obra |
+| 4 | SQLite único, sin extensiones | Postgres + base vectorial | Simplicidad operativa; fichero portable por obra |
 | 5 | Texto inmutable y versionado | Edición en sitio | Permite comparar estrategias y volver atrás |
 | 6 | Agentes separados por rol | Un agente que escribe y se corrige | Quien escribe no ve sus contradicciones |
 | 7 | Presupuesto por capa con fallo explícito | Truncado por ventana deslizante | Un truncado silencioso produce defectos invisibles |
@@ -749,6 +756,7 @@ Los diagramas de ontología que allí vivían se han trasladado al **§14 de `de
 | 1.0 | Primera versión: se recoge aquí el material de fabricación que estaba mezclado en los otros dos documentos |
 | 1.1 | Se añaden §2.2 presupuesto concurrente, §3 orquestación y §4 memoria; se renumera §3–§12 → §5–§14 |
 | 1.2 | El techo agregado de tokens se sustituye por un límite de concurrencia contado en llamadas (§2.2). El Auditor deja de escribir memoria (§4.3). Los prompts son ficheros con hash (§5.5). Aparecen la lista negra de n-gramas, `version_obra` y `serie` (§5.5). La puerta de escena se parte en G1a y G1b (§8.3). Un hecho sustituido invalida los *snapshots* posteriores (§4.7). Ejecutada la limpieza de `definitions.md` de §14 |
+| 1.4 | Se retira la búsqueda vectorial. Desaparecen `VectorStore`, `sqlite-vec`, `BruteForceStore` y el proveedor de *embeddings*; la ordenación semántica de §4.6 la resuelve el proveedor de modelo sobre el conjunto ya filtrado. El motivo es de entorno: solo hay una credencial, la del CLI de Claude, y su API no ofrece *embeddings*. El precio está escrito en §4.6 y en `CLAUDE.md` §4.2 — el paquete deja de ser reproducible, el ensamblado deja de ser gratis y pasa por el turno de §2.2, y el Ensamblador deja de ser código puro en la selección (sigue siéndolo en presupuesto y recorte). Cambia también la decisión 4 y el §3.5 del Ensamblador |
 | 1.3 | El defecto del Continuista pasa a tener forma comprobable: cita anclada por desplazamiento y `hecho_canon_id` obligatorio en `CAN-01`. Aparecen la comprobación de forma previa a G1a y el estado «mal formado» (§8.3), la tabla `defecto` (§5.5) y su métrica (§9) |
 
 *La v1.3 se commiteó en `aa47bd0`, junto a la v1.2 de `definitions.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que esta tabla es la vía para localizarla.*
