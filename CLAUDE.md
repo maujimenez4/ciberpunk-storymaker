@@ -17,6 +17,7 @@ Sistema de generación asistida de novela larga (80.000–120.000 palabras), con
 | Qué significa un término | `docs/definitions.md` — **fuente de verdad** |
 | Cómo funciona una novela (estructura, género, arcos) | `docs/domain-knowledge.md` |
 | Cómo se construye el sistema, agentes, proceso, diagramas y árboles | `docs/architecture.md` |
+| Cómo se gana confianza en el resultado: métodos, puntos ciegos y riesgos | `docs/verification.md` |
 | Cómo se trabaja: `docs/`, spec, plan, código | §3 de este fichero |
 | Stack, límites técnicos, convenciones, agentes, checklist | este fichero |
 
@@ -26,7 +27,7 @@ Sistema de generación asistida de novela larga (80.000–120.000 palabras), con
 
 > **Si necesitas la definición de cualquier término del dominio, ve a [`docs/definitions.md`](docs/definitions.md).**
 
-Aplica siempre que aparezca uno de estos conceptos: escena, beat, giro de valor, canon, hecho de canon, plantado, pago, revelación, hilo narrativo, estado en T, ledger, paquete de contexto, muestra ancla, deriva, perfil de voz, beat de género, tropo, nivel de calor, HEA/HFN, puerta de calidad, defecto, biblia, outline, ficha de escena.
+Aplica siempre que aparezca uno de estos conceptos: escena, beat, giro de valor, canon, hecho de canon, plantado, pago, revelación, hilo narrativo, estado en T, ledger, paquete de contexto, muestra ancla, deriva, perfil de voz, beat de género, tropo, nivel de calor, HEA/HFN, puerta de calidad, defecto, cita, biblia, outline, ficha de escena.
 
 - No inventes sinónimos ni traduzcas términos por tu cuenta: el mismo concepto se llama igual en el esquema de datos, en los prompts, en las rúbricas y en la interfaz.
 - Si un término que necesitas **no está** en `docs/definitions.md`, no lo introduzcas: propón la definición y espera confirmación antes de escribir código con él.

@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 1.1 · **Fecha:** 2026-09-21 · **Dominio:** generación asistida de novela larga, género de referencia: romance
+**Versión:** 1.2 · **Fecha:** 2026-09-22 · **Dominio:** generación asistida de novela larga, género de referencia: romance
 
 ---
 
@@ -16,6 +16,7 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | --- | --- |
 | 1.0 | Primera versión de la ontología |
 | 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
+| 1.2 | `Defecto` deja de ser una tabla de códigos y pasa a clase con atributos (§8): la `cita` se ancla por desplazamiento a una `VersionDeTexto` y `hecho_canon_id` es obligatorio en `CAN-01`. Entran el término `Cita` (§8 y §13), los predicados `señala` y `choca_con` (§10) y los axiomas 11 y 12 (§11) |
 
 ---
 
@@ -330,6 +331,28 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | GEN-02 | Ruptura por malentendido evitable | Reescribir la causa desde la herida del personaje |
 | SEG-01 | Nivel de calor o tema fuera de contrato | Reescritura obligatoria, sin excepción |
 
+**Atributos.** Un defecto no es una frase: es un registro con forma comprobable. Estos son los campos
+que permiten comprobarla sin volver a llamar al modelo.
+
+| Atributo | Tipo | Cardinalidad | Para qué |
+| --- | --- | --- | --- |
+| `defecto_id` | Identificador | 1 | Referencia estable |
+| `codigo` | Uno de la tabla anterior | 1 | Fuera de la taxonomía no es un defecto |
+| `version_texto_id` | Identificador de `VersionDeTexto` | 1 | Qué texto se juzga. Un defecto sin texto no se puede anclar |
+| `cita` | Texto | 1 | El pasaje al que se refiere, **literal** |
+| `desplazamiento_inicio`, `desplazamiento_fin` | Entero | 1 | Dónde empieza y acaba la cita dentro de esa versión |
+| `hecho_canon_id` | Identificador de `HechoCanon` | 0..1 | Con qué hecho choca. **Obligatorio si `codigo` es `CAN-01`** |
+
+#### `Cita`
+Fragmento de una `VersionDeTexto` que sitúa un defecto en el texto. **Literal** quiere decir subcadena
+exacta en el desplazamiento declarado: ni parafraseada, ni normalizada, ni reconstruida de memoria.
+
+La cita es lo que convierte un defecto en reparable —el reintento la lleva en el prompt— y lo que lo
+hace comprobable: un pasaje que no está en el texto no es una imprecisión de redacción, es un defecto
+que no se refiere a nada. Por eso los axiomas 11 y 12 del §11 son restricciones de integridad y no
+recomendaciones de estilo. Qué hace el sistema con un defecto que no las cumple es mecanismo:
+`architecture.md` §8.3.
+
 #### `PuertaDeCalidad`
 Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existen, qué bloquea cada una y la política de reparación son mecanismo: `architecture.md` §8.3.
 
@@ -384,6 +407,8 @@ Los almacenes en los que vive todo esto están enumerados en `architecture.md` �
 | `Arco` | progresa_en | `Escena` | 1..\* | Curva de tensión e intimidad |
 | `Relacion` | evoluciona_en | `Escena` | 1..\* | Arco romántico medible |
 | `Ejecucion` | produce | `VersionDeTexto` | 1 | Trazabilidad y reproducibilidad |
+| `Defecto` | señala | `VersionDeTexto` | 1 | Ancla la cita al texto que se juzga |
+| `Defecto` | choca_con | `HechoCanon` | 0..1 | Hace determinista el contraste de `CAN-01` |
 
 ---
 
@@ -401,6 +426,9 @@ El validador debe poder comprobar mecánicamente:
 8. Toda `Escena` tiene exactamente un `pov` y un `giro_de_valor` no nulo.
 9. Ningún contenido romántico o sexual con personajes menores de 18 años (validación de esquema, no instrucción de prompt).
 10. Ninguna escena puede exceder el `nivel_de_calor` declarado en la `Obra`.
+11. La `cita` de un `Defecto` es subcadena exacta de la `VersionDeTexto` que señala, en el
+    `desplazamiento_inicio`–`desplazamiento_fin` declarado.
+12. Todo `Defecto` con `codigo` `CAN-01` declara un `hecho_canon_id` que existe en el grafo de canon.
 
 ---
 
@@ -431,6 +459,7 @@ El validador debe poder comprobar mecánicamente:
 | Estado en T | Hechos móviles verdaderos justo antes de una escena |
 | Ledger | Log append-only de eventos confirmados |
 | Paquete de contexto | Lo que se envía al modelo para escribir una escena concreta |
+| Cita | Fragmento literal de una versión de texto que sitúa un defecto, con su desplazamiento |
 | Deriva | Alejamiento progresivo del texto respecto de las normas declaradas |
 | Puerta de calidad | Condición que una unidad debe cumplir para avanzar de fase |
 | HEA / HFN | *Happily ever after* / *happy for now*: finales admisibles en romance |

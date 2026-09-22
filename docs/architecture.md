@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-**Versión:** 1.2 · **Fecha:** 2026-09-21
+**Versión:** 1.3 · **Fecha:** 2026-09-22
 
 Este documento describe **cómo se construye** el sistema. El **qué significa cada término** vive en [`definitions.md`](definitions.md); el **cómo funciona una novela** vive en [`domain-knowledge.md`](domain-knowledge.md). Si un concepto aparece aquí sin definir, está definido allí.
 
@@ -424,6 +424,7 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Hilos y plantados | `plantado`, `hilo_narrativo` | Estado: abierto, pagado, vencido |
 | Prompts y rúbricas | **Ficheros versionados en el repositorio** | Nunca se editan en sitio. `ejecucion` guarda `prompt_id`, `version` y el **hash** del fichero: eso hace reproducible la llamada sin un segundo sistema de versionado |
 | Ejecuciones | `ejecucion` | Prompt con su hash, modelo, semilla, tokens, coste, veredicto |
+| Defectos | Tabla `defecto` | Salida del Continuista. La cita se guarda con su desplazamiento sobre `version_texto`, y `CAN-01` con el `hecho_canon` que choca |
 | Lista negra de n-gramas | Tabla `ngrama_vetado` | Crece con el manuscrito; la escribe el Extractor, la lee el Editor de línea |
 | Versiones de obra | Tabla `version_obra` | Una por versión de biblia; cada escena apunta a la que estaba vigente cuando se escribió |
 | Serie | Tabla `serie`, opcional | Si existe, el canon se comparte entre sus obras **desde el primer día** |
@@ -535,7 +536,7 @@ Cada agente tiene prompt propio, contexto propio y criterio de éxito propio. Es
 | **Planificador de escena** | Función dramática, giro de valor, selección de beat | Outline + estado en T | Ficha de escena | No | 15–25 k |
 | **Ensamblador de contexto** | Recuperación híbrida, presupuesto y recorte, conteo de tokens | Ficha + almacenes | Paquete de contexto | No (es código) | — |
 | **Escritor** | Voz por POV, dramatización, diálogo, ritmo | Paquete de contexto | Prosa de escena | Sí | ≤ 100 k |
-| **Continuista** | Extracción de afirmaciones, contraste con canon, validación de conocimiento y geografía | Prosa + canon | Defectos con código | No | 30–60 k |
+| **Continuista** | Extracción de afirmaciones, contraste con canon, validación de conocimiento y geografía | Prosa + canon | Defectos con código, cita anclada y, en `CAN-01`, el hecho con el que chocan | No | 30–60 k |
 | **Crítico** | Rúbrica de función dramática, subtexto, satisfacción del beat | Prosa + rúbrica | Puntuaciones y diagnóstico | No | 20–40 k |
 | **Editor de línea** | Prosa frase a frase, muletillas, variedad sintáctica | Prosa aprobada | Prosa pulida | Sí, sin tocar hechos | 20–30 k |
 | **Extractor** | Extracción de hechos, deltas de estado, resúmenes, hilos | Prosa aprobada | Hechos, estado, resumen, hilos | No | 20–30 k |
@@ -636,6 +637,27 @@ sequenceDiagram
 
 **Por qué G1 está partida.** Lo que se puede **contar** y lo que hay que **juzgar** no se verifican igual ni están disponibles a la vez (`domain-knowledge.md` §11). G1a la resuelve código —contradicciones de canon, tiempos de viaje, `sabe_desde`, edad y nivel de calor— y está disponible desde el primer día. G1b necesita al Crítico con una rúbrica calibrada contra escenas etiquetadas por el editor, que es trabajo de la fase 4 (§13). **Hasta que exista esa calibración, G1b no bloquea**: se registra el diagnóstico y se deja pasar. Fingir que la función dramática se comprueba mecánicamente sería peor que declararla pendiente.
 
+**Comprobación de forma antes de G1a.** El Continuista es un modelo, así que lo que afirma es una
+señal con varianza: lo que hace mecánica a G1a es el **contraste**, no la extracción
+(`verification.md` §6.2). Por eso, antes de que un defecto llegue a la puerta, el orquestador comprueba
+su **forma**, en código y sin volver a llamar al modelo:
+
+1. El `codigo` pertenece a la taxonomía de `definitions.md` §8.
+2. La `cita` es subcadena exacta de la `VersionDeTexto` que señala, en el desplazamiento declarado
+   (`definitions.md` §11, axioma 11).
+3. Si el `codigo` es `CAN-01`, el `hecho_canon_id` existe en el grafo de canon (axioma 12).
+
+Un defecto que no pasa las tres está **mal formado**: no bloquea, no consume reintento y no llega al
+prompt de reparación. Tampoco se descarta en silencio —se registra y se cuenta aparte en §9—, porque
+la tasa de defectos mal formados es hoy la única señal directa de que el Continuista está afirmando
+cosas que no están en el texto.
+
+Lo que esta comprobación compra es concreto y conviene no ampliarlo al leerlo: **desaparece la
+categoría del defecto bien formado con la cita equivocada**, que era el punto ciego declarado de los
+tests de contrato (`verification.md` §2.1), y un `CAN-01` deja de poder apuntar a un hecho inventado.
+No dice nada sobre el defecto que el Continuista **no vio**: el falso negativo sigue sin medirse
+(`verification.md` §6.3) y ninguna comprobación de forma lo alcanza.
+
 **Política de reparación:** el reintento lleva el **defecto concreto** en el prompt, con cita del pasaje. Un reintento genérico («mejóralo») degrada el texto casi siempre. Tras dos intentos, escalado a humano.
 
 ---
@@ -644,7 +666,7 @@ sequenceDiagram
 
 Cada llamada al modelo registra: `run_id`, escena, versión de prompt, versión de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto.
 
-Métricas operativas a vigilar: coste por escena y por novela, tokens medios por capa, tasa de defectos por código, tasa de reintento, escalados a humano por cada cien escenas, latencia por fase, porcentaje de contexto ocupado por cada capa, y —del límite de §2.2— tiempo de espera por turno y número de esperas vencidas.
+Métricas operativas a vigilar: coste por escena y por novela, tokens medios por capa, tasa de defectos por código, **tasa de defectos mal formados** (§8.3), tasa de reintento, escalados a humano por cada cien escenas, latencia por fase, porcentaje de contexto ocupado por cada capa, y —del límite de §2.2— tiempo de espera por turno y número de esperas vencidas.
 
 ---
 
@@ -684,7 +706,7 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 | 14 | Prompts como ficheros del repositorio, con su hash en `ejecucion` | Tabla de prompts versionada en la base de datos | Se revisan como código, cambiarlos no exige migración, y el hash basta para reproducir una ejecución |
 | 15 | La puerta de escena se parte en mecánica y de juicio | Una sola puerta que espera al juez calibrado | Lo que se cuenta está disponible hoy; lo que se juzga, en la fase 4 |
 
-**Riesgos abiertos:** coste total por novela con nueve agentes, acotado en concurrencia por §2.2 pero **no en total**; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra.
+**Riesgos abiertos:** coste total por novela con nueve agentes, acotado en concurrencia por §2.2 pero **no en total**; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra; **consolidación en el canon de hechos nuevos que no contradicen nada**, porque el Continuista solo detecta colisiones con lo ya sabido y el Extractor registra el origen, que es trazabilidad y no veracidad (`verification.md` §7).
 
 ---
 
@@ -727,5 +749,6 @@ Los diagramas de ontología que allí vivían se han trasladado al **§14 de `de
 | 1.0 | Primera versión: se recoge aquí el material de fabricación que estaba mezclado en los otros dos documentos |
 | 1.1 | Se añaden §2.2 presupuesto concurrente, §3 orquestación y §4 memoria; se renumera §3–§12 → §5–§14 |
 | 1.2 | El techo agregado de tokens se sustituye por un límite de concurrencia contado en llamadas (§2.2). El Auditor deja de escribir memoria (§4.3). Los prompts son ficheros con hash (§5.5). Aparecen la lista negra de n-gramas, `version_obra` y `serie` (§5.5). La puerta de escena se parte en G1a y G1b (§8.3). Un hecho sustituido invalida los *snapshots* posteriores (§4.7). Ejecutada la limpieza de `definitions.md` de §14 |
+| 1.3 | El defecto del Continuista pasa a tener forma comprobable: cita anclada por desplazamiento y `hecho_canon_id` obligatorio en `CAN-01`. Aparecen la comprobación de forma previa a G1a y el estado «mal formado» (§8.3), la tabla `defecto` (§5.5) y su métrica (§9) |
 
 **Criterio para el futuro:** si la frase cambia cuando cambias de framework, de modelo o de base de datos, va en `architecture.md`. Si cambiaría aunque escribieras la novela a mano, va en `domain-knowledge.md`. Si es «X significa Y», va en `definitions.md`.
