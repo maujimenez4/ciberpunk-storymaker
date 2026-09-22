@@ -138,7 +138,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
 | RI-23 | El backend **publica su esquema OpenAPI** y toda ruta declara su modelo de respuesta: el contrato con cualquier cliente es el esquema generado, no una descripción escrita aparte | M | **A** (+T) |
 
-*Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3.5, §4.2, §4 (OpenAPI como contrato), §6; RI-23 y la parte **D** de RI-17, `verification.md` §2 (tests de contrato) y §4.1.*
+*Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3 (principio 5), §4.2, §4 (OpenAPI como contrato), §6; RI-23 y la parte **D** de RI-17, `verification.md` §2 (tests de contrato) y §4.1.*
 
 ### Funcionales
 
@@ -188,7 +188,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | RF-CTX-10 | Exponer paquete y desglose para depuración | M | **D** |
 | RF-CTX-11 | La reserva del 10 % permanece libre en la primera llamada: el reintento con el defecto añadido debe caber | M | **T** |
 | RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** (+T) |
-| RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa** | M | **D** |
+| RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa**, y **caduca**: reconstruir una escena antigua desde los almacenes de hoy da otro paquete (`verification.md` §4.1) | M | **D** |
 
 **Las cuatro propiedades mínimas del ensamblador** (`verification.md` §2, fila de tests basados en propiedades). Son el conjunto que no puede faltar, no el conjunto completo:
 
@@ -343,7 +343,7 @@ Observables y comprobables: cada uno acabará siendo un test.
 - [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice.
 - [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
 - [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
-- [ ] **CA-10** — Desde una fila de `ejecucion` se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
+- [ ] **CA-10** — Desde una fila de `ejecucion`, **y con el estado de almacenes de esa escena**, se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
 - [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
 - [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
 
@@ -432,7 +432,7 @@ Todo requisito nace de un documento anterior. Ninguno es original de esta spec, 
 
 | Bloque | Origen |
 | --- | --- |
-| RI-01 a RI-22 | `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3.5, §4.2, §6 |
+| RI-01 a RI-22 | `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3 (principio 5), §4.2, §6 |
 | RF-OBR, RF-OUT, RF-ESC | `definitions.md` §4, §6, §9; `domain-knowledge.md` §3, §8 |
 | RF-CTX | `definitions.md` §7; `architecture.md` §2.1, §4.2, §4.6; `domain-knowledge.md` §7 |
 | RF-ORQ | `architecture.md` §3 |
@@ -458,7 +458,8 @@ Lo que `docs/verification.md` clasifica como **U — no verificable** no aparece
 | No verificable | Qué toca de la v1 | Qué se entrega en su lugar |
 | --- | --- | --- |
 | Calidad narrativa | Nada: ningún requisito la afirma | El juicio humano sobre la demostración de CA-1 |
-| Pertinencia de la memoria recuperada | **RF-CTX-07**: se verifica el **orden** de la recuperación híbrida, no que lo recuperado sea lo pertinente | Nada. El único síntoma observable llega después, como defecto del Continuista |
+| Pertinencia de la memoria recuperada | **RF-CTX-07**: se verifica el **orden** de la recuperación híbrida, no que lo recuperado sea lo pertinente | Nada. La **presencia** de un dato concreto sí sería comprobable —`verification.md` §4.2 la separa de la pertinencia—, pero la v1 no declara esa comprobación |
+| Que un hecho nuevo deba entrar en el canon | **RF-CAN-01 a 04**: el Extractor consolida el hecho citando su escena de origen, que es trazabilidad y no veracidad; un hecho que no contradice nada no tiene contra qué contrastarse | Nada. `verification.md` §7 lo registra como riesgo descubierto |
 | Calibración del Crítico | Nada: el Crítico está fuera de alcance, y por eso G1b no bloquea (RF-CAL-09) | — |
 | Ausencia de fallos semánticos sutiles | Toda la suite: detecta aquello para lo que se escribió | CA-4, a mano, mientras los tests de mutación siguen aplazados |
 | Comportamiento del modelo entre versiones | El veredicto de los validadores depende del modelo que los ejecuta | `ejecucion` registra modelo y parámetros (RI-14): la regresión se detecta después, no se previene |
