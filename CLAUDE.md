@@ -256,6 +256,10 @@ No usamos Atomic Design: `primitives` = sin lógica de negocio, reutilizable en 
 5. Ninguna escena puede exceder el `nivel_de_calor` declarado en la obra.
 6. Ningún contenido romántico o sexual con personajes menores de 18 años: **validación de esquema**, no instrucción de prompt.
 7. Cada ejecución guarda prompt, versión de biblia, IDs recuperados, modelo, semilla y coste.
+8. La `cita` de un defecto es subcadena exacta de la versión de texto que señala, en el desplazamiento declarado.
+9. Todo defecto con código `CAN-01` declara un `hecho_canon_id` que existe en el grafo de canon.
+
+Las reglas 8 y 9 son los axiomas 11 y 12 de `docs/definitions.md` §11, y entraron con su v1.2: son las que hacen comprobable la forma de un defecto sin volver a llamar al modelo (`docs/architecture.md` §8.3).
 
 Si el código y `docs/definitions.md` no coinciden, **gana el documento**.
 
