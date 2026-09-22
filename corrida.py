@@ -15,6 +15,7 @@ comprueba que juntas escriben un capítulo, que es lo que CA-1 pide demostrar.
 """
 
 import argparse
+import functools
 import json
 import shutil
 import subprocess
@@ -30,10 +31,10 @@ from app.commons.db import RegistroDeEjecucion, RepositorioDeEjecuciones  # noqa
 from app.commons.domain import RelojDelSistema  # noqa: E402
 from app.commons.jobs import (  # noqa: E402
     CerrojoPorObra,
-    con_reintentos,
     Estado,
     RepositorioDeTrabajos,
     TurnoDeModelo,
+    con_reintentos,
 )
 from app.commons.llm import (  # noqa: E402
     CargadorDePrompts,
@@ -212,7 +213,10 @@ def correr(real: bool) -> int:
         nivel_de_calor=NivelDeCalor.SENSUAL,
     )
 
-    print(f"{'REAL' if real else 'SECO'} · {ESCENAS} escenas · base {base}\n")
+    print(
+        f"{'REAL' if real else 'SECO'} · {ESCENAS} escenas · base {base}\n",
+        flush=True,
+    )
     anterior: str | None = None
     coste_total = 0.0
 
@@ -247,8 +251,14 @@ def correr(real: bool) -> int:
             with turno.en_uso(espera_s=300) as hay_turno:
                 if not hay_turno:
                     raise SystemExit("sin turno")
+                # `partial` y no `lambda`: un lambda dentro del bucle captura
+                # las variables tarde, y si algun dia la llamada se aplazara
+                # -una cola, un hilo- se ejecutaria con los valores de la ultima
+                # escena. Aqui se llama en el acto y daria igual; la costumbre
+                # de escribirlo bien es lo que evita el dia que no de igual.
                 ficha = con_reintentos(
-                    lambda: planificar_escena(
+                    functools.partial(
+                        planificar_escena,
                         escena_id,
                         parametros,
                         cliente_planificador,
@@ -275,7 +285,7 @@ def correr(real: bool) -> int:
                 if not hay_turno:
                     raise SystemExit("sin turno")
                 respuesta = con_reintentos(
-                    lambda: cliente_escritor.generar(paquete.texto)
+                    functools.partial(cliente_escritor.generar, paquete.texto)
                 )
             prosa = respuesta.texto
             version = escenas.guardar_version(escena_id, prosa, run_id, reloj)
@@ -351,7 +361,8 @@ def correr(real: bool) -> int:
                     p_extractor.texto + "\n\n## Escena aprobada\n\n" + prosa
                 )
                 con_reintentos(
-                    lambda: extraer_de_escena(
+                    functools.partial(
+                        extraer_de_escena,
                         serie_id="s1",
                         escena_id=escena_id,
                         version_texto_id=version.version_texto_id,
@@ -373,7 +384,8 @@ def correr(real: bool) -> int:
                 escena_id=escena_id,
                 tokens=paquete.desglose.total,
                 coste_usd=round(coste, 4),
-            )
+            ),
+            flush=True,
         )
 
     # --- resultado -----------------------------------------------------------

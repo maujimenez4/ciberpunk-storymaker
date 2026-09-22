@@ -8,7 +8,7 @@ def test_quita_la_valla_de_markdown() -> None:
 
 
 def test_quita_la_valla_sin_etiqueta() -> None:
-    assert extraer_json('```\n[1, 2]\n```') == "[1, 2]"
+    assert extraer_json("```\n[1, 2]\n```") == "[1, 2]"
 
 
 def test_quita_un_preambulo() -> None:

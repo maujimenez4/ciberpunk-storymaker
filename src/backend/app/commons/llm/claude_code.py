@@ -43,6 +43,7 @@ class ErrorTransitorioDeProveedor(RuntimeError):
     indistinguible de una cuota agotada o de un prompt demasiado largo.
     """
 
+
 # RF-ORQ-16: ninguna de estas llega al agente narrativo.
 HERRAMIENTAS_PROHIBIDAS = (
     "Bash",
@@ -122,7 +123,7 @@ class ClienteDeClaudeCode:
         if proceso.returncode != 0:
             raise ErrorTransitorioDeProveedor(
                 f"el CLI devolvio {proceso.returncode}: "
-                f"{(proceso.stderr or proceso.stdout or "").strip()[:400]}"
+                f"{(proceso.stderr or proceso.stdout or '').strip()[:400]}"
             )
 
         try:
