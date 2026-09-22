@@ -348,7 +348,7 @@ Hay una skill por requisito técnico de §4, más tres instaladas por decisión 
 
 **`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §6.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
 
-**`coherencia-docs` no decide nada por su cuenta.** Compara `docs/` y este fichero entre sí y produce informe, plan y edición en tres pasos separados, con parada en cada uno; solo aplica lo aprobado. No rellena huecos escribiendo contenido nuevo ni reclasifica las letras de `docs/verification.md`: eso es §3.2 y §14.
+**`coherencia-docs` no decide nada por su cuenta.** Compara `docs/` y este fichero entre sí y produce informe, plan y edición en tres pasos separados, con parada en cada uno; solo aplica lo aprobado. No rellena huecos escribiendo contenido nuevo ni reclasifica las letras de `docs/verification.md`: eso es §3.2 y §14 de este fichero.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, las reglas de frontera de §5, el ledger append-only— **no lo cubre ninguna skill pública**: vive en este fichero.
 

@@ -76,7 +76,7 @@ Convenciones de esta sección:
 
 **Todo requisito cita su origen.** Uno sin origen es una invención y se rechaza en revisión. Las palabras **debe**, **no debe** y **puede** se usan en sentido normativo.
 
-**Una letra por requisito.** `verification.md` §4 exige exactamente una: la del método que **establece** el requisito. Cuando un segundo método lo refuerza sin establecerlo se anota entre paréntesis —`**A** (+T)` se lee «se verifica leyendo el código, y un test lo refuerza»— y no sustituye a la letra. **Ningún requisito de esta spec lleva U:** lo que hoy nadie puede comprobar no es requisito, y está enumerado en «Lo que esta spec no verifica».
+**Una letra por requisito.** `verification.md` §4 fija **una letra principal**: la del método que **establece** el requisito. Cuando un segundo método lo refuerza sin establecerlo se anota entre paréntesis —`**A** (+T)` se lee «se verifica leyendo el código, y un test lo refuerza»— y no sustituye a la letra. **Ningún requisito de esta spec lleva U:** lo que hoy nadie puede comprobar no es requisito, y está enumerado en «Lo que esta spec no verifica».
 
 ### Casos de uso
 
