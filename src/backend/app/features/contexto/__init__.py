@@ -13,6 +13,11 @@ from app.features.contexto.capas import (
     CapaEnsamblada,
     Pieza,
 )
+from app.features.contexto.recoleccion import (
+    MUESTRAS_ANCLA,
+    Almacenes,
+    recolectar,
+)
 from app.features.contexto.service import (
     ABRE_DATOS,
     CIERRA_DATOS,
@@ -24,6 +29,8 @@ from app.features.contexto.service import (
 
 __all__ = [
     "ABRE_DATOS",
+    "MUESTRAS_ANCLA",
+    "Almacenes",
     "CIERRA_DATOS",
     "LIMITE_DURO",
     "ORIGEN",
@@ -37,4 +44,5 @@ __all__ = [
     "PaqueteDeContexto",
     "Pieza",
     "ensamblar",
+    "recolectar",
 ]
