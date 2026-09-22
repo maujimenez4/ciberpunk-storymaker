@@ -28,7 +28,9 @@ def upgrade() -> None:
         sa.Column("serie_id", sa.String, primary_key=True),
         sa.Column("titulo", sa.String, nullable=False),
         sa.Column("orden_de_lectura", sa.Integer),
-        sa.Column("canon_compartido", sa.Boolean, nullable=False, default=True),
+        sa.Column(
+            "canon_compartido", sa.Boolean, nullable=False, server_default=sa.text("1")
+        ),
     )
     op.create_table(
         "obra",
@@ -123,7 +125,7 @@ def upgrade() -> None:
         ),
         # RF-ESC-03: inmutable. No hay UPDATE sobre `texto` en ninguna ruta.
         sa.Column("texto", sa.Text, nullable=False),
-        sa.Column("vigente", sa.Boolean, nullable=False, default=False),
+        sa.Column("vigente", sa.Boolean, nullable=False, server_default=sa.text("0")),
         sa.Column("run_id", sa.String, nullable=False),
         # RF-MAN-02: generado, editado o humano.
         sa.Column("autoria", sa.String, nullable=False),
@@ -221,6 +223,119 @@ def upgrade() -> None:
         sa.Column("escena_en_que_se_establece", sa.String, sa.ForeignKey("escena.escena_id")),
     )
 
+
+    # --- canon, ledger, estado derivado e indice ---------------------------
+    op.create_table(
+        "entidad",
+        sa.Column("entidad_id", sa.String, primary_key=True),
+        sa.Column("obra_id", sa.String, sa.ForeignKey("obra.obra_id"), nullable=False),
+        sa.Column("tipo", sa.String, nullable=False),
+        sa.Column("nombre", sa.String, nullable=False),
+    )
+    # RD-11: el canon cuelga de `serie_id`, no de `obra_id`. Es lo unico de
+    # todo el esquema cuya clave ajena apunta a la serie a proposito.
+    op.create_table(
+        "hecho_canon",
+        sa.Column("hc_id", sa.String, primary_key=True),
+        sa.Column("serie_id", sa.String, sa.ForeignKey("serie.serie_id"), nullable=False),
+        sa.Column("entidad", sa.String, nullable=False),
+        sa.Column("atributo", sa.String, nullable=False),
+        sa.Column("valor", sa.String, nullable=False),
+        # RF-CAN-04: todo hecho cita la escena que lo establecio.
+        sa.Column(
+            "escena_de_origen", sa.String, sa.ForeignKey("escena.escena_id"), nullable=False
+        ),
+        sa.Column("confianza", sa.Float),
+        # RF-CAN-07: corregir no edita. El hecho nuevo cita al que sustituye.
+        sa.Column("sustituye_a", sa.String, sa.ForeignKey("hecho_canon.hc_id")),
+    )
+    op.create_table(
+        "evento",
+        sa.Column("evt_id", sa.String, primary_key=True),
+        sa.Column("serie_id", sa.String, sa.ForeignKey("serie.serie_id"), nullable=False),
+        sa.Column("descripcion", sa.String, nullable=False),
+        sa.Column("tiempo_historia", sa.String),
+        sa.Column("lugar", sa.String),
+        sa.Column("participantes", sa.JSON),
+        # RF-CAN-11: de aqui se deriva quien puede saber que, y desde cuando.
+        sa.Column("testigos", sa.JSON),
+        sa.Column("causa", sa.JSON),
+        sa.Column("consecuencia", sa.JSON),
+        sa.Column("escena_de_origen", sa.String, sa.ForeignKey("escena.escena_id")),
+    )
+    # RF-CAN-05: append-only impuesto por el motor, no por el repositorio. Si
+    # solo lo impidiera el codigo, una consulta suelta o una migracion futura
+    # podrian romperlo sin que nada avisara.
+    op.execute(
+        "CREATE TRIGGER evento_sin_update BEFORE UPDATE ON evento BEGIN "
+        "SELECT RAISE(ABORT, 'el ledger es append-only'); END"
+    )
+    op.execute(
+        "CREATE TRIGGER evento_sin_delete BEFORE DELETE ON evento BEGIN "
+        "SELECT RAISE(ABORT, 'el ledger es append-only'); END"
+    )
+    op.create_table(
+        "plantado",
+        sa.Column("plantado_id", sa.String, primary_key=True),
+        sa.Column(
+            "escena_de_origen", sa.String, sa.ForeignKey("escena.escena_id"), nullable=False
+        ),
+        sa.Column("importancia", sa.String, nullable=False),
+        sa.Column("escena_de_pago_prevista", sa.String, sa.ForeignKey("escena.escena_id")),
+        sa.Column("escena_de_pago", sa.String, sa.ForeignKey("escena.escena_id")),
+    )
+    op.create_table(
+        "hilo_narrativo",
+        sa.Column("hilo_id", sa.String, primary_key=True),
+        sa.Column("pregunta", sa.String, nullable=False),
+        sa.Column(
+            "escena_de_apertura", sa.String, sa.ForeignKey("escena.escena_id"), nullable=False
+        ),
+        sa.Column("escena_de_cierre", sa.String, sa.ForeignKey("escena.escena_id")),
+        sa.Column("estado", sa.String, nullable=False),
+    )
+    # RF-CAN-08: cascada escena -> capitulo -> acto -> obra. `referencia_id`
+    # apunta a la unidad resumida; que tabla sea depende de `nivel`, asi que no
+    # lleva clave ajena.
+    op.create_table(
+        "resumen",
+        sa.Column("resumen_id", sa.String, primary_key=True),
+        sa.Column("nivel", sa.String, nullable=False),
+        sa.Column("referencia_id", sa.String, nullable=False),
+        sa.Column("texto", sa.Text, nullable=False),
+        sa.UniqueConstraint("nivel", "referencia_id"),
+    )
+    # RF-CAN-06 y RF-CAN-13: el estado en T es derivado; esto es solo cache.
+    # `valido` es lo que permite invalidar los posteriores a un hecho sustituido
+    # sin borrarlos, y recalcular desde el ultimo valido.
+    op.create_table(
+        "snapshot_estado_en_t",
+        sa.Column("snapshot_id", sa.String, primary_key=True),
+        sa.Column(
+            "escena_id", sa.String, sa.ForeignKey("escena.escena_id"), nullable=False
+        ),
+        sa.Column("estado", sa.JSON, nullable=False),
+        sa.Column("valido", sa.Boolean, nullable=False, server_default=sa.text("1")),
+        sa.Column("creado_en", sa.DateTime, nullable=False),
+        sa.UniqueConstraint("escena_id"),
+    )
+    # RD-07: el embedding se guarda como BLOB, legible por las dos
+    # implementaciones de VectorStore. `dimension` viaja con el vector para que
+    # cambiar de proveedor sea un reindexado detectable, no un fallo silencioso.
+    op.create_table(
+        "fragmento",
+        sa.Column("fragmento_id", sa.String, primary_key=True),
+        sa.Column(
+            "version_texto_id",
+            sa.String,
+            sa.ForeignKey("version_texto.version_texto_id"),
+            nullable=False,
+        ),
+        sa.Column("texto", sa.Text, nullable=False),
+        sa.Column("embedding", sa.LargeBinary),
+        sa.Column("dimension", sa.Integer),
+    )
+
     # Una sola version vigente por escena (RF-ESC-03).
     op.create_index(
         "ix_version_texto_una_vigente_por_escena",
@@ -233,7 +348,17 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_version_texto_una_vigente_por_escena", "version_texto")
+    op.execute("DROP TRIGGER IF EXISTS evento_sin_update")
+    op.execute("DROP TRIGGER IF EXISTS evento_sin_delete")
     for tabla in (
+        "fragmento",
+        "snapshot_estado_en_t",
+        "resumen",
+        "hilo_narrativo",
+        "plantado",
+        "evento",
+        "hecho_canon",
+        "entidad",
         "regla_de_mundo",
         "objeto",
         "distancia_entre_lugares",

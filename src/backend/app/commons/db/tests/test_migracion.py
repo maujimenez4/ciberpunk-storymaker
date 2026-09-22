@@ -100,7 +100,61 @@ BIBLIA_Y_MUNDO: dict[str, set[str]] = {
     },
 }
 
-TABLAS = {**OBRA_Y_MANUSCRITO, **BIBLIA_Y_MUNDO}
+# P-06c - canon, ledger, estado derivado e indice.
+CANON: dict[str, set[str]] = {
+    "entidad": {"entidad_id", "obra_id", "tipo", "nombre"},
+    "hecho_canon": {
+        "hc_id",
+        "serie_id",
+        "entidad",
+        "atributo",
+        "valor",
+        "escena_de_origen",
+        "confianza",
+        "sustituye_a",
+    },
+    "evento": {
+        "evt_id",
+        "serie_id",
+        "descripcion",
+        "tiempo_historia",
+        "lugar",
+        "participantes",
+        "testigos",
+        "escena_de_origen",
+    },
+    "plantado": {
+        "plantado_id",
+        "escena_de_origen",
+        "importancia",
+        "escena_de_pago_prevista",
+        "escena_de_pago",
+    },
+    "hilo_narrativo": {
+        "hilo_id",
+        "pregunta",
+        "escena_de_apertura",
+        "escena_de_cierre",
+        "estado",
+    },
+    "resumen": {"resumen_id", "nivel", "referencia_id", "texto"},
+    "snapshot_estado_en_t": {
+        "snapshot_id",
+        "escena_id",
+        "estado",
+        "valido",
+        "creado_en",
+    },
+    "fragmento": {
+        "fragmento_id",
+        "version_texto_id",
+        "texto",
+        "embedding",
+        "dimension",
+    },
+}
+
+TABLAS = {**OBRA_Y_MANUSCRITO, **BIBLIA_Y_MUNDO, **CANON}
 
 
 @pytest.fixture(scope="module")
@@ -153,3 +207,51 @@ def test_el_canon_cuelga_de_la_serie_desde_la_migracion_inicial(
     """
     assert "serie" in esquema
     assert "serie_id" in esquema["obra"]
+
+
+def test_el_ledger_rechaza_actualizar_y_borrar_por_construccion(
+    tmp_path: Path,
+) -> None:
+    """RF-CAN-05: append-only no es una convencion, es el motor.
+
+    Si solo lo impidiera el repositorio, cualquier consulta suelta o una
+    migracion futura podria romperlo sin que nada avisara.
+    """
+    import sqlite3
+    import subprocess
+    import sys as _sys
+
+    fichero = tmp_path / "obra.db"
+    assert (
+        subprocess.run(
+            [
+                _sys.executable,
+                "-m",
+                "alembic",
+                "-x",
+                f"url=sqlite:///{fichero}",
+                "upgrade",
+                "head",
+            ],
+            cwd=RAIZ,
+            capture_output=True,
+            text=True,
+        ).returncode
+        == 0
+    )
+    conexion = sqlite3.connect(fichero)
+    conexion.execute("INSERT INTO serie (serie_id, titulo) VALUES ('s1', 'S')")
+    conexion.execute(
+        "INSERT INTO evento (evt_id, serie_id, descripcion) VALUES ('e1', 's1', 'x')"
+    )
+    conexion.commit()
+    for sentencia in (
+        "UPDATE evento SET descripcion = 'y' WHERE evt_id = 'e1'",
+        "DELETE FROM evento WHERE evt_id = 'e1'",
+    ):
+        try:
+            conexion.execute(sentencia)
+        except sqlite3.IntegrityError:
+            continue
+        raise AssertionError(f"el ledger acepto: {sentencia}")
+    conexion.close()
