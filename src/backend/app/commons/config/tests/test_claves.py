@@ -16,7 +16,7 @@ from app.commons.config.tests.test_ajustes import ENTORNO_COMPLETO
 
 CAMPOS_SECRETOS = ("proveedor_generacion_clave", "proveedor_embeddings_clave")
 
-RAIZ = Path(__file__).resolve().parents[4]
+RAIZ = Path(__file__).resolve().parents[6]  # raiz del repositorio
 
 # Formas habituales de una clave escrita a mano en el codigo.
 SOSPECHOSOS = re.compile(
