@@ -1,0 +1,64 @@
+[project]
+name = "ciberpunk-storymaker"
+version = "0.1.0"
+description = "Generacion asistida de novela larga. Backend v1."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.20",
+    "alembic>=1.14",
+    "numpy>=2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend/app"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/backend"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+src = ["src/backend"]
+# .claude/ son skills vendorizadas: SOURCES.md prohibe editar su texto.
+extend-exclude = [".claude", ".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/backend/app"]
+
+[[tool.mypy.overrides]]
+module = "app.commons.domain.*"
+disallow_any_explicit = true
+
+# Reglas de frontera de CLAUDE.md §5.1 y architecture.md §5.2.
+# P-16 las completa; aqui solo el contrato que P-01 necesita para no romper la build.
+[tool.importlinter]
+root_packages = ["app"]
+
+[[tool.importlinter.contracts]]
+name = "commons no importa de ninguna feature"
+type = "forbidden"
+source_modules = ["app.commons"]
+forbidden_modules = ["app.features"]
