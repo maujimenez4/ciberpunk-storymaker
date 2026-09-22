@@ -25,7 +25,7 @@ class Ajustes(BaseSettings):
     proveedor_generacion_url: str
     modelo: str
     proveedor_embeddings_clave: SecretStr
-    ruta_base_datos: str
+    ruta_base_de_datos: str
 
     # Con valor por defecto explicito.
     llamadas_simultaneas: int = 1  # D-03, architecture.md §2.2

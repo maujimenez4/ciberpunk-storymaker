@@ -14,7 +14,7 @@ ENTORNO_COMPLETO = {
     "STORYMAKER_PROVEEDOR_GENERACION_URL": "https://ejemplo.invalid",
     "STORYMAKER_MODELO": "modelo-de-prueba",
     "STORYMAKER_PROVEEDOR_EMBEDDINGS_CLAVE": "clave-de-prueba",
-    "STORYMAKER_RUTA_BASE_DATOS": "obra.db",
+    "STORYMAKER_RUTA_BASE_DE_DATOS": "obra.db",
 }
 
 OBLIGATORIAS = sorted(ENTORNO_COMPLETO)
