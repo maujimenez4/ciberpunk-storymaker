@@ -19,7 +19,12 @@ import unicodedata
 from pydantic import BaseModel, ConfigDict
 
 from app.commons.errors import EntradaFueraDeDominio
-from app.features.calidad.defectos import CodigoDeDefecto, Defecto, citar
+from app.features.calidad.defectos import (
+    CodigoDeDefecto,
+    Defecto,
+    citar,
+    citar_del_modelo,
+)
 
 
 class Afirmacion(BaseModel):
@@ -164,15 +169,15 @@ def validar_continuidad_fisica(
                 )
             else:
                 continue
-            defectos.append(
-                citar(
-                    texto,
-                    siguiente.cita,
-                    CodigoDeDefecto.CON_01,
-                    version_texto_id,
-                    detalle=detalle,
-                )
+            defecto = citar_del_modelo(
+                texto,
+                siguiente.cita,
+                CodigoDeDefecto.CON_01,
+                version_texto_id,
+                detalle=detalle,
             )
+            if defecto is not None:
+                defectos.append(defecto)
     return defectos
 
 
@@ -230,8 +235,8 @@ def validar_conocimiento(
     cosa que se usa, no algo que se sepa, y contrastarla contra la lista de lo
     que un personaje sabe daba CON-03 en toda escena con un objeto dentro.
     """
-    return [
-        citar(
+    defectos = [
+        citar_del_modelo(
             texto,
             a.cita,
             CodigoDeDefecto.CON_03,
@@ -243,6 +248,7 @@ def validar_conocimiento(
         and a.informacion
         and not _ya_lo_sabia(a.informacion, conocimientos.get(a.sujeto, []))
     ]
+    return [d for d in defectos if d is not None]
 
 
 # --- RF-CAL-06: contradicción de canon (CAN-01) -----------------------------
@@ -282,19 +288,19 @@ def validar_canon(
             continue
         establecido = por_clave.get((a.sujeto, a.atributo))
         if establecido and establecido.valor != a.valor:
-            defectos.append(
-                citar(
-                    texto,
-                    a.cita,
-                    CodigoDeDefecto.CAN_01,
-                    version_texto_id,
-                    hecho_canon_id=establecido.hc_id,
-                    detalle=(
-                        f"{a.sujeto}.{a.atributo} es '{establecido.valor}' desde la "
-                        f"escena de orden {establecido.orden_discurso}, no '{a.valor}'"
-                    ),
-                )
+            defecto = citar_del_modelo(
+                texto,
+                a.cita,
+                CodigoDeDefecto.CAN_01,
+                version_texto_id,
+                hecho_canon_id=establecido.hc_id,
+                detalle=(
+                    f"{a.sujeto}.{a.atributo} es '{establecido.valor}' desde la "
+                    f"escena de orden {establecido.orden_discurso}, no '{a.valor}'"
+                ),
             )
+            if defecto is not None:
+                defectos.append(defecto)
     return defectos
 
 
@@ -310,8 +316,8 @@ def validar_objetos(
     version_texto_id: str,
 ) -> list[Defecto]:
     """RG-05."""
-    return [
-        citar(
+    defectos = [
+        citar_del_modelo(
             texto,
             a.cita,
             CodigoDeDefecto.CON_02,
@@ -321,6 +327,7 @@ def validar_objetos(
         for a in afirmaciones
         if a.objeto and estado_de_objetos.get(a.objeto) in INDISPONIBLES
     ]
+    return [d for d in defectos if d is not None]
 
 
 # --- RF-CAL-12: persona y tiempo verbal declarados (VOZ-03) -----------------

@@ -22,6 +22,7 @@ from app.features.calidad import (
     CodigoDeDefecto,
     Defecto,
     HechoDeCanon,
+    pasar_g1a,
     solo_narracion,
     validar_canon,
     validar_conocimiento,
@@ -271,3 +272,54 @@ def test_el_discurso_declarado_en_la_escala_sigue_evaluandose(
 ) -> None:
     """El control negativo: fallar cerrado no puede volverse fallar siempre."""
     validar_discurso("Ada cruzó el taller sin mirarlo.", persona, tiempo, VT)
+
+
+# --- RF-CAL-11: una cita parafraseada es un defecto, no una excepcion -------
+
+
+def test_una_cita_que_el_modelo_se_invento_no_mata_el_ciclo() -> None:
+    """Lo encontro la sesion Julio en la primera corrida real con Continuista.
+
+    Los cuatro validadores de continuidad reciben la cita **que escribe el
+    modelo**, y `citar` lanza `ValueError` cuando no la encuentra literalmente.
+    El Continuista parafraseo -que es lo que hace cualquier modelo al que le
+    pides que cite- y la excepcion subio por `ciclo_de_escena` y mato el proceso
+    en la escena 1.
+
+    Lo grave no es la excepcion: es **donde** ocurre. Toda la maquinaria contra
+    la cita inventada -`comprobar_forma`, los axiomas 11 y 12, la tasa de mal
+    formados- vive aguas abajo, en la puerta. Para que un defecto mal formado se
+    registre, primero tiene que construirse; aqui reventaba antes de existir. El
+    sistema tenia el mecanismo y el caso no llegaba nunca a el.
+    """
+    texto = "Ada dejo la carpeta sobre la mesa y no la solto."
+    parafraseada = Afirmacion(
+        cita="conozco a todos los clientes de este barrio",
+        sujeto="pj-ada",
+        informacion="los clientes del barrio",
+    )
+
+    defectos = validar_conocimiento([parafraseada], {"pj-ada": []}, texto, VT)
+
+    assert [d.codigo.value for d in defectos] == ["CON-03"]
+    # Se conserva lo que el modelo dijo: es la prueba de que se lo invento, y es
+    # lo que alimenta la tasa que mide al Continuista (§9).
+    assert defectos[0].cita == "conozco a todos los clientes de este barrio"
+
+
+def test_la_cita_inventada_llega_a_la_puerta_y_sale_mal_formada() -> None:
+    """La otra mitad: que el defecto llegue **entero** al mecanismo que existe
+    para juzgarlo, y que ese mecanismo lo rechace por su cuenta."""
+    texto = "Ada dejo la carpeta sobre la mesa y no la solto."
+    parafraseada = Afirmacion(
+        cita="conozco a todos los clientes de este barrio",
+        sujeto="pj-ada",
+        informacion="los clientes del barrio",
+    )
+
+    defectos = validar_conocimiento([parafraseada], {"pj-ada": []}, texto, VT)
+    veredicto = pasar_g1a(defectos, texto, set())
+
+    assert veredicto.mal_formados, "la cita inventada tiene que contarse"
+    assert veredicto.bloquean == []
+    assert veredicto.aprobada is True

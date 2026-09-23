@@ -132,3 +132,50 @@ def citar(
         hecho_canon_id=hecho_canon_id,
         detalle=detalle,
     )
+
+
+def citar_del_modelo(
+    texto: str,
+    fragmento: str,
+    codigo: CodigoDeDefecto,
+    version_texto_id: str,
+    hecho_canon_id: str | None = None,
+    detalle: str = "",
+) -> Defecto | None:
+    """Como `citar`, pero la cita **la escribio el modelo** y puede no estar.
+
+    La diferencia con `citar` no es de estilo. Alli el fragmento sale del propio
+    texto -`texto[posicion:posicion + len(termino)]`- y que aparezca esta
+    garantizado por construccion; aqui lo escribe el Continuista, y que no
+    aparezca **es el dato**, no un error de programacion: el modelo parafraseo.
+
+    Reventar con `ValueError` dejaba ese caso sin llegar a ninguna parte. Toda la
+    maquinaria que existe para juzgarlo -`comprobar_forma`, los axiomas 11 y 12,
+    la tasa de mal formados de §9- vive aguas abajo, en la puerta, y para que un
+    defecto mal formado se registre primero tiene que construirse. En la primera
+    corrida real con Continuista la excepcion subio por `ciclo_de_escena` y mato
+    el proceso en la escena 1.
+
+    Asi que se construye igual, anclado al principio del texto. **No lo declara
+    mal formado**: eso lo decide `comprobar_forma`, que comparara la cita con lo
+    que hay en el desplazamiento y no cuadrara. El juicio se queda donde estaba;
+    lo que se arregla es que el caso llegue hasta el.
+
+    Devuelve `None` cuando no hay cita ninguna: sin pasaje no hay defecto
+    reparable (regla 8), y un `Defecto` sin cita no se puede ni construir.
+    """
+    if not fragmento:
+        return None
+    if texto.find(fragmento) >= 0:
+        return citar(
+            texto, fragmento, codigo, version_texto_id, hecho_canon_id, detalle
+        )
+    return Defecto(
+        codigo=codigo,
+        version_texto_id=version_texto_id,
+        cita=fragmento,
+        desplazamiento_inicio=0,
+        desplazamiento_fin=len(fragmento),
+        hecho_canon_id=hecho_canon_id,
+        detalle=detalle,
+    )
