@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — de la entrevista a la novela publicada
-estado: en-revision       # borrador | en-revision | aprobada | implementada
-aprobada_por:             # lo rellena una persona, nunca un agente
+estado: aprobada          # borrador | en-revision | aprobada | implementada
+aprobada_por: maujimenez4 # firmada el 2026-09-23
 fecha: 2026-09-23
 ---
 
@@ -513,8 +513,8 @@ Dos consecuencias que se escriben aquí porque cambian requisitos:
 
 ## Cierre
 
-**No queda ninguna pregunta abierta**, que es la única condición que `CLAUDE.md` §3.2 pone para que una spec pueda aprobarse. Por eso pasa a `en-revision`.
+**Aprobada por `maujimenez4` el 2026-09-23**, con las seis preguntas cerradas y ninguna abierta, que es la condición que `CLAUDE.md` §3.2 pone.
 
-**No pasa a `aprobada`.** Eso lo hace una persona, en un commit suyo que no contenga nada más (§3.2 y §15). Ningún agente de este repositorio lo ha tocado ni debe tocarlo.
+Es **firma nueva y no heredada**: reemplaza a la spec aprobada el 2026-09-22, cuyo alcance era otro. Y aprueba además, **en bloque**, las catorce dependencias de Impacto técnico (P-01).
 
-Y necesita **firma nueva**, no la heredada: reemplaza a la spec aprobada el 2026-09-22, cuyo alcance era otro. Firmarla aprueba además, en bloque, las catorce dependencias de Impacto técnico (P-01).
+**Lo que esta firma abre:** el plan (`§3.2`), y con él la pregunta que se apartó a propósito de esta spec porque era de plan y no de alcance — **qué se puede comprobar antes de G4 aunque sea parcialmente**. Cuatro validadores bloquean con la novela ya escrita, y ahí un fallo no cuesta un capítulo: cuesta lo que haya que rehacer.
