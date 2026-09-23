@@ -92,3 +92,10 @@
 - **Ficheros:** `bitacora/nubia.md`
 - **Estado:** terminado — corregido completando el renombrado, sin reescribir historia
 - **Ojo:** **la causa importa más que el fallo.** Otra sesión había dejado el renombrado en el índice, y `git commit` cierra **todo lo que está staged**, no solo lo que uno añade con `git add`. En un directorio compartido por seis sesiones, `git add <ficheros>` no acota nada. **Regla: mirar `git diff --cached --stat` antes de cada commit, no `git status`.** Es la segunda vez hoy que un mensaje mío promete algo distinto de lo que trae el commit; la primera fue `13900cf`.
+
+## 19:30 · Inventario de `manuscrito` para los seis endpoints de la 002
+
+- **Qué:** análisis pedido por Ezequiel antes de escribir la spec de backend, para no volver a declarar inexistente lo que ya está. En `specs/002-lectura-web/inventario-manuscrito.md`.
+- **Ficheros:** `specs/002-lectura-web/inventario-manuscrito.md`. **Ni una línea de `router.py` ni de `schemas.py`**: sin spec ni plan aprobados no hay código (§3.4).
+- **Estado:** terminado
+- **Ojo:** la respuesta a su pregunta es que **`ensamblar` no sirve para montar una `VersionPublicada`**, y no por campos que falten: filtra por `vigente = 1` en el momento de la consulta, o sea responde «el manuscrito ahora» y no «el que se entregó el día 3». Una publicación tiene que fijar los `version_texto_id`. `a_pdf` sí sirve tal cual, porque recibe un `Manuscrito` ya montado y no sabe de dónde salió. Y de las 27 tablas del esquema, **ninguna** es de la capa de entrega: el vocabulario entró en `definitions.md` v1.4, las tablas no.

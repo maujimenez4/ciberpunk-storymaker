@@ -103,3 +103,15 @@ compruebo lo que otros terminan y lo subo si está en verde.
   - **Nada lo podía ver:** el seco pasa `[]`, los tests y la sonda construyen las `Afirmacion` a mano con citas que sí están. Ningún camino ejercía esos validadores con una cita escrita por el modelo.
   - **No relajar `citar`.** La regla de dominio 8 exige subcadena exacta. La salida es que una cita del modelo que no case sea **defecto mal formado**, registrado y sin bloquear: respeta la regla, alimenta la tasa que mide al Continuista y convierte un proceso muerto en un número.
   - La llamada del Continuista **tampoco quedó en `ejecucion`**: se pagó y no hay registro, porque la excepción saltó antes de persistir.
+
+## 17:50 · Corrida con Continuista: el arreglo funciona, el Continuista no
+
+- **Qué:** relanzada tras el arreglo de H-7. Murió en es2. 0,1956 USD.
+- **Ficheros:** ninguno. Base en `Documents\evidencia-corridas\corrida-continuista-completa\`.
+- **Estado:** terminado el hallazgo; bloquea la fase 3 del plan.
+- **Ojo:** tres cosas encadenadas, y la tercera es la grave.
+  1. **El arreglo de Jose funciona.** No hay excepción, los 42 defectos se persisten y la fila del `continuista` aparece en `ejecucion`, que antes faltaba.
+  2. **El Continuista marca un cuarto de la escena.** 40 CON-03 y 2 CON-01 sobre 151 frases. En es1 el canon está vacío por definición, así que *toda* información es «información que no se sabe»: CON-03 no puede acertar en la primera escena.
+  3. **Y los 42 son `bien_formado = 1`.** La tasa de mal formados —la única señal que existe para medir al Continuista— dice 0%, o sea perfecto, mientras su salida es inservible. «Bien formado» solo significa que la cita está en el texto; no dice nada de si el defecto es cierto.
+  4. **La cascada:** los 2 CON-01 bloquean → es1 a `ESCALADA` → no integra → el Extractor no corre → `hecho_canon` se queda en 0 → es2 lanza `CapaVacia` y **muere la corrida entera**. Una escena escalada al principio se lleva el capítulo por delante.
+  5. El error culpa a quien no es: «es fallo del almacén que la surte, no del Escritor». `contexto/repository.py:113` asume que canon vacío con escena anterior significa que el Extractor no escribe. Confunde eso con que la escena anterior no integró.
