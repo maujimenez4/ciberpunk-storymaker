@@ -16,7 +16,7 @@ Sistema cliente-servidor con **tres usuarios distintos**, y conviene separarlos 
 | --- | --- | --- |
 | **Comprador** | Encarga la novela y responde la entrevista | Entrevista |
 | **Destinatario** | La lee, y puede pedir cambios sobre lo que lee | Lectura web |
-| **Autor / operador** | Dirige la obra, resuelve escalados, revisa el manuscrito | Taller |
+| **Autor** | Dirige la obra, resuelve escalados, revisa el manuscrito, puntúa la rúbrica | Taller |
 
 El frontend es una SPA de React; el backend en FastAPI orquesta los agentes, ensambla el contexto, valida y persiste en SQLite.
 
@@ -24,7 +24,7 @@ El frontend es una SPA de React; el backend en FastAPI orquesta los agentes, ens
 flowchart TD
   C["Comprador"] --> ENTR["Entrevista<br/>brief validado"]
   D["Destinatario"] --> LEC["Lectura web<br/>+ petición de cambio"]
-  A["Autor / operador"] --> TAL["Taller"]
+  A["Autor"] --> TAL["Taller"]
 
   ENTR --> FE["Frontend<br/>React + TypeScript + Vite"]
   LEC --> FE
@@ -955,7 +955,7 @@ cosas compatibles:
 | **Salida del modelo** | Lo que el rol devolvió | **Sí, en la traza.** Es la mitad que falta para comparar dos versiones de plantilla |
 
 **Decisión de `maujimenez4`, 2026-09-23**, en sus palabras: *no hay problema en que la novela del
-cliente se vierta al servicio externo, registrando el prompt y el tracing*. Antes de esa decisión
+comprador se vierta al servicio externo, registrando el prompt y el tracing*. Antes de esa decisión
 este documento prometía versionar prompts en la tabla de arriba y prohibía registrarlos dos párrafos
 después: se contradecía consigo mismo.
 
@@ -965,7 +965,7 @@ Extractor y Auditor (§7)—, así que su prompt renderizado **es** el capítulo
 Una regla que dijera «sube el prompt pero no la prosa» sería incumplible justo en los roles que
 juzgan la calidad, y quien la implementara la resolvería por su cuenta y en silencio.
 
-Así que se dice con las palabras exactas: **el manuscrito del cliente llega al servicio externo,
+Así que se dice con las palabras exactas: **el manuscrito del comprador llega al servicio externo,
 dentro de los prompts de los roles que lo reciben.** Es una decisión sobre datos de un tercero —el
 destinatario, que no ha firmado nada— tomada a propósito y no un efecto lateral.
 
@@ -1009,7 +1009,7 @@ Se verifican formalmente dos cosas que **no son la misma**, y confundirlas es el
 ## 11. Guardarraíles, seguridad y cumplimiento (aplicado en código)
 
 - Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt.
-- **Prompts y traza suben a Langfuse**, por decisión explícita de `maujimenez4`, para que el *tuning* del encargo §6 sea posible (§9.2). Como cinco roles reciben la prosa como entrada, **el manuscrito del cliente llega con ellos**: está dicho con esas palabras en §9.2 y no se disimula.
+- **Prompts y traza suben a Langfuse**, por decisión explícita de `maujimenez4`, para que el *tuning* del encargo §6 sea posible (§9.2). Como cinco roles reciben la prosa como entrada, **el manuscrito del destinatario llega con ellos**: está dicho con esas palabras en §9.2 y no se disimula.
 - **Fuera de Langfuse no sale nada:** ni prompts ni fragmentos de manuscrito se escriben en logs, y la base de datos de la obra no abandona la máquina.
 - Las claves de proveedor se leen de entorno; **nunca del repositorio ni de la base de datos**.
 - Registro de autoría: qué partes son generadas, editadas o humanas.
@@ -1021,12 +1021,12 @@ Se aplica **en código sobre cada capítulo, antes de aceptarlo**. No es una ins
 | Ámbito | Qué contiene | Quién lo fija |
 | --- | --- | --- |
 | **Global** | Insultos, términos ofensivos | El sistema |
-| **Obra** | Lo vetado para esta novela | El operador |
-| **Brief** | Lo que este cliente no quiere leer: el nombre de una expareja, un tema | El comprador, en la entrevista |
+| **Obra** | Lo vetado para esta novela | El Autor |
+| **Brief** | Lo que este comprador no quiere leer: el nombre de una expareja, un tema | El comprador, en la entrevista |
 
 **La comparación es sobre texto normalizado**: mayúsculas, acentos, plurales y variantes simples. Un veto que solo caza la forma exacta con la que se escribió no es un veto: quien lo sortea no necesita ingenio, le basta con escribir el plural.
 
-Si hay coincidencia, el capítulo **vuelve al escritor** con el término concreto, con límite de intentos. Agotado el límite, **la generación se detiene y se informa** — no se publica una novela con una palabra que el cliente pidió no leer, aunque el resto esté bien. Cada coincidencia queda en el registro de auditoría y en Langfuse.
+Si hay coincidencia, el capítulo **vuelve al escritor** con el término concreto, con límite de intentos. Agotado el límite, **la generación se detiene y se informa** — no se publica una novela con una palabra que el comprador pidió no leer, aunque el resto esté bien. Cada coincidencia queda en el registro de auditoría y en Langfuse.
 
 ### 11.2 El registro de auditoría
 
@@ -1093,7 +1093,7 @@ Reordenada a la escala del encargo: diez capítulos, no cuarenta escenas.
 5. **Verificación**: Lean en la publicación, TLA+ con TLC en desarrollo, evals con cinco briefs y una iteración de *tuning*. Meta: **se puede demostrar que funciona**.
 6. **Calidad medida**: juez calibrado contra revisión humana con la misma rúbrica, puertas con umbrales.
 
-**El orden no es arbitrario.** La 3 va antes que la 4 porque publicar sin registro de auditoría deja sin respuesta la única pregunta que un cliente hará si algo sale mal. Y la 5 va después de la 4 porque **TLA+ tiene que modelar el flujo real**, incluida la regeneración por petición del lector: especificarla antes de que exista es especificar lo que uno imagina.
+**El orden no es arbitrario.** La 3 va antes que la 4 porque publicar sin registro de auditoría deja sin respuesta la única pregunta que un comprador hará si algo sale mal. Y la 5 va después de la 4 porque **TLA+ tiene que modelar el flujo real**, incluida la regeneración por petición del lector: especificarla antes de que exista es especificar lo que uno imagina.
 
 ---
 

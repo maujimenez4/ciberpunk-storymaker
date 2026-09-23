@@ -28,7 +28,7 @@ Es una spec única y grande a propósito: cubre **el backend entero**. Las pieza
 
 **Por la personalización.** El destinatario existe, conoce de primera mano la mitad de los hechos y **detecta errores que ningún editor podría detectar**. Si el perro se llama Luna en el capítulo siete, no lo lee como un descuido: lo lee como que el regalo no era para él.
 
-Lo sufren tres personas distintas: el **comprador**, que encarga y no sabe si lo que pidió llegó al texto; el **destinatario**, que recibe; y el **operador**, que no puede responder por qué una novela salió como salió.
+Lo sufren tres personas distintas: el **comprador**, que encarga y no sabe si lo que pidió llegó al texto; el **destinatario**, que recibe; y el **Autor**, que no puede responder por qué una novela salió como salió.
 
 Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de contexto, un encargo, y ni una línea de código contra ellos.
 
@@ -48,7 +48,7 @@ Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de
 | *Story bible* en SQLite: canon con **uso por capítulos**, ledger, cronología, resúmenes | §4 | Cierra el bucle entre capítulos, y es la entrada de Lean |
 | Guardarraíles: vetos en tres ámbitos con normalización, y registro de auditoría | §7 | Se aplican en código, antes de aceptar el capítulo |
 | Validadores programáticos, con nombre y punto de ejecución | §5a | Son los que se cuentan |
-| Juez con rúbrica, **revisión del equipo** con la misma rúbrica y **aceptación del comprador** | §5b | Sin la revisión con rúbrica, el juez emite números que nadie contrastó; sin la aceptación, nadie decide si se entrega |
+| Juez con rúbrica, **revisión del Autor** con la misma rúbrica y **aceptación del comprador** | §5b | Sin la revisión con rúbrica, el juez emite números que nadie contrastó; sin la aceptación, nadie decide si se entrega |
 | Verificación formal: **Lean** sobre la cronología, **TLA+** sobre el harness | §5c, §5d | Dos sujetos distintos (`architecture.md` §9.3) |
 | Observabilidad en Langfuse: sesión por novela, spans, *scores*, plantillas versionadas | §6 | Sin ella no hay *tuning* documentable |
 | Publicación: `VersionPublicada` inmutable, conservando la anterior | §2 | La interfaz es de la 002; el concepto es de aquí |
@@ -61,7 +61,7 @@ Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de
 
 | Excluido | Motivo | Dónde |
 | --- | --- | --- |
-| La interfaz de lectura: portada, índice, ficha, petición desde la página | Es otra feature y otra capa | `specs/002-frontend-v1/` |
+| La interfaz de lectura: portada, índice, ficha, petición desde la página | Es otra feature y otra capa | `specs/002-frontend/` |
 | Servidor MCP de consulta | Opcional del encargo; requiere la API cerrada antes | Después |
 | Login y multiusuario | Opcional, y las cuentas están fuera del encargo | — |
 | *Linters* de prosa más allá de los obligatorios | Opcional | — |
@@ -158,7 +158,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
 | RF-ENT-01 | La entrevista recoge del destinatario nombre, edad, rasgos y recuerdos; y de la obra género, tono y extensión | M | Test |
-| RF-ENT-02 | Recoge **las palabras y temas que el cliente no quiere que aparezcan**, que pasan al ámbito `brief` de los vetos | M | Test |
+| RF-ENT-02 | Recoge **las palabras y temas que el comprador no quiere que aparezcan**, que pasan al ámbito `brief` de los vetos | M | Test |
 | RF-ENT-03 | Detecta **qué datos obligatorios faltan** y los devuelve nombrados, no como un error genérico | M | Test |
 | RF-ENT-04 | Detecta **al menos un tipo de contradicción** —por ejemplo edad contra tono, o contra género— y la devuelve explicada. **El esquema no la ve**: un brief puede ser válido y contradictorio a la vez | M | Test |
 | RF-ENT-05 | El texto libre se guarda como `TextoAportado` y **se trata como contenido no confiable**: entra marcado como dato y **nunca se concatena a un prompt sin esa marca** | M | Análisis (+Test) |
@@ -252,7 +252,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 | RF-JUZ-01 | Existe una `Rubrica` versionada con criterios y **anclajes descritos**: qué es un 1 y qué un máximo | M | Inspección |
 | RF-JUZ-02 | Cubre continuidad, tono, calidad narrativa —arco, coherencia de personajes, ritmo— **y naturalidad de la personalización** | M | Inspección |
 | RF-JUZ-03 | El juez devuelve **puntuación por criterio y justificación**. Una puntuación de juicio sin justificación **no se acepta** | M | Test |
-| RF-JUZ-04 | Existe una **revisión humana de al menos una novela completa con la misma rúbrica**, criterio a criterio. La hace **el equipo**, como parte de la evaluación de §5, **no el comprador**: el encargo §5b la exige con rúbrica, y una aceptación comercial no la sustituye | M | Inspección |
+| RF-JUZ-04 | Existe una **revisión humana de al menos una novela completa con la misma rúbrica**, criterio a criterio. La hace **el Autor**, como parte de la evaluación de §5, **no el comprador**: el encargo §5b la exige con rúbrica, y una aceptación comercial no la sustituye | M | Inspección |
 | RF-JUZ-05 | Se registra la **distancia** entre el juicio automático y el humano. Es la única medida de cuánto vale el juez | M | Test |
 | RF-JUZ-06 | **El juez no bloquea** mientras esa correlación no se haya medido sobre un conjunto y firmado (`architecture.md` §8.3) | M | Análisis |
 | RF-JUZ-07 | **El comprador aprueba o rechaza la entrega**, y su veredicto se registra con la versión publicada. Es un booleano, es la aceptación del producto, y **no alimenta la distancia de RF-JUZ-05**: de un sí o un no no sale una distancia | M | Test |
@@ -396,7 +396,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 - [ ] **CA-32** — El outline asigna cada beat obligatorio a **exactamente un** capítulo; uno duplicado o sin asignar falla. *(Test)* → RF-PLA-01, RF-PLA-02, RF-PLA-03, RF-PLA-04.
 - [ ] **CA-33** — Los catorce endpoints aparecen en el OpenAPI con sus modelos, y el estado de un trabajo se lee **por capítulo**. *(Test)* → RI-01, RI-02, RI-03, RI-04, RI-05, RI-06, RI-07, RI-08, RI-09, RI-10, RI-11, RI-12, RI-13, RF-ESC-01, RF-ESC-02, RF-MEM-01, RF-MEM-04, RF-MEM-08, RF-ORQ-01.
 
-- [ ] **CA-34** — Cuando la entrevista se completa sin faltantes ni contradicciones, entonces el brief resultante contiene **el destinatario con sus datos, los vetos del cliente y sus elementos obligatorios**, y valida contra su esquema; y la salida de cada rol valida contra el suyo. *(Test)* → RF-ENT-01, RF-ENT-02, RF-VAL-02.
+- [ ] **CA-34** — Cuando la entrevista se completa sin faltantes ni contradicciones, entonces el brief resultante contiene **el destinatario con sus datos, los vetos del comprador y sus elementos obligatorios**, y valida contra su esquema; y la salida de cada rol valida contra el suyo. *(Test)* → RF-ENT-01, RF-ENT-02, RF-VAL-02.
 - [ ] **CA-35** — Un capítulo por debajo o por encima del rango declarado **se detecta y vuelve al escritor**; uno dentro del rango pasa. *(Test)* → RF-VAL-04.
 - [ ] **CA-37** — La revisión humana de una novela completa produce **puntuación por criterio**, y de ahí se **registra y se consulta la distancia** frente al juicio del modelo. Y el veredicto del comprador —aprobar o rechazar— queda asociado a su versión **sin entrar en ese cálculo**. *(Test)* → RF-JUZ-04, RF-JUZ-05, RF-JUZ-07.
 - [ ] **CA-36** — Dos paquetes que suman más de 100.000 tokens **no corren a la vez**: el segundo espera, y arranca en cuanto el primero libera. Dos que suman menos **sí se solapan**. El contador de tokens en vuelo es **observable**, no implícito. *(Test)* → RF-ORQ-10.
@@ -445,9 +445,23 @@ Las quince de `CLAUDE.md` §8, todas. Las que esta spec **establece por primera 
 
 ---
 
+## Actores
+
+Los tres del sistema, con el nombre que tienen en `docs/definitions.md` y **solo ese**:
+
+| Actor | Qué hace en esta spec |
+| --- | --- |
+| **Comprador** | Responde la entrevista, aporta el `TextoAportado` y los vetos, y **acepta o rechaza la entrega** (RF-JUZ-07) |
+| **Destinatario** | Recibe la obra. **No interviene en el backend**: sus datos entran por el Comprador, y la lectura es de la 002 |
+| **Autor** | Resuelve escalados y **puntúa la rúbrica** de la revisión humana (RF-JUZ-04) |
+
+*No se escribe ~~cliente~~ ni ~~usuario~~ por «comprador», ni ~~operador~~ o ~~el equipo~~ por «autor». `cliente` solo designa software: cliente de modelo, cliente OpenAPI.*
+
+---
+
 ## Vocabulario
 
-Todos los términos existen en `docs/definitions.md` v2.0. Los que esta spec usa y entraron con esa versión: `Destinatario`, `Comprador`, `Dedicatoria`, `TextoAportado`, `PalabraProhibida`, `RegistroDeAuditoria`, `VersionPublicada`, `PeticionDeCambio`, `FichaDeLectura`, `Cronologia`, `Rubrica`, `Puntuacion`, `RevisionHumana`, `ResumenDeCapitulo`.
+Todos los términos existen en `docs/definitions.md` v2.1. Los que esta spec usa y entraron con esa versión: `Destinatario`, `Comprador`, `Dedicatoria`, `TextoAportado`, `PalabraProhibida`, `RegistroDeAuditoria`, `VersionPublicada`, `PeticionDeCambio`, `FichaDeLectura`, `Cronologia`, `Rubrica`, `Puntuacion`, `RevisionHumana`, `ResumenDeCapitulo`.
 
 **Dos términos entran con esta spec**, aprobados por `maujimenez4` el 2026-09-23 y escritos en `definitions.md` antes de cerrarla:
 
@@ -460,14 +474,14 @@ Todos los términos existen en `docs/definitions.md` v2.0. Los que esta spec usa
 
 **P-05 · Quién aprueba la novela y quién calibra al juez son dos personas distintas.** Decidido por `maujimenez4`, 2026-09-23.
 
-**El comprador aprueba o rechaza la entrega.** Eso, y no más: un veredicto, no una rúbrica puntuada. Es la respuesta correcta para un producto de regalo —quien decide si el regalo sirve es quien lo paga, no un crítico literario— y es lo único que se le puede pedir de verdad a un cliente.
+**El comprador aprueba o rechaza la entrega.** Eso, y no más: un veredicto, no una rúbrica puntuada. Es la respuesta correcta para un producto de regalo —quien decide si el regalo sirve es quien lo paga, no un crítico literario— y es lo único que se le puede pedir de verdad a un comprador.
 
-**Y por eso la revisión humana del encargo §5b no la hace él.** El §5b pide, literalmente, «una revisión humana de al menos una novela completa, **con la misma rúbrica**, para comparar el juicio humano con el del LLM». De un sí o un no no sale ninguna comparación por criterio, así que si el comprador fuera el único revisor, **el encargo quedaría incumplido**. La revisión con rúbrica la hace **el equipo**, en desarrollo, junto a los cinco briefs de evaluación de §5.
+**Y por eso la revisión humana del encargo §5b no la hace él.** El §5b pide, literalmente, «una revisión humana de al menos una novela completa, **con la misma rúbrica**, para comparar el juicio humano con el del LLM». De un sí o un no no sale ninguna comparación por criterio, así que si el comprador fuera el único revisor, **el encargo quedaría incumplido**. La revisión con rúbrica la hace **el Autor**, en desarrollo, junto a los cinco briefs de evaluación de §5.
 
 | Acto | Quién | Qué produce | Para qué |
 | --- | --- | --- | --- |
 | Aceptación de la entrega | **Comprador** | Un booleano, asociado a su versión | Es el producto: decide si se entrega |
-| Revisión con rúbrica | **Equipo** | Puntuación por criterio | Es la calibración: mide la distancia con el juez |
+| Revisión con rúbrica | **Autor** | Puntuación por criterio | Es la calibración: mide la distancia con el juez |
 
 **Qué sigue sin cerrarse:** una novela es una novela. La distancia medida sobre un solo manuscrito dice muy poco, así que RF-JUZ-06 sigue en pie — **el juez no bloquea** hasta que haya un número firmado sobre un conjunto (`architecture.md` §8.3). El encargo pide *al menos* una; nosotros no fingimos que una baste.
 

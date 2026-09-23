@@ -22,6 +22,8 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 
 | **2.1** | Entran **`PresupuestoConcurrente`** (§9) y **`CuadroDeDefectos`** (§9.2), con sus tres entradas de glosario (§13) y su sitio en los árboles (§14.6 y §14.7). Los dos salen de decisiones de `maujimenez4` del 2026-09-23 sobre `specs/001-backend-v1/`: P-06 admite el paralelismo, y con él la suma de tokens en vuelo pasa a ser una magnitud calculable que hay que nombrar; P-04 da nombre al conjunto de defectos que se guarda con una versión publicada. **Aditiva:** no retira ni redefine nada de la v2.0 |
 
+| **2.2** | **Tabla canónica de actores** (§9.1): `Comprador`, `Destinatario` y `Autor`, este último definido por primera vez, cada uno con los **nombres que no se usan** para designarlo. Y el atributo `Revelacion.destinatario` pasa a **`dirigida_a`**, porque `Destinatario` ya nombra a un actor y el término significaba dos cosas. Decisiones de `maujimenez4`, 2026-09-23. **Aditiva salvo ese renombrado**, que es un cambio de modelo y por eso va dicho aquí y no solo en la clase |
+
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
 
 ---
@@ -208,7 +210,9 @@ Escena que cobra un plantado y satisface la expectativa creada.
 
 #### `Revelacion`
 Dato que cambia la interpretación de lo ya leído.
-- `escena`, `destinatario` ∈ {personaje X, lector, ambos}, `efecto_sobre_la_relacion`
+- `escena`, `dirigida_a` ∈ {personaje X, lector, ambos}, `efecto_sobre_la_relacion`
+
+> **`dirigida_a` se llamaba `destinatario` hasta la v2.2**, y se renombra porque `Destinatario` pasó a ser un actor con clase propia (§9.1). El mismo término significaba dos cosas en este documento: la persona a quien se regala la obra, y a quién va dirigida una revelación dentro de la historia. El contexto las desambiguaba hoy y habría dejado de hacerlo en cuanto alguien escribiera `revelacion.destinatario` en el esquema. **El `lector` del enumerado es el narratológico** y ese sí se queda: una revelación puede ir dirigida al personaje, a quien lee, o a los dos.
 
 #### `HiloNarrativo`
 Pregunta abierta que el lector arrastra.
@@ -342,7 +346,7 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | **Cobertura de la personalización** | Manuscrito | Cada elemento obligatorio del `Brief` aparece en al menos un `Capitulo`, contrastado contra `HechoCanon.usado_en[]`  |
 | **Naturalidad de la personalización** | Manuscrito | Juez con rúbrica: ¿el dato está **integrado en la historia** o **incrustado** en ella?  |
 
-**Las dos últimas entran en la v2.0 y cubren un agujero grande.** Las doce anteriores juzgan si la novela está bien escrita; **ninguna juzgaba si es de quien dice ser.** Con solo aquellas, un sistema podía sacar la máxima puntuación en todas habiendo ignorado al destinatario por completo — y ese sistema habría fallado en lo único que el cliente compra.
+**Las dos últimas entran en la v2.0 y cubren un agujero grande.** Las doce anteriores juzgan si la novela está bien escrita; **ninguna juzgaba si es de quien dice ser.** Con solo aquellas, un sistema podía sacar la máxima puntuación en todas habiendo ignorado al destinatario por completo — y ese sistema habría fallado en lo único que el comprador compra.
 
 Son **dos** y no una a propósito, porque fallan por separado y en direcciones opuestas: la cobertura se arregla metiendo el dato, y meterlo a lo bruto es exactamente lo que rompe la naturalidad. Medir solo la primera premia el relleno; medir solo la segunda deja pasar una novela que no menciona al destinatario. **La personalización no justifica una mala escritura**, y la calidad tampoco justifica una novela impersonal.
 
@@ -453,10 +457,30 @@ Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existe
 
 La novela no es un producto, es **un regalo para alguien**. Estas cuatro clases son ese alguien.
 
+#### Los tres actores, y las cinco palabras que sobraban
+
+Decisión de `maujimenez4`, 2026-09-23. **Hay tres actores y solo tres nombres.**
+
+| Actor | Qué hace | No se le llama |
+| --- | --- | --- |
+| **`Comprador`** | Encarga la obra, responde la entrevista, aporta los datos y los vetos, acepta la entrega | ~~cliente~~, ~~usuario~~ |
+| **`Destinatario`** | Recibe la obra, la lee y **puede pedir cambios** | ~~lector~~ |
+| **`Autor`** | Dirige la obra, resuelve los escalados y **puntúa la rúbrica** en la revisión humana | ~~operador~~, ~~el equipo~~, ~~Autor/operador~~ |
+
+**Por qué son dos personas y no una.** El encargo lo fija en su §Contexto: «la novela debe incorporar de forma natural los datos **del destinatario**… los detalles que **el comprador** ha aportado». Esa frase solo se sostiene si son dos: uno aporta los datos del otro. Pueden coincidir en una venta concreta; no pueden fundirse en el modelo.
+
+**Y por qué esta tabla dice qué palabras *no* se usan.** El encargo emplea **cinco** términos para dos personas —destinatario, comprador, cliente, usuario, lector— sin distinguirlos. Copiamos su vocabulario sin normalizarlo y la deriva vino de ahí: no sobraba un actor, sobraban tres nombres. Una tabla que solo dijera cómo se llaman las cosas no impediría que alguien escriba «cliente»; esta dice cuáles están prohibidas, que es lo que se puede comprobar.
+
+Dos reservas que evitan el siguiente choque:
+
+- **`cliente` queda reservado para software**: cliente de modelo, cliente OpenAPI, clientes HTTP. Cuando aparezca esa palabra en el repositorio, no es una persona.
+- **`lector` está prohibido como nombre del `Destinatario`, no como palabra.** Sigue siendo correcto allí donde significa *quien lee una novela* en sentido narratológico: los treinta y cuatro usos de [`domain-knowledge.md`](domain-knowledge.md) y los dieciocho de **este mismo documento** —«¿qué espera el lector?», «donde el lector decide si sigue», «contrato con el lector»— son legítimos y **no se corrigen**. La prueba para distinguirlos: si la frase seguiría siendo cierta en una novela que nadie regaló, es el lector narratológico; si habla de quien recibió **esta** obra, es el `Destinatario`.
+
 | Clase | Definición | Atributos clave |
 | --- | --- | --- |
 | `Destinatario` | Persona real a quien se regala la `Obra`. Aporta al `Brief` los datos que se personalizan. **No es un `Personaje`** y no se le aplican las reglas de canon narrativo | `destinatario_id`, `nombre`, `edad`, `rasgos[]`, `recuerdos_aportados[]` |
 | `Comprador` | Quien encarga la obra y responde la entrevista. Puede coincidir con el `Destinatario` o no; cuando no coincide, es quien aporta los datos de aquel | `comprador_id`, `nombre`, `contacto` |
+| `Autor` | Quien **dirige** la obra desde dentro del sistema: resuelve los escalados de la puerta de calidad y puntúa la `Rubrica` en la `RevisionHumana`. **No es parte de la venta** —no compra ni recibe— y por eso no está en el `Brief`: es el único de los tres actores que pertenece a la producción y no al encargo | `autor_id`, `nombre` |
 | `Dedicatoria` | Texto de portada dirigido al `Destinatario`. Vive **fuera del manuscrito y fuera del canon**: ni la ve el `Escritor` ni la extrae el `Extractor`, porque no es parte de la historia | `texto`, `firma` |
 | `TextoAportado` | Prosa que el comprador pega en la entrevista: una carta, una anécdota. **Contenido no confiable**, siempre: lo que contiene son datos de los que se extraen hechos, nunca instrucciones que el sistema obedezca | `texto_id`, `contenido`, `procedencia`, `hechos_extraidos[]` |
 
@@ -481,7 +505,7 @@ Cómo la novela deja de ser filas en una base de datos y pasa a ser algo que alg
 
 | Clase | Definición | Atributos clave |
 | --- | --- | --- |
-| `PalabraProhibida` | Término o tema que no debe aparecer en el texto. **Tres ámbitos**: `global` (insultos, términos ofensivos), `obra` y `brief` (lo que este cliente veta: el nombre de una expareja, un asunto que no quiere leer) | `palabra_id`, `termino`, `ambito` ∈ {global, obra, brief}, `motivo` |
+| `PalabraProhibida` | Término o tema que no debe aparecer en el texto. **Tres ámbitos**: `global` (insultos, términos ofensivos), `obra` y `brief` (lo que este comprador veta: el nombre de una expareja, un asunto que no quiere leer) | `palabra_id`, `termino`, `ambito` ∈ {global, obra, brief}, `motivo` |
 | `RegistroDeAuditoria` | Qué decidió el sistema sobre una unidad, cuándo y por qué. **Append-only** | `registro_id`, `momento`, `sujeto`, `decision`, `motivo`, `evidencia` |
 
 **La comparación de `PalabraProhibida` es sobre texto normalizado**, no sobre la cadena literal: mayúsculas, acentos, plurales y variantes simples. Un veto que solo caza la forma exacta con la que se escribió no es un veto, es una sugerencia — y quien lo sortea no necesita ingenio, le basta con escribir el plural.
@@ -530,7 +554,7 @@ Los almacenes en los que vive todo esto están enumerados en `architecture.md` �
 | `Defecto` | choca_con | `HechoCanon` | 0..1 | Hace determinista el contraste de `CAN-01` |
 | `Obra` | se_dedica_a | `Destinatario` | 0..1 | De quién es el regalo |
 | `Comprador` | encarga | `Obra` | 0..\* | Quién paga y responde la entrevista |
-| `Brief` | veta | `PalabraProhibida` | 0..\* | Lo que este cliente no quiere leer |
+| `Brief` | veta | `PalabraProhibida` | 0..\* | Lo que este comprador no quiere leer |
 | `TextoAportado` | aporta | `HechoCanon` | 0..\* | De dónde salió un hecho que no vino de una escena |
 | `HechoCanon` | usado_en | `Capitulo` | 0..\* | **Qué hay que regenerar si el hecho cambia**, y si el elemento llegó al texto |
 | `Capitulo` | resume_en | `ResumenDeCapitulo` | 0..1 | Contexto para los capítulos siguientes |
@@ -583,7 +607,7 @@ El validador debe poder comprobar mecánicamente:
 - **Sesgos y representación:** auditar estereotipos en físico, profesiones y acentos; el modelo tiende al promedio del corpus.
 - **Originalidad:** los tropos son libres, la expresión concreta no. Detección de solapamiento léxico alto con obras conocidas.
 - **Trazabilidad de autoría:** cada parte del texto es atribuible a una persona o a una generación.
-- **Datos de entrada:** si se usan obras del cliente como referencia de estilo, acordar derechos y no incorporarlas a índices compartidos entre proyectos.
+- **Datos de entrada:** si se usan obras del comprador como referencia de estilo, acordar derechos y no incorporarlas a índices compartidos entre proyectos.
 
 ---
 
@@ -611,15 +635,15 @@ El validador debe poder comprobar mecánicamente:
 | HEA / HFN | *Happily ever after* / *happy for now*: finales admisibles en romance |
 | Nivel de calor | Escala declarada de explicitud sexual |
 | Muestra ancla | Fragmento de prosa aprobada usado como referencia de voz |
-| Destinatario | Persona real que recibe la novela de regalo. **No es un personaje** |
-| Comprador | Quien encarga la novela y responde la entrevista. Puede no ser quien la recibe |
+| Destinatario | Persona real que recibe la novela de regalo, la lee y puede pedir cambios. **No es un personaje**, y **nunca se le llama «lector»** fuera de [`domain-knowledge.md`](domain-knowledge.md) (§9.1) |
+| Comprador | Quien encarga la novela y responde la entrevista. Puede no ser quien la recibe. **Nunca «cliente» ni «usuario»** (§9.1) |
 | Dedicatoria | Texto de portada para el destinatario, fuera del manuscrito y del canon |
 | Texto aportado | Prosa que pega el comprador. **Contenido no confiable**: son datos, nunca instrucciones |
 | Elemento obligatorio | Dato del brief que **debe** aparecer en el texto. Si no aparece, el producto no está entregado |
 | Palabra prohibida | Término vetado en ámbito global, de obra o de brief. Se compara normalizado |
 | Registro de auditoría | Qué decidió el sistema, cuándo y por qué. No es un log de errores |
-| Versión publicada | Los capítulos que el lector recibe a la vez. Una regeneración crea otra y conserva la anterior |
-| Petición de cambio | Lo que el lector pide sobre un hecho concreto de lo que está leyendo |
+| Versión publicada | Los capítulos que el `Destinatario` recibe a la vez. Una regeneración crea otra y conserva la anterior |
+| Petición de cambio | Lo que el `Destinatario` pide sobre un hecho concreto de lo que está leyendo |
 | Ficha de lectura | Personajes y lugares de una versión publicada, con sus capítulos. Derivable del ledger |
 | Cronología | Proyección consultable de los eventos con su momento, lugar y presentes. Entrada del validador formal |
 | Rúbrica | Criterios y escala con anclajes, **compartidos por el juez automático y el humano** |
@@ -628,6 +652,7 @@ El validador debe poder comprobar mecánicamente:
 | Presupuesto de contexto | Techo de tokens de **una** llamada al modelo, repartido por capas. Se comprueba al ensamblar el paquete |
 | Presupuesto concurrente | Suma de los tokens de **todas las llamadas en vuelo** de un proceso en un instante. Se comprueba al conceder el turno, no al ensamblar |
 | Cuadro de defectos | Los defectos de una versión publicada, guardados con ella. Es contra lo que se decide si un defecto posterior es preexistente o introducido |
+| Autor | Quien dirige la obra, resuelve escalados y puntúa la rúbrica. **Nunca «operador» ni «el equipo»** (§9.1) |
 
 ---
 

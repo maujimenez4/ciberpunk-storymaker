@@ -39,10 +39,11 @@ Un sistema que escribe **novelas personalizadas para regalar**: a un hijo, a la 
 
 > **Si necesitas la definición de cualquier término del dominio, ve a [`docs/definitions.md`](docs/definitions.md).**
 
-Aplica siempre que aparezca uno de estos conceptos: escena, beat, giro de valor, canon, hecho de canon, plantado, pago, revelación, hilo narrativo, estado en T, ledger, paquete de contexto, muestra ancla, deriva, perfil de voz, beat de género, tropo, nivel de calor, HEA/HFN, puerta de calidad, defecto, cita, biblia, outline, ficha de escena, **destinatario, comprador, dedicatoria, texto aportado, palabra prohibida, registro de auditoría, versión publicada, petición de cambio, ficha de lectura, cronología, rúbrica, puntuación**.
+Aplica siempre que aparezca uno de estos conceptos: **comprador, destinatario, autor**, escena, beat, giro de valor, canon, hecho de canon, plantado, pago, revelación, hilo narrativo, estado en T, ledger, paquete de contexto, muestra ancla, deriva, perfil de voz, beat de género, tropo, nivel de calor, HEA/HFN, puerta de calidad, defecto, cita, biblia, outline, ficha de escena, **destinatario, comprador, dedicatoria, texto aportado, palabra prohibida, registro de auditoría, versión publicada, petición de cambio, ficha de lectura, cronología, rúbrica, puntuación**.
 
 - No inventes sinónimos ni traduzcas términos por tu cuenta: el mismo concepto se llama igual en el esquema de datos, en los prompts, en las rúbricas y en la interfaz.
 - Si un término que necesitas **no está** en `docs/definitions.md`, no lo introduzcas: propón la definición y espera confirmación antes de escribir código con él.
+- **Los actores tienen un nombre y solo uno** (`docs/definitions.md`, tabla de actores): **Comprador**, **Destinatario**, **Autor**. No se escribe ~~cliente~~ ni ~~usuario~~ por «comprador», ni ~~lector~~ por «destinatario» —prohibido **como nombre del actor, no como palabra**: si la frase seguiría siendo cierta en una novela que nadie regaló, es el lector narratológico y se queda—, ni ~~operador~~ o ~~el equipo~~ por «autor». `cliente` queda **reservado para software**: cliente de modelo, cliente OpenAPI, clientes HTTP.
 - Si el código y `docs/definitions.md` se contradicen, **gana el documento**.
 
 ---
@@ -64,9 +65,11 @@ Aplica siempre que aparezca uno de estos conceptos: escena, beat, giro de valor,
 | Spec | Qué cubre | Estado |
 | --- | --- | --- |
 | `specs/001-backend-v1/` | Cómo se **escribe** una novela: el ciclo completo de una escena | **Existe**, `aprobada`, sin plan |
-| `specs/002-frontend-v1/` | Cómo se **lee**: publicación, lectura, petición de cambio del lector | **Aún no escrita** |
+| `specs/002-frontend/` | Cómo se **lee**: portada, índice, ficha, petición de cambio del comprador | **Existe**, `borrador`, sin plan |
 
-La columna de estado no es decoración: esta sección describe una decisión, y **la segunda spec todavía no existe**. Cuando se escriba, la columna desaparece.
+La columna de estado no es decoración: dice dónde está cada una de verdad, y **ninguna de las dos tiene plan aprobado**, así que hoy no se escribe código de producto (§3.2).
+
+*La carpeta es `002-frontend`, sin sufijo de versión, por decisión de `maujimenez4` del 2026-09-23. Difiere de `001-backend-v1` y se deja así a propósito: renombrar la 001 después de firmarla habría roto las citas del commit de aprobación.*
 
 **El resto del entregable se construye sin ceremonia de spec**, y se documenta en `docs/`: personalización y entrevista, guardarraíles, observabilidad, evaluación, verificación formal y el paquete de entrega.
 
@@ -80,7 +83,7 @@ La columna de estado no es decoración: esta sección describe una decisión, y 
 | --- | --- | --- |
 | **Spec** | no queda ninguna pregunta abierta | una persona, en un commit suyo |
 | **Plan** | `spec.md` está en `estado: aprobada` | una persona, en un commit suyo |
-| **Código** | `plan.md` está en `estado: aprobado` | un test en rojo, antes de la primera línea |
+| **Código** | el plan **de esa fase** está en `estado: aprobado` | un test en rojo, antes de la primera línea |
 | **Cierre** | la spec y `docs/` reflejan lo implementado | el checklist de §16 |
 
 Tres sitios, tres cosas distintas. Confundirlos es justo el error que este proceso evita:
@@ -90,7 +93,7 @@ Tres sitios, tres cosas distintas. Confundirlos es justo el error que este proce
 | `docs/` | lo que **es verdad hoy**: vocabulario, dominio, arquitectura, verificación | permanente |
 | `docs/entregable/` | lo que **pide el encargo**: requisito externo, no decisión nuestra | hasta la entrega |
 | `specs/<id>/spec.md` | lo que **queremos que sea verdad**: una funcionalidad con criterios de aceptación | nace, se aprueba, se implementa, se archiva |
-| `specs/<id>/plan.md` | **cómo** se llega hasta ahí, paso a paso y test a test | muere con la implementación |
+| `specs/<id>/plan-N-<slug>.md` | **cómo** se llega hasta ahí, paso a paso y test a test | muere con la implementación |
 
 ### 3.3 Actualizar `docs/`
 
@@ -100,6 +103,19 @@ Tres sitios, tres cosas distintas. Confundirlos es justo el error que este proce
 - Nada se duplica entre documentos: se enlaza. Dos copias de una regla divergen.
 - Un término nuevo no entra sin pasar antes por `docs/definitions.md` (§2).
 - **Al invertir una decisión ya razonada, se escribe por qué.** No basta con cambiar la línea: el que la escribió tenía un motivo, y quien venga después necesita saber si el motivo dejó de valer o si la pregunta era otra. `definitions.md` §15 y `verification.md` §10 son el ejemplo.
+
+### 3.3 bis · Una spec puede tener varios planes
+
+**Decisión de `maujimenez4`, 2026-09-23.** Hasta hoy este fichero decía `specs/<id>/plan.md`, en singular. La 001 cubre el backend entero —125 requisitos— y un plan único a la granularidad que exige `writing-plans` —cada paso de dos a cinco minutos, con su código de test escrito— habría pasado de tres mil líneas.
+
+Un plan así tiene dos problemas, y el segundo es el que decide:
+
+1. **No se lee.** Se aprueba de una firma un documento que nadie recorre entero, que es el fallo que acabamos de evitar en la spec.
+2. **Se escribe demasiado pronto.** Un plan **muere con la implementación** (§3.2): detallar hoy, paso a paso, la fase que se implementará dentro de semanas produce sobre todo desviaciones. El plan que se escribe con el código delante es mejor que el que se escribe adivinando.
+
+Por eso: `specs/<id>/plan-N-<slug>.md`, **uno por fase, escrito cuando le toca**, cada uno con su `estado` y su firma. Una fase no empieza sin su plan aprobado, y **cada plan entrega software que funciona y se puede probar solo** — que es el criterio con el que se decide dónde cortar, no el número de requisitos.
+
+Lo que **no** cambia: las cuatro puertas, el TDD de §3.4, y que **ningún agente aprueba un plan**.
 
 ### 3.4 Escribir código: TDD
 
@@ -170,7 +186,7 @@ Es la restricción de diseño más importante del proyecto.
 - Una **sesión por novela**, que abarca la entrevista, la generación y **todas las regeneraciones posteriores**. No una sesión por ejecución: si no, una regeneración aparece desconectada de la novela que modifica.
 - Cada rol y cada llamada a tool, un **span** con nombre identificable.
 - Cada validador —programático, semántico y Lean— emite un **score** asociado a su traza. TLC no: corre en desarrollo.
-- **Suben el prompt y la traza.** Decisión de `maujimenez4`: los datos del cliente pueden llegar al servicio externo, porque sin eso el *tuning* que pide el encargo no se puede documentar.
+- **Suben el prompt y la traza.** Decisión de `maujimenez4`: los datos del comprador pueden llegar al servicio externo, porque sin eso el *tuning* que pide el encargo no se puede documentar.
 - **Y con ellos sube el manuscrito**, porque cinco de los diez roles reciben la prosa como entrada (§9): su prompt renderizado **es** el capítulo. Separarlos no es posible, así que se dice y no se promete lo contrario.
 - **Fuera de Langfuse no sale nada:** ni prompts ni fragmentos en logs, y la base de datos de la obra no abandona la máquina.
 
@@ -346,8 +362,8 @@ Cada agente narrativo pertenece a la feature que lo orquesta: su código en `fea
 
 Se aplican **en código**, antes de aceptar un capítulo. No son instrucciones de prompt.
 
-- **Palabras y temas vetados**, en tres ámbitos: `global` (insultos, términos ofensivos), `obra` y `brief` (lo que este cliente no quiere leer). La comparación es sobre **texto normalizado**: un veto que solo caza la forma exacta no es un veto, porque basta con escribir el plural.
-- Si hay coincidencia, el capítulo **vuelve al escritor** con el término concreto, con límite de intentos. Agotado el límite, **la generación se detiene y se informa**: no se publica una novela con una palabra que el cliente pidió no leer, aunque el resto esté bien.
+- **Palabras y temas vetados**, en tres ámbitos: `global` (insultos, términos ofensivos), `obra` y `brief` (lo que este comprador no quiere leer). La comparación es sobre **texto normalizado**: un veto que solo caza la forma exacta no es un veto, porque basta con escribir el plural.
+- Si hay coincidencia, el capítulo **vuelve al escritor** con el término concreto, con límite de intentos. Agotado el límite, **la generación se detiene y se informa**: no se publica una novela con una palabra que el comprador pidió no leer, aunque el resto esté bien.
 - Cada coincidencia queda en el **registro de auditoría** y en Langfuse.
 - El registro de auditoría es *append-only* y dice **qué se permitió y qué se bloqueó, y por qué**. No es un log de errores.
 - **El texto que aporta el comprador es contenido no confiable, siempre.** La defensa no es pedirle al modelo que no haga caso: es que ese texto no llegue nunca a la posición donde una instrucción se obedece.
@@ -375,7 +391,7 @@ Las skills instaladas viven en `.claude/skills/`, commiteadas. Procedencia, comm
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
 | `brainstorming` | La puerta **Spec** de §3.2, escrita como skill | `specs/` |
 | `clarificar-spec` | Barrido de ambigüedad antes de aprobar una spec | `specs/` |
-| `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit | `specs/*/plan.md` |
+| `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit | `specs/*/plan-*.md` |
 | `test-driven-development` | §3.4: rojo → verde → refactor | Todo el código |
 | `verification-before-completion` | El checklist de §16: evidencia antes de afirmar | Todo |
 | `verification-methods` | Metodologías y la clasificación T/A/I/D/U | `docs/verification.md` |
