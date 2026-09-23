@@ -10,6 +10,7 @@ from app.features.canon.repository import (
     RepositorioDeCanon,
     derivar_estado_en_t,
 )
+from app.features.canon.router import CanonDeObra, HechoEnRespuesta, router
 from app.features.canon.schemas import (
     EventoExtraido,
     Extraccion,
@@ -22,7 +23,10 @@ from app.features.canon.schemas import (
 from app.features.canon.service import extraer_de_escena
 
 __all__ = [
+    "CanonDeObra",
     "EstadoEnT",
+    "HechoEnRespuesta",
+    "router",
     "Extraccion",
     "ExtraccionInvalida",
     "Evento",

@@ -401,6 +401,45 @@ class RepositorioDeCanon:
             ]
         return [self.leer_hecho(i) for i in ids]
 
+    def hechos_de_obra(
+        self,
+        obra_id: str,
+        entidad: str | None = None,
+        atributo: str | None = None,
+    ) -> list[HechoCanon]:
+        """RI-08: el canon de una obra, filtrable, y **solo lo vigente**.
+
+        Sube de la escena a la obra por el mismo camino que `outline`, porque
+        `hecho_canon` cuelga de la serie (RD-11) y la v1 tiene una sola. Un
+        hecho sustituido no sale: quien consulta el canon quiere saber que es
+        verdad ahora, no que se llego a creer (RF-CAN-07).
+        """
+        condiciones = ["p.obra_id = ?"]
+        parametros: list[str] = [obra_id]
+        if entidad:
+            condiciones.append("h.entidad = ?")
+            parametros.append(entidad)
+        if atributo:
+            condiciones.append("h.atributo = ?")
+            parametros.append(atributo)
+
+        with self._conexion() as conexion:
+            ids = [
+                f[0]
+                for f in conexion.execute(
+                    "SELECT h.hc_id FROM hecho_canon h"
+                    " JOIN escena e ON e.escena_id = h.escena_de_origen"
+                    " JOIN capitulo c ON c.capitulo_id = e.capitulo_id"
+                    " JOIN parte p ON p.parte_id = c.parte_id"
+                    f" WHERE {' AND '.join(condiciones)}"
+                    " AND h.hc_id NOT IN (SELECT sustituye_a FROM hecho_canon"
+                    " WHERE sustituye_a IS NOT NULL)"
+                    " ORDER BY e.orden_discurso, h.rowid",
+                    tuple(parametros),
+                )
+            ]
+        return [self.leer_hecho(i) for i in ids]
+
     def eventos_de_escena(self, escena_id: str) -> list[str]:
         with self._conexion() as conexion:
             return [

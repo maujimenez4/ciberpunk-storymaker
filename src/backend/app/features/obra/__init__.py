@@ -13,6 +13,7 @@ from app.features.obra.biblia import (
     VersionDeBiblia,
 )
 from app.features.obra.repository import RepositorioDeObras
+from app.features.obra.router import router
 from app.features.obra.schemas import Brief, ObraCreada
 from app.features.obra.service import crear_obra, generar_biblia
 
@@ -28,5 +29,6 @@ __all__ = [
     "SalidaDeAgenteInvalida",
     "VersionDeBiblia",
     "crear_obra",
+    "router",
     "generar_biblia",
 ]

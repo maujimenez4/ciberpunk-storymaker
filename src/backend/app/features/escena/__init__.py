@@ -8,6 +8,7 @@ from app.features.escena.repository import (
     RepositorioDeEscenas,
     VersionDeTexto,
 )
+from app.features.escena.router import HistorialDeEscena, VersionEnRespuesta, router
 from app.features.escena.schemas import (
     FichaDeEscena,
     FichaInvalida,
@@ -18,6 +19,9 @@ from app.features.escena.service import planificar_escena
 
 __all__ = [
     "EscenaPersistida",
+    "HistorialDeEscena",
+    "VersionEnRespuesta",
+    "router",
     "FichaDeEscena",
     "FichaPersistida",
     "FichaInvalida",

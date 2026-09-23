@@ -30,12 +30,16 @@ from fastapi import FastAPI
 
 from app.commons.errors import registrar_manejadores
 from app.commons.jobs import RepositorioDeTrabajos, montar_ejecutor_de_trabajos
+from app.features.canon import router as router_canon
+from app.features.contexto import router as router_contexto
+from app.features.escena import router as router_escena
 from app.features.escritura import (
     Dependencias,
     construir_dependencias,
     ejecutar_en_segundo_plano,
 )
 from app.features.escritura import router as router_escritura
+from app.features.obra import router as router_obra
 
 TITULO = "StoryMaker · backend v1"
 
@@ -60,6 +64,10 @@ def crear_app(
     registrar_manejadores(app)
     ejecutor = montar_ejecutor_de_trabajos(app)
     _retomar_trabajos_vivos(app, ejecutor)
+    app.include_router(router_obra)
+    app.include_router(router_escena)
+    app.include_router(router_contexto)
+    app.include_router(router_canon)
     app.include_router(router_escritura)
     return app
 

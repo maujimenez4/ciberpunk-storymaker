@@ -19,6 +19,7 @@ from app.features.contexto.recoleccion import (
     recolectar,
 )
 from app.features.contexto.repository import AlmacenesDeLaObra
+from app.features.contexto.router import ContextoDeEscena, router
 from app.features.contexto.service import (
     ABRE_DATOS,
     CIERRA_DATOS,
@@ -33,6 +34,8 @@ __all__ = [
     "MUESTRAS_ANCLA",
     "Almacenes",
     "AlmacenesDeLaObra",
+    "ContextoDeEscena",
+    "router",
     "CIERRA_DATOS",
     "LIMITE_DURO",
     "ORIGEN",
