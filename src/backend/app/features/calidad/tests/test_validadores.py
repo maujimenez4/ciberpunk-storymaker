@@ -146,7 +146,7 @@ def test_un_viaje_con_tiempo_suficiente_no_da_defecto() -> None:
 
 def test_usar_lo_que_no_se_sabe_da_con_03() -> None:
     afirmaciones = [
-        Afirmacion(cita="menciona el incendio", sujeto="Noe", objeto="el incendio")
+        Afirmacion(cita="menciona el incendio", sujeto="Noe", informacion="el incendio")
     ]
     texto = "Noe menciona el incendio."
 
@@ -157,7 +157,7 @@ def test_usar_lo_que_no_se_sabe_da_con_03() -> None:
 
 def test_usar_lo_que_si_se_sabe_no_da_defecto() -> None:
     afirmaciones = [
-        Afirmacion(cita="menciona el incendio", sujeto="Ada", objeto="el incendio")
+        Afirmacion(cita="menciona el incendio", sujeto="Ada", informacion="el incendio")
     ]
     texto = "Ada menciona el incendio."
 
@@ -290,62 +290,16 @@ def test_una_narracion_en_el_tiempo_declarado_no_da_defecto() -> None:
     assert validar_discurso("Ada cruzó el taller.", "tercera", "pasado", VT) == []
 
 
-# --- El limite conocido del contraste: igualdad exacta de texto libre -------
+# --- El limite que queda: CAN-01 compara valores por igualdad exacta --------
 #
-# Estos cuatro tests no comprueban que el validador acierte: comprueban que
-# **falla de la forma que sabemos**, y son la razon por la que CAN-01 y CON-03
-# no bloquean G1a (`defectos.py`). Si alguien arregla el contraste, se pondran
-# en rojo, y eso es lo que se busca: obligan a volver a mirar la decision de
-# bloqueo en vez de dejarla enterrada.
+# Este test no comprueba que el validador acierte: comprueba que **falla de la
+# forma que sabemos**, y es la razon por la que CAN-01 no bloquea G1a
+# (`defectos.py`). Si alguien arregla el contraste se pondra en rojo, y eso es
+# lo que se busca: obliga a volver a mirar la decision de bloqueo.
 #
-# El fondo: `conocimientos` lo llena el Extractor con `evento.descripcion`, y
-# `Afirmacion` la llena el Continuista. Dos llamadas independientes al modelo,
-# las dos en texto libre.
-
-
-def test_con_03_se_dispara_con_un_objeto_fisico_cualquiera() -> None:
-    """`objeto` significa dos cosas a la vez en `continuista.v1.md`.
-
-    Para CON-02 es un objeto fisico; para CON-03, la informacion que alguien
-    usa. El mismo campo lleva las dos, asi que una carpeta se contrasta contra
-    la lista de lo que el personaje sabe y nunca esta ahi.
-    """
-    afirmacion = Afirmacion(cita="la carpeta", sujeto="pj-ada", objeto="la carpeta")
-
-    defectos = validar_conocimiento(
-        [afirmacion], {"pj-ada": ["Noe se niega a firmar"]}, "la carpeta", VT
-    )
-
-    assert [d.codigo for d in defectos] == [CodigoDeDefecto.CON_03]
-
-
-def test_con_03_se_dispara_aunque_el_personaje_lo_presenciara() -> None:
-    """Lo presencio, pero el Continuista lo dice con otras palabras."""
-    afirmacion = Afirmacion(
-        cita="Noe no quiere firmar", sujeto="pj-ada", objeto="Noe no quiere firmar"
-    )
-
-    defectos = validar_conocimiento(
-        [afirmacion], {"pj-ada": ["Noe se niega a firmar"]}, "Noe no quiere firmar", VT
-    )
-
-    assert [d.codigo for d in defectos] == [CodigoDeDefecto.CON_03]
-
-
-def test_con_03_solo_queda_limpio_si_la_cadena_coincide_palabra_por_palabra() -> None:
-    afirmacion = Afirmacion(
-        cita="Noe no quiere firmar", sujeto="pj-ada", objeto="Noe se niega a firmar"
-    )
-
-    assert (
-        validar_conocimiento(
-            [afirmacion],
-            {"pj-ada": ["Noe se niega a firmar"]},
-            "Noe no quiere firmar",
-            VT,
-        )
-        == []
-    )
+# Los dos tests que habia aqui para CON-03 se retiraron el 2026-09-23: su
+# contraste dejo de ser igualdad exacta (RF-CAL-16), asi que ya no describian
+# nada cierto. Lo que lo vigila ahora esta en `test_invariantes.py`.
 
 
 def test_can_01_se_dispara_con_el_mismo_hecho_dicho_de_otra_forma() -> None:

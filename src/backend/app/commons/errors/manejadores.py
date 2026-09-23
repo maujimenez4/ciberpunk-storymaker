@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.commons.errors.errores import (
     ContextBudgetExceeded,
+    EntradaFueraDeDominio,
     ErrorDeDominio,
     FalloDeProveedor,
     RecursoNoEncontrado,
@@ -18,6 +19,7 @@ from app.commons.errors.errores import (
 # anadirla aqui lo caza el test de cobertura de P-04.
 CODIGOS: dict[type[ErrorDeDominio], int] = {
     ContextBudgetExceeded: 422,
+    EntradaFueraDeDominio: 422,
     ReglaDeDominioViolada: 422,
     RecursoNoEncontrado: 404,
     TiempoAgotado: 503,

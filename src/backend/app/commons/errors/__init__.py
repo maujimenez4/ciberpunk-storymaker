@@ -2,6 +2,7 @@
 
 from app.commons.errors.errores import (
     ContextBudgetExceeded,
+    EntradaFueraDeDominio,
     ErrorDeDominio,
     FalloDeProveedor,
     RecursoNoEncontrado,
@@ -13,6 +14,7 @@ from app.commons.errors.manejadores import CODIGOS, registrar_manejadores
 __all__ = [
     "CODIGOS",
     "ContextBudgetExceeded",
+    "EntradaFueraDeDominio",
     "ErrorDeDominio",
     "FalloDeProveedor",
     "ReglaDeDominioViolada",

@@ -267,7 +267,7 @@ def test_un_personaje_que_usa_lo_que_no_sabe_escala_la_escena(
             {
                 "cita": "Ella dejo la carpeta sobre la mesa",
                 "sujeto": "pj-noe",
-                "objeto": "Noe se niega a firmar",
+                "informacion": "Noe se niega a firmar",
                 "momento": 1,
             }
         ]
@@ -288,7 +288,7 @@ def test_quien_presencio_el_evento_si_puede_usarlo(
             {
                 "cita": "Ella dejo la carpeta sobre la mesa",
                 "sujeto": "pj-ada",
-                "objeto": "Noe se niega a firmar",
+                "informacion": "Noe se niega a firmar",
                 "momento": 1,
             }
         ]

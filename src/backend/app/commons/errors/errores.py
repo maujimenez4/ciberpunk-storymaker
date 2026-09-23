@@ -83,3 +83,30 @@ class FalloDeProveedor(ErrorDeDominio):
 
     def datos(self) -> dict[str, Any]:
         return {"intentos": self.intentos}
+
+
+class EntradaFueraDeDominio(ErrorDeDominio):
+    """A un validador mecanico le entra algo que no sabe evaluar (RF-CAL-13).
+
+    **Existe para que los guardarrailes fallen cerrados.** `validar_nivel_de_calor`
+    devolvia lista vacia ante un `nivel_de_calor` que no estaba en la escala, y
+    lista vacia significa «no he encontrado nada malo»: una errata en el nivel
+    declarado apagaba entero el validador de la regla 5 de §8 sin hacer ruido.
+    Un validador que no puede evaluar tiene que decirlo, no callar.
+    """
+
+    def __init__(self, parametro: str, valor: str, esperado: str) -> None:
+        super().__init__(
+            f"{parametro}={valor!r} no pertenece al dominio del validador: "
+            f"se esperaba {esperado}"
+        )
+        self.parametro = parametro
+        self.valor = valor
+        self.esperado = esperado
+
+    def datos(self) -> dict[str, Any]:
+        return {
+            "parametro": self.parametro,
+            "valor": self.valor,
+            "esperado": self.esperado,
+        }
