@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-**Versión:** 1.3 · **Fecha:** 2026-09-22
+**Versión:** 2.0 · **Fecha:** 2026-09-23
 
 Este documento describe **cómo se construye** el sistema. El **qué significa cada término** vive en [`definitions.md`](definitions.md); el **cómo funciona una novela** vive en [`domain-knowledge.md`](domain-knowledge.md). Si un concepto aparece aquí sin definir, está definido allí.
 
@@ -10,22 +10,44 @@ Este documento describe **cómo se construye** el sistema. El **qué significa c
 
 ## 1. Visión general
 
-Sistema cliente-servidor. El frontend es una SPA de React donde el autor dirige la obra y revisa el manuscrito; el backend en FastAPI orquesta los agentes, ensambla el contexto, valida y persiste en SQLite.
+Sistema cliente-servidor con **tres usuarios distintos**, y conviene separarlos porque quieren cosas distintas:
+
+| Quién | Qué hace | Por dónde entra |
+| --- | --- | --- |
+| **Comprador** | Encarga la novela y responde la entrevista | Entrevista |
+| **Destinatario** | La lee, y puede pedir cambios sobre lo que lee | Lectura web |
+| **Autor / operador** | Dirige la obra, resuelve escalados, revisa el manuscrito | Taller |
+
+El frontend es una SPA de React; el backend en FastAPI orquesta los agentes, ensambla el contexto, valida y persiste en SQLite.
 
 ```mermaid
 flowchart TD
-  U["Autor / editor"] --> FE["Frontend<br/>React + TypeScript + Vite"]
+  C["Comprador"] --> ENTR["Entrevista<br/>brief validado"]
+  D["Destinatario"] --> LEC["Lectura web<br/>+ petición de cambio"]
+  A["Autor / operador"] --> TAL["Taller"]
+
+  ENTR --> FE["Frontend<br/>React + TypeScript + Vite"]
+  LEC --> FE
+  TAL --> FE
+
   FE -->|REST + OpenAPI| BE["Backend<br/>FastAPI (Python 3.12+)"]
-  BE --> ORQ["Orquestador de agentes"]
+  BE --> ORQ["Orquestador de agentes<br/>máquina de estados determinista"]
   ORQ --> ENS["Ensamblador de contexto<br/>determinista"]
-  ENS --> DB[("SQLite<br/>canon · ledger · manuscrito")]
-  ENS --> VEC[("Índice vectorial<br/>sqlite-vec o fuerza bruta")]
-  ORQ --> LLM["Proveedor de modelo<br/>límite 100.000 tokens"]
+  ENS --> DB[("SQLite<br/>story bible · ledger · manuscrito<br/>cronología · vetos · auditoría")]
+  ENS --> VEC[("Índice de fragmentos<br/>sqlite-vec o fuerza bruta")]
+  ORQ --> LLM["Proveedor de modelo<br/>límite 100.000 tokens por llamada"]
   ORQ --> VAL["Validadores<br/>y puertas de calidad"]
   VAL --> DB
+  ORQ --> OBS["Langfuse<br/>trazas, spans, scores, coste"]
+  VAL --> OBS
+  VAL --> LEAN["Lean 4<br/>invariantes de cronología"]
+  LEAN --> PUB["Publicación<br/>VersionPublicada"]
+  PUB --> LEC
 ```
 
 **Principio de diseño:** el ensamblado de contexto es **código, no modelo**. Es lo único que garantiza que un fallo se pueda reproducir.
+
+**Segundo principio, propio de este producto:** *el sistema no optimiza por que los datos aparezcan.* Una novela que menciona al destinatario quince veces y no se sostiene como historia ha fallado igual que una impecable en la que no está. Por eso hay **dos familias de validadores que se miden por separado** (§8.3) y ninguna rescata a la otra.
 
 ---
 
@@ -35,9 +57,14 @@ flowchart TD
 | --- | --- | --- |
 | Frontend | React 19 + TypeScript + Vite | SPA; cliente de API generado del OpenAPI |
 | Backend | FastAPI, Python 3.12+, Pydantic v2 | Async por defecto; OpenAPI como contrato |
-| Persistencia | SQLite (WAL) + Alembic | Fichero único por obra; sin segunda base de datos |
-| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | El sistema nunca falla por falta de extensión |
+| Persistencia | **SQLite (WAL) + Alembic — obligatorio** | Fichero único por obra; sin segunda base de datos. Es la *story bible* del encargo |
+| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Decisión propia, no requisito del encargo**, que no menciona ninguna extensión. El sistema nunca falla por falta de ella |
 | Modelo | Límite **duro** de 100.000 tokens por llamada | Presupuesto por capa; fallo explícito, nunca truncado silencioso |
+| Observabilidad | **Langfuse** | Una sesión por novela; cada rol y cada tool, un span; validadores como *scores* (§9) |
+| Verificación formal | **Lean 4** sobre la cronología; **TLA+/TLC** sobre el harness | Lean corre en cada publicación y bloquea; TLC corre en desarrollo (§9.3) |
+| Guardarraíles | Vetos en SQLite + registro de auditoría | Se aplican **en código** sobre cada capítulo, antes de aceptarlo (§11) |
+
+**Sobre la extensión vectorial, para que no se lea como una exigencia externa.** El encargo obliga a SQLite y no dice nada de vectores. Mantener `VectorStore` con dos implementaciones es una decisión de este proyecto: el coste es una interfaz y una suite que corre en dos modos; a cambio, el sistema arranca en una máquina sin la extensión. **Si algún día ese coste deja de pagarse, se retira el camino vectorial y no se incumple nada.**
 
 ### 2.1 Presupuesto de contexto
 
@@ -167,6 +194,7 @@ Cada agente recibe exactamente los almacenes que su rol necesita. Lo que no apar
 
 | Agente | Lectura | Escritura | Llama al modelo |
 | --- | --- | --- | --- |
+| **Entrevistador** | Respuestas del comprador y su `TextoAportado` | Brief, destinatario, vetos | Sí |
 | Arquitecto | Brief | Biblia, outline | Sí |
 | Planificador | Outline, estado en T, hilos | Ficha de escena | Sí |
 | Ensamblador | Canon, ledger, manuscrito, índice vectorial | Nada | No |
@@ -178,6 +206,8 @@ Cada agente recibe exactamente los almacenes que su rol necesita. Lo que no apar
 | Auditor | Todo en lectura | Informe | Sí |
 
 **Regla clave:** el Escritor **nunca** accede a la base de datos. Si le falta un dato, es un fallo del ensamblado, no del escritor. Esto hace que los defectos sean atribuibles.
+
+**Segunda regla clave, nueva con el Entrevistador:** es el **único agente cuya entrada no controla el sistema**. Todo lo que recibe viene de una persona, incluido el `TextoAportado` que el comprador pega. Por eso su salida **se valida con esquema antes de persistirse**, y el texto pegado entra al sistema marcado como dato y **nunca concatenado a un prompt** sin esa marca. La defensa contra que alguien escriba «ignora tus instrucciones» en una anécdota **no es pedirle al modelo que no haga caso** —eso es negociar con el atacante—: es que ese texto no llegue nunca a la posición donde una instrucción se obedece.
 
 Los agentes tampoco leen ni escriben ficheros del repositorio: el paquete llega como datos y la salida vuelve como datos. Los prompts los carga el orquestador, no el agente.
 
@@ -206,7 +236,80 @@ El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamad
 - **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** ensamblado, lectura de almacenes, persistencia y cálculo de embeddings. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
 - **Las escrituras se serializan por obra.** SQLite con WAL admite lectores concurrentes y un solo escritor; el orquestador respeta eso con un cerrojo por obra en vez de confiar en `busy_timeout` para resolver colisiones.
 
-### 3.9 Dónde vive el código
+### 3.9 La máquina de estados de la **novela**
+
+El §3.3 describe el ciclo de **una escena**. Por encima hay una segunda máquina, la de la
+novela entera, y es la que se verifica formalmente con TLA+ (§9.3): sus estados son los que el
+modelo explora.
+
+```mermaid
+stateDiagram-v2
+  [*] --> CONFIGURANDO
+  CONFIGURANDO --> PLANIFICADA: brief válido
+  CONFIGURANDO --> CONFIGURANDO: falta un dato o hay contradicción
+  PLANIFICADA --> ESCRIBIENDO_CAPITULO
+  ESCRIBIENDO_CAPITULO --> VALIDANDO_CAPITULO
+  VALIDANDO_CAPITULO --> ESCRIBIENDO_CAPITULO: Reparar · defecto, intento < límite
+  VALIDANDO_CAPITULO --> DETENIDA: límite de intentos agotado
+  VALIDANDO_CAPITULO --> ESCRIBIENDO_CAPITULO: SiguienteCapitulo · quedan capítulos
+  VALIDANDO_CAPITULO --> VERIFICANDO: último capítulo aprobado
+  VERIFICANDO --> PUBLICADA: Lean y las puertas pasan
+  VERIFICANDO --> DETENIDA: Lean falla
+  PUBLICADA --> REGENERANDO: petición del lector
+  REGENERANDO --> VERIFICANDO: capítulos afectados rehechos
+  REGENERANDO --> PUBLICADA: DescartarPeticion · vuelve la vigente, sin versión nueva
+  PUBLICADA --> [*]
+  DETENIDA --> [*]
+```
+
+| Estado | Qué está pasando | Checkpoint |
+| --- | --- | --- |
+| `CONFIGURANDO` | El Entrevistador recoge datos, detecta faltantes y contradicciones | El brief parcial se persiste |
+| `PLANIFICADA` | Existe biblia y outline de diez capítulos | — |
+| `ESCRIBIENDO_CAPITULO` | Ciclo de escena del §3.3 para el capítulo N | — |
+| `VALIDANDO_CAPITULO` | Puertas mecánicas, guardarraíles y juez | — |
+| `VERIFICANDO` | Lean sobre la cronología completa (§9.3) | — |
+| `PUBLICADA` | Existe una `VersionPublicada` inmutable | — |
+| `REGENERANDO` | Se rehacen los capítulos afectados por una `PeticionDeCambio` | La versión anterior **no se toca** |
+| `DETENIDA` | Se agotó el límite o falló la verificación. **Se informa** | Terminal |
+
+**Tres pares de flechas que parecen una y son dos**, y conviene fijarlo aquí porque quien escriba
+la especificación de §9.3 las va a encontrar:
+
+| Acción | Qué hace | Toca el contador de intentos |
+| --- | --- | --- |
+| `Reparar` | Rehace **el mismo** capítulo con el defecto y su cita | **Sí, lo incrementa** |
+| `SiguienteCapitulo` | Pasa al capítulo N+1, que aún no se ha escrito | **No.** Cada capítulo empieza con su propio contador |
+| `DescartarPeticion` | La regeneración no prospera: **vuelve la versión vigente** | No |
+
+Las dos primeras salen de `VALIDANDO_CAPITULO` hacia `ESCRIBIENDO_CAPITULO` y **no son la misma
+acción**. Modelarlas como una sola tiene una consecuencia concreta y absurda: avanzar de capítulo
+consumiría reintentos, y una novela de diez capítulos se detendría sola por agotamiento sin que
+hubiera fallado nada.
+
+La tercera **no es una publicación**: es un regreso. No crea `VersionPublicada` y no toca la
+vigente. Comparte destino con el éxito porque el estado del sistema acaba siendo el mismo —hay una
+versión publicada y es la de antes—, pero el camino y sus consecuencias son opuestos.
+
+**Checkpoint por capítulo.** Al integrar un capítulo se persiste el avance, de modo que una caída
+reanuda desde **el último capítulo completado** y no desde el principio. La propiedad que esto
+tiene que cumplir —y que TLC comprueba— es que **la reanudación no duplica ni pierde capítulos**:
+se apoya en la misma idempotencia por `run_id` del §3.1.
+
+**Tres cosas que esta máquina garantiza por construcción, y que son invariantes de §9.3:**
+
+1. **Ninguna `VersionPublicada` se crea sin haber pasado por `VERIFICANDO`.** Enunciada sobre la
+   creación de la versión y no sobre el estado de destino, porque `DescartarPeticion` **llega a
+   `PUBLICADA` sin crear nada**: devuelve la vigente. Una invariante escrita sobre el estado —«no
+   se alcanza `PUBLICADA` sin pasar por `VERIFICANDO`»— es falsa en el primer paso, y el peligro no
+   es que TLC saque contraejemplo: es que alguien la relaje para que pase y acabemos con una
+   invariante que dice algo distinto de lo que este documento promete. **Publicar es afirmar que
+   pasó las puertas**, no que se escribió.
+2. `REGENERANDO` **no escribe sobre la `VersionPublicada` vigente**: produce otra, o ninguna.
+3. El contador de intentos solo crece, y al alcanzar el límite la única salida es `DETENIDA`.
+   No hay ciclo que lo reinicie.
+
+### 3.10 Dónde vive el código
 
 | Pieza | Sitio |
 | --- | --- |
@@ -261,6 +364,23 @@ Se **reconstruye entera en cada llamada**. Nada se arrastra de la llamada anteri
 | Índice vectorial | Fragmentos con su embedding | Extractor | Regenerable; puede reconstruirse entero |
 | Hilos y plantados | Abierto, pagado, vencido | Extractor | Estado con ciclo de vida |
 | Lista negra de n-gramas | Secuencias ya gastadas en el manuscrito | Extractor | Crece con la obra; la lee el Editor de línea |
+| **Uso de hechos** | En qué capítulos se apoya cada hecho de canon | Extractor, al integrar | **Hacia adelante.** Es lo que permite saber qué regenerar |
+| **Cronología** | Eventos con momento, lugar y presentes | **Nadie: derivada del ledger** | Entrada del validador formal (§9.3) |
+| **Resúmenes por capítulo** | Síntesis del capítulo integrado | Extractor | Contexto de los siguientes |
+| **Vetos** | Palabras y temas prohibidos en tres ámbitos | Entrevistador (ámbito brief); fijos los demás | Se leen en cada capítulo (§11) |
+| **Registro de auditoría** | Qué se permitió, qué se bloqueó y por qué | El policy engine | *Append-only* |
+
+**El uso de hechos merece un párrafo, porque es la pieza que faltaba.** Hasta ahora un hecho sabía
+de qué escena **salió**; no sabía a qué capítulos **fue**. Sin esa relación, la petición del lector
+—«el perro se llama Nala, no Luna»— no se puede atender: no hay forma de saber qué hay que rehacer.
+Tampoco se puede comprobar que un elemento obligatorio del brief llegó de verdad al texto, que es
+la mitad de la personalización. La escribe quien **integra** el capítulo, no quien crea el hecho.
+
+**Letra pequeña que conviene no olvidar al usarla:** lo que se registra es qué hechos **entraron en
+el paquete** del capítulo, no cuáles acabó usando la prosa. Es una **sobreaproximación**. Para
+decidir qué regenerar es la dirección segura del error —se rehace de más, nunca de menos—; para
+decirle al lector qué capítulos cambiaron, sobre-reporta, y ahí se marca por diferencia real de
+texto y no por esta relación.
 
 La columna que importa es la tercera: **solo el Extractor escribe memoria de largo plazo**, y solo desde el paso `EXTRAYENDO`. Ningún otro agente puede dejar rastro permanente. El Auditor, en particular, **lee todo y no escribe nada**: su salida es un informe, y quien actúe sobre él será una persona o un trabajo posterior (§3.5).
 
@@ -408,7 +528,17 @@ La ruta de evolución está prevista: si el número de features crece, se agrupa
 | `GET` | `/escenas/{id}/versiones` | Historial inmutable de versiones |
 | `POST` | `/obras/{id}/auditoria` | Auditoría de manuscrito: beats, plantados, curva |
 | `GET` | `/obras/{id}/canon` | Consulta del grafo de canon |
-| `GET` | `/trabajos/{id}` | Estado de un trabajo en segundo plano |
+| `GET` | `/trabajos/{id}` | Estado de un trabajo en segundo plano, **legible por capítulo** |
+| `POST` | `/entrevistas` | Abre una entrevista con el comprador |
+| `POST` | `/entrevistas/{id}/respuestas` | Aporta datos o `TextoAportado`; devuelve faltantes y contradicciones |
+| `POST` | `/entrevistas/{id}/cerrar` | Valida el brief con esquema y crea la obra |
+| `POST` | `/obras/{id}/publicar` | Verifica y publica una `VersionPublicada` |
+| `GET` | `/obras/{id}/versiones` | Historial de versiones y qué capítulos cambió cada una |
+| `GET` | `/obras/{id}/versiones/{v}` | Portada, dedicatoria, índice y capítulos de esa versión |
+| `GET` | `/obras/{id}/versiones/{v}/ficha` | Ficha de personajes y lugares con sus capítulos |
+| `GET` | `/obras/{id}/versiones/{v}/pdf` | Descarga del PDF de esa versión |
+| `POST` | `/obras/{id}/peticiones` | Petición de cambio del lector sobre un hecho |
+| `POST` | `/obras/{id}/versiones/{v}/revertir` | Vuelve a la versión anterior |
 
 Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trabajos en segundo plano** con estado consultable, no peticiones HTTP que esperan.
 
@@ -428,6 +558,25 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Lista negra de n-gramas | Tabla `ngrama_vetado` | Crece con el manuscrito; la escribe el Extractor, la lee el Editor de línea |
 | Versiones de obra | Tabla `version_obra` | Una por versión de biblia; cada escena apunta a la que estaba vigente cuando se escribió |
 | Serie | Tabla `serie`, opcional | Si existe, el canon se comparte entre sus obras **desde el primer día** |
+| Personalización | `destinatario`, `comprador`, `dedicatoria`, `texto_aportado` | El regalo tiene dueño. La dedicatoria **no** es una `version_texto` |
+| Uso de hechos | `hecho_usado_en` (`hc_id`, `capitulo_id`) | Qué regenerar cuando un hecho cambia |
+| Cronología | Vista derivada del ledger, materializada al verificar | Eventos con momento, lugar, presentes y fechas de nacimiento |
+| Resúmenes | `resumen_capitulo` | Derivado del texto aprobado; regenerable |
+| Entrega | `version_publicada`, `capitulo_publicado`, `peticion_de_cambio`, `ficha_de_lectura` | Inmutables. Una regeneración crea otra versión y **conserva la anterior** |
+| Vetos | `palabra_prohibida` (`termino`, `ambito`) | Tres ámbitos: global, obra, brief |
+| Auditoría | `registro_auditoria` | *Append-only*. Qué se decidió y por qué |
+
+**Dos avisos sobre estas tablas nuevas.**
+
+**La `dedicatoria` no puede ser una `version_texto`.** Si lo fuera, el ensamblado del manuscrito la
+incluiría y acabaría en el `.md`, en el `.pdf` como si fuera un capítulo, y en la lista negra de
+n-gramas. Va dirigida a una persona real **desde fuera de la ficción**: no la ve el Escritor ni la
+extrae el Extractor.
+
+**Y publicar no es leer lo vigente.** `version_publicada` **fija** los `version_texto_id` de cada
+capítulo en el momento de publicar. Resolver por «la versión vigente de cada escena» contestaría
+«el manuscrito ahora» y no «el que se entregó», y entonces la versión anterior dejaría de ser
+recuperable en cuanto se publicara otra — que es exactamente lo que el encargo prohíbe.
 
 **Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia. La búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes.
 
@@ -532,6 +681,7 @@ Cada agente tiene prompt propio, contexto propio y criterio de éxito propio. Es
 
 | Agente | Skills / capacidades | Entrada | Salida | Escribe prosa | Tokens típicos |
 | --- | --- | --- | --- | --- | --- |
+| **Entrevistador** | Recogida de datos, detección de faltantes y contradicciones, extracción de hechos de texto libre | Respuestas del comprador y `TextoAportado` | `Brief` validado con esquema, destinatario, vetos | No | 10–20 k |
 | **Arquitecto** | Diseño estructural, cobertura de beats, coherencia de premisa | Brief | Premisa, biblia, outline | No | 20–40 k |
 | **Planificador de escena** | Función dramática, giro de valor, selección de beat | Outline + estado en T | Ficha de escena | No | 15–25 k |
 | **Ensamblador de contexto** | Recuperación híbrida, presupuesto y recorte, conteo de tokens | Ficha + almacenes | Paquete de contexto | No (es código) | — |
@@ -562,9 +712,16 @@ Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-
 | `src/frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
 | — | `feature-sliced-design` | **Referencia de FSD para la migración de §6.5, no la norma vigente.** En decisiones de ubicación y fronteras manda `CLAUDE.md` §5.2 |
 | `docs/verification.md` | `verification-methods` | Metodologías de verificación y la clasificación T/A/I/D/U; origen del documento |
+| `specs/` | `brainstorming` | La puerta **Spec** de `CLAUDE.md` §3.2 escrita como skill: clasifica cuánto proceso pide el trabajo y su `<HARD-GATE>` impide implementar sin aprobación de spec y de plan **por separado** |
+| `specs/` | `clarificar-spec` | Barrido de ambigüedad por once categorías con umbral: no deja aprobar una spec hasta bajar de él. **Escrita en este repositorio**, porque ninguna descargable conocía `specs/NNN-slug/` ni los estados |
+| `specs/*/plan.md` | `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit verificable, cada uno con su test |
+| Todo el código | `test-driven-development` | §3.4: rojo → verde → refactor, con el test visto fallar |
+| Todo | `verification-before-completion` | El checklist de §16: evidencia ejecutada antes de afirmar que algo pasa |
 | `docs/`, `CLAUDE.md` | `coherencia-docs` | Revisión de coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica, invariantes condicionales caducadas. Informe, plan y edición en pasos separados; **no edita sin aprobación explícita** |
 
-Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más tres instaladas por decisión explícita (las tres últimas filas, sin área de código asociada). Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
+Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más las **cinco de proceso** —que son las cuatro puertas de §3 y su barrido de ambigüedad— y tres por decisión explícita.
+
+**Una skill no entra sin tres filas:** en `.claude/skills/SOURCES.md`, en `CLAUDE.md` §13 y en esta tabla. Sin las tres no está instalada, está copiada — y una skill copiada la usa quien la encuentra por casualidad, no quien la necesita. Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, reglas de frontera (`import-linter`, `import/no-restricted-paths`), ledger append-only— **no lo cubre ninguna skill pública**: vive en `CLAUDE.md`.
 
@@ -630,10 +787,12 @@ sequenceDiagram
 
 | Puerta | Cuándo | Bloqueantes | Umbral | Acción si falla |
 | --- | --- | --- | --- | --- |
-| **G1a · Escena, mecánica** | Tras escribir | Canon, continuidad, conocimiento, seguridad | — | Reintento dirigido (máx. 2) → humano |
+| **G0 · Brief** | Al cerrar la entrevista | Esquema del brief, datos obligatorios, contradicciones | — | Se vuelve a preguntar. **No se escribe nada** |
+| **G1a · Escena, mecánica** | Tras escribir | Canon, continuidad, conocimiento, seguridad, **vetos**, **extensión**, **grafías del canon** | — | Reintento dirigido (máx. 2) → humano |
 | **G1b · Escena, de juicio** | Tras superar G1a | Función dramática | Voz, prosa, diálogo | Reintento dirigido (máx. 2) → humano |
 | G2 · Capítulo | Al cerrar capítulo | — | Ritmo, escena/resumen | Replanificar escenas del capítulo |
-| G3 · Manuscrito | Al cerrar borrador | Beats, cabos sueltos, contrato con el lector | Curva de temperatura | Vuelta al outline |
+| G3 · Manuscrito | Al cerrar borrador | Beats, cabos sueltos, contrato con el lector, **cobertura de los elementos obligatorios** | Curva de temperatura, **naturalidad de la personalización** | Vuelta al outline |
+| **G4 · Publicación** | Antes de crear una `VersionPublicada` | **Lean sobre la cronología**, renderizado de la lectura | — | **No se publica.** El fallo vuelve al editor como *feedback* |
 
 **Por qué G1 está partida.** Lo que se puede **contar** y lo que hay que **juzgar** no se verifican igual ni están disponibles a la vez (`domain-knowledge.md` §11). G1a la resuelve código **en el contraste** —contradicciones de canon, tiempos de viaje, `sabe_desde`, edad y nivel de calor se comprueban contra el grafo y contra el esquema, no a ojo— y está disponible desde el primer día. Quién extrae las afirmaciones que se contrastan, y qué se comprueba antes de que un defecto llegue a la puerta, en el párrafo siguiente. G1b necesita al Crítico con una rúbrica calibrada contra escenas etiquetadas por el editor, que es trabajo de la fase 4 (§13). **Hasta que exista esa calibración, G1b no bloquea**: se registra el diagnóstico y se deja pasar. Fingir que la función dramática se comprueba mecánicamente sería peor que declararla pendiente.
 
@@ -660,13 +819,98 @@ No dice nada sobre el defecto que el Continuista **no vio**: el falso negativo s
 
 **Política de reparación:** el reintento lleva el **defecto concreto** en el prompt, con cita del pasaje. Un reintento genérico («mejóralo») degrada el texto casi siempre. Tras dos intentos, escalado a humano.
 
+**Por qué G0 existe y no es burocracia.** Una contradicción del brief —una edad que no encaja con
+el tono pedido— **no se arregla escribiendo mejor**: se arregla preguntando. Si entra al sistema,
+se convierte en una novela coherente con una premisa equivocada, y eso no lo detecta ninguna puerta
+posterior porque no es un defecto del texto. Es el único punto del proceso donde la respuesta
+correcta es **parar y volver a la persona**.
+
+**Y por qué las dos familias de validadores no se suman.** El encargo tiene dos dimensiones y dice
+que ninguna justifica a la otra. Traducido a puertas: **la cobertura de la personalización es
+bloqueante** —un elemento obligatorio que no aparece es producto sin entregar— y **la naturalidad
+es umbral**, porque exige juicio. Medir solo la primera premia el relleno; medir solo la segunda
+deja pasar una novela que no menciona al destinatario.
+
 ---
 
-## 9. Trazabilidad y observabilidad
+## 9. Trazabilidad, observabilidad y verificación formal
 
-Cada llamada al modelo registra: `run_id`, escena, versión de prompt, versión de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto.
+### 9.1 Registro propio
 
-Métricas operativas a vigilar: coste por escena y por novela, tokens medios por capa, tasa de defectos por código, **tasa de defectos mal formados** (§8.3), tasa de reintento, escalados a humano por cada cien escenas, latencia por fase, porcentaje de contexto ocupado por cada capa, y —del límite de §2.2— tiempo de espera por turno y número de esperas vencidas.
+Cada llamada al modelo registra en `ejecucion`: `run_id`, escena, versión de prompt, versión de biblia, **IDs recuperados —de memoria y de canon—**, modelo, parámetros, semilla, tokens por capa, coste y veredicto.
+
+Métricas operativas a vigilar: coste por escena, por capítulo y por novela; tokens medios por capa; tasa de defectos por código; **tasa de defectos mal formados** (§8.3); tasa de reintento; escalados a humano; latencia por fase; porcentaje de contexto ocupado por cada capa; y —del límite de §2.2— tiempo de espera por turno y esperas vencidas.
+
+### 9.2 Langfuse
+
+El registro propio dice qué pasó dentro de una llamada. Langfuse es donde eso se **mira**, y su unidad de agrupación no es la llamada sino la novela.
+
+| Concepto | Qué es aquí |
+| --- | --- |
+| **Sesión** | **Una por novela**, y abarca la entrevista, la generación y **todas las regeneraciones posteriores**. Una petición del lector de dentro de un mes cae en la misma sesión |
+| **Traza** | Una generación: la escritura completa, o una regeneración por petición |
+| **Span** | **Cada uno de los diez roles** —Entrevistador, Arquitecto, Planificador de escena, Ensamblador de contexto, Escritor, Continuista, Crítico, Editor de línea, Extractor, Auditor de manuscrito— y **cada llamada a tool**, con nombre identificable. El Ensamblador es código y no llama al modelo, pero genera span igual: es donde se ve el desglose por capa y el recorte |
+| **Score** | El resultado de **cada** validador: programático, semántico y Lean, asociado a su traza |
+| **Plantilla de prompt** | Versionada en Langfuse —`escritor.v3` y sus huecos sin rellenar—, de modo que una iteración de *tuning* pueda decir **qué versión produjo qué resultado** |
+
+Visible por llamada, por capítulo y por novela: **tokens, coste y latencia**.
+
+**Dos decisiones que conviene no descubrir tarde.**
+
+La primera: **la sesión dura lo que dura la novela, no lo que dura el proceso.** Si cada ejecución abriera su propia sesión, una regeneración pedida por el lector aparecería desconectada de la novela que modifica, y el coste real de esa novela —que incluye sus regeneraciones— dejaría de poder sumarse.
+
+La segunda: **suben el prompt y la traza; no sube la prosa.** Aquí hay tres objetos que el lenguaje
+corriente confunde, y separarlos es lo que hace que §6 del encargo y §11 de este documento digan
+cosas compatibles:
+
+| Objeto | Qué contiene | ¿Sube a Langfuse? |
+| --- | --- | --- |
+| **Plantilla** (`escritor.v3`) | El texto del rol con sus huecos **sin rellenar** | **Sí, versionada.** Es lo que el encargo pide para el *tuning* |
+| **Prompt renderizado** | La plantilla con la biblia, el canon y los recuerdos dentro | **Sí, en la traza.** Sin él, comparar dos versiones de plantilla es comparar dos números sin contexto |
+| **Salida del modelo** | Lo que el rol devolvió | **Sí, en la traza.** Es la mitad que falta para comparar dos versiones de plantilla |
+
+**Decisión de `maujimenez4`, 2026-09-23**, en sus palabras: *no hay problema en que la novela del
+cliente se vierta al servicio externo, registrando el prompt y el tracing*. Antes de esa decisión
+este documento prometía versionar prompts en la tabla de arriba y prohibía registrarlos dos párrafos
+después: se contradecía consigo mismo.
+
+**Y la prosa sube, necesariamente.** No es una concesión añadida: es que **no se puede separar**.
+Cinco de los diez roles reciben la prosa **como entrada** —Continuista, Crítico, Editor de línea,
+Extractor y Auditor (§7)—, así que su prompt renderizado **es** el capítulo más unas instrucciones.
+Una regla que dijera «sube el prompt pero no la prosa» sería incumplible justo en los roles que
+juzgan la calidad, y quien la implementara la resolvería por su cuenta y en silencio.
+
+Así que se dice con las palabras exactas: **el manuscrito del cliente llega al servicio externo,
+dentro de los prompts de los roles que lo reciben.** Es una decisión sobre datos de un tercero —el
+destinatario, que no ha firmado nada— tomada a propósito y no un efecto lateral.
+
+**Lo que se gana a cambio:** el *tuning* que pide el encargo §6 es posible de verdad. Comparar dos
+versiones de una plantilla exige ver qué se envió con cada una y qué salió, no solo qué puntuó cada
+validador.
+
+**Lo que sigue sin salir:** nada se registra fuera de Langfuse. Los logs locales no escriben prompts
+ni fragmentos de manuscrito (§11), y la base de datos de la obra no sale de la máquina.
+
+**TLC no corre aquí.** El model checker se ejecuta en desarrollo, no en cada generación (§9.3).
+
+### 9.3 Verificación formal: dos sujetos distintos
+
+Se verifican formalmente dos cosas que **no son la misma**, y confundirlas es el error típico:
+
+| | **Lean 4** | **TLA+ / TLC** |
+| --- | --- | --- |
+| Verifica | La **historia**: que la cronología sea posible | El **harness**: que el flujo se comporte |
+| Entrada | Fichero generado desde la cronología en SQLite | Especificación de la máquina de estados de §3.9 |
+| Cuándo corre | **En cada publicación**, en la puerta G4 | **En desarrollo**, no en cada generación |
+| Si falla | **No se publica.** Vuelve al editor como *feedback* | Hay un contraejemplo: se cambia el código o la spec |
+
+**Lean.** De la cronología —eventos con su momento, lugar, presentes y las fechas de nacimiento de los personajes— se genera un fichero Lean, y se comprueban invariantes que **ningún validador de texto puede ver**, porque no son propiedades de una escena sino del conjunto: que los eventos respeten el orden temporal declarado; que la edad atribuida a alguien en un evento sea coherente con su fecha de nacimiento; que nadie esté en dos lugares a la vez; que nadie aparezca después de un evento que lo excluye. Se ejecuta con `lake build`.
+
+**Por qué esto no lo cubre G1a.** La puerta de escena mira **una** escena contra el canon. Una cronología imposible puede estar repartida en tres capítulos, cada uno impecable por separado: nadie miente, simplemente las fechas no encajan al ponerlas juntas. Es la clase de fallo que solo aparece al mirar el conjunto, y por eso el validador vive en la publicación y no en la escena.
+
+**TLA+.** La máquina de §3.9 se especifica en TLA+ o PlusCal y se comprueba con TLC sobre un modelo pequeño —cinco capítulos, dos reintentos—, con la configuración en el repositorio. Los invariantes de seguridad son los tres del §3.9, más la propiedad de **liveness**: toda generación termina publicando o deteniéndose con error, **nunca queda en un bucle**.
+
+**La especificación tiene que corresponder al código**, y eso no se cumple solo por escribirla: el README dice qué estado o transición del código implementa cada acción de la especificación. Una spec TLA+ que verifica un sistema que no es el nuestro verifica perfectamente y no dice nada. Y si TLC encuentra un contraejemplo, se documenta **junto al cambio que provocó** — un contraejemplo sin su consecuencia es una anécdota.
 
 ---
 
@@ -677,12 +921,50 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 
 ---
 
-## 11. Seguridad y cumplimiento (aplicado en código)
+## 11. Guardarraíles, seguridad y cumplimiento (aplicado en código)
 
 - Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt.
-- Los prompts de producción y los fragmentos de manuscrito no se registran en logs por defecto.
-- Las claves de proveedor se leen de entorno; nunca del repositorio ni de la base de datos.
+- **Prompts y traza suben a Langfuse**, por decisión explícita de `maujimenez4`, para que el *tuning* del encargo §6 sea posible (§9.2). Como cinco roles reciben la prosa como entrada, **el manuscrito del cliente llega con ellos**: está dicho con esas palabras en §9.2 y no se disimula.
+- **Fuera de Langfuse no sale nada:** ni prompts ni fragmentos de manuscrito se escriben en logs, y la base de datos de la obra no abandona la máquina.
+- Las claves de proveedor se leen de entorno; **nunca del repositorio ni de la base de datos**.
 - Registro de autoría: qué partes son generadas, editadas o humanas.
+
+### 11.1 Palabras y temas vetados
+
+Se aplica **en código sobre cada capítulo, antes de aceptarlo**. No es una instrucción de prompt.
+
+| Ámbito | Qué contiene | Quién lo fija |
+| --- | --- | --- |
+| **Global** | Insultos, términos ofensivos | El sistema |
+| **Obra** | Lo vetado para esta novela | El operador |
+| **Brief** | Lo que este cliente no quiere leer: el nombre de una expareja, un tema | El comprador, en la entrevista |
+
+**La comparación es sobre texto normalizado**: mayúsculas, acentos, plurales y variantes simples. Un veto que solo caza la forma exacta con la que se escribió no es un veto: quien lo sortea no necesita ingenio, le basta con escribir el plural.
+
+Si hay coincidencia, el capítulo **vuelve al escritor** con el término concreto, con límite de intentos. Agotado el límite, **la generación se detiene y se informa** — no se publica una novela con una palabra que el cliente pidió no leer, aunque el resto esté bien. Cada coincidencia queda en el registro de auditoría y en Langfuse.
+
+### 11.2 El registro de auditoría
+
+Registra **qué decidió el sistema, cuándo y por qué**. No es un log de errores: un log de errores dice qué falló; este dice **qué se permitió y qué se bloqueó**, que es lo que permite responder meses después por qué aquella novela salió como salió.
+
+Es *append-only*, por el mismo motivo que el ledger: un registro que se puede editar no es un registro.
+
+### 11.3 El texto que aporta el comprador
+
+Lo que el comprador pega en la entrevista —una carta, una anécdota— es **contenido no confiable**, siempre y sin excepción. Puede contener «ignora tus instrucciones anteriores», y la defensa **no es pedirle al modelo que no haga caso**: eso es negociar con el atacante.
+
+La defensa es de estructura: ese texto entra al sistema **marcado como dato**, y no se concatena nunca a un prompt sin esa marca. Lo que se extrae de él son hechos, que pasan por el mismo esquema que cualquier otro. Es la misma lógica que la edad mínima: lo que protege es el esquema, no la redacción.
+
+### 11.4 Hooks
+
+Dos, y se ejecutan fuera del bucle del modelo:
+
+| Hook | Cuándo | Qué hace |
+| --- | --- | --- |
+| **Validación de capítulo** | Al terminar un capítulo | Corre los validadores programáticos y devuelve el resultado a la puerta |
+| **Policy** | Antes de aceptar cualquier salida | Aplica los vetos de §11.1 y escribe en el registro de auditoría |
+
+**Por qué son hooks y no llamadas dentro del servicio:** un guardarraíl que vive dentro del código que vigila se puede saltar cambiando ese código sin que nada lo note. Un hook es un punto de enganche declarado, y su ausencia **se ve**.
 
 ---
 
@@ -705,19 +987,28 @@ Métricas operativas a vigilar: coste por escena y por novela, tokens medios por
 | 13 | `Serie` y canon compartido **desde el primer día** | Añadir `Serie` cuando llegue la segunda obra | `definitions.md` §4.1: añadirlo después obliga a reescribir todas las referencias de canon |
 | 14 | Prompts como ficheros del repositorio, con su hash en `ejecucion` | Tabla de prompts versionada en la base de datos | Se revisan como código, cambiarlos no exige migración, y el hash basta para reproducir una ejecución |
 | 15 | La puerta de escena se parte en mecánica y de juicio | Una sola puerta que espera al juez calibrado | Lo que se cuenta está disponible hoy; lo que se juzga, en la fase 4 |
+| 16 | **Cobertura de la personalización bloqueante; naturalidad como umbral** | Una sola métrica de personalización | Fallan en direcciones opuestas: solo cobertura premia el relleno, solo naturalidad deja pasar una novela impersonal |
+| 17 | **La sesión de Langfuse dura lo que dura la novela**, no la ejecución | Una sesión por ejecución | Si no, una regeneración aparece desconectada de la novela que modifica y el coste real deja de poder sumarse |
+| 18 | **Lean en la puerta de publicación; TLC en desarrollo** | Ambos en cada generación | Lean mira una cronología concreta y es barato; TLC explora un espacio de estados y no depende de los datos de una novela |
+| 19 | **`version_publicada` fija los `version_texto_id`** | Resolver por «versión vigente» al leer | Resolver al leer contesta «el manuscrito ahora» y hace irrecuperable la versión anterior, que es justo lo que hay que conservar |
+| 20 | **La extensión vectorial sigue siendo opcional**, y es decisión propia | Retirarla, o exigirla | El encargo obliga a SQLite y no menciona vectores. El coste es una interfaz y una suite en dos modos; a cambio arranca sin la extensión |
 
-**Riesgos abiertos:** coste total por novela con nueve agentes, acotado en concurrencia por §2.2 pero **no en total**; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra; **consolidación en el canon de hechos nuevos que no contradicen nada**, porque el Continuista solo detecta colisiones con lo ya sabido y el Extractor registra el origen, que es trazabilidad y no veracidad (`verification.md` §7).
+**Riesgos abiertos:** coste total por novela con **diez** agentes y con las regeneraciones que pida el lector, acotado en concurrencia por §2.2 pero **no en total**; calibración del juez al cambiar de modelo; rendimiento de la búsqueda por fuerza bruta cuando el índice supera unas decenas de miles de fragmentos; concurrencia de escritura en SQLite si varios autores comparten obra; **consolidación en el canon de hechos nuevos que no contradicen nada**, porque el Continuista solo detecta colisiones con lo ya sabido y el Extractor registra el origen, que es trazabilidad y no veracidad (`verification.md` §7); y **que la especificación TLA+ deje de corresponder al código**, que es el riesgo nuevo de §9.3: una spec verde sobre un código que ya no implementa esa máquina no falla, afirma la seguridad de otro sistema.
 
 ---
 
 ## 13. Hoja de ruta
 
-1. **Vertical mínima**: biblia sencilla, outline de 40 escenas, escritura con contexto ensamblado, extracción de hechos. Meta: un capítulo coherente.
-2. **Canon consultable**: grafo con origen, validadores de contradicción y conocimiento. Meta: cero defectos CAN y CON en diez escenas.
-3. **Estado y recuperación**: ledger, resúmenes en cascada, búsqueda híbrida. Meta: coherencia más allá del capítulo 10.
-4. **Calidad medida**: métricas, juez calibrado, puertas con umbrales. Meta: reparación dirigida.
-5. **Género y arco**: cobertura de beats, curva de temperatura, auditoría de plantados.
-6. **Producción**: versionado, comparación de estrategias de contexto, coste por novela, exportación editorial.
+Reordenada a la escala del encargo: diez capítulos, no cuarenta escenas.
+
+1. **Vertical mínima**: biblia, outline de diez capítulos, escritura con contexto ensamblado, extracción de hechos. Meta: **una novela de diez capítulos de principio a fin**.
+2. **Personalización**: entrevista, brief validado, destinatario y vetos, cobertura de elementos obligatorios. Meta: **el destinatario se reconoce**.
+3. **Guardarraíles y observabilidad**: vetos en tres ámbitos, registro de auditoría, hooks, Langfuse con sesión por novela. Meta: **se ve lo que cuesta y lo que se bloqueó**.
+4. **Entrega**: publicación inmutable, lectura web, ficha, petición de cambio y regeneración acotada. Meta: **el regalo se abre**.
+5. **Verificación**: Lean en la publicación, TLA+ con TLC en desarrollo, evals con cinco briefs y una iteración de *tuning*. Meta: **se puede demostrar que funciona**.
+6. **Calidad medida**: juez calibrado contra revisión humana con la misma rúbrica, puertas con umbrales.
+
+**El orden no es arbitrario.** La 3 va antes que la 4 porque publicar sin registro de auditoría deja sin respuesta la única pregunta que un cliente hará si algo sale mal. Y la 5 va después de la 4 porque **TLA+ tiene que modelar el flujo real**, incluida la regeneración por petición del lector: especificarla antes de que exista es especificar lo que uno imagina.
 
 ---
 
@@ -750,6 +1041,7 @@ Los diagramas de ontología que allí vivían se han trasladado al **§14 de `de
 | 1.1 | Se añaden §2.2 presupuesto concurrente, §3 orquestación y §4 memoria; se renumera §3–§12 → §5–§14 |
 | 1.2 | El techo agregado de tokens se sustituye por un límite de concurrencia contado en llamadas (§2.2). El Auditor deja de escribir memoria (§4.3). Los prompts son ficheros con hash (§5.5). Aparecen la lista negra de n-gramas, `version_obra` y `serie` (§5.5). La puerta de escena se parte en G1a y G1b (§8.3). Un hecho sustituido invalida los *snapshots* posteriores (§4.7). Ejecutada la limpieza de `definitions.md` de §14 |
 | 1.3 | El defecto del Continuista pasa a tener forma comprobable: cita anclada por desplazamiento y `hecho_canon_id` obligatorio en `CAN-01`. Aparecen la comprobación de forma previa a G1a y el estado «mal formado» (§8.3), la tabla `defecto` (§5.5) y su métrica (§9) |
+| **2.0** | **El sistema deja de tener un solo usuario y una sola salida.** Cambio mayor, al cruzar el documento contra `docs/entregable/examen-final.md`. Entran: los tres usuarios y el `Entrevistador` como décimo agente (§1, §3.5, §7); la **máquina de estados de la novela** con configuración, publicación, checkpoint por capítulo y regeneración por petición del lector (§3.9), que es la que verifica TLA+; la relación **hecho → capítulos** y las tablas de personalización, entrega, vetos y auditoría (§4.3, §5.5); las puertas **G0** del brief y **G4** de publicación (§8.3); **Langfuse** con sesión por novela, spans por rol y *scores* por validador (§9.2); la **verificación formal** con Lean en la publicación y TLC en desarrollo (§9.3); y los **guardarraíles** con vetos en tres ámbitos, registro de auditoría y dos hooks (§11). La hoja de ruta se reordena a diez capítulos. Se deja escrito que **SQLite es obligatorio por el encargo y la extensión vectorial no**: mantenerla opcional es decisión de este proyecto |
 
 *La v1.3 se commiteó en `aa47bd0`, junto a la v1.2 de `definitions.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que esta tabla es la vía para localizarla.*
 

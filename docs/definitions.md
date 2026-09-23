@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 1.3 · **Fecha:** 2026-09-22 · **Dominio:** generación asistida de novela larga, género de referencia: romance
+**Versión:** 2.0 · **Fecha:** 2026-09-23 · **Dominio:** generación asistida de **novela personalizada de regalo**, género de referencia: romance
 
 ---
 
@@ -18,6 +18,7 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
 | 1.3 | Entra el código `VOZ-03` en la taxonomía (§8) y el axioma 13 (§11): la prosa debe usar la `persona` y el `tiempo_verbal` declarados en la `Obra`. Cubre un hueco detectado al cruzar las restricciones duras contra sus validadores —las dos se fijaban en la obra, se heredaban a la ficha y se repetían en el prompt, pero ningún validador las comprobaba en el texto |
 | 1.2 | `Defecto` deja de ser una tabla de códigos y pasa a clase con atributos (§8): la `cita` se ancla por desplazamiento a una `VersionDeTexto` y `hecho_canon_id` es obligatorio en `CAN-01`. Entran el término `Cita` (§8 y §13), los predicados `señala` y `choca_con` (§10) y los axiomas 11 y 12 (§11) |
+| **2.0** | **El producto deja de ser «una novela» y pasa a ser «una novela para alguien».** Cambio mayor, no aditivo, al cruzar el documento contra `docs/entregable/examen-final.md`. Entran: la **personalización** como capa de primera clase (`Destinatario`, `Comprador`, `Dedicatoria`, `TextoAportado`), la **entrega** (`VersionPublicada`, `PeticionDeCambio`, `FichaDeLectura`), los **guardarraíles** (`PalabraProhibida`, `RegistroDeAuditoria`), la **evaluación con rúbrica** (`Rubrica`, `Puntuacion`, `RevisionHumana`) y el **resumen por capítulo**. `Cronologia` deja de ser un concepto y pasa a estructura consultable, porque es la entrada del validador formal. Y se corrigen dos cosas que impedían cumplir: `HechoCanon` ya no exige escena de origen —un hecho del brief no tiene ninguna— y registra **en qué capítulos se usa**; `Capitulo` pasa a 1.000–1.500 palabras y a contener **exactamente una** `Escena`. Detalle del porqué en §15 |
 
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
 
@@ -46,7 +47,9 @@ La ontología se organiza en cinco capas. Cada una falla de forma distinta y se 
 | **Discurso** (sjuzhet) | ¿Cómo se cuenta? | Baja pero global | Restricciones duras por escena |
 | **Género** | ¿Qué espera el lector? | Fija por contrato | Cobertura de beats obligatorios |
 | **Estado** | ¿Qué es verdad en el instante T? | Alta | Ledger de eventos + derivación |
-| **Producción** | ¿Cómo se fabrica y se acepta? | Alta | Versionado, métricas, puertas |
+| **Producción** | ¿Cómo se fabrica, se acepta **y para quién**? | Alta | Versionado, métricas, puertas |
+
+**La personalización no es una sexta capa.** Vive dentro de Producción (§9.1) porque falla como falla la producción —se detecta contando y contrastando, y se corrige regenerando— y no como falla la historia. Meterla en Historia habría convertido al `Destinatario` en un personaje más, que es justo lo que no es.
 
 ---
 
@@ -63,6 +66,8 @@ Conjunto de obras que comparten canon, personajes o mundo.
 La novela individual. Raíz de casi todo el grafo.
 - `obra_id`, `titulo`, `logline`, `premisa`, `tema`, `genero`, `subgenero`, `extension_objetivo`, `publico_objetivo`, `promesa_de_apertura`, `tipo_de_final` **[fijo]**
 - Parámetros de discurso heredados por todas sus escenas: `persona`, `tiempo_verbal`, `esquema_de_pov`, `nivel_de_calor`
+- `destinatario_id` (0..1) — **de quién es el regalo**. Una obra sin destinatario es legítima; una obra personalizada sin él, no.
+- **Extensión de referencia:** diez `Capitulo` de 1.000–1.500 palabras. La complejidad del producto está en el proceso, no en la extensión.
 
 #### `Parte` (Acto)
 Agrupación macroestructural con una función dramática propia.
@@ -71,8 +76,10 @@ Agrupación macroestructural con una función dramática propia.
 
 #### `Capitulo`
 Unidad de lectura y de ritmo; es donde el lector decide si sigue.
-- `capitulo_id`, `numero`, `titulo`, `pov_dominante`, `gancho_de_apertura`, `tipo_de_corte_final`, `extension_objetivo` (típicamente 2.500–4.000 palabras)
+- `capitulo_id`, `numero`, `titulo`, `pov_dominante`, `gancho_de_apertura`, `tipo_de_corte_final`, `extension_objetivo` (**1.000–1.500 palabras**)
+- `resumen_id` (0..1) — su `ResumenDeCapitulo`, que alimenta el contexto de los siguientes (§9).
 - Criterio de cierre: corta en tensión, en pregunta o en revelación.
+- **Un capítulo contiene exactamente una `Escena`** (§10). A esta escala coinciden, y separar los dos conceptos sigue valiendo la pena: el capítulo es unidad de **lectura** y la escena unidad de **generación**. Si algún día la extensión crece, la cardinalidad vuelve a `1..*` sin tocar nada más.
 
 #### `Escena`
 **Unidad atómica de generación.** Es el mayor fragmento que cabe cómodamente en una llamada y el menor que tiene sentido narrativo completo: POV único, lugar continuo, tiempo continuo.
@@ -115,7 +122,8 @@ Serie temporal de cambio de una entidad a lo largo del manuscrito.
 La entidad más cara de mantener porque tiene parte fija y parte móvil. Separarlas es obligatorio.
 
 **Parte fija [fijo]** — vive en la biblia:
-- `pj_id`, `nombre`, `apodos[]`, `edad`, `fisico_invariable`, `profesion`, `familia`, `historia_previa`
+- `pj_id`, `nombre`, `apodos[]`, `edad`, `fecha_de_nacimiento` (0..1), `fisico_invariable`, `profesion`, `familia`, `historia_previa`
+- **Por qué `fecha_de_nacimiento` además de `edad`:** «tiene 34 años» no se puede contrastar contra un evento fechado, y «nació en 1991» sí. Es lo que permite comprobar que la edad declarada en cada evento es coherente con la fecha, que es un invariante del validador formal. Opcional porque no toda obra fecha a sus personajes; **obligatoria si algún evento afirma una edad**.
 - `herida_original`: el suceso pasado que explica su conducta defensiva
 - `mentira_que_se_cree`: la creencia falsa que debe abandonar
 - `deseo_consciente` (lo que persigue) vs. `necesidad_inconsciente` (lo que le falta)
@@ -157,21 +165,37 @@ Entidad de primera clase, no un atributo del personaje. En romance es el objeto 
 Restricción del universo ficcional (magia, tecnología, norma social, jerarquía).
 - `regla_id`, `enunciado`, `alcance`, `excepciones[]`, `escena_en_que_se_establece`
 
-#### `Cronologia`
+#### `Cronologia` **[derivado]**
+Los **dos relojes** y, además, **la proyección consultable que los hace comprobables**.
+
 - `tiempo_historia` (cuándo ocurre en la ficción) vs. `orden_discurso` (en qué posición se cuenta)
 - **Regla de diseño:** son dos relojes distintos. Sin separarlos, cualquier analepsis rompe el cálculo de estado.
+
+**Como estructura**, la cronología es la proyección de los `Evento` del ledger con lo mínimo para razonar sobre el tiempo: por cada evento, su `tiempo_historia`, su `lugar`, sus `participantes[]` y sus `testigos[]`; y por cada `Personaje` implicado, su `fecha_de_nacimiento` si la tiene.
+
+**No es una fuente de verdad nueva.** Se deriva del ledger, como `EstadoEnT`, y por el mismo motivo: si se escribiera a mano sería una segunda verdad sobre cuándo pasó cada cosa, y divergiría del texto. Existe como concepto propio porque es **la entrada del validador formal**, que necesita leerla entera y de una vez en lugar de recorrer el ledger.
 
 ### 4.5 Eventos e información
 
 #### `Evento`
 - `evt_id`, `descripcion`, `tiempo_historia`, `lugar`, `participantes[]`, **`testigos[]`**
 - `causa` (0..\*), `consecuencia` (0..\*)
+- `excluye[]` (0..\*) — personajes que **dejan de poder aparecer** a partir de este evento: una muerte, una partida definitiva, un encarcelamiento. Sin este campo, «que nadie reaparezca después de morir» no es comprobable: es un juicio de lectura.
 - **Clave:** de `testigos[]` se deriva quién puede saber el hecho después. Es el mecanismo que evita que un personaje use información que no debería tener.
 
 #### `HechoCanon`
 Cualquier afirmación declarada verdadera: color de ojos, apellido, fecha, regla.
-- `hc_id`, `entidad`, `atributo`, `valor`, `escena_de_origen`, `confianza`
-- **Regla de arbitraje:** si dos hechos sobre el mismo atributo difieren, prevalece el de menor `orden_discurso`; el otro es un defecto CAN-01.
+- `hc_id`, `entidad`, `atributo`, `valor`, `confianza`
+- `origen` ∈ {`escena`, `brief`, `edicion_humana`} — **de dónde salió el hecho**
+- `escena_de_origen` (0..1) — **obligatorio si `origen` es `escena`**, vacío en los demás casos
+- `usado_en[]` (0..\*) — los `Capitulo` cuyo texto se apoya en este hecho
+- **Regla de arbitraje:** si dos hechos sobre el mismo atributo difieren, prevalece el de menor `orden_discurso`; el otro es un defecto CAN-01. Un hecho de `origen: brief` precede a todos los de escena, porque existía antes de que se escribiera una línea.
+
+**Por qué `escena_de_origen` deja de ser obligatorio, que es un cambio de fondo.** Hasta la v1.3, todo hecho citaba la escena que lo estableció, y esa regla venía de una premisa que ha dejado de ser cierta: que el canon nace del texto. En una novela personalizada **el canon nace antes del texto** — el nombre del destinatario, su perro, el verano del 98 que contó el comprador. Esos hechos no tienen escena de origen y el sistema tiene que guardarlos igual, porque son justo los que hay que comprobar que aparecen.
+
+La trazabilidad **no se pierde, se generaliza**: antes se decía «de qué escena salió», ahora «de dónde salió», y la escena sigue siendo obligatoria cuando la respuesta es una escena. Lo que se pierde es la comodidad de asumir que siempre hay una.
+
+**Y por qué `usado_en[]` es imprescindible y no una conveniencia.** Un hecho sabe de dónde vino; hasta ahora no sabía **a dónde fue**. Sin eso, «el perro se llama Nala, no Luna» no se puede atender: no hay forma de saber qué capítulos hay que rehacer. Tampoco se puede comprobar que un elemento personalizado obligatorio llegó de verdad al texto. Es una relación **hacia adelante**, y por eso no se deriva de `escena_de_origen`: la escribe quien integra el capítulo, no quien crea el hecho.
 
 #### `Plantado`
 Dato sembrado sin explicar, destinado a cobrarse más adelante.
@@ -306,6 +330,12 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | Cumplimiento de género | Manuscrito | Cobertura de beats y del tropo  |
 | Cabos sueltos | Manuscrito | Plantados sin pago, hilos vencidos  |
 | Contrato con el lector | Manuscrito | Nivel de calor, temas sensibles, advertencias  |
+| **Cobertura de la personalización** | Manuscrito | Cada elemento obligatorio del `Brief` aparece en al menos un `Capitulo`, contrastado contra `HechoCanon.usado_en[]`  |
+| **Naturalidad de la personalización** | Manuscrito | Juez con rúbrica: ¿el dato está **integrado en la historia** o **incrustado** en ella?  |
+
+**Las dos últimas entran en la v2.0 y cubren un agujero grande.** Las doce anteriores juzgan si la novela está bien escrita; **ninguna juzgaba si es de quien dice ser.** Con solo aquellas, un sistema podía sacar la máxima puntuación en todas habiendo ignorado al destinatario por completo — y ese sistema habría fallado en lo único que el cliente compra.
+
+Son **dos** y no una a propósito, porque fallan por separado y en direcciones opuestas: la cobertura se arregla metiendo el dato, y meterlo a lo bruto es exactamente lo que rompe la naturalidad. Medir solo la primera premia el relleno; medir solo la segunda deja pasar una novela que no menciona al destinatario. **La personalización no justifica una mala escritura**, y la calidad tampoco justifica una novela impersonal.
 
 #### `Metrica` — automáticas y baratas
 - **Repetición:** trigramas y cuatrigramas repetidos entre escenas (detecta prosa de plantilla).
@@ -334,6 +364,14 @@ Tres piezas: **dimensiones** (qué se juzga), **métricas** (cómo se mide), **d
 | GEN-01 | Beat obligatorio ausente o fuera de sitio | Insertar o recolocar escena |
 | GEN-02 | Ruptura por malentendido evitable | Reescribir la causa desde la herida del personaje |
 | SEG-01 | Nivel de calor o tema fuera de contrato | Reescritura obligatoria, sin excepción |
+| **SEG-02** | **`PalabraProhibida` presente en el texto** | Reescritura obligatoria. Se cuenta en el `RegistroDeAuditoria` |
+| **PER-01** | **Elemento personalizado obligatorio que no aparece en ningún capítulo** | Insertar donde la historia lo admita, no donde quepa |
+| **PER-02** | **Nombre del destinatario o de un personaje escrito de otra forma que en el canon** | Corrección literal al valor del `HechoCanon` |
+| **PER-03** | **Dato personal incrustado sin función narrativa** | Reescribir para que el dato haga algo en la escena, o retirarlo |
+| **EST-02** | **Capítulo fuera del rango de extensión declarado** | Ampliar o condensar sin añadir relleno |
+| **CFG-01** | **Contradicción dentro del `Brief`** (p. ej. edad contra tono, o contra género) | Se resuelve **en la entrevista**, no escribiendo |
+| **CFG-02** | **Dato obligatorio del `Brief` ausente** | Volver a preguntar |
+| **REN-01** | **La lectura no renderiza**: índice, ficha o portada rotos | Corregir la interfaz y volver a inspeccionar |
 
 **Atributos.** Un defecto no es una frase: es un registro con forma comprobable. Estos son los campos
 que permiten comprobarla sin volver a llamar al modelo.
@@ -357,6 +395,32 @@ que no se refiere a nada. Por eso los axiomas 11 y 12 del §11 son restricciones
 recomendaciones de estilo. Qué hace el sistema con un defecto que no las cumple es mecanismo:
 `architecture.md` §8.3.
 
+#### `Rubrica`
+Instrumento de juicio **compartido entre el juez automático y el humano**. Es lo que hace que sus dos
+opiniones sean comparables: si cada uno puntúa con su propio criterio, la comparación no significa nada.
+
+- `rubrica_id`, `version`, `criterios[]`, `escala` (rango y qué significa cada extremo)
+- Cada `criterio` lleva `nombre`, `definicion` y **qué se considera un 1 y qué un máximo**
+- **Regla:** una rúbrica sin anclajes descritos no es una rúbrica, es una escala. Dos jueces que no
+  comparten qué es un 3 no están midiendo lo mismo.
+- Se versiona: cambiar un criterio invalida la comparación con puntuaciones anteriores.
+
+#### `Puntuacion`
+El resultado de aplicar un validador —automático, de juicio o formal— a una unidad.
+
+- `puntuacion_id`, `validador` (su nombre), `unidad` (escena, capítulo, manuscrito o versión)
+- `valor`, `criterio` (0..1, si viene de una `Rubrica`), `justificacion`
+- **Regla:** una puntuación de juicio **sin justificación no se acepta**. Un número sin motivo no se
+  puede discutir, y por tanto no se puede corregir ni calibrar: solo obedecer.
+
+#### `RevisionHumana`
+Lectura de una obra completa por una persona, **con la misma `Rubrica`** que usó el juez automático.
+
+- `revision_id`, `obra_id`, `rubrica_id`, `revisor`, `fecha`, `puntuaciones[]`
+- **Para qué sirve, que no es para decidir:** sirve para **saber cuánto vale el juez**. La distancia
+  entre las dos puntuaciones es la única medida que existe de si el juicio automático se parece al
+  humano. Sin ella, el juez emite números que nadie ha contrastado con nada.
+
 #### `PuertaDeCalidad`
 Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existen, qué bloquea cada una y la política de reparación son mecanismo: `architecture.md` §8.3.
 
@@ -366,7 +430,7 @@ Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existe
 
 | Clase | Definición | Atributos clave |
 | --- | --- | --- |
-| `Brief` | Encargo inicial | Género, tropo, tono, extensión, referencias |
+| `Brief` | Encargo inicial, **estructurado y validado con esquema**. Es el contrato de personalización: lo que el comprador pide y lo que veta | `brief_id`, `comprador_id`, `destinatario_id`, género, tropo, tono, extensión, `elementos_obligatorios[]`, `vetos[]`, referencias |
 | `Biblia` | Conjunto de hechos fijos, decididos antes de escribir | Versionada; cambiarla crea una `VersionDeObra` |
 | `Outline` | Plan jerárquico partes → capítulos → escenas | Cobertura de beats, curva de tensión |
 | `FichaDeEscena` | Contrato de generación de una escena | Ver §4.1 `Escena` |
@@ -374,10 +438,51 @@ Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existe
 | `Ejecucion` | Una llamada al modelo | `run_id`, escena, prompt con su `hash`, modelo, semilla, parámetros, coste, métricas, veredicto |
 | `VersionDeTexto` | Texto inmutable de una escena | `version`, `vigente`, `run_id` de origen |
 | `VersionDeObra` | Estado congelado de la biblia con el que se escribió un tramo del manuscrito | `version_obra_id`, `biblia`, `vigente_desde`; cada `Escena` apunta a la suya |
+| `ResumenDeCapitulo` | Síntesis de un `Capitulo` ya integrado, para construir el contexto de los siguientes. **Se deriva del texto aprobado**, no se escribe aparte | `resumen_id`, `capitulo_id`, `texto`, `hechos_establecidos[]`, `hilos_abiertos[]` |
 
-**Roles de agente.** Nueve, y estos son sus nombres, que es lo que fija este documento:
+### 9.1 Personalización
 
-`Arquitecto` · `Planificador de escena` · `Ensamblador de contexto` · `Escritor` · `Continuista` · `Crítico` · `Editor de línea` · `Extractor` · **`Auditor de manuscrito`**
+La novela no es un producto, es **un regalo para alguien**. Estas cuatro clases son ese alguien.
+
+| Clase | Definición | Atributos clave |
+| --- | --- | --- |
+| `Destinatario` | Persona real a quien se regala la `Obra`. Aporta al `Brief` los datos que se personalizan. **No es un `Personaje`** y no se le aplican las reglas de canon narrativo | `destinatario_id`, `nombre`, `edad`, `rasgos[]`, `recuerdos_aportados[]` |
+| `Comprador` | Quien encarga la obra y responde la entrevista. Puede coincidir con el `Destinatario` o no; cuando no coincide, es quien aporta los datos de aquel | `comprador_id`, `nombre`, `contacto` |
+| `Dedicatoria` | Texto de portada dirigido al `Destinatario`. Vive **fuera del manuscrito y fuera del canon**: ni la ve el `Escritor` ni la extrae el `Extractor`, porque no es parte de la historia | `texto`, `firma` |
+| `TextoAportado` | Prosa que el comprador pega en la entrevista: una carta, una anécdota. **Contenido no confiable**, siempre: lo que contiene son datos de los que se extraen hechos, nunca instrucciones que el sistema obedezca | `texto_id`, `contenido`, `procedencia`, `hechos_extraidos[]` |
+
+**Sobre `TextoAportado` y por qué su desconfianza es de esquema y no de prompt.** Un texto que el usuario pega puede decir «ignora tus instrucciones anteriores». La defensa no es pedirle al modelo que no haga caso —eso es negociar con el atacante— sino que el texto **entre al sistema marcado como dato** y no se concatene nunca a un prompt sin esa marca. Es la misma lógica que la edad mínima: lo que protege es el esquema, no la redacción.
+
+### 9.2 Entrega
+
+Cómo la novela deja de ser filas en una base de datos y pasa a ser algo que alguien abre.
+
+| Clase | Definición | Atributos clave |
+| --- | --- | --- |
+| `VersionPublicada` | Conjunto **inmutable** de `VersionDeTexto`, una por capítulo, entregado como una sola cosa. Una regeneración crea otra y **conserva la anterior**; nunca se edita ni se borra | `version_publicada_id`, `numero`, `publicada_en`, `sucede_a`, `capitulos_cambiados[]` |
+| `PeticionDeCambio` | Lo que el lector pide sobre un `HechoCanon` concreto de lo que está leyendo. **No edita el canon**: la corrección es un hecho nuevo que sustituye al anterior | `peticion_id`, `version_publicada_id`, `hecho_canon_id`, `texto_pedido`, `estado` |
+| `FichaDeLectura` | Vista de los `Personaje` y `Lugar` de una `VersionPublicada`, con los capítulos donde aparece cada uno. **Derivable y reproducible** desde el ledger y la versión | `version_publicada_id`, entradas con sus capítulos |
+
+**`VersionPublicada` se llama así, y no `VersionDeNovela`, a propósito.** Ya existen `VersionDeTexto` (el texto de una escena) y `VersionDeObra` (la biblia congelada). Una tercera «versión de» sería la deriva terminológica que el §2 de este documento existe para evitar: **«publicada» nombra lo que la distingue**, que es el acto de entregarla.
+
+**Y la ficha es *derivable* por una razón dura, no por elegancia.** Congelada en una tabla y nada más, sería canon escrito fuera del ledger: una segunda verdad sobre quién es quién, incontrastable porque está congelada. Guardarla está bien —hace que la lectura de una versión antigua concuerde con su texto—, pero solo si se puede **reconstruir y comprobar que coincide**. Una ficha que no se puede reconstruir no es una copia: es un original, y entonces el ledger ha dejado de ser la fuente.
+
+### 9.3 Guardarraíles
+
+| Clase | Definición | Atributos clave |
+| --- | --- | --- |
+| `PalabraProhibida` | Término o tema que no debe aparecer en el texto. **Tres ámbitos**: `global` (insultos, términos ofensivos), `obra` y `brief` (lo que este cliente veta: el nombre de una expareja, un asunto que no quiere leer) | `palabra_id`, `termino`, `ambito` ∈ {global, obra, brief}, `motivo` |
+| `RegistroDeAuditoria` | Qué decidió el sistema sobre una unidad, cuándo y por qué. **Append-only** | `registro_id`, `momento`, `sujeto`, `decision`, `motivo`, `evidencia` |
+
+**La comparación de `PalabraProhibida` es sobre texto normalizado**, no sobre la cadena literal: mayúsculas, acentos, plurales y variantes simples. Un veto que solo caza la forma exacta con la que se escribió no es un veto, es una sugerencia — y quien lo sortea no necesita ingenio, le basta con escribir el plural.
+
+**El `RegistroDeAuditoria` registra lo que el sistema decidió, no lo que le pasó.** Un log de errores dice qué falló; este dice **qué se permitió y qué se bloqueó, y con qué motivo**. Son cosas distintas y solo la segunda permite responder, meses después, por qué aquella novela salió como salió.
+
+**Roles de agente.** Diez, y estos son sus nombres, que es lo que fija este documento:
+
+**`Entrevistador`** · `Arquitecto` · `Planificador de escena` · `Ensamblador de contexto` · `Escritor` · `Continuista` · `Crítico` · `Editor de línea` · `Extractor` · `Auditor de manuscrito`
+
+El **`Entrevistador`** entra en la v2.0 y es el primero de la cadena: recoge del comprador los datos del destinatario y sus vetos, detecta lo que falta y lo que se contradice, extrae hechos del `TextoAportado`, y produce un `Brief` validado con esquema. **Es el único rol que habla con una persona**, y por eso es también el único cuya entrada no la controla el sistema.
 
 > Qué recibe y qué produce cada uno, qué almacenes puede tocar y por qué están separados es mecanismo: `architecture.md` §7 y §3.5. El **Auditor de manuscrito** revisa el manuscrito cerrado —cobertura de beats, plantados sin pago, curva de temperatura, contrato de género— y **solo produce un informe: no escribe en ningún almacén**.
 
@@ -391,7 +496,7 @@ Los almacenes en los que vive todo esto están enumerados en `architecture.md` �
 | --- | --- | --- | --- | --- |
 | `Obra` | contiene | `Parte` | 1..\* | Estructura |
 | `Parte` | contiene | `Capitulo` | 1..\* | Estructura |
-| `Capitulo` | contiene | `Escena` | 1..\* | Ritmo y extensión |
+| `Capitulo` | contiene | `Escena` | **1..1** | A esta escala coinciden; el capítulo es unidad de lectura y la escena de generación |
 | `Escena` | ocurre_en | `Lugar` | 1 | Coherencia geográfica y sensorial |
 | `Escena` | narrada_desde | `Personaje` | 1 | Filtrar qué puede percibirse |
 | `Escena` | dramatiza | `Evento` | 1..\* | Distinguir escena de resumen |
@@ -413,6 +518,21 @@ Los almacenes en los que vive todo esto están enumerados en `architecture.md` �
 | `Ejecucion` | produce | `VersionDeTexto` | 1 | Trazabilidad y reproducibilidad |
 | `Defecto` | señala | `VersionDeTexto` | 1 | Ancla la cita al texto que se juzga |
 | `Defecto` | choca_con | `HechoCanon` | 0..1 | Hace determinista el contraste de `CAN-01` |
+| `Obra` | se_dedica_a | `Destinatario` | 0..1 | De quién es el regalo |
+| `Comprador` | encarga | `Obra` | 0..\* | Quién paga y responde la entrevista |
+| `Brief` | veta | `PalabraProhibida` | 0..\* | Lo que este cliente no quiere leer |
+| `TextoAportado` | aporta | `HechoCanon` | 0..\* | De dónde salió un hecho que no vino de una escena |
+| `HechoCanon` | usado_en | `Capitulo` | 0..\* | **Qué hay que regenerar si el hecho cambia**, y si el elemento llegó al texto |
+| `Capitulo` | resume_en | `ResumenDeCapitulo` | 0..1 | Contexto para los capítulos siguientes |
+| `Evento` | excluye | `Personaje` | 0..\* | A partir de aquí ya no puede aparecer |
+| `VersionPublicada` | agrupa | `VersionDeTexto` | 1..\* | Qué texto exacto leyó el lector |
+| `VersionPublicada` | sucede_a | `VersionPublicada` | 0..1 | Conservar la anterior tras una regeneración |
+| `PeticionDeCambio` | afecta_a | `HechoCanon` | 1 | Qué hecho quiere cambiar el lector |
+| `PeticionDeCambio` | produce | `VersionPublicada` | 0..1 | Una atendida publica; una rechazada, ninguna |
+| `FichaDeLectura` | describe | `VersionPublicada` | 1 | La ficha acompaña a su versión |
+| `Puntuacion` | evalua | `Obra` \| `Capitulo` \| `Escena` | 1 | Qué se juzgó |
+| `Puntuacion` | aplica | `Rubrica` | 0..1 | Con qué criterio, si es de juicio |
+| `RevisionHumana` | contrasta | `Puntuacion` | 0..\* | Mide cuánto vale el juez automático |
 
 ---
 
@@ -434,6 +554,13 @@ El validador debe poder comprobar mecánicamente:
     `desplazamiento_inicio`–`desplazamiento_fin` declarado.
 12. Todo `Defecto` con `codigo` `CAN-01` declara un `hecho_canon_id` que existe en el grafo de canon.
 13. La prosa de una `Escena` usa la `persona` y el `tiempo_verbal` declarados en su `Obra`. Son restricciones duras heredadas, no preferencias de estilo: se comprueban en el texto, no solo se piden en el prompt.
+14. Todo `HechoCanon` con `origen: escena` declara su `escena_de_origen`. Los de `origen: brief` **no la tienen y no deben inventarla**: existían antes del texto.
+15. Todo elemento de `Brief.elementos_obligatorios[]` aparece en al menos un `Capitulo`, comprobado contra `HechoCanon.usado_en[]`. **Un dato que el comprador pidió y no está no es una omisión: es el producto sin entregar.**
+16. Ninguna `PalabraProhibida` de los tres ámbitos aparece en el texto de un `Capitulo`, **comparando sobre texto normalizado**.
+17. La edad que un `Evento` atribuye a un `Personaje` es coherente con su `fecha_de_nacimiento` y el `tiempo_historia` del evento, **cuando ambas existen**.
+18. Un `Personaje` no aparece en ningún `Evento` posterior a uno que lo `excluye`.
+19. Toda `Puntuacion` que aplica una `Rubrica` lleva `justificacion`. Un número sin motivo no se puede discutir, y por tanto tampoco corregir.
+20. Ningún `Capitulo` de una `VersionPublicada` puede haber quedado fuera de su puerta de calidad. **Publicar es afirmar que pasó**, no que se escribió.
 
 ---
 
@@ -456,6 +583,10 @@ El validador debe poder comprobar mecánicamente:
 | --- | --- |
 | Biblia | Hechos fijos de la obra, no modificables sin versión nueva |
 | Canon | Todo hecho declarado verdadero, de la biblia o del texto aprobado |
+| Hecho de canon | Una afirmación concreta declarada verdadera: un color de ojos, un apellido, una fecha. Lleva de dónde salió y en qué capítulos se usa |
+| Hilo narrativo | Pregunta que la novela abre y el lector arrastra. Abierto, pagado o vencido |
+| Perfil de voz | Cómo habla y piensa un personaje, modelado **aparte** de quién es, para auditar el estilo sin tocar el canon |
+| Ficha de escena | El contrato de generación de una escena: qué tiene que conseguir, con qué obstáculo y con qué giro |
 | Escena | Unidad atómica de generación: POV único, lugar y tiempo continuos, giro de valor |
 | Beat | Unidad mínima de acción–reacción |
 | Beat de género | Hito obligatorio del contrato del género, con posición esperada |
@@ -470,6 +601,20 @@ El validador debe poder comprobar mecánicamente:
 | HEA / HFN | *Happily ever after* / *happy for now*: finales admisibles en romance |
 | Nivel de calor | Escala declarada de explicitud sexual |
 | Muestra ancla | Fragmento de prosa aprobada usado como referencia de voz |
+| Destinatario | Persona real que recibe la novela de regalo. **No es un personaje** |
+| Comprador | Quien encarga la novela y responde la entrevista. Puede no ser quien la recibe |
+| Dedicatoria | Texto de portada para el destinatario, fuera del manuscrito y del canon |
+| Texto aportado | Prosa que pega el comprador. **Contenido no confiable**: son datos, nunca instrucciones |
+| Elemento obligatorio | Dato del brief que **debe** aparecer en el texto. Si no aparece, el producto no está entregado |
+| Palabra prohibida | Término vetado en ámbito global, de obra o de brief. Se compara normalizado |
+| Registro de auditoría | Qué decidió el sistema, cuándo y por qué. No es un log de errores |
+| Versión publicada | Los capítulos que el lector recibe a la vez. Una regeneración crea otra y conserva la anterior |
+| Petición de cambio | Lo que el lector pide sobre un hecho concreto de lo que está leyendo |
+| Ficha de lectura | Personajes y lugares de una versión publicada, con sus capítulos. Derivable del ledger |
+| Cronología | Proyección consultable de los eventos con su momento, lugar y presentes. Entrada del validador formal |
+| Rúbrica | Criterios y escala con anclajes, **compartidos por el juez automático y el humano** |
+| Puntuación | Resultado de un validador sobre una unidad. Si es de juicio, lleva justificación |
+| Resumen de capítulo | Síntesis derivada del capítulo aprobado, para contextualizar los siguientes |
 
 ---
 
@@ -522,6 +667,10 @@ flowchart LR
   E --> E1["PaqueteDeContexto · Ledger<br/>EstadoEnT · MuestraAncla"]
   F --> F1["DimensionDeCalidad · Metrica<br/>Defecto · PuertaDeCalidad"]
   G --> G1["Brief · Biblia · Outline<br/>Prompt · Ejecucion · VersionDeTexto"]
+  G --> G2["Destinatario · Comprador<br/>Dedicatoria · TextoAportado"]
+  G --> G3["VersionPublicada · PeticionDeCambio<br/>FichaDeLectura · ResumenDeCapitulo"]
+  G --> G4["PalabraProhibida · RegistroDeAuditoria"]
+  F --> F2["Rubrica · Puntuacion<br/>RevisionHumana"]
 ```
 
 ### 14.3 Árbol de la capa de Historia
@@ -650,6 +799,9 @@ flowchart TD
   P --> P1["Artefactos"]
   P --> P2["Roles de agente"]
   P --> P3["Control"]
+  P --> P4["Personalización"]
+  P --> P5["Entrega"]
+  P --> P6["Guardarraíles"]
 
   P1 --> P11["Brief"]
   P1 --> P12["Biblia"]
@@ -657,7 +809,21 @@ flowchart TD
   P1 --> P14["FichaDeEscena"]
   P1 --> P15["VersionDeTexto"]
   P1 --> P16["VersionDeObra"]
+  P1 --> P17["ResumenDeCapitulo"]
 
+  P4 --> P41["Destinatario"]
+  P4 --> P42["Comprador"]
+  P4 --> P43["Dedicatoria"]
+  P4 --> P44["TextoAportado"]
+
+  P5 --> P51["VersionPublicada"]
+  P5 --> P52["PeticionDeCambio"]
+  P5 --> P53["FichaDeLectura"]
+
+  P6 --> P61["PalabraProhibida"]
+  P6 --> P62["RegistroDeAuditoria"]
+
+  P2 --> P20["Entrevistador"]
   P2 --> P21["Arquitecto"]
   P2 --> P22["Planificador de escena"]
   P2 --> P23["Ensamblador de contexto"]
@@ -761,5 +927,47 @@ flowchart TD
   N3 --> Q31["Cumplimiento de género → GEN-01, GEN-02"]
   N3 --> Q32["Arco romántico y curva"]
   N3 --> Q33["Cabos sueltos"]
-  N3 --> Q34["Contrato con el lector → SEG-01"]
+  N3 --> Q34["Contrato con el lector → SEG-01, SEG-02"]
+  N3 --> Q35["Cobertura de la personalización → PER-01, PER-02"]
+  N3 --> Q36["Naturalidad de la personalización → PER-03"]
+
+  Q --> N0["Nivel CONFIGURACIÓN"]
+  N0 --> Q01["Brief completo y sin contradicciones → CFG-01, CFG-02"]
+
+  N2 --> Q23["Extensión dentro de rango → EST-02"]
+
+  Q --> N4["Nivel VERSIÓN PUBLICADA"]
+  N4 --> Q41["La lectura renderiza → REN-01"]
 ```
+
+---
+
+## 15. Por qué la v2.0 es un cambio mayor
+
+Las versiones 1.1 a 1.3 añadían: un rol, un código, un axioma. La v2.0 **corrige dos cosas que
+estaban decididas**, y conviene que quede escrito por qué, porque en ambos casos lo que había no
+era un descuido sino una decisión correcta para otro producto.
+
+**1 · `HechoCanon` ya no exige escena de origen.**
+
+La regla venía de una premisa razonable: el canon nace del texto, así que todo hecho puede citar
+la escena que lo estableció. En una novela personalizada esa premisa es falsa. El nombre del
+destinatario, su perro, el verano que contó el comprador — **el canon nace antes que el texto**, y
+esos hechos son precisamente los que hay que comprobar que llegan a la prosa.
+
+Con la regla anterior, el sistema no podía **guardarlos**. No es que fuera incómodo: el modelo de
+datos los prohibía. La trazabilidad no se pierde, se generaliza — de «de qué escena salió» a «de
+dónde salió» — y la escena sigue siendo obligatoria cuando la respuesta es una escena.
+
+**2 · `Capitulo` pasa de 2.500–4.000 palabras a 1.000–1.500, y de contener `1..*` escenas a `1..1`.**
+
+Es la escala del producto, no una preferencia. A esta extensión capítulo y escena coinciden, y aun
+así **no se fusionan los dos conceptos**: el capítulo es unidad de **lectura** —donde el lector
+decide si sigue— y la escena unidad de **generación** —lo que cabe en una llamada—. Son preguntas
+distintas que hoy dan el mismo corte. Borrar una de las dos clases habría sido irreversible de
+hecho; cambiar una cardinalidad se deshace en una línea.
+
+**Y lo que no se toca, que también es una decisión.** El ledger sigue siendo *append-only*,
+`EstadoEnT` sigue derivándose y `Cronologia` se suma a lo derivado en vez de ser tabla propia. La
+personalización añade cosas que contar y comprobar; **no añade una segunda fuente de verdad**, y
+esa es la línea que la v2.0 no cruza.

@@ -1,6 +1,6 @@
 # Verificación — StoryMaker
 
-**Versión:** 3.1 · **Fecha:** 2026-09-22
+**Versión:** 4.0 · **Fecha:** 2026-09-23
 
 Cómo pensamos ganar confianza en el código y en el comportamiento de los agentes.
 Dos preguntas, separadas porque fallan por separado:
@@ -31,7 +31,7 @@ de una no vale para la otra:
 
 | Sujeto | Qué es | Dónde está descrito |
 | --- | --- | --- |
-| **Agentes narrativos** | Los nueve roles del producto —Arquitecto, Escritor, Continuista, Crítico, Extractor…— que se ejecutan en producción para generar una novela | `architecture.md` §7 |
+| **Agentes narrativos** | Los diez roles del producto —Entrevistador, Arquitecto, Escritor, Continuista, Crítico, Extractor…— que se ejecutan en producción para generar una novela | `architecture.md` §7 |
 | **Agente de código** | El asistente de programación que escribe este repositorio | `CLAUDE.md` §3 |
 
 El nivel de artefacto es común a ambos: el código es el mismo, venga de quien venga.
@@ -52,7 +52,7 @@ refiere.
 | Comprobación de tipos | Verificación automática de que los valores se usan de forma coherente con lo que las operaciones esperan de ellos | **Previsto** — línea base de las dos aplicaciones: `mypy` estricto sobre `commons/domain/` y los `service.py`, TypeScript estricto sin `any`. El cliente del frontend se **genera** del OpenAPI, así que una ruptura de contrato es error de compilación y no un 422 en ejecución. Pydantic v2 añade la comprobación equivalente en ejecución, en la frontera | [Type system](https://en.wikipedia.org/wiki/Type_system) |
 | Análisis estático / SAST | Escanear el código fuente sin ejecutarlo, contrastándolo con patrones conocidos como defectuosos | **Previsto** — es lo que hace verificables las fronteras. `ruff` y ESLint son la línea base; lo que aporta de verdad es `import-linter` (arq. §5.2) e `import/no-restricted-paths` (arq. §6.2): las reglas de dependencia entre features son afirmaciones sobre el código fuente, se comprueban sin ejecutarlo y fallan la build | [Static program analysis](https://en.wikipedia.org/wiki/Static_program_analysis) |
 | Ejecución simbólica | Ejecutar el código con entradas simbólicas para derivar las condiciones exactas de fallo mediante un solucionador SMT | **No aplicable** — la única lógica numérica con condiciones de fallo interesantes es la aritmética de presupuesto del ensamblador, y ahí un test basado en propiedades da la misma respuesta por mucho menos | [Symbolic execution](https://en.wikipedia.org/wiki/Symbolic_execution) |
-| Verificación formal / demostración de teoremas | Demostrar matemáticamente que el código satisface una especificación para todas las entradas posibles | **No aplicable** — las invariantes que merecerían demostración (el estado en T deriva del ledger; ningún paquete supera los 100.000 tokens) se garantizan **por construcción**: ledger *append-only*, vista derivada y `ContextBudgetExceeded`. Construirlas sale más barato que demostrarlas | [Formal verification](https://en.wikipedia.org/wiki/Formal_verification) |
+| Verificación formal / demostración de teoremas | Demostrar matemáticamente que el código satisface una especificación para todas las entradas posibles | **Obligatorio (Lean 4)** — no sobre el código, sobre la **cronología de la historia**. De la biblia se genera un fichero Lean con eventos, momento, presentes, lugar y fechas de nacimiento, y se demuestran al menos dos invariantes: el orden temporal declarado se respeta, y la edad de un personaje en cada evento concuerda con su fecha de nacimiento. Se ejecuta con `lake build` y **es una puerta**: si falla, la versión no se publica y el fallo vuelve al editor. Hasta la v3.1 esta fila decía «No aplicable» y el argumento era bueno para otro producto — véase §10 | [Formal verification](https://en.wikipedia.org/wiki/Formal_verification) |
 | Tests unitarios / de integración | Comprobar el comportamiento frente a entradas concretas elegidas y salidas esperadas | **Previsto** — método principal a nivel de artefacto. `pytest` con `pytest-asyncio`; test colocado junto al componente en el frontend. Dos reglas del proyecto lo sostienen: toda regla de dominio de `CLAUDE.md` §8 tiene su test, y el cliente de modelo se inyecta, de modo que ninguna prueba llama al proveedor | [Unit testing](https://en.wikipedia.org/wiki/Unit_testing) |
 | Tests basados en propiedades | Especificar una propiedad general y generar muchas entradas para buscar una violación | **Previsto** — dirigido al **ensamblador de contexto**, que es donde los ejemplos elegidos se quedan cortos. Propiedades: el desglose por capa suma el total contado; recortar una capa no altera las demás; las capas constitucional e instrucción nunca encogen; o el paquete cabe en 100.000 tokens o se lanza `ContextBudgetExceeded`, nunca un truncado silencioso | [QuickCheck — Claessen y Hughes, 2000](https://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf) |
 | Tests de mutación | Introducir deliberadamente pequeños fallos para comprobar si la suite de tests los detecta | **Aplazado** — tendrá sentido cuando exista la suite del ensamblador, porque es precisamente la suite en cuya luz verde estaremos tentados de confiar para afirmar que el contexto nunca se recorta a escondidas. Hoy no hay suite que mutar | [Mutation testing](https://en.wikipedia.org/wiki/Mutation_testing) |
@@ -69,7 +69,7 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 | Comprobación de tipos | Habla de forma, no de significado. Un programa bien tipado puede hacer exactamente lo contrario de lo que debe: que `escena_de_origen` sea una cadena no dice que apunte a una escena que exista, ni que sea la escena correcta |
 | Análisis estático / SAST | Solo encuentra lo que alguien supo describir como patrón. Las fronteras que comprueba son las **declaradas como import**: un acoplamiento real por inyección, por configuración o por nombre de tabla no es un import y no aparece |
 | Ejecución simbólica | Descartada, y aunque se adoptara resolvería la aritmética del paquete, no su contenido. Un paquete cuyos números cuadran puede ser el paquete equivocado |
-| Verificación formal | Demuestra que el código cumple **la especificación escrita**; si la especificación es la equivocada, la demostración es correcta y el sistema está mal. Aquí, además, está descartada, así que lo que sostiene las invariantes «por construcción» es una lectura del repositorio, no una comprobación |
+| Verificación formal (Lean) | Demuestra que la cronología cumple **las invariantes escritas**; si la invariante es la equivocada, la demostración es correcta y la historia está mal. Y tiene un punto ciego propio de este uso, que conviene no perder de vista: **Lean demuestra sobre el fichero generado desde la biblia, no sobre la prosa**. Si el capítulo dice algo que nunca llegó a la biblia, Lean no lo ve — verifica el modelo de la historia, no la historia |
 | Tests unitarios / de integración | Comprueban los casos que a alguien se le ocurrieron. No dicen nada del caso que no se escribió, y su luz verde crece con el número de tests, no con su calidad |
 | Tests basados en propiedades | Buscan violaciones de la propiedad **enunciada**. La propiedad que nadie enunció no se busca: que el paquete quepa y respete los topes no dice que contenga lo que la escena necesitaba |
 | Tests de mutación | Miden la suite, no el código: un mutante muerto prueba que algún test reacciona a ese cambio, no que el comportamiento sea correcto. Y están aplazados, de modo que hoy nada mide la suite |
@@ -79,8 +79,10 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 
 | Metodología | Definición | Estado aquí | Explicación |
 | --- | --- | --- | --- |
-| Observabilidad / trazas en ejecución | Instrumentar el agente para que su trayectoria sea visible y consultable a posteriori | **Aplicado por diseño (narrativos)** — cada llamada registra `run_id`, escena, versión de prompt y de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto (arq. §9). Matiz: arq. §11 prohíbe registrar por defecto los prompts de producción y los fragmentos de manuscrito, así que la traza es **estructural, no textual**: dice qué se envió y cuánto costó, no qué decía | [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) |
-| Evals | Pruebas estructuradas del comportamiento del agente contra un conjunto de datos y un método de puntuación | **Previsto (narrativos)** — fase 4 de la hoja de ruta. El criterio de éxito del Crítico es «correlación con el editor humano», y eso *es* una eval: un conjunto de escenas etiquetadas por una persona contra el que se puntúa al juez. Sin él no se distingue un cambio de prompt que mejora de uno que solo desplaza la salida, ni se detecta la descalibración al cambiar de modelo (riesgo abierto de arq. §12) | [HELM — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
+| Observabilidad / trazas en ejecución | Instrumentar el agente para que su trayectoria sea visible y consultable a posteriori | **Aplicado por diseño (narrativos)** — cada llamada registra `run_id`, escena, versión de prompt y de biblia, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto (arq. §9). **Cambio del 2026-09-23:** hasta hoy esta fila decía que la traza era «estructural, no textual». `maujimenez4` ha autorizado que **el prompt renderizado y el tracing** lleguen a Langfuse, y que **la prosa generada no**. Lo que desbloquea es real —comparar dos versiones de prompt deja de ser comparar dos números sin contexto— y lo que cuesta también: los **datos personales del destinatario** viajan a un servicio externo dentro del prompt. Es una decisión sobre datos de terceros, no un matiz técnico, y por eso se fecha y se atribuye. **Y con el prompt sube el manuscrito**, porque cinco de los diez roles reciben la prosa *como* entrada: su prompt renderizado **es** el capítulo. `CLAUDE.md` §4.3 lo dice con esas palabras en vez de prometer lo contrario, que es la única forma honesta de escribirlo | [Observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) |
+| Evals | Pruebas estructuradas del comportamiento del agente contra un conjunto de datos y un método de puntuación | **Obligatorio (narrativos)** — deja de ser trabajo de una fase futura: **cinco briefs de prueba**, uno **adversarial** (instrucciones incrustadas en el texto libre) y uno construido para **provocar una incoherencia temporal**, una tabla que diga por brief qué validadores pasaron y cuáles fallaron, y **una iteración de tuning documentada** con resultados antes y después. Sigue valiendo lo que ya decía esta fila: sin conjunto etiquetado no se distingue un cambio de prompt que mejora de uno que solo desplaza la salida | [HELM — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
+| Juicio por modelo con rúbrica | Un modelo puntúa la salida de otro contra criterios escritos, con una puntuación y una justificación por criterio | **Obligatorio (narrativos)** — el Crítico deja de puntuar a ojo: la rúbrica es un artefacto con nombre (`Rubrica` en `definitions.md` §9) y cubre continuidad, tono, calidad narrativa —arco, coherencia de personajes, ritmo— y **naturalidad de la personalización**. Cada criterio devuelve puntuación **y** justificación: una nota sin motivo no se puede contrastar ni discutir | [LLM-as-a-judge — Zheng et al., 2023](https://arxiv.org/abs/2306.05685) |
+| Revisión humana con la misma rúbrica | Una persona puntúa con los mismos criterios que el modelo, para medir la distancia entre los dos juicios | **Obligatorio (narrativos)** — al menos **una novela completa** leída por una persona con la **misma** rúbrica. Que sea la misma es lo que hace comparables las dos columnas: con rúbricas distintas se obtienen dos opiniones y ninguna medida. Es lo que convierte la calibración del Crítico de intención en dato, y es la única fila de este documento que produce el patrón contra el que se mide todo juicio semántico | [Inter-rater reliability](https://en.wikipedia.org/wiki/Inter-rater_reliability) |
 | Ejecución en sandbox *(narrativos)* | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (arq. §3.5). Se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox, y cierto mientras ningún agente reciba una herramienta | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Ejecución en sandbox *(agente de código)* | Lo mismo, aplicado al asistente que escribe este repositorio | **No aplicado** — el agente de código lee y escribe ficheros y ejecuta órdenes directamente: no hay entorno aislado ni intermediario que lo haga por él. Lo que acota el daño es otra cosa, y está dos filas más abajo: toda escritura pasa por una persona, y por la tubería de `CLAUDE.md` §15. Hasta el 2026-09-22 esta fila afirmaba lo contrario —que corría sin herramientas de fichero— y siguió afirmándolo después de dejar de ser cierto | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Guardarraíles *(narrativos)* | Políticas y filtros que restringen qué acciones puede producir un agente | **Aplicado en código** — edad mínima y nivel de calor se validan **en esquema**, no en el prompt (arq. §11); el presupuesto de contexto falla explícitamente en vez de truncar; el reintento dirigido tiene tope de dos; cada agente recibe el mínimo de permisos que su nodo necesita (arq. §3.5); y un defecto mal formado no llega a la puerta (arq. §8.3). Regla que lo sostiene: ninguna regla de seguridad depende solo del prompt | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
@@ -90,7 +92,8 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 | Integración en CI/CD | Hacer pasar los cambios generados por el agente por la misma tubería que los escritos por personas | **Previsto (agente de código)** — sin una vía aparte y más débil para los diffs del agente. La tubería es la lista de `CLAUDE.md` §15: `ruff`, `mypy`, `pytest`, `lint-imports`, `pnpm typecheck`, `pnpm lint` y migraciones de Alembic. Exigencia propia de este proyecto: la suite debe correr **en los dos modos de `VectorStore`**; si solo se ejecuta con `sqlite-vec` cargado, el modo degradado que promete arq. §2 no está verificado | [Continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) |
 | Despliegue progresivo | Enviar un cambio a un pequeño porcentaje del tráfico tras un flag antes de la publicación completa | **No aplicable** — el modo de referencia es local, con un fichero SQLite por obra (arq. §10): no hay tráfico que repartir. Lo que sí cumple la función de comparar variantes sin desplegar son las versiones de texto inmutables y la comparación de estrategias de contexto de la fase 6 | [Feature toggle](https://en.wikipedia.org/wiki/Feature_toggle) |
 | Red teaming / pruebas adversarias | Sondear deliberadamente en busca de fallos bajo un modelo de amenaza adversario | **Previsto (narrativos), con modelo de amenaza concreto** — la vía realista no es un atacante externo, es el propio bucle: el Extractor convierte prosa generada en canon, de modo que un texto con instrucciones incrustadas se realimenta al sistema por un canal legítimo. Segundo objetivo: empujar desde el brief contra los guardarraíles de edad y nivel de calor, para comprobar que lo que aguanta es el esquema y no el prompt | [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) |
-| Comprobación de modelos | Explorar exhaustivamente los estados y transiciones alcanzables del agente para verificar invariantes | **No aplicable, por ahora** — la máquina de estados del orquestador es explícita desde que existe arq. §3.3: diez estados y transiciones cerradas, más las cuatro puertas y los dos reintentos. Sigue siendo lo bastante pequeña para que la cubran los tests, y lo que la mantiene tratable es la restricción de **una escena en vuelo por obra** (arq. §3.8). Se reconsidera si esa restricción se levanta o si aparece concurrencia real de escritura sobre una misma obra | [Model checking](https://en.wikipedia.org/wiki/Model_checking) |
+| Inspección visual automatizada *(browser MCP)* | Abrir el artefacto en un navegador real y comprobar sobre el renderizado lo que el código fuente no dice | **Obligatorio (narrativos y agente de código)** — el agente abre la lectura web, navega los capítulos y verifica que el **índice**, la **ficha de personajes y lugares** y la **portada con dedicatoria** se ven; si algo no renderiza, es un fallo que vuelve al rol que lo produjo. Es el único método de este documento que mira **el producto tal y como lo recibe el destinatario**, y caza la clase de defecto que ningún test de unidad ve: el enlace que apunta a un capítulo que no existe, la ficha vacía, la dedicatoria que se sale. Su **uso real se documenta**: qué se inspeccionó, qué se detectó y qué cambió a consecuencia | [Browser automation](https://en.wikipedia.org/wiki/Browser_automation) |
+| Comprobación de modelos | Explorar exhaustivamente los estados y transiciones alcanzables del agente para verificar invariantes | **Obligatorio (TLA+ / PlusCal, con TLC)** — sobre el **harness**, no sobre la historia: configuración → planificación → escritura → validación → publicación, con reintentos, reanudación desde checkpoint y regeneración por petición del lector. Al menos tres invariantes de seguridad —no se publica una versión con un capítulo que no pasó todos los validadores; la reanudación no duplica ni pierde capítulos; la versión anterior se conserva— y una de liveness: toda generación termina publicando o parando con error. Se comprueba con TLC sobre un modelo pequeño, con la configuración en el repositorio. **El argumento con el que se descartó en la v3.1 —«la máquina es pequeña y la cubren los tests»— ha dejado de valer**: publicación de versiones, checkpoint por capítulo y regeneración parcial son tres ejes nuevos que se multiplican entre sí, y ahí es donde un model checker gana a los tests | [Model checking](https://en.wikipedia.org/wiki/Model_checking) |
 
 ### 3.1 Lo que no detecta cada método
 
@@ -100,7 +103,9 @@ en §3 partidos por sujeto, y el punto ciego que sigue es el del método, común
 | Metodología | Qué no detecta |
 | --- | --- |
 | Observabilidad / trazas | Registra lo que se decidió registrar, y aquí, a propósito, no el texto. La traza dice qué se envió y cuánto costó, **no si lo enviado era lo que la escena necesitaba**: un fallo de pertinencia del ensamblado es invisible en ella |
-| Evals | Puntúan contra un conjunto y un criterio, y miden lo que ese conjunto representa. Sin conjunto etiquetado —hoy— no miden nada; con él seguirán sin ver lo que no esté representado |
+| Evals | Puntúan contra un conjunto y un criterio, y miden lo que ese conjunto representa. **Cinco briefs son cinco puntos**: cubren los modos de fallo que alguien imaginó al escribirlos, y el sexto brief —el que un cliente real traerá— no está representado. Una tabla con cinco filas en verde mide la cobertura del conjunto, no la del sistema |
+| Juicio por modelo con rúbrica | Puntúa contra los criterios **enunciados en la rúbrica**, así que la calidad que nadie supo enunciar no se puntúa. Y comparte modelo con lo que juzga (§6.1): un texto que le suena bien al modelo por las mismas razones por las que lo escribió obtiene buena nota sin que nadie pueda notarlo desde dentro |
+| Revisión humana con la misma rúbrica | Mide **la distancia entre dos jueces**, no si alguno acierta. Si los dos comparten el sesgo —y una rúbrica común empuja a eso—, una correlación alta confirma que se entienden entre ellos, no que la novela sea buena. Y es una sola novela: dice lo que pasó con esa |
 | Sandbox / supresión del alcance | Acota el daño, no la corrección: un agente sin herramientas produce texto equivocado con la misma facilidad que uno con ellas. Y la propiedad depende de una configuración de permisos que nada vigila de forma continua |
 | Guardarraíles | Bloquean lo que está **tipificado** como prohibido. Lo que no está tipificado —el caso del §7, un hecho nuevo que no contradice nada— atraviesa el guardarraíl sin activarlo |
 | Revisión humana en el bucle | Su calidad decae con el volumen: un escalado frecuente produce aprobación en masa, y «revisado» deja de distinguirse de «aprobado sin leer». Hoy ninguna señal separa esos dos estados |
@@ -108,7 +113,8 @@ en §3 partidos por sujeto, y el punto ciego que sigue es el del método, común
 | Integración en CI/CD | Dice que la tubería terminó, no que haya comprobado algo. Una prueba omitida por falta de extensión, un modo no ejercitado o una fixture ausente se ven igual que el verde |
 | Despliegue progresivo | Descartado por ausencia de tráfico. Con él se descarta la única forma de observar una variante con uso real antes de adoptarla, que en modo local no existe de todos modos |
 | Red teaming / pruebas adversarias | Encuentra lo que el modelo de amenaza contempla. Queda fuera por definición el vector no previsto y, sobre todo, el fallo **accidental** que se comporta como un ataque: una escena legítima en la que un personaje dicta instrucciones |
-| Comprobación de modelos | Descartada. Explora estados y transiciones, no **contenido**: una máquina de estados perfecta puede pasear una escena equivocada por los diez estados correctos |
+| Inspección visual automatizada | Comprueba que **algo** se ve, no que sea **lo correcto**: un índice que renderiza once entradas para diez capítulos renderiza perfectamente. Y mira la página, no la novela — que la ficha de personajes aparezca no dice que sus datos coincidan con la biblia |
+| Comprobación de modelos (TLA+) | Explora estados y transiciones, no **contenido**: una máquina de estados perfecta puede pasear una escena equivocada por los diez estados correctos. Y verifica **la especificación, no el código**: que TLC no encuentre contraejemplo no dice que el orquestador implemente esa máquina. Esa correspondencia es una lectura humana —el README dice qué transición del código implementa cada acción—, o sea una **I**, y es el eslabón más débil de la cadena |
 
 ## 4. Clasificación: T / A / I / D / U
 
@@ -152,12 +158,22 @@ chocarían con subsecciones reales —§3.5 es «Cierre», no el quinto principi
 | La cita de un `Defecto` es subcadena exacta del texto que señala | def. §11, axioma 11 | **T** | Comprobación de forma en código antes de G1a (arq. §8.3): se contrasta la subcadena y su desplazamiento sobre la `VersionDeTexto`, sin volver a llamar al modelo |
 | Todo `CAN-01` declara un `hecho_canon_id` que existe en el grafo | def. §11, axioma 12 | **T** | Misma comprobación, contra el grafo de canon |
 | Un defecto mal formado no bloquea ni consume reintento | arq. §8.3 | **T** | Emitir un defecto con cita inventada y comprobar que no llega al prompt de reparación, que no gasta intento y que se cuenta aparte (arq. §9) |
-| El sistema funciona con y sin extensión vectorial | arq. §2 | **T + D** | La suite corre en los dos modos; además, arranque real con la extensión ausente |
+| El sistema funciona con y sin extensión vectorial | arq. §2 | **T + D** | La suite corre en los dos modos; además, arranque real con la extensión ausente. **Es un requisito propio, no del examen:** el examen §4 exige SQLite por su nombre y no menciona `sqlite-vec`, así que lo obligatorio es la base y opcional la extensión. Que el modo degradado se pruebe lo decidimos nosotros, y por eso se puede retirar sin incumplir nada |
 | Una ejecución se puede reproducir | CLAUDE §3, principio 6 | **D**, no T | Se reproduce el **paquete de contexto**, que es determinista; la prosa no, porque el modelo no lo es. Es justo la razón de que el ensamblador sea código: lo reproducible es lo auditable. **Con fecha de caducidad:** el paquete se reproduce mientras el estado de almacenes sea el de entonces, y el canon crece en cada escena, así que reconstruir una escena antigua desde los almacenes de hoy da otro paquete |
 | Ninguna escena excede el nivel de calor declarado | CLAUDE §8, regla 5 | **T** parcial **+ I** | El esquema comprueba el nivel declarado; que la prosa se mantenga dentro lo juzga el Crítico (defecto SEG-01) y, en última instancia, una lectura humana |
 | Ningún contenido romántico o sexual con personajes menores de 18 | CLAUDE §8, regla 6 | **T + I** | La edad se valida en esquema y bloquea por construcción; que la prosa no lo insinúe se inspecciona |
 | El coste **por llamada** se mantiene acotado | arq. §2.1 y §2.2 | **T** | El contador inyectado y los topes por capa lo acotan antes de llamar, y el límite de concurrencia acota el proceso. **El total de una novela no lo acota nada**: por eso figura como U en §4.2 y como descubierto en §7, y no como un requisito verificado aquí |
-| El juez correlaciona con el editor humano | arq. §7 | **U** hoy → **T** | Pasa a T el día que exista el conjunto de escenas etiquetadas |
+| El juez correlaciona con el editor humano | arq. §7 | **U** hoy → **T** | Pasa a T con la revisión humana de una novela completa **con la misma rúbrica** (§3). Es el requisito que más cambia de estado en esta versión: deja de esperar a una fase y tiene método asignado |
+| Los eventos respetan el orden temporal declarado | examen §5c | **T** | Invariante demostrada en Lean sobre la cronología generada desde la biblia, ejecutada con `lake build`. **Bloquea la publicación** |
+| La edad de un personaje concuerda con su fecha de nacimiento en cada evento | examen §5c | **T** | Segunda invariante de Lean, misma puerta |
+| No se publica una versión con un capítulo que no pasó todos los validadores | examen §5d | **T + A** | Invariante de seguridad comprobada por TLC sobre el modelo; que el código implemente ese modelo es **I** y no está cubierto (§7) |
+| La reanudación desde checkpoint no duplica ni pierde capítulos | examen §5d | **T** | Invariante de TLC, y la prueba de reanudación que ya existía en esta tabla. Dos métodos no correlacionados sobre el mismo requisito |
+| La versión anterior de la novela se conserva tras una regeneración | examen §5d | **T** | Invariante de TLC más versiones de texto inmutables por construcción |
+| Toda generación termina publicando o parando con error | examen §5d | **T** | Propiedad de liveness en TLC. Es la única de la lista que **no** es de seguridad: las demás dicen qué no debe pasar, esta dice que algo tiene que pasar |
+| Ninguna palabra vetada llega al capítulo aceptado | examen §7 | **T** | Comparación léxica normalizada en código, con tests de cada nivel de lista y de variante con acento o plural. **Caza la palabra, no la alusión** (§7) |
+| Cada elemento personalizado obligatorio aparece en al menos un capítulo | examen §5a | **T** | Contraste contra los hechos y su `usado_en[]`. Comprueba **presencia**, no integración |
+| La personalización está integrada y no incrustada | examen §5b | **I + U parcial** | Juez con rúbrica y revisión humana. La prueba de oficio —quitar el dato y ver si la escena cambia (`domain-knowledge.md` §14.1)— es enunciable pero no mecanizable |
+| El destinatario se reconoce en la novela | examen, Contexto | **U** | Solo lo sabe él. Ninguna de las dos dimensiones del §1.1 de `domain-knowledge.md` tiene juez definitivo distinto de la persona a la que se regala |
 | El relato merece la pena leerse | — | **U** | — |
 
 ### 4.2 Qué es hoy U
@@ -190,8 +206,14 @@ hacemos sin pruebas.
   controlamos, y una suite de evals detecta regresiones a posteriori en lugar de
   prevenirlas.
 - **Coste total de una novela completa.** El presupuesto *por llamada* está acotado y
-  es verificable; el total de nueve agentes, con G1 gastando dos validaciones por
+  es verificable; el total de diez agentes, con G1 gastando dos validaciones por
   escena, lo limita una política y no lo demuestra ningún análisis.
+- **Que el destinatario se reconozca.** Es la mitad del producto (`domain-knowledge.md`
+  §1.1) y no tiene juez distinto de la persona a la que se regala. Se puede comprobar que
+  cada dato obligatorio **aparece** —eso es T, contra la tabla de hechos— y se puede
+  puntuar si suena integrado o incrustado —eso es I, con rúbrica—. Ninguna de las dos
+  responde la pregunta, que es si al abrirlo pensó «esto es mío». Conviene no confundir la
+  cobertura, que es medible, con el reconocimiento, que no lo es.
 
 ## 5. Advertencias
 
@@ -214,7 +236,10 @@ hacemos sin pruebas.
   de casos adversarios, qué cobertura. Un «Previsto» sin umbral no se puede incumplir, y
   lo que no se puede incumplir no verifica. Los umbrales son requisitos y viven en una
   spec, no aquí; mientras no existan, el estado de una fila describe intención de
-  trabajo, no una condición de aceptación.
+  trabajo, no una condición de aceptación. **Las dos filas formales de la v4.0 son la
+  excepción, y por eso valen más de lo que parece:** «`lake build` pasa» y «TLC no
+  encuentra contraejemplo» son criterios binarios que alguien puede incumplir, y las
+  únicas de este documento que bloquean por sí solas.
 - Un método marcado «Aplicado» puede dejar de estarlo sin que nada cambie en su fila: la
   revisión humana se degrada por volumen, la supresión del alcance por una configuración
   de permisos, la suite en dos modos por una prueba que se omite en silencio. El estado
@@ -273,10 +298,15 @@ Continuista no extraiga no llega nunca al contraste determinista que la habría 
 
 - Los **tests de mutación** están aplazados (§2), así que lo único que mediría la suite
   está apagado.
-- Hay **una** señal, y es nueva: la **tasa de defectos mal formados** (arq. §8.3 y §9) mide
-  cuántas veces el Continuista afirma algo que no está en el texto, porque la comprobación
-  de forma lo detecta sin volver a llamar al modelo. Es una medida del validador, no del
-  código, y por eso vale: es la primera.
+- Hay **una** señal: la **tasa de defectos mal formados** (arq. §8.3 y §9). Es una medida
+  del validador, no del código, y por eso vale. Pero **mide menos de lo que la v3.1
+  afirmaba, y conviene decirlo con precisión: no mide al Continuista, mide su capacidad de
+  copiar.** `comprobar_forma` comprueba dos cosas —que la cita esté literalmente donde dice
+  que está, y que un `CAN-01` traiga un `hecho_canon_id` que exista—. Las dos son
+  propiedades de la **transcripción**. Un modelo que copie el pasaje con exactitud y se
+  invente entera la contradicción que ese pasaje supuestamente contiene saca el **100 %** en
+  esta tasa. Sigue siendo la primera señal que existe, y sigue siendo barata; simplemente
+  no es la que mide el juicio.
 - Lo que esa señal **no** mide es la mitad que importa para la puerta: la **tasa de falsos
   negativos** del Continuista y del Extractor sigue sin medirse, porque no existe un
   conjunto de defectos conocidos contra el que puntuarlos. Un validador que calla no
@@ -317,31 +347,128 @@ de los puntos ciegos de §2.1 y §3.1. Tres estados:
 | Al paquete le falta un dato que la escena necesitaba | Nada antes del hecho; se observa después, como defecto de continuidad | **Descubierto** en prevención |
 | La prosa excede el nivel de calor declarado | Esquema sobre el valor declarado (determinista) más lectura humana | **Parcial** — el juicio sobre la prosa no bloquea mientras G1b no bloquee |
 | Contenido prohibido con menores | Validación en esquema, que bloquea por construcción, más inspección | **Cubierto** en lo tipificado |
-| Prosa con instrucciones incrustadas realimentada como canon | Red teaming, **previsto** y no ejecutado | **Descubierto** hoy |
+| Prosa con instrucciones incrustadas realimentada como canon | El brief **adversarial** de las cinco evals, que ahora es obligatorio, más el red teaming del §3 | **Parcial** — el brief adversarial ataca por la puerta de entrada, el texto libre del cliente. El vector que este documento describe es otro y sigue sin cubrirse: la instrucción que entra en la **prosa generada** y el Extractor consolida como canon |
 | Un defecto inventado bloquea una escena o consume un reintento | Comprobación de forma en código antes de G1a: axiomas 11 y 12 de `definitions.md` §11 (arq. §8.3) | **Cubierto** |
 | El modo sin extensión vectorial no es el que se prueba | Suite declarada en los dos modos | **Parcial** — §3.1: una prueba omitida se ve igual que el verde |
 | El ledger deja de ser *append-only*, o el estado en T se edita | Lectura del repositorio (**A**) | **Parcial** — un solo validador, y humano |
 | Un agente recibe una herramienta y las filas «Aplicado por diseño» caducan | La advertencia del §5 | **Descubierto** — nada lo detecta el día que ocurre, y de hecho ya ocurrió con el agente de código sin que nada lo señalara (§3) |
 | La revisión humana se degrada por volumen | Métrica de escalados por cada cien escenas (`architecture.md` §9), sin umbral declarado | **Parcial** |
 | El coste total de la novela se dispara | Techo por llamada y límite de concurrencia | **Descubierto** en el total: acotan la llamada y el proceso, no la suma. §4.1 solo afirma el techo por llamada; el total es U (§4.2) |
-| Un cambio de modelo descalibra a los validadores | Evals, previstas para la fase 4 | **Descubierto** hoy |
+| Un cambio de modelo descalibra a los validadores | Evals, ahora obligatorias, con cinco briefs y una iteración de tuning | **Parcial** — las evals detectan la descalibración **después** del cambio; nada la previene |
+| **Una incoherencia temporal llega al lector** | Lean sobre la cronología (determinista, y **bloquea la publicación**) más el Continuista (probabilístico) | **Cubierto** — dos validadores no correlacionados y uno determinista. Es la casilla que justifica sola el coste de Lean |
+| **Una palabra vetada por el cliente llega al texto** | Guardarraíl léxico en código sobre cada capítulo, con normalización de mayúsculas, acentos y variantes, y tope de reintentos | **Parcial** — es comparación léxica: caza la palabra, no la alusión. Quien pidió no ver a su expareja no la nombra, y el tema puede entrar sin que ningún término de la lista aparezca |
+| **El destinatario no se reconoce en la novela** | Cobertura de la personalización, contra la tabla de hechos (determinista) más el juez con rúbrica y la revisión humana | **Parcial** — la cobertura comprueba que el dato **está**, no que haga nada; que esté **integrado y no incrustado** solo lo juzga un juicio, y el juez comparte modelo con quien escribió |
+| **El manuscrito del cliente sale a un servicio externo** | La decisión de `maujimenez4` del 2026-09-23, declarada en `CLAUDE.md` §4.3: sube el prompt renderizado, y con él la prosa, porque **cinco de los diez roles reciben el texto como entrada** —Continuista, Crítico, Editor de línea, Extractor y Auditor de manuscrito (arq. §7)—. Fuera de Langfuse no sale nada | **Aceptado, no cubierto** — es el único riesgo de esta tabla que no espera un validador: **está decidido a sabiendas**. Se registra porque una decisión sobre datos de un tercero que no está escrita se convierte en un descuido en cuanto cambia quien la tomó. Lo que sí queda sin método es comprobar que la última línea se cumple: nada vigila que un fragmento no acabe en otro log |
+| **La especificación TLA+ deja de corresponder al código** | La lectura del README que empareja cada acción con su transición | **Descubierto** — es una **I**, y nada la vuelve a comprobar cuando el orquestador cambia. Una especificación verde sobre un código que ya no implementa esa máquina es peor que no tenerla: afirma seguridad de otro sistema |
 | Este documento deja de describir el repositorio | Revisión manual al aterrizar el código | **Descubierto** |
 
-Siete riesgos están **descubiertos**, y conviene distinguir dos clases. Dos esperan a un
-método ya decidido y fechado: la prosa con instrucciones incrustadas, al red teaming del
-§3, y la descalibración al cambiar de modelo, a las evals de la fase 4. Los otros cinco
-—el hecho nuevo que entra en el canon, el dato que le faltó al paquete, el agente que
-recibe una herramienta, el coste total y la deriva de este documento— **no tienen método
-asignado en ninguna fase**. Enumerarlos es el sentido de la matriz, igual que enumerar las
-U lo es del §4.2: un riesgo sin casilla es un riesgo que se está corriendo sin decirlo.
+**Seis riesgos siguen descubiertos, y ninguno tiene ya la excusa de esperar a una fase
+futura**, porque las dos que la tenían —red teaming y evals— han dejado de ser previsiones
+y son obligatorias. Los seis son: el hecho nuevo que entra en el canon, el dato que le
+faltó al paquete, el agente que recibe una herramienta, el coste total de la novela, la
+correspondencia entre la especificación TLA+ y el código, y la deriva de este documento.
 
-## 8. Registro de cambios
+Conviene ver qué clase de cosa son, porque no es la misma. Cuatro son **huecos de método**:
+nadie ha decidido cómo se comprobarían. Los otros dos —la correspondencia de TLA+ y la
+deriva de este documento— son de una clase peor: **son afirmaciones que se hacen y que
+nada vuelve a comprobar**. Una especificación formal verde sobre un código que ya no
+implementa esa máquina no es cobertura ausente, es cobertura **falsa**, y afirma seguridad
+sobre un sistema que no es el que se ejecuta.
+
+Enumerarlos es el sentido de la matriz, igual que enumerar las U lo es del §4.2: un riesgo
+sin casilla es un riesgo que se está corriendo sin decirlo.
+
+## 8. Los validadores, uno a uno: nombre, punto de ejecución y qué bloquean
+
+Las tablas anteriores ordenan por **método** (§2, §3) y por **riesgo** (§7). Falta el eje
+operativo, que es el que hace falta para construir el sistema y el que permite comprobar
+que la afirmación «cada validador corre en un punto concreto» es cierta y no un deseo.
+
+Tres columnas hacen el trabajo. **Dónde corre** decide qué información tiene disponible:
+un validador en el *hook* del capítulo no puede mirar la novela entera. **Qué bloquea**
+separa la verificación de la telemetría: un validador que se ejecuta y no detiene nada no
+verifica, informa. Y **el score** es lo que lo hace comparable entre ejecuciones.
+
+| Nombre | Tipo | Dónde corre | Qué bloquea | Score |
+| --- | --- | --- | --- | --- |
+| `esquema_de_brief` | Programático | Puerta G0, al cerrar la entrevista | No se planifica con un brief inválido o contradictorio | Sí |
+| `esquema_de_salida_de_rol` | Programático | Tras cada llamada a un rol | La salida mal formada es fallo del paso, no resultado vacío | Sí |
+| `extension_de_capitulo` | Programático | *Hook* de validación de capítulo | Fuera del rango declarado, vuelve al escritor (EST-02) | Sí |
+| `nombres_literales` | Programático | *Hook* de validación de capítulo | Un nombre escrito distinto que en el canon (PER-02) | Sí |
+| `palabras_vetadas` | Programático | *Hook* de *policy*, antes de aceptar | Con tope de intentos; agotado, **se detiene la generación** (SEG-02) | Sí |
+| `cobertura_de_personalizacion` | Programático | Puerta G4, antes de publicar | Un elemento obligatorio del brief que no está en ningún capítulo (PER-01) | Sí |
+| `continuidad_y_canon` | Programático | Puerta G1a, por escena | Contradicción contra el grafo; el Continuista extrae y el código contrasta (§6.2) | Sí |
+| `inspeccion_visual` | Programático | Sobre la lectura publicada | Índice, ficha o portada que no renderizan | Sí |
+| `cronologia_lean` | Formal | Puerta G4, en cada publicación | **No se publica**; el fallo vuelve al editor | Sí |
+| `juez_con_rubrica` | Semántico | Puerta G1b, por capítulo | **Hoy no bloquea** — sin calibrar (§6.3) | Sí |
+| `revision_humana` | Semántico | Fuera del bucle, una novela completa | No bloquea: produce el patrón contra el que se mide el juez | Sí |
+| `spec_tla` | Formal | **En desarrollo**, no en generación | Nada en ejecución: su resultado cambia el código o la spec | No |
+
+**Dos cosas que esta tabla deja ver y las otras no.**
+
+La primera: **de doce validadores, dos no bloquean nada y uno no corre en producción.** El
+juez con rúbrica es el más caro de los tres semánticos y hoy es telemetría, porque no está
+calibrado. Eso no es un defecto de la tabla, es el estado real — pero verlo en una columna
+evita la lectura optimista de contar doce validadores como doce defensas.
+
+La segunda: **la concentración en G4.** Cobertura de personalización y cronología en Lean
+bloquean ahí, al final, cuando la novela ya está escrita. Es el sitio correcto —ninguna de
+las dos es comprobable sobre una escena suelta— y a la vez es el más caro: un fallo en G4
+no cuesta un capítulo, cuesta lo que haya que rehacer. Conviene saberlo antes de calcular
+plazos, no después.
+
+## 9. Registro de cambios
 
 | Versión | Qué cambió |
 | --- | --- |
 | 1.0 | Catálogo de metodologías con veredicto por método, y clasificación T/A/I/D/U de los requisitos del proyecto |
 | 2.0 | Se separan los dos sujetos del §1, se detalla el estado de cada método en este repositorio y se nombra lo que es U |
 | 3.0 | El documento pasa de catálogo a conjunto: §2.1 y §3.1 añaden el punto ciego de cada método; §6, las reglas del conjunto —independencia correlacionada, determinista frente a probabilístico, quién mide a los validadores—; §7, la matriz de riesgo × validadores con los descubiertos. §4 fija la letra principal con refuerzo; §4.1 anota que la reproducción del paquete caduca con el estado de almacenes y que el techo por llamada no acota el total; §4.2 separa pertinencia de presencia y añade el hecho nuevo que no contradice nada |
+| **4.0** | **Al cruzar el documento contra `docs/entregable/examen-final.md`, dos veredictos se invierten y uno se corrige.** Verificación formal deja de ser «No aplicable»: entra **Lean 4** sobre la cronología, con dos invariantes y **puerta de publicación** (§2). Comprobación de modelos deja de ser «No aplicable, por ahora»: entra **TLA+ con TLC** sobre el harness, con tres invariantes de seguridad y una de liveness (§3). Las **evals** dejan de esperar a la fase 4 y son obligatorias, con cinco briefs —uno adversarial y uno de trampa temporal— y una iteración de tuning; entran además el **juicio por modelo con rúbrica** y la **revisión humana con la misma rúbrica**, que es lo que convierte la calibración del Crítico en dato. §4.1 clasifica los once requisitos nuevos, §8 es nueva —cada validador con su nombre, dónde corre y qué bloquea, que es el eje que faltaba—, entra la **inspección visual por browser MCP** (§3), que era el único método del encargo ausente, §7 gana cuatro riesgos —incoherencia temporal, palabra vetada, el destinatario que no se reconoce y la correspondencia TLA+/código— y el porqué de las dos inversiones está en el §10. **Corrección de hecho:** §6.3 decía que la tasa de defectos mal formados mide al Continuista; no lo mide a él, mide su capacidad de copiar |
 | 3.1 | Se clasifican los axiomas 11 y 12 y la comprobación de forma previa a G1a (§4.1), y la matriz gana la casilla que cubren (§7). El punto ciego de los tests de contrato (§2.1) se corrige: la comprobación de forma elimina el defecto bien formado con la cita inventada. §6.3 deja de decir que nada mide a los validadores: la tasa de defectos mal formados es la primera señal, y se nombra lo que no alcanza. Guardarraíles deja de mezclar los dos sujetos (§3) |
 
 *La v3.0 se commiteó en `aa47bd0`, que arrastró también la v1.2 de `definitions.md` y la v1.3 de `architecture.md`; el mensaje de ese commit describe solo esta. Queda dicho aquí en vez de reescribir la historia: el trabajo que se mezcló no era de quien escribió el commit, y el registro de cada documento es donde se busca una versión.*
+
+## 10. Por qué la v4.0 da la vuelta a dos decisiones
+
+Las versiones 2.0 a 3.1 añadían filas y matices. La v4.0 **invierte dos veredictos que
+estaban razonados**, y conviene que quede escrito por qué, porque en los dos casos lo que
+había no era un descuido: era la respuesta correcta a otra pregunta.
+
+**1 · La verificación formal pasa de «No aplicable» a obligatoria.**
+
+El argumento de la v3.1 era: las invariantes que merecerían demostración —el estado en T
+deriva del ledger, ningún paquete supera los 100.000 tokens— se garantizan **por
+construcción**, y construirlas sale más barato que demostrarlas. **Ese argumento sigue
+siendo cierto, y no es el que se ha invertido.** Hablaba de demostrar cosas sobre el
+**código**, y ahí la conclusión no cambia.
+
+Lo que entra es otra cosa: demostrar sobre la **historia**. La cronología de una novela no
+se garantiza por construcción —nada impide que un personaje esté en dos sitios a la vez
+salvo que alguien lo compruebe— y no es el tipo de propiedad que un test cubre bien,
+porque hay que comprobarla sobre **todos** los pares de eventos, no sobre los que a alguien
+se le ocurrieron. La fila decía «No aplicable» porque la pregunta que se hacía era sobre el
+código; el examen §5c hace la pregunta sobre la historia, y para esa la respuesta era otra
+desde el principio.
+
+**2 · La comprobación de modelos pasa de «No aplicable, por ahora» a obligatoria, y el
+«por ahora» estaba bien puesto.**
+
+Aquí la v3.1 dejó escrita su propia condición de caducidad: la máquina de estados es
+pequeña, la cubren los tests, y **se reconsidera si aparece concurrencia real o se levanta
+la restricción de una escena en vuelo**. No ha aparecido concurrencia, pero han aparecido
+tres ejes que no estaban: **publicación de versiones**, **checkpoint por capítulo** y
+**regeneración parcial por petición del lector**. Los tres se multiplican entre sí, y el
+producto de los tres es exactamente el tipo de espacio donde los tests eligen caminos y un
+model checker los recorre todos.
+
+La lección que conviene retener no es que la decisión fuera mala: es que **caducó por donde
+no se esperaba**. Se escribió una condición de reapertura —concurrencia— y la realidad
+reabrió el asunto por otra puerta. Una fila con condición de caducidad sigue necesitando
+que alguien la relea cuando el producto cambia, porque la condición que se escribe es la
+que se imagina.
+
+**Y lo que no se toca.** Los dos métodos entran como **puertas reales**: si Lean falla, no
+se publica. Eso los pone en el mismo sitio que el presupuesto de contexto —fallar antes, no
+avisar después— y es la línea que este documento no cruza: un validador que se ejecuta y
+cuyo resultado no bloquea nada no es verificación, es telemetría.

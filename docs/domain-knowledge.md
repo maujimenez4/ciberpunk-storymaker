@@ -1,8 +1,13 @@
 # Conocimiento de dominio: cómo funciona una novela
 
-**Versión:** 2.0 · **Fecha:** 2026-09-21 · **Género de referencia:** romance
+**Versión:** 3.0 · **Fecha:** 2026-09-23 · **Dominio:** novela personalizada de regalo · **Género de referencia:** romance
 
 Este documento explica **cómo funciona una novela**: qué la sostiene, por qué se rompe y qué distingue un capítulo que funciona de uno que no. Todo lo que hay aquí seguiría siendo cierto si la novela se escribiera a mano, en un cuaderno, sin ninguna máquina de por medio.
+
+| Versión | Qué cambió |
+| --- | --- |
+| **3.0** | **La novela pasa a ser un regalo para una persona concreta**, al cruzar el documento contra `docs/entregable/examen-final.md`. Entra la **personalización como problema narrativo** (§14), que es la mitad del producto y no estaba escrita. Y cambia la **escala**: diez capítulos de 1.000–1.500 palabras, con un capítulo por escena (§3). Eso obliga a rehacer los dos sitios donde el documento razonaba sobre una novela de 100.000 palabras: la premisa de §1 y la deriva de §10 |
+| 2.0 | Sale de aquí todo lo que era fabricación y no narrativa, listado en `architecture.md` §14 |
 
 | Necesitas… | Ve a |
 | --- | --- |
@@ -16,17 +21,36 @@ Este documento explica **cómo funciona una novela**: qué la sostiene, por qué
 
 ## 1. Una novela no es un texto largo
 
-La diferencia entre un relato y una novela no es de extensión, es de **memoria**. En un relato, el lector retiene todo lo leído. En 100.000 palabras, no: el lector recuerda las promesas, las emociones y unos pocos hechos salientes, y olvida el resto. La novela funciona si lo que el lector recuerda y lo que el texto sostiene coinciden.
+La diferencia entre un relato y una novela no es de extensión, es de **memoria**: la novela funciona si lo que el lector recuerda y lo que el texto sostiene coinciden.
+
+A la escala de este producto —diez capítulos, unas doce mil palabras— esa coincidencia **no se afloja: se aprieta**. En 100.000 palabras el lector olvida el color de unos ojos mencionado treinta escenas atrás, y una contradicción menor pasa desapercibida. En doce mil no olvida casi nada: se lee de una o dos sentadas, y todo lo dicho sigue fresco cuando aparece lo que lo contradice. **La novela corta no perdona más, perdona menos.** Un descuido que una novela larga se traga, esta lo exhibe.
+
+Y hay un segundo lector que agrava esto, y es el del producto: **la novela se escribe para una persona concreta, que conoce de primera mano la mitad de los hechos**. Sabe cómo se llama su perro y en qué año fue aquel verano. Sobre esa parte del texto no es un lector: es la fuente. Detecta errores que ningún editor podría detectar, porque nadie más sabe que están mal.
 
 De ahí salen las tres tensiones que gobiernan todo lo demás:
 
 | Tensión | En qué consiste | Qué pasa si se pierde |
 | --- | --- | --- |
-| **Coherencia** | Lo dicho en el capítulo 3 sigue siendo verdad en el 27 | El lector deja de fiarse y abandona |
+| **Coherencia** | Lo dicho en el capítulo 3 sigue siendo verdad en el 10 | El lector deja de fiarse y abandona |
 | **Progresión** | Cada escena deja la situación distinta de como la encontró | La novela se siente larga aunque sea corta |
 | **Promesa** | Lo prometido al principio se cumple al final | El lector se siente estafado, y lo dice |
 
 Casi todos los defectos narrativos son un fallo de una de las tres. No son problemas de estilo: son problemas de arquitectura de la historia.
+
+### 1.1 Las dos dimensiones, y por qué ninguna rescata a la otra
+
+Una novela de regalo se juzga por dos cosas a la vez, y son independientes:
+
+| Dimensión | Qué se pregunta | Cómo falla |
+| --- | --- | --- |
+| **Personalización** | ¿El destinatario se reconoce? ¿Siente que se escribió para él? | La novela es correcta y podría ser de cualquiera |
+| **Calidad narrativa** | ¿Se lee de principio a fin sin tropezar? | El destinatario aparece en cada página de un texto que no funciona |
+
+**Ninguna compensa a la otra**, y conviene decirlo porque la tentación es real: cuando el encargo insiste en que aparezcan unos datos, es fácil darse por satisfecho al colocarlos. Colocar un dato no es narrarlo. Un regalo que menciona al destinatario quince veces en una historia que no se sostiene no es un regalo personalizado: es una lista de datos con diálogos alrededor.
+
+Y al revés: una novela impecable en la que el destinatario no está es un producto equivocado, por bien escrita que esté. **Nadie regala una novela genérica que casualmente lleva un nombre encima.**
+
+Cómo se integra un dato real sin romper la historia es el asunto del §14, y es la mitad del oficio de este producto.
 
 ---
 
@@ -75,9 +99,9 @@ La novela se organiza en cuatro niveles, y **cada uno tiene su propio criterio d
 
 ```mermaid
 flowchart TD
-  B["Obra<br/>80.000–120.000 palabras"] --> C["Parte / Acto<br/>función estructural"]
-  C --> D["Capítulo<br/>2.500–4.000 palabras"]
-  D --> E["Escena<br/>800–2.000 palabras<br/>UNIDAD ATÓMICA"]
+  B["Obra<br/>diez capítulos<br/>~12.000 palabras"] --> C["Parte / Acto<br/>función estructural"]
+  C --> D["Capítulo<br/>1.000–1.500 palabras"]
+  D --> E["Escena<br/>una por capítulo<br/>UNIDAD ATÓMICA"]
   E --> F["Beat<br/>acción – reacción"]
 
   C -.cierra cuando.-> C1["Cambio irreversible<br/>en la situación"]
@@ -93,9 +117,22 @@ flowchart TD
 | **Escena** | Unidad de generación y de validación | El valor cambia de signo |
 | **Beat** | Acción y reacción | La reacción provoca la acción siguiente |
 
-El capítulo es la unidad **comercial** de la atención: es donde alguien decide apagar la luz o seguir leyendo. Por eso su criterio de cierre es distinto del de la escena, y por eso un capítulo puede terminar a mitad de escena.
+El capítulo es la unidad **comercial** de la atención: es donde alguien decide apagar la luz o seguir leyendo. Por eso su criterio de cierre es distinto del de la escena.
 
-### 3.1 Los dos relojes
+### 3.1 A esta escala, un capítulo es una escena
+
+Con capítulos de 1.000–1.500 palabras, los dos cortes caen en el mismo sitio: **cada capítulo contiene exactamente una escena**.
+
+Que coincidan no los convierte en lo mismo, y conviene no fusionarlos ni siquiera al hablar. Son dos preguntas distintas que hoy dan la misma respuesta:
+
+- **El capítulo pregunta por el lector**: ¿sigue leyendo? Cierra en tensión, en pregunta o en revelación.
+- **La escena pregunta por la historia**: ¿ha cambiado algo? Cierra cuando el valor cambia de signo.
+
+**Lo que esto aprieta es que ahora un mismo texto tiene que cumplir los dos criterios a la vez**, y antes podía repartírselos entre varias escenas. Un capítulo que gira el valor pero cierra en calma se deja; uno que corta en tensión sin haber girado nada es relleno con un gancho al final. Hasta ahora un capítulo podía permitirse una escena sin giro si otra del mismo capítulo lo daba. **A un capítulo por escena, esa compensación desaparece:** cada uno de los diez tiene que ganarse las dos cosas por su cuenta.
+
+Y desaparece también una libertad de oficio: un capítulo ya **no** puede terminar a mitad de escena. El corte de capítulo y el corte de escena son el mismo corte.
+
+### 3.2 Los dos relojes
 
 Una novela lleva dos relojes que no marcan lo mismo:
 
@@ -276,6 +313,22 @@ flowchart LR
 
 Las posiciones son franjas, no marcas exactas. Lo que no admite excepción es el **orden** y la **presencia**: un gran gesto antes de la revelación interior no significa nada, porque el personaje no ha cambiado todavía.
 
+**En diez capítulos, cada capítulo es un 10 % y las franjas dejan de ser franjas.** Un hito que en una novela larga podía colocarse en cualquier punto de un tramo de cinco mil palabras aquí cae en un capítulo concreto:
+
+| Capítulo | Hito que le toca |
+| --- | --- |
+| 1 | Carencias y encuentro |
+| 2–3 | Punto de no retorno |
+| 3–5 | Diversión y juegos: la promesa del tropo |
+| 5–6 | Punto medio |
+| 6–7 | La grieta |
+| 8 | Ruptura |
+| 8–9 | Revelación interior |
+| 9–10 | Gran gesto |
+| 10 | HEA / HFN |
+
+La consecuencia práctica es que **no hay capítulo de sobra**. En una novela de cuarenta escenas, dos o tres flojas se diluyen; aquí cada capítulo carga con un hito o con la transición a él, y uno que no haga su trabajo deja un hueco visible en un arco de diez piezas. La estructura del género no se relaja al acortar: se vuelve más exigente, porque hay menos sitio donde esconder una escena que no avanza.
+
 ### 8.2 Por qué la ruptura no puede ser un malentendido
 
 La ruptura del 70–80 % debe nacer de **la herida del personaje**, no de un equívoco que se resolvería con una conversación de dos minutos. Ese es el defecto GEN-02, y es el más odiado por los lectores del género.
@@ -313,7 +366,9 @@ La escala de explicitud declarada —de puerta cerrada a explícito— es una pr
 
 ## 9. Ritmo y variedad
 
-Una novela larga se sostiene por variación, no por intensidad constante.
+Una novela se sostiene por variación, no por intensidad constante — y a diez capítulos eso **se nota antes**, no menos. Con cuarenta escenas, tres seguidas con el mismo corte y la misma duración pasan desapercibidas entre las otras treinta y siete. Con diez, tres seguidas son casi un tercio del libro.
+
+El recorrido de cada palanca también se estrecha: entre 1.000 y 1.500 palabras no caben escenas de longitudes muy dispares, y el capítulo ya no puede alternar escena y resumen dentro de sí mismo porque contiene una sola escena (§3.1). **La variación se reparte entre capítulos, no dentro de ellos**, y eso deja menos sitios donde colocarla y ninguno donde esconderla.
 
 | Palanca | Qué controla | Síntoma cuando falla |
 | --- | --- | --- |
@@ -327,9 +382,13 @@ El error habitual no es el exceso de una cosa, sino la **ausencia de contraste**
 
 ---
 
-## 10. Cómo se degrada una novela larga: la deriva
+## 10. Cómo se degrada una novela: la deriva
 
-La **deriva** es el alejamiento progresivo del texto respecto de lo que se declaró al principio. No es un problema de las máquinas: le pasa a cualquiera que escriba 100.000 palabras durante meses. Solo que a escala larga se acumula sin que nadie lo note, porque cada escena por separado parece correcta.
+La **deriva** es el alejamiento progresivo del texto respecto de lo que se declaró al principio. No es un problema de las máquinas: le pasa a cualquiera que escriba mucho seguido, porque cada escena por separado parece correcta y el desvío solo se ve al comparar la primera con la última.
+
+**A diez capítulos la deriva no desaparece: cambia de velocidad y de visibilidad.** Hay menos texto donde acumularse, así que es menor. Pero el lector tiene delante toda la novela de una sentada, y comparar el capítulo 1 con el 10 no le cuesta nada — en una novela de cuarenta capítulos nadie recuerda con precisión cómo sonaba el tercero. **La deriva pequeña de una novela corta se ve más que la deriva grande de una larga.**
+
+Y la deriva de hechos cambia de naturaleza cuando la novela es un regalo: aquí no se trata solo de que el apellido baile entre dos capítulos, sino de que **deje de coincidir con el del destinatario real**. Eso no es una incoherencia interna que el lector descubre releyendo: es un error que salta a la primera y en el peor sitio posible.
 
 | Tipo | Síntoma | Por qué ocurre |
 | --- | --- | --- |
@@ -390,10 +449,82 @@ No son preferencias editoriales: son límites del oficio y del trato con el lect
 - **Representación.** Los estereotipos en físico, profesiones y acentos se auditan. La tendencia por defecto es al promedio de lo ya escrito, y el promedio de lo ya escrito está lleno de tópicos.
 - **Originalidad.** Los tropos son de todos; la expresión concreta, no. Reutilizar una estructura es oficio; reutilizar frases es otra cosa.
 - **Autoría.** Qué partes son generadas, cuáles editadas y cuáles escritas a mano se registra. No por trámite: porque afecta a quién firma.
+- **La persona real.** El destinatario existe y no ha firmado nada. No se le atribuyen defectos, traumas ni intimidades que nadie contó, ni se convierte en personaje de algo que no querría leer sobre sí mismo. Y lo que el comprador pidió **no** mencionar —un nombre, un tema— no aparece ni de refilón: esa lista es un límite, no una preferencia de estilo.
 
 ---
 
-## 14. Qué no está en este documento
+## 14. La personalización como problema narrativo
+
+Escribir para alguien concreto no es rellenar huecos en una plantilla. Es un problema de oficio con reglas propias, y seguiría siéndolo escribiendo a mano: cualquiera que haya escrito un cuento para un sobrino se ha topado con todas las que siguen.
+
+El material de partida cambia de sitio. En una novela normal, los hechos nacen del texto: el autor decide que la protagonista tiene un perro y a partir de ahí el perro existe. Aquí **una parte del canon llega antes que la primera línea** —el nombre, la edad, el perro que de verdad se llama Nala, el verano del 98— y no se puede negociar con ella. El oficio consiste en construir una historia que la contenga sin que se le note el andamio.
+
+### 14.1 La prueba del dato que no hace nada
+
+La pregunta que decide si un dato está **integrado** o **incrustado**:
+
+> Quita el dato y vuelve a leer la escena. Si la escena funciona exactamente igual, el dato estaba incrustado.
+
+Un dato integrado **hace algo**: causa el conflicto, da la vuelta a una decisión, explica por qué el personaje reacciona así. Un dato incrustado se limita a estar ahí, normalmente en una frase que empieza por «como buen aficionado a la jardinería…». El lector no sabe nombrar la diferencia, pero la nota: el texto incrustado suena a formulario relleno.
+
+Tres formas de que un dato real entre haciendo algo, de menos a más valiosa:
+
+| Forma | Qué es | Cuándo sirve |
+| --- | --- | --- |
+| **Textura** | El dato decora el mundo: el coche, la ciudad, la profesión | Para lo secundario. Barato y seguro, pero no personaliza de verdad |
+| **Motor** | El dato causa la escena: por ser quien es, esto le pasa | El habitual, y el que hay que buscar |
+| **Herida** | El dato explica por qué el personaje es como es | El más potente y el más delicado: exige que alguien lo haya contado |
+
+Una novela cuya personalización es toda textura pasa la comprobación de que los datos aparecen y falla en lo único que importaba: **el destinatario se reconoce en los detalles, pero no se reconoce en la historia**.
+
+### 14.2 La tensión de fondo: un regalo no puede tener protagonista plano
+
+Aquí hay un choque real entre §4 y el producto, y no tiene solución cómoda.
+
+El §4 dice que un personaje es un **mecanismo de resistencia al cambio**: sin herida, sin mentira que se cree, no hay arco. Pero el destinatario es una persona real a la que **no se le pueden inventar heridas**, y el comprador rara vez aporta una: aporta lo bonito. El resultado natural, si nadie lo evita, es un protagonista admirable, querido por todos y sin nada que superar — o sea, exactamente el personaje plano que el §4 declara imposible de narrar.
+
+Las tres salidas honestas, por orden de preferencia:
+
+1. **La herida la pone la situación, no la persona.** El protagonista es competente y entero; lo que le falla es el mundo. Funciona siempre y no atribuye nada a nadie.
+2. **Se usa lo que el comprador ofreció.** Si contó que al destinatario le cuesta pedir ayuda, eso es una mentira interna regalada, y es la mejor materia prima que hay.
+3. **El protagonista está inspirado en el destinatario, no es el destinatario.** Se le puede dar lo que haga falta porque ya no es él.
+
+Lo que **no** es una salida es ahorrarse el arco. Una novela sin arco no es un regalo amable: es un texto que el destinatario deja a medias sin saber por qué.
+
+### 14.3 El lector que conoce la verdad
+
+El destinatario sabe cosas que el texto no puede saber, y eso crea dos obligaciones asimétricas:
+
+- **Lo aportado no se contradice.** Si el perro es Nala, no puede ser Luna en el capítulo 7. Este es el error más caro de todos los posibles, porque no se lee como un descuido: se lee como que el regalo no era para él.
+- **Lo no aportado es territorio libre, y conviene decirlo.** Nadie contó qué desayuna. Inventarlo no es un fallo: es escribir. El peligro contrario —no inventar nada por miedo a equivocarse— produce una novela hecha solo de los quince datos del encargo, repetidos.
+
+Y un efecto que sorprende la primera vez: **demasiada precisión incomoda.** Un texto que acierta el nombre del colegio, la marca del coche y el mote de la abuela deja de parecer un regalo y empieza a parecer un informe. La personalización se dosifica igual que cualquier otro recurso; el objetivo es que el destinatario se reconozca, no que se sienta investigado.
+
+### 14.4 El radio de una corrección tardía
+
+Un regalo se corrige después de entregarlo. «El perro no se llama Luna, se llama Nala» llega cuando la novela ya está escrita y leída, y la pregunta narrativa es **hasta dónde llega el cambio**.
+
+La respuesta ingenua —«a los capítulos donde aparece la palabra»— es la que rompe las novelas. Un hecho no vive solo en las frases que lo nombran. Arrastra tres cosas, y las tres se olvidan en ese orden:
+
+| Lo que arrastra | Por qué | Ejemplo |
+| --- | --- | --- |
+| **Lo que los personajes saben** | Quien se enteró de algo en el capítulo 4 actúa con ello desde entonces (§7.1) | Si el hecho cambia, lo que ella dedujo en el 6 puede dejar de deducirse |
+| **Los plantados que dependían de él** | Un plantado se cobra después; cambiar la siembra descoloca el pago (§7) | El detalle del capítulo 2 que explicaba el giro del 9 |
+| **Lo que el lector ya interpretó** | Una revelación reordena lo leído hacia atrás; corregirla lo reordena otra vez | El lector vuelve a leer el 7 con otra clave |
+
+De ahí la regla de oficio: **el radio de una corrección no es dónde aparece el dato, sino dónde algo depende de él.** Y esas dos cosas casi nunca coinciden, porque la dependencia más cara —quién sabía qué— no deja rastro textual: en el capítulo donde importa, el dato ni se menciona.
+
+Hay una asimetría que conviene tener presente, porque decide cuánto cuesta cada corrección: **cambiar un dato inerte es barato y cambiar un dato que hace algo es caro** — y es justo al revés de lo que interesa narrativamente. Un dato de textura (§14.1) se sustituye en tres frases; uno que era el motor de una escena no se sustituye, se reescribe la escena. Es el precio de haber integrado bien, y es un precio que merece la pena pagar: la alternativa era una novela que no se rompe al tocarla porque nada dependía de nada.
+
+Y una obligación con el lector que ya leyó: **la versión anterior no desaparece.** Alguien leyó eso, lo comentó, quizá lo recuerda de otra manera. Sustituir el texto en silencio deja a un lector con recuerdos de un libro que ya no existe.
+
+### 14.5 La dedicatoria está fuera
+
+La dedicatoria va dirigida a una persona real desde fuera de la ficción. No es el primer capítulo ni una escena: **es la voz de quien regala, no la del narrador**, y mezclarlas estropea las dos. Una dedicatoria dentro de la historia suena a ruptura de la cuarta pared; un narrador que agradece cosas deja de ser narrador.
+
+---
+
+## 15. Qué no está en este documento
 
 Para que nadie lo busque aquí:
 
@@ -404,5 +535,7 @@ Para que nadie lo busque aquí:
 | Roles que fabrican la novela y cómo se coordinan | `architecture.md` §3 y §7 | Es fabricación, no narrativa |
 | Puertas, reintentos y políticas de reparación | `architecture.md` §8.3 | Es proceso de producción |
 | Árboles de clases y grafos de relaciones | `definitions.md` §14 | Es la misma ontología en forma visual |
+| Cómo se recogen los datos del destinatario y cómo se comprueba que llegaron al texto | `architecture.md` | La entrevista y la comprobación son fabricación; **por qué un dato tiene que hacer algo en la escena** se queda aquí (§14) |
+| Qué es un `Destinatario`, una `Dedicatoria` o un `TextoAportado` | `definitions.md` §9 | Es «X significa Y» |
 
 **Regla de oro de este documento:** si una frase menciona una tecnología, un formato de datos o un componente del sistema, está en el fichero equivocado.
