@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.commons.domain import Reloj
 from app.commons.errors import RecursoNoEncontrado
-from app.features.escena.schemas import FichaPersistida
+from app.features.escena.schemas import FichaDeEscena, FichaPersistida
 
 
 class VersionDeTexto(BaseModel):
@@ -211,3 +211,36 @@ class RepositorioDeEscenas:
             distancia_psiquica=fila[15],
             beat_de_genero=fila[16],
         )
+
+    def guardar_ficha(self, ficha: FichaDeEscena) -> None:
+        """RF-ESC-01: lo que el Planificador decidio queda en la fila.
+
+        Actualiza **solo** los campos que la ficha propone. `mencionados`,
+        `tiempo_historia` y el resto los pone quien corresponda, y pisarlos con
+        un `None` aqui borraria en silencio lo que el outline ya sabia.
+
+        Sin esta escritura, la capa de instruccion del paquete sale de la ficha
+        gruesa del outline en vez de la del Planificador, y el Escritor recibe
+        menos de lo que se decidio para el.
+        """
+        with self._conexion() as conexion:
+            conexion.execute(
+                "UPDATE escena SET pov = ?, presentes = ?, lugar = ?,"
+                " objetivo_del_pov = ?, obstaculo = ?, valor_entrada = ?,"
+                " valor_salida = ?, distancia_psiquica = ?,"
+                " densidad_de_dialogo_objetivo = ?, extension_objetivo = ?"
+                " WHERE escena_id = ?",
+                (
+                    ficha.pov,
+                    json.dumps(ficha.presentes),
+                    ficha.lugar,
+                    ficha.objetivo_del_pov,
+                    ficha.obstaculo,
+                    ficha.valor_entrada,
+                    ficha.valor_salida,
+                    ficha.distancia_psiquica,
+                    ficha.densidad_de_dialogo_objetivo,
+                    ficha.extension_objetivo,
+                    ficha.escena_id,
+                ),
+            )

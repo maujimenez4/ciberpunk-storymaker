@@ -79,3 +79,52 @@ def test_presentes_y_mencionados_vacios_son_listas_y_no_none(
 
     assert ficha.presentes == []
     assert ficha.mencionados == []
+
+
+def test_la_ficha_del_planificador_se_guarda_y_se_vuelve_a_leer(
+    escena_con_ficha: Path,
+) -> None:
+    """P-111b, RF-ESC-01.
+
+    `planificar_escena` producia la ficha y **nadie la escribia**: `corrida.py`
+    la usaba en memoria y la tiraba. La fila de `escena` conservaba solo lo que
+    el outline habia puesto, sin presentes, sin distancia psiquica y sin
+    extension objetivo.
+
+    Se nota al montar el paquete: la capa de instruccion sale de la ficha en
+    disco, asi que sin esta escritura el Escritor recibe la ficha del outline
+    -la propuesta gruesa- en vez de la del Planificador.
+    """
+    from app.commons.domain import NivelDeCalor
+    from app.features.escena import FichaDeEscena
+
+    repositorio = RepositorioDeEscenas(escena_con_ficha)
+    ficha = FichaDeEscena(
+        escena_id="es1",
+        pov="pj-noe",
+        presentes=["pj-noe", "pj-vera"],
+        lugar="el muelle",
+        objetivo_del_pov="entregar el paquete",
+        obstaculo="la inspectora lo espera",
+        valor_entrada="confianza",
+        valor_salida="sospecha",
+        distancia_psiquica="cercana",
+        densidad_de_dialogo_objetivo=0.4,
+        extension_objetivo=1600,
+        persona="tercera",
+        tiempo_verbal="pasado",
+        nivel_de_calor=NivelDeCalor.SENSUAL,
+    )
+
+    repositorio.guardar_ficha(ficha)
+    leida = repositorio.ficha_de("es1")
+
+    assert leida.pov == "pj-noe"
+    assert leida.lugar == "el muelle"
+    assert leida.presentes == ["pj-noe", "pj-vera"]
+    assert leida.objetivo_del_pov == "entregar el paquete"
+    assert leida.distancia_psiquica == "cercana"
+    assert leida.extension_objetivo == 1600
+    assert leida.densidad_de_dialogo_objetivo == 0.4
+    # Lo que el Planificador no propone no se pisa (RF-ESC-02).
+    assert leida.mencionados == ["pj-vera"]
