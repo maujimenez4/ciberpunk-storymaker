@@ -22,25 +22,71 @@ Tres garantías con test propio:
 alcance y la spec retiró RI-10 sin renumerar el resto.
 """
 
+import functools
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import FastAPI
 
 from app.commons.errors import registrar_manejadores
-from app.commons.jobs import montar_ejecutor_de_trabajos
+from app.commons.jobs import RepositorioDeTrabajos, montar_ejecutor_de_trabajos
+from app.features.escritura import (
+    Dependencias,
+    construir_dependencias,
+    ejecutar_en_segundo_plano,
+)
 from app.features.escritura import router as router_escritura
 
 TITULO = "StoryMaker · backend v1"
 
 
-def crear_app(ruta_base_de_datos: Path | str = "obra.db") -> FastAPI:
+def crear_app(
+    ruta_base_de_datos: Path | str = "obra.db",
+    fabrica_dependencias: Callable[[], Dependencias] | None = None,
+) -> FastAPI:
+    """`fabrica_dependencias` entra por parametro y no por `Depends` porque la
+    reanudacion del arranque corre fuera de una peticion, donde `Depends` no
+    llega. Una sola fabrica para los dos caminos: dos serian dos caminos, y el
+    que se prueba nunca es el que falla."""
     app = FastAPI(title=TITULO, version="1.0.0")
     app.state.ruta_base_de_datos = str(ruta_base_de_datos)
     # Donde viven los prompts lo decide la composicion, no la feature. Si lo
     # calculara el router con `Path(__file__)`, `escritura` estaria tocando el
     # sistema de ficheros y RF-ORQ-16 dejaria de ser cierta por construccion.
     app.state.ruta_prompts = Path(__file__).resolve().parent / "features"
+    app.state.fabrica_dependencias = fabrica_dependencias or functools.partial(
+        construir_dependencias, str(ruta_base_de_datos), app.state.ruta_prompts
+    )
     registrar_manejadores(app)
-    montar_ejecutor_de_trabajos(app)
+    ejecutor = montar_ejecutor_de_trabajos(app)
+    _retomar_trabajos_vivos(app, ejecutor)
     app.include_router(router_escritura)
     return app
+
+
+def _retomar_trabajos_vivos(app: FastAPI, ejecutor: object) -> None:
+    """RF-ORQ-05 y CA-3: una caida a mitad de escena no pierde trabajo.
+
+    `vivos()` existia y estaba probado desde la fase 7, pero **no lo llamaba
+    nadie**: el estado se persistia con todo cuidado y luego no se leia. Un paso
+    interrumpido se repite entero (§3.7), que es posible porque la salida solo
+    se persiste al completarse y el `run_id` evita duplicados.
+    """
+    repositorio = RepositorioDeTrabajos(app.state.ruta_base_de_datos)
+    try:
+        vivos = repositorio.vivos()
+    except Exception:  # noqa: BLE001 - sin base todavia no hay nada que retomar
+        return
+    for trabajo in vivos:
+        if trabajo.escena_id is None:
+            continue
+        ejecutor.encolar(  # type: ignore[attr-defined]
+            functools.partial(
+                ejecutar_en_segundo_plano,
+                trabajo.trabajo_id,
+                trabajo.escena_id,
+                trabajo.obra_id,
+                "s1",
+                app.state.fabrica_dependencias(),
+            )
+        )

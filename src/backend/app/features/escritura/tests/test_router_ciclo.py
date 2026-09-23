@@ -74,3 +74,52 @@ def test_el_trabajo_que_revienta_queda_fallida_y_no_colgado(
     estado = cliente.get(f"/trabajos/{trabajo_id}").json()
     assert estado["estado"] == "FALLIDA"
     assert estado["causa_fallo"]
+
+
+def test_al_arrancar_se_retoman_los_trabajos_no_terminales(obra_lista: Path) -> None:
+    """P-113, RF-ORQ-05 y CA-3.
+
+    `vivos()` existia y estaba probado, pero **nadie lo llamaba al arrancar**.
+    Una caida a mitad de escena dejaba el trabajo en su estado intermedio para
+    siempre: el estado se persistia con todo cuidado y luego no lo leia nadie.
+
+    La reanudacion ocurre en el arranque, donde `dependency_overrides` no llega,
+    asi que la fabrica de dependencias la recibe `crear_app`. Es composicion, y
+    su sitio es `main.py`.
+    """
+    from app.commons.domain import RelojFijo
+    from app.commons.jobs import RepositorioDeTrabajos
+    from app.features.escritura.tests.test_ciclo_completo import RELOJ
+
+    trabajos = RepositorioDeTrabajos(obra_lista)
+    interrumpido = trabajos.crear("o1", "es1", "escribir_escena", RELOJ)
+
+    app = crear_app(obra_lista, fabrica_dependencias=lambda: dependencias(obra_lista))
+    with TestClient(app) as cliente:  # el `with` dispara el lifespan
+        # `parar()` y no `drenar()`: el lifespan ya arranco el hilo, asi que la
+        # cola puede estar vacia con el trabajo todavia en curso. `parar()` hace
+        # join, que es lo unico que garantiza que termino.
+        cliente.app.state.ejecutor.parar()  # type: ignore[attr-defined]
+        estado = cliente.get(f"/trabajos/{interrumpido.trabajo_id}").json()
+
+    assert estado["estado"] == "INTEGRADA", (
+        "el trabajo interrumpido no se retomo al arrancar"
+    )
+    assert isinstance(RELOJ, RelojFijo)
+
+
+def test_un_trabajo_terminal_no_se_retoma(obra_lista: Path) -> None:
+    """Reanudar uno ya cerrado lo volveria a escribir y a cobrar."""
+    from app.commons.jobs import Estado, RepositorioDeTrabajos
+    from app.features.escritura.tests.test_ciclo_completo import RELOJ
+
+    trabajos = RepositorioDeTrabajos(obra_lista)
+    cerrado = trabajos.crear("o1", "es1", "escribir_escena", RELOJ)
+    trabajos.transitar(cerrado.trabajo_id, Estado.CANCELADA, RELOJ)
+
+    app = crear_app(obra_lista, fabrica_dependencias=lambda: dependencias(obra_lista))
+    with TestClient(app) as cliente:
+        cliente.app.state.ejecutor.parar()  # type: ignore[attr-defined]
+        estado = cliente.get(f"/trabajos/{cerrado.trabajo_id}").json()
+
+    assert estado["estado"] == "CANCELADA"

@@ -8,6 +8,7 @@ trabajo huerfano y al cliente sin saber si ocurrio.
 """
 
 import functools
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -80,7 +81,9 @@ def obtener_ejecutor(peticion: Request) -> EjecutorDeTrabajos:
     return ejecutor
 
 
-def obtener_dependencias(peticion: Request) -> Dependencias:
+def construir_dependencias(
+    ruta_base_de_datos: str, ruta_prompts: Path | str
+) -> Dependencias:
     """Arma el ciclo con el proveedor real.
 
     Es el unico sitio donde `Ajustes.modelo` tiene lector, que era lo que P-106
@@ -91,9 +94,9 @@ def obtener_dependencias(peticion: Request) -> Dependencias:
     «si es prueba» aqui dentro, que es la forma habitual de que el camino
     probado y el real dejen de ser el mismo.
     """
-    ruta = peticion.app.state.ruta_base_de_datos
+    ruta = ruta_base_de_datos
     ajustes = cargar_ajustes()
-    cargador = CargadorDePrompts(peticion.app.state.ruta_prompts)
+    cargador = CargadorDePrompts(ruta_prompts)
     cliente = ClienteDeClaudeCode(modelo=ajustes.modelo)
     return Dependencias(
         reloj=RelojDelSistema(),
@@ -113,6 +116,19 @@ def obtener_dependencias(peticion: Request) -> Dependencias:
         almacenes=AlmacenesDeLaObra(ruta),
         snapshot_cada_n=ajustes.snapshot_cada_n_escenas,
     )
+
+
+def obtener_dependencias(peticion: Request) -> Dependencias:
+    """La fabrica la decide la composicion (`main.py`), no la feature.
+
+    Tiene que ser la **misma** que usa la reanudacion al arrancar, y aquella
+    corre fuera de una peticion, donde `Depends` no llega. Dos fabricas
+    distintas serian dos caminos, y el que se prueba nunca es el que falla.
+    """
+    fabrica: object = peticion.app.state.fabrica_dependencias
+    assert callable(fabrica)
+    resultado: Dependencias = fabrica()
+    return resultado
 
 
 @router.post(

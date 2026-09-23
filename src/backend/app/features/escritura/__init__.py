@@ -15,6 +15,7 @@ from app.features.escritura.router import (
     DefectoEnRespuesta,
     EstadoDeTrabajo,
     TrabajoAceptado,
+    construir_dependencias,
     router,
 )
 from app.features.escritura.service import (
@@ -22,6 +23,7 @@ from app.features.escritura.service import (
     ResultadoDeEscena,
     SinTurno,
     ciclo_de_escena,
+    ejecutar_en_segundo_plano,
 )
 
 __all__ = [
@@ -30,6 +32,8 @@ __all__ = [
     "ResultadoDeEscena",
     "SinTurno",
     "ciclo_de_escena",
+    "construir_dependencias",
+    "ejecutar_en_segundo_plano",
     "DefectoParaReparar",
     "EstadoDeTrabajo",
     "TrabajoAceptado",
