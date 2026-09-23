@@ -20,13 +20,14 @@ from pathlib import Path
 import pytest
 
 from app.commons.domain import RelojFijo, RolNarrativo
+from app.commons.llm import ContadorBPE, DobleDeOrdenador
 from app.features.canon import (
     EventoExtraido,
     Extraccion,
     HechoExtraido,
     RepositorioDeCanon,
 )
-from app.features.contexto import AlmacenesDeLaObra
+from app.features.contexto import AlmacenesDeLaObra, ensamblar, recolectar
 from app.features.escena import RepositorioDeEscenas
 from app.features.obra import (
     Biblia,
@@ -228,3 +229,29 @@ def test_cada_capa_restante_sale_de_su_almacen(
     instruccion = " ".join(almacenes.instruccion("es3"))
     assert "recuperar el contrato" in instruccion
     assert "la puerta esta sellada" in instruccion
+
+
+def test_el_paquete_se_monta_entero_desde_la_base_de_datos(
+    obra_con_dos_escenas_escritas: Path,
+) -> None:
+    """P-110, RF-CTX-14 contra el disco y no contra dobles.
+
+    Es la unica forma de saber que las nueve lecturas encajan de verdad: un
+    doble que devuelve cadenas siempre llena todas las capas, asi que un almacen
+    que no supiera leer la suya pasaria inadvertido hasta la primera corrida.
+    """
+    capas = recolectar(
+        escena_id="es3",
+        almacenes=AlmacenesDeLaObra(obra_con_dos_escenas_escritas),
+        ordenador=DobleDeOrdenador(),
+        consulta="el contrato del taller",
+    )
+
+    vacias = [capa.value for capa, contenido in capas.items() if contenido.esta_vacia]
+    assert not vacias, f"capas sin contenido desde los almacenes reales: {vacias}"
+
+    paquete = ensamblar(capas, ContadorBPE())
+
+    assert paquete.desglose.total > 0
+    assert "contrabandista" in paquete.texto, "el canon no llego al paquete montado"
+    assert "recuperar el contrato" in paquete.texto
