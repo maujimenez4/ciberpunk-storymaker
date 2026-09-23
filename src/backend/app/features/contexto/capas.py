@@ -58,6 +58,11 @@ PROTEGIDAS = frozenset({Capa.CONSTITUCIONAL, Capa.INSTRUCCION})
 # añadido siga cabiendo.
 RESERVADA = Capa.RESERVA
 
+# Prefijo de la etiqueta de un fragmento recuperado. Lo que va detras es su
+# identificador, y de ahi salen los `ids_recuperados` que `ejecucion` persiste
+# (RI-14) y que hacen reconstruible el paquete (CA-10).
+ETIQUETA_RECUPERADO = "recuperado:"
+
 # §4.8: de qué almacén sale cada capa. Una capa con origen declarado que llegue
 # vacía detiene el ensamblado (RF-CTX-14).
 ORIGEN: dict[Capa, str] = {

@@ -14,7 +14,12 @@ de `canon` y de `escena` a la vez.
 from typing import Protocol
 
 from app.commons.llm import TOPE_DE_CANDIDATOS, OrdenadorSemantico
-from app.features.contexto.capas import Capa, CapaEnsamblada, Pieza
+from app.features.contexto.capas import (
+    ETIQUETA_RECUPERADO,
+    Capa,
+    CapaEnsamblada,
+    Pieza,
+)
 
 # RF-CTX-08. Cuántas muestras ancla de prosa aprobada del mismo POV se inyectan:
 # son la contención principal de la deriva estilística, y más de dos empiezan a
@@ -169,7 +174,11 @@ def _recuperar(
         Pieza(
             texto=candidatos[identificador],
             prioridad=len(ordenados) - posicion,
-            etiqueta=f"recuperado-{posicion}",
+            # El identificador y no la posicion: `ejecucion` guarda
+            # `ids_recuperados` (RI-14), y con una posicion no se puede
+            # reconstruir que se envio (CA-10). Ademas, la posicion cambia
+            # con el recorte y el identificador no.
+            etiqueta=f"{ETIQUETA_RECUPERADO}{identificador}",
         )
         for posicion, identificador in enumerate(ordenados)
     ]

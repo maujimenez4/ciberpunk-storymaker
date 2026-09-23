@@ -35,6 +35,8 @@ VENTANA_RECIENTE = 2
 # Escritor que el silencio: sabe que no hay nada detras en vez de suponerlo.
 SIN_CANON_TODAVIA = "Sin canon establecido: esta es la primera escena de la obra."
 SIN_ESCENA_ANTERIOR = "Primera escena de la obra: no hay escena anterior."
+SIN_ESTADO_TODAVIA = "Nadie sabe nada todavía: no ha ocurrido ninguna escena."
+SIN_MEMORIA_TODAVIA = "No hay manuscrito anterior del que recuperar nada."
 
 
 class AlmacenesDeLaObra:
@@ -110,7 +112,7 @@ class AlmacenesDeLaObra:
             )
             for hecho in self.canon.hechos_hasta(ficha.orden_discurso)
         ]
-        if hechos or self._vecina(escena_id, atras=1) is not None:
+        if hechos or not self._es_el_principio(escena_id):
             # Si hay escena anterior y aun asi no hay canon, el Extractor no
             # esta escribiendo: se devuelve vacio y RF-CTX-14 lo detiene.
             return hechos
@@ -137,7 +139,9 @@ class AlmacenesDeLaObra:
                 reciente = orden >= ficha.orden_discurso - VENTANA_RECIENTE
             testigos = ", ".join(evento.testigos) or "nadie"
             salida.append((f"{testigos} sabe: {evento.descripcion}", reciente))
-        return salida
+        if salida or not self._es_el_principio(escena_id):
+            return salida
+        return [(SIN_ESTADO_TODAVIA, True)]
 
     # --- capa de continuidad local -------------------------------------------
 
@@ -163,7 +167,10 @@ class AlmacenesDeLaObra:
 
     def fragmentos_candidatos(self, escena_id: str, tope: int) -> dict[str, str]:
         """Ya filtrados por el filtro estructural (§4.6, paso 1)."""
-        return self.canon.candidatos_para_ordenar(tope)
+        candidatos = self.canon.candidatos_para_ordenar(tope)
+        if candidatos or not self._es_el_principio(escena_id):
+            return candidatos
+        return {"sin-memoria": SIN_MEMORIA_TODAVIA}
 
     def muestras_ancla(self, escena_id: str, cuantas: int) -> list[str]:
         """Escenas anteriores del **mismo POV**, que es lo que contiene la
@@ -204,6 +211,15 @@ class AlmacenesDeLaObra:
         return piezas
 
     # --- interno -------------------------------------------------------------
+
+    def _es_el_principio(self, escena_id: str) -> bool:
+        """No hay ninguna escena antes de esta en la obra.
+
+        Es la unica condicion que convierte una capa vacia en algo legitimo. Con
+        cualquier escena detras, un almacen que devuelve vacio esta roto y
+        RF-CTX-14 tiene que detener el paso.
+        """
+        return self._vecina(escena_id, atras=1) is None
 
     def _vecina(self, escena_id: str, atras: int) -> EscenaPersistida | None:
         """La escena `atras` posiciones antes **en la obra**, no en el capítulo.

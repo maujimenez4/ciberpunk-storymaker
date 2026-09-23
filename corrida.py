@@ -15,7 +15,6 @@ comprueba que juntas escriben un capítulo, que es lo que CA-1 pide demostrar.
 """
 
 import argparse
-import functools
 import json
 import shutil
 import subprocess
@@ -27,14 +26,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src" / "backend"))
 
 from app.commons.config import Metricas, traza  # noqa: E402
-from app.commons.db import RegistroDeEjecucion, RepositorioDeEjecuciones  # noqa: E402
+from app.commons.db import RepositorioDeEjecuciones  # noqa: E402
 from app.commons.domain import RelojDelSistema  # noqa: E402
 from app.commons.jobs import (  # noqa: E402
     CerrojoPorObra,
-    Estado,
     RepositorioDeTrabajos,
     TurnoDeModelo,
-    con_reintentos,
 )
 from app.commons.llm import (  # noqa: E402
     CargadorDePrompts,
@@ -42,25 +39,49 @@ from app.commons.llm import (  # noqa: E402
     DobleDeModelo,
     DobleDeOrdenador,
 )
-from app.features.calidad import (  # noqa: E402
-    pasar_g1a,
-    validar_discurso,
-    validar_giro_de_valor,
-    validar_nivel_de_calor,
-)
-from app.features.canon import RepositorioDeCanon, extraer_de_escena  # noqa: E402
-from app.features.contexto import (  # noqa: E402
-    Capa,
-    CapaEnsamblada,
-    Pieza,
-    ensamblar,
-)
-from app.features.escena import RepositorioDeEscenas, planificar_escena  # noqa: E402
+from app.features.canon import RepositorioDeCanon  # noqa: E402
+from app.features.contexto import AlmacenesDeLaObra  # noqa: E402
+from app.features.escena import RepositorioDeEscenas  # noqa: E402
+from app.features.escritura import Dependencias, ciclo_de_escena  # noqa: E402
 from app.features.manuscrito import RepositorioDeManuscrito  # noqa: E402
+from app.features.obra import RepositorioDeObras  # noqa: E402
 
 RAIZ = Path(__file__).parent
 PROMPTS = RAIZ / "src" / "backend" / "app" / "features"
 ESCENAS = 10
+
+# La biblia tiene que validar contra `Biblia`: desde P-111c la capa
+# constitucional del paquete sale de `version_obra`, asi que un `{}` como el que
+# habia aqui rompe la corrida en la primera escena. Es la misma leccion de
+# siempre: lo que no se lee, no se sabe que esta mal.
+BIBLIA_FALSA = json.dumps(
+    {
+        "tropo": "enemigos a amantes",
+        "promesa_de_apertura": "Una relojera y un contrabandista, obligados a pactar.",
+        "personajes": [
+            {
+                "pj_id": "pj-ada",
+                "nombre": "Ada",
+                "edad": 31,
+                "rol_narrativo": "protagonista",
+            },
+            {
+                "pj_id": "pj-noe",
+                "nombre": "Noe",
+                "edad": 34,
+                "rol_narrativo": "coprotagonista",
+            },
+        ],
+        "lugares": [{"lug_id": "lug-taller", "nombre": "El taller"}],
+        "distancias": [
+            {
+                "origen_id": "lug-taller",
+                "destino_id": "lug-muelle",
+                "tiempo_de_viaje": "veinte minutos",
+            }
+        ],
+    }
+)
 
 FICHA_FALSA = json.dumps(
     {
@@ -133,8 +154,8 @@ def preparar_base(ruta: Path) -> None:
     )
     conexion.execute(
         "INSERT INTO version_obra (version_obra_id, obra_id, numero, biblia, creada_en)"
-        " VALUES ('vo1','o1',1,'{}',?)",
-        (datetime.now(UTC).isoformat(),),
+        " VALUES ('vo1','o1',1,?,?)",
+        (BIBLIA_FALSA, datetime.now(UTC).isoformat()),
     )
     conexion.execute(
         "INSERT INTO parte (parte_id, obra_id, numero, funcion_estructural)"
@@ -147,246 +168,104 @@ def preparar_base(ruta: Path) -> None:
     for i in range(1, ESCENAS + 1):
         conexion.execute(
             "INSERT INTO escena (escena_id, capitulo_id, version_obra_id,"
-            " orden_discurso, tiempo_historia, pov) VALUES (?,?,?,?,?,'pj-ada')",
-            (f"es{i}", "ca1", "vo1", i, f"dia-{i}"),
+            " orden_discurso, tiempo_historia, pov, lugar, beat_de_genero)"
+            " VALUES (?,?,?,?,?,'pj-ada','lug-taller',?)",
+            (
+                f"es{i}",
+                "ca1",
+                "vo1",
+                i,
+                f"dia-{i}",
+                "encuentro" if i == 1 else "chispa",
+            ),
         )
     conexion.commit()
     conexion.close()
 
 
-def _capas(escena_id: str, prompt: str, anterior: str | None) -> dict:
-    """Las siete con contenido. En la corrida real las surten los almacenes;
-    aqui basta con que ninguna llegue vacia, que es lo que RF-CTX-14 exige."""
-    contenido = {
-        Capa.CONSTITUCIONAL: "Obra en tercera persona, pasado, nivel sensual.",
-        Capa.ESTRUCTURAL: "Capitulo 1, La tregua. Beat: encuentro.",
-        Capa.CANON_RELEVANTE: "Ada: protagonista. Noe: coprotagonista.",
-        Capa.ESTADO_EN_T: "Ada sabe lo del contrato. Noe no.",
-        Capa.CONTINUIDAD_LOCAL: anterior or "Primera escena del capitulo.",
-        Capa.MEMORIA_RECUPERADA: "El taller aparece en la escena inicial.",
-        Capa.INSTRUCCION: prompt,
-    }
-    return {
-        capa: CapaEnsamblada(capa=capa, piezas=[Pieza(texto, 0, capa.value)])
-        for capa, texto in contenido.items()
-    }
+def correr(real: bool, destino: Path | None = None) -> int:
+    """Escribe ESCENAS escenas llamando al **mismo** ciclo que usara la API.
 
-
-def correr(real: bool) -> int:
+    Hasta P-111c este guion tenia el bucle dentro, 200 lineas que duplicaban lo
+    que `features/escritura/service.py` deberia hacer. Dos copias del
+    orquestador se desincronizan en cuanto alguien toca una: la real pasaba por
+    el ensamblador de verdad y esta se fabricaba las capas a mano.
+    """
     reloj = RelojDelSistema()
-    contador = ContadorBPE()
     cargador = CargadorDePrompts(PROMPTS)
     metricas = Metricas()
-    turno = TurnoDeModelo(simultaneas=1)
-    cerrojo = CerrojoPorObra()
 
     if real:
         from app.commons.llm import ClienteDeClaudeCode, OrdenadorPorModelo
 
-        cliente_planificador = ClienteDeClaudeCode(modelo="haiku")
-        cliente_escritor = ClienteDeClaudeCode(modelo="haiku")
-        cliente_extractor = ClienteDeClaudeCode(modelo="haiku")
+        planificador = ClienteDeClaudeCode(modelo="haiku")
+        escritor = ClienteDeClaudeCode(modelo="haiku")
+        extractor = ClienteDeClaudeCode(modelo="haiku")
         ordenador = OrdenadorPorModelo(
             ClienteDeClaudeCode(modelo="haiku"), cargador.cargar("ordenador").texto
         )
     else:
-        cliente_planificador = DobleDeModelo([FICHA_FALSA] * ESCENAS)
-        cliente_escritor = DobleDeModelo([PROSA_FALSA] * ESCENAS)
-        cliente_extractor = DobleDeModelo([EXTRACCION_FALSA] * ESCENAS)
+        planificador = DobleDeModelo([FICHA_FALSA] * ESCENAS)
+        escritor = DobleDeModelo([PROSA_FALSA] * ESCENAS)
+        extractor = DobleDeModelo([EXTRACCION_FALSA] * ESCENAS)
         ordenador = DobleDeOrdenador()
 
-    carpeta = Path(tempfile.mkdtemp(prefix="corrida-"))
-    base = carpeta / "obra.db"
+    # Con `--base` la base sobrevive a la corrida y se puede abrir con sqlite3
+    # para mirar `hecho_canon`, `version_texto` y `ejecucion`. Sin ella va a un
+    # temporal que se borra: es una demostracion, no un almacen.
+    efimera = destino is None
+    carpeta = Path(tempfile.mkdtemp(prefix="corrida-")) if efimera else destino.parent
+    base = carpeta / "obra.db" if efimera else destino
+    base.parent.mkdir(parents=True, exist_ok=True)
+    if base.exists():
+        base.unlink()
     preparar_base(base)
 
-    trabajos = RepositorioDeTrabajos(base)
-    escenas = RepositorioDeEscenas(base)
-    canon = RepositorioDeCanon(base)
-    ejecuciones = RepositorioDeEjecuciones(base)
-
-    from app.commons.domain import NivelDeCalor, ParametrosDeDiscurso
-
-    parametros = ParametrosDeDiscurso(
-        persona="tercera",
-        tiempo_verbal="pasado",
-        esquema_de_pov="dual",
-        nivel_de_calor=NivelDeCalor.SENSUAL,
+    dep = Dependencias(
+        reloj=reloj,
+        contador=ContadorBPE(),
+        cargador=cargador,
+        turno=TurnoDeModelo(simultaneas=1),
+        cerrojo=CerrojoPorObra(),
+        ordenador=ordenador,
+        planificador=planificador,
+        escritor=escritor,
+        extractor=extractor,
+        trabajos=RepositorioDeTrabajos(base),
+        escenas=RepositorioDeEscenas(base),
+        canon=RepositorioDeCanon(base),
+        ejecuciones=RepositorioDeEjecuciones(base),
+        obras=RepositorioDeObras(base),
+        almacenes=AlmacenesDeLaObra(base),
     )
 
     print(
-        f"{'REAL' if real else 'SECO'} · {ESCENAS} escenas · base {base}\n",
-        flush=True,
+        f"{'REAL' if real else 'SECO'} · {ESCENAS} escenas · base {base}\n", flush=True
     )
-    anterior: str | None = None
     coste_total = 0.0
 
     for numero in range(1, ESCENAS + 1):
         escena_id = f"es{numero}"
-        with cerrojo.en_uso("o1", espera_s=5) as tomado:
-            if not tomado:
-                raise SystemExit("no se pudo tomar el cerrojo de la obra")
-            trabajo = trabajos.crear("o1", escena_id, "escribir_escena", reloj)
-            run_id = trabajo.run_id
-
-            # PLANIFICANDO. El prompt de rol **no basta**: hay que adjuntar
-            # el material. El doble ignora el prompt, asi que la corrida en seco
-            # no podia detectar esto; el modelo real contesta "espero el outline"
-            # y el paso falla con una salida que no valida.
-            p_plan = cargador.cargar("planificador")
-            material = "\n".join(
-                [
-                    "## Material",
-                    "",
-                    "Obra: Ceniza y neon, romantasy. Tercera persona, pasado,",
-                    "nivel de calor sensual.",
-                    "Personajes: pj-ada (protagonista), pj-noe (coprotagonista).",
-                    "Lugares: lug-taller, lug-puerto.",
-                    f"Escena {numero} de {ESCENAS} del capitulo 1, La tregua.",
-                    "Escena anterior: " + (anterior[:300] if anterior else "ninguna"),
-                    "",
-                    "Produce ahora la ficha de esta escena.",
-                ]
-            )
-            encargo_plan = p_plan.texto + "\n\n" + material
-            with turno.en_uso(espera_s=300) as hay_turno:
-                if not hay_turno:
-                    raise SystemExit("sin turno")
-                # `partial` y no `lambda`: un lambda dentro del bucle captura
-                # las variables tarde, y si algun dia la llamada se aplazara
-                # -una cola, un hilo- se ejecutaria con los valores de la ultima
-                # escena. Aqui se llama en el acto y daria igual; la costumbre
-                # de escribirlo bien es lo que evita el dia que no de igual.
-                ficha = con_reintentos(
-                    functools.partial(
-                        planificar_escena,
-                        escena_id,
-                        parametros,
-                        cliente_planificador,
-                        encargo_plan,
-                        reloj,
-                    )
-                )
-            trabajos.transitar(trabajo.trabajo_id, Estado.ENSAMBLANDO, reloj)
-
-            # ENSAMBLANDO
-            p_escritor = cargador.cargar("escritor")
-            instruccion = p_escritor.texto.format(
-                persona=ficha.persona,
-                tiempo_verbal=ficha.tiempo_verbal,
-                pov=ficha.pov,
-                nivel_de_calor=ficha.nivel_de_calor.value,
-                extension_objetivo=ficha.extension_objetivo,
-            )
-            paquete = ensamblar(_capas(escena_id, instruccion, anterior), contador)
-            trabajos.transitar(trabajo.trabajo_id, Estado.ESCRIBIENDO, reloj)
-
-            # ESCRIBIENDO
-            with turno.en_uso(espera_s=300) as hay_turno:
-                if not hay_turno:
-                    raise SystemExit("sin turno")
-                respuesta = con_reintentos(
-                    functools.partial(cliente_escritor.generar, paquete.texto)
-                )
-            prosa = respuesta.texto
-            version = escenas.guardar_version(escena_id, prosa, run_id, reloj)
-            coste = float(respuesta.parametros.get("coste_usd") or 0)
-            coste_total += coste
-            ejecuciones.registrar(
-                RegistroDeEjecucion(
-                    run_id=run_id,
-                    escena_id=escena_id,
-                    prompt_id=p_escritor.prompt_id,
-                    prompt_version=p_escritor.version,
-                    prompt_hash=p_escritor.hash,
-                    version_obra_id="vo1",
-                    ids_recuperados=["frag-memoria"],
-                    modelo=respuesta.modelo or "doble",
-                    parametros={"tokens_salida": respuesta.tokens_salida},
-                    semilla=None,
-                    tokens_por_capa=paquete.desglose.por_capa,
-                    coste=coste,
-                    veredicto=None,
-                ),
-                reloj,
-            )
-            trabajos.transitar(trabajo.trabajo_id, Estado.VALIDANDO, reloj)
-
-            # VALIDANDO (G1a, mecanica)
-            defectos = [
-                *validar_giro_de_valor(
-                    ficha.valor_entrada,
-                    ficha.valor_salida,
-                    prosa,
-                    version.version_texto_id,
-                ),
-                *validar_nivel_de_calor(
-                    prosa, ficha.nivel_de_calor.value, version.version_texto_id
-                ),
-                *validar_discurso(
-                    prosa, ficha.persona, ficha.tiempo_verbal, version.version_texto_id
-                ),
-            ]
-            veredicto = pasar_g1a(defectos, prosa, set())
-            for defecto in [
-                *veredicto.bloquean,
-                *veredicto.no_bloquean,
-                *veredicto.mal_formados,
-            ]:
-                metricas.anotar_defecto(defecto.codigo.value, defecto.bien_formado)
-
-            if not veredicto.aprobada:
-                print(
-                    f"  es{numero}: G1a rechaza -> "
-                    f"{[d.codigo.value for d in veredicto.bloquean]}"
-                )
-                trabajos.transitar(
-                    trabajo.trabajo_id,
-                    Estado.REPARANDO,
-                    reloj,
-                    causa_fallo="DefectoBloqueante",
-                    incrementa_intento=True,
-                )
-                trabajos.transitar(trabajo.trabajo_id, Estado.ESCALADA, reloj)
-                metricas.escalados += 1
-                continue
-
-            trabajos.transitar(trabajo.trabajo_id, Estado.EXTRAYENDO, reloj)
-
-            # EXTRAYENDO
-            with turno.en_uso(espera_s=300) as hay_turno:
-                if not hay_turno:
-                    raise SystemExit("sin turno")
-                p_extractor = cargador.cargar("extractor")
-                encargo_extractor = (
-                    p_extractor.texto + "\n\n## Escena aprobada\n\n" + prosa
-                )
-                con_reintentos(
-                    functools.partial(
-                        extraer_de_escena,
-                        serie_id="s1",
-                        escena_id=escena_id,
-                        version_texto_id=version.version_texto_id,
-                        cliente=cliente_extractor,
-                        prompt=encargo_extractor,
-                        repositorio=canon,
-                        reloj=reloj,
-                    )
-                )
-            canon.crear_snapshot_si_toca(escena_id, 5, reloj)
-            trabajos.transitar(trabajo.trabajo_id, Estado.INTEGRADA, reloj)
-
-        metricas.anotar_escena(escena_id, coste, paquete.desglose.por_capa)
-        anterior = prosa
-        _ = ordenador  # se usará cuando la recuperación lea fragmentos reales
+        resultado = ciclo_de_escena(
+            escena_id=escena_id, obra_id="o1", serie_id="s1", dep=dep
+        )
+        coste_total += resultado.coste
+        metricas.anotar_escena(escena_id, resultado.coste, resultado.tokens_por_capa)
+        if resultado.estado != "INTEGRADA":
+            metricas.escalados += 1
+            print(f"  {escena_id}: {resultado.estado} -> {resultado.defectos}")
+            continue
         print(
             traza(
                 "escena_integrada",
                 escena_id=escena_id,
-                tokens=paquete.desglose.total,
-                coste_usd=round(coste, 4),
+                tokens=sum(resultado.tokens_por_capa.values()),
+                coste_usd=round(resultado.coste, 4),
             ),
             flush=True,
         )
+
+    trabajos = dep.trabajos
 
     # --- resultado -----------------------------------------------------------
     manuscrito = RepositorioDeManuscrito(base).ensamblar("o1")
@@ -417,7 +296,10 @@ def correr(real: bool) -> int:
     salida = RAIZ / ("manuscrito-real.txt" if real else "manuscrito-seco.txt")
     salida.write_text(manuscrito.texto, encoding="utf-8")
     print(f"manuscrito escrito en {salida.name}")
-    shutil.rmtree(carpeta, ignore_errors=True)
+    if efimera:
+        shutil.rmtree(carpeta, ignore_errors=True)
+    else:
+        print(f"base conservada en {base} · abrela con: sqlite3 {base}")
 
     return 0 if integradas == ESCENAS else 1
 
@@ -427,5 +309,11 @@ if __name__ == "__main__":
     grupo = parser.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--seco", action="store_true")
     grupo.add_argument("--real", action="store_true")
+    parser.add_argument(
+        "--base",
+        type=Path,
+        default=None,
+        help="donde conservar la base; por defecto, un temporal que se borra",
+    )
     argumentos = parser.parse_args()
-    raise SystemExit(correr(real=argumentos.real))
+    raise SystemExit(correr(real=argumentos.real, destino=argumentos.base))

@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict
 from app.commons.errors import ContextBudgetExceeded
 from app.commons.llm import ContadorDeTokens
 from app.features.contexto.capas import (
+    ETIQUETA_RECUPERADO,
     LIMITE_DURO,
     ORIGEN,
     PROTEGIDAS,
@@ -88,6 +89,11 @@ class PaqueteDeContexto(BaseModel):
     texto: str
     desglose: DesgloseDeTokens
     descartado_por_capa: dict[str, list[str]]
+    # Los fragmentos que **sobrevivieron al recorte**, no los que se pidieron.
+    # Es lo que `ejecucion` persiste (RI-14) y lo unico que permite reconstruir
+    # el paquete despues (CA-10): guardar los candidatos diria que se envio algo
+    # que quiza se cayo al ajustar el presupuesto.
+    ids_recuperados: list[str] = []
 
     def tokens_de(self, capa: Capa) -> int:
         return self.desglose.por_capa.get(capa.value, 0)
@@ -164,4 +170,12 @@ def ensamblar(
             for capa, contenido in capas.items()
             if contenido.descartadas
         },
+        ids_recuperados=[
+            pieza.etiqueta.removeprefix(ETIQUETA_RECUPERADO)
+            for pieza in capas.get(
+                Capa.MEMORIA_RECUPERADA,
+                CapaEnsamblada(capa=Capa.MEMORIA_RECUPERADA, piezas=[]),
+            ).piezas
+            if pieza.etiqueta.startswith(ETIQUETA_RECUPERADO)
+        ],
     )
