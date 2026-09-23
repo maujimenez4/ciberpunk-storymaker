@@ -14,6 +14,7 @@ en T equivocado, y el validador de conocimiento acusaria a un personaje de saber
 algo que ya habia vivido.
 """
 
+import json
 import sqlite3
 import uuid
 from pathlib import Path
@@ -22,6 +23,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.commons.domain import Reloj
 from app.commons.errors import RecursoNoEncontrado
+from app.features.escena.schemas import FichaPersistida
 
 
 class VersionDeTexto(BaseModel):
@@ -169,4 +171,43 @@ class RepositorioDeEscenas:
         return self._escenas(
             f"{self._COLUMNAS} WHERE capitulo_id = ? ORDER BY tiempo_historia",
             (capitulo_id,),
+        )
+
+    def ficha_de(self, escena_id: str) -> FichaPersistida:
+        """Los campos de ficha de la fila, con las listas ya deserializadas.
+
+        `presentes` y `mencionados` se guardan como JSON y pueden ser `NULL`
+        cuando la escena viene del outline y aun no se ha planificado. Se
+        devuelven como lista vacia: un `None` aqui obligaria a un `if` en cada
+        uso y acabaria colandose uno sin el.
+        """
+        with self._conexion() as conexion:
+            fila = conexion.execute(
+                "SELECT escena_id, capitulo_id, orden_discurso, tiempo_historia,"
+                " pov, lugar, presentes, mencionados, objetivo_del_pov, obstaculo,"
+                " resultado, valor_entrada, valor_salida, extension_objetivo,"
+                " densidad_de_dialogo_objetivo, distancia_psiquica, beat_de_genero"
+                " FROM escena WHERE escena_id = ?",
+                (escena_id,),
+            ).fetchone()
+        if fila is None:
+            raise RecursoNoEncontrado("Escena", escena_id)
+        return FichaPersistida(
+            escena_id=fila[0],
+            capitulo_id=fila[1],
+            orden_discurso=fila[2],
+            tiempo_historia=fila[3],
+            pov=fila[4],
+            lugar=fila[5],
+            presentes=json.loads(fila[6]) if fila[6] else [],
+            mencionados=json.loads(fila[7]) if fila[7] else [],
+            objetivo_del_pov=fila[8],
+            obstaculo=fila[9],
+            resultado=fila[10],
+            valor_entrada=fila[11],
+            valor_salida=fila[12],
+            extension_objetivo=fila[13],
+            densidad_de_dialogo_objetivo=fila[14],
+            distancia_psiquica=fila[15],
+            beat_de_genero=fila[16],
         )

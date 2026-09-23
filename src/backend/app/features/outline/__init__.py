@@ -12,6 +12,7 @@ from app.features.outline.schemas import (
     Outline,
     OutlineInvalido,
     ParteDeOutline,
+    Ubicacion,
 )
 from app.features.outline.service import generar_outline
 
@@ -24,5 +25,6 @@ __all__ = [
     "OutlineInvalido",
     "ParteDeOutline",
     "RepositorioDeOutline",
+    "Ubicacion",
     "generar_outline",
 ]

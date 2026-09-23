@@ -80,3 +80,33 @@ class FichaDeEscena(BaseModel):
     persona: str
     tiempo_verbal: str
     nivel_de_calor: NivelDeCalor
+
+
+class FichaPersistida(BaseModel):
+    """La ficha tal como quedo en la fila de `escena` (§4.8).
+
+    `EscenaPersistida` expone lo que hace falta para ordenar y versionar; esto
+    expone lo que hace falta para **montar el paquete**: la capa de instruccion
+    es esta ficha, y las listas de presentes y mencionados son lo que separa,
+    en la capa de canon, a quien esta en la escena de quien solo se nombra.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    escena_id: str
+    capitulo_id: str
+    orden_discurso: int
+    tiempo_historia: str | None
+    pov: str
+    lugar: str | None
+    presentes: list[str]
+    mencionados: list[str]
+    objetivo_del_pov: str | None
+    obstaculo: str | None
+    resultado: str | None
+    valor_entrada: str | None
+    valor_salida: str | None
+    extension_objetivo: int | None
+    densidad_de_dialogo_objetivo: float | None
+    distancia_psiquica: str | None
+    beat_de_genero: str | None

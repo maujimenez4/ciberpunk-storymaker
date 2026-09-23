@@ -11,6 +11,7 @@ from app.features.escena.repository import (
 from app.features.escena.schemas import (
     FichaDeEscena,
     FichaInvalida,
+    FichaPersistida,
     PropuestaDeFicha,
 )
 from app.features.escena.service import planificar_escena
@@ -18,6 +19,7 @@ from app.features.escena.service import planificar_escena
 __all__ = [
     "EscenaPersistida",
     "FichaDeEscena",
+    "FichaPersistida",
     "FichaInvalida",
     "PropuestaDeFicha",
     "RepositorioDeEscenas",

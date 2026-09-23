@@ -140,3 +140,23 @@ class Outline(BaseModel):
                 )
             anterior = posicion
         return self
+
+
+class Ubicacion(BaseModel):
+    """Donde vive una escena dentro de la obra (§4.8).
+
+    El Ensamblador recibe solo `escena_id` y necesita llegar hasta la obra para
+    montar la capa constitucional. Este es ese camino de vuelta, y vive aqui
+    porque `parte` y `capitulo` los escribe esta feature.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    escena_id: str
+    obra_id: str
+    parte_id: str
+    capitulo_id: str
+    capitulo_numero: int
+    capitulo_titulo: str | None
+    funcion_estructural: str
+    orden_discurso: int

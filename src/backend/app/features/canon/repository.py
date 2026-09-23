@@ -374,6 +374,33 @@ class RepositorioDeCanon:
             ]
         return [self.leer_hecho(i) for i in ids]
 
+    def hechos_hasta(self, orden_discurso: int) -> list[HechoCanon]:
+        """Los hechos **vigentes** establecidos antes de esa escena (§4.8).
+
+        Estrictamente anteriores, igual que `eventos_hasta`: el canon de una
+        escena es el de justo antes de escribirla.
+
+        Y solo los vigentes. Corregir no edita (RF-CAN-07): registra un hecho
+        nuevo que cita al viejo por `sustituye_a`. Devolver el sustituido
+        meteria en el paquete la afirmacion que el canon ya desmintio, y el
+        Escritor la trataria como verdad porque no tiene forma de saber que no
+        lo es: solo ve el paquete.
+        """
+        with self._conexion() as conexion:
+            ids = [
+                f[0]
+                for f in conexion.execute(
+                    "SELECT h.hc_id FROM hecho_canon h"
+                    " JOIN escena s ON s.escena_id = h.escena_de_origen"
+                    " WHERE s.orden_discurso < ?"
+                    " AND h.hc_id NOT IN (SELECT sustituye_a FROM hecho_canon"
+                    " WHERE sustituye_a IS NOT NULL)"
+                    " ORDER BY s.orden_discurso, h.rowid",
+                    (orden_discurso,),
+                )
+            ]
+        return [self.leer_hecho(i) for i in ids]
+
     def eventos_de_escena(self, escena_id: str) -> list[str]:
         with self._conexion() as conexion:
             return [

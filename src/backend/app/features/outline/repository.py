@@ -4,7 +4,8 @@ import sqlite3
 import uuid
 from pathlib import Path
 
-from app.features.outline.schemas import Outline
+from app.commons.errors import RecursoNoEncontrado
+from app.features.outline.schemas import Outline, Ubicacion
 
 
 class RepositorioDeOutline:
@@ -74,3 +75,33 @@ class RepositorioDeOutline:
                     (obra_id,),
                 )
             ]
+
+    def ubicacion_de(self, escena_id: str) -> Ubicacion:
+        """De la escena a la obra, subiendo por capitulo y parte.
+
+        Falla si no la encuentra en vez de devolver campos vacios: una
+        ubicacion a medias produce una capa constitucional en blanco, y eso se
+        detecta mucho despues, en RF-CTX-14, y en otro sitio.
+        """
+        with self._conexion() as conexion:
+            fila = conexion.execute(
+                "SELECT e.escena_id, p.obra_id, p.parte_id, c.capitulo_id,"
+                " c.numero, c.titulo, p.funcion_estructural, e.orden_discurso"
+                " FROM escena e"
+                " JOIN capitulo c ON c.capitulo_id = e.capitulo_id"
+                " JOIN parte p ON p.parte_id = c.parte_id"
+                " WHERE e.escena_id = ?",
+                (escena_id,),
+            ).fetchone()
+        if fila is None:
+            raise RecursoNoEncontrado("Escena", escena_id)
+        return Ubicacion(
+            escena_id=fila[0],
+            obra_id=fila[1],
+            parte_id=fila[2],
+            capitulo_id=fila[3],
+            capitulo_numero=fila[4],
+            capitulo_titulo=fila[5],
+            funcion_estructural=fila[6],
+            orden_discurso=fila[7],
+        )
