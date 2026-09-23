@@ -282,6 +282,31 @@ Total 100.000. El desglose se persiste en `ejecucion` (P-48, P-94).
 
 ## Riesgos
 
+### Medido en la primera corrida real (2026-09-22)
+
+D-07 prometía confirmar o sustituir los objetivos de rendimiento midiendo. Lo
+medido, con Haiku y diez escenas:
+
+| Qué | Objetivo | Medido |
+| --- | --- | --- |
+| Coste por escena | sin objetivo | 0,052 USD |
+| Tokens del paquete | ≤ 90.000 + reserva | 537 a 2.781 |
+| Escalados por cien escenas | sin umbral | 0 |
+| Defectos por código | — | ninguno (solo 3 de 11 validadores en el bucle) |
+
+**El reparto de §2.1 no se pone a prueba todavía.** La continuidad local se lleva
+1.504 tokens de media y el resto de capas suman menos de 130: el canon aporta 36.
+Es correcto por diseño —§4.2 pide la escena N-1 íntegra—, pero significa que los
+topes por capa no han tenido ocasión de recortar nada. Se sabrá cuando los
+almacenes estén cableados de verdad y el canon traiga contenido.
+
+**El contador local frente al del proveedor.** El riesgo que este plan marcaba
+como el peor sigue sin poder descartarse: los paquetes de esta corrida son tan
+pequeños que ninguna diferencia de tokenización se notaría. Hace falta una escena
+cerca del techo para saberlo.
+
+---
+
 **El contador local puede no coincidir con el del proveedor.** D-07 obliga a un contador local para cumplir RNF-REN-01. Si tokeniza distinto, RNF-TOK-01 se incumple *en silencio*: el paquete cabe según nosotros y no según quien factura. Mitigación en P-08: margen explícito y contraste periódico contra el recuento que devuelve el proveedor. **Es el riesgo con peor relación entre probabilidad y visibilidad de todo el plan.**
 
 **VOZ-03 puede dar falsos positivos.** Detectar persona y tiempo verbal en castellano falla con el diálogo: un personaje habla en primera dentro de una narración en tercera. P-68 mide solo sobre narración, y el diálogo es un test propio.
@@ -308,6 +333,11 @@ Se anotan **antes** de seguir, no al final.
 
 | Fecha | Paso | Qué cambió y por qué |
 | --- | --- | --- |
+| 2026-09-22 | P-99 | **La corrida en seco no cubre lo que se creía.** Valida que las siete features encajan y que la máquina llega a `INTEGRADA` diez veces, pero `DobleDeModelo` **ignora el prompt** y devuelve texto fijo: ni el adaptador del proveedor ni el contrato de los prompts pasan por ella. Los cuatro fallos que mataron la primera corrida real —el `.cmd` de npm, el prompt como argumento, las vallas de markdown y los nombres de campo inventados— eran todos invisibles en seco. Un doble que ignora su entrada no puede validar lo que se le pide al modelo. |
+| 2026-09-22 | P-88 | **RNF-FIA-02 estaba implementado y era inalcanzable.** El cliente lanzaba `FalloDeProveedor` directamente y `con_reintentos` trata esa excepción como ya agotada, así que un 5xx transitorio mataba la corrida en el primer intento. La primera corrida real integró 5 de 10 escenas por eso. Entra `ErrorTransitorioDeProveedor`, que sí se reintenta; `FalloDeProveedor` queda para cuando los tres intentos se agotan. El test de P-88 pasaba porque probaba la función aislada, no su conexión. |
+| 2026-09-22 | P-43 a P-59 | **Añadido `extraer_json`.** Los prompts piden «solo JSON» y el modelo lo envuelve en vallas de markdown casi siempre. Recorta el envoltorio y **no repara**: si lo de dentro está roto, sigue siendo fallo del paso (RF-ORQ-15). Un extractor que arreglara JSON medio escrito convertiría una salida rota en una silenciosamente incompleta. |
+| 2026-09-22 | P-21 | **Los prompts describían los campos en prosa y el modelo elegía otros nombres**: `que_ocurre` por `descripcion`, `distancia_psiquica` como número. Ahora llevan la plantilla exacta con tipos. Es la misma lección tres veces: un contrato de salida se declara, no se narra. |
+| 2026-09-22 | P-99 | **Resultado de CA-1:** 10/10 escenas `INTEGRADA`, 10.236 palabras, 0,5233 USD con Haiku. Cero defectos, y eso **no** significa que el texto sea impecable: en esta corrida corren tres de los once validadores y el Continuista no está en el bucle. Cero defectos significa que nadie miró. |
 | 2026-09-22 | P-56 | **Se retira.** Era `prop_mismo_estado_y_misma_semilla_dan_el_mismo_paquete`, es decir RF-CTX-01, que D-02 retiró al sustituir el índice vectorial por una ordenación semántica con varianza. La fase 5 pasa de cuatro propiedades mínimas a tres: el desglose suma (P-48), recortar una capa no altera las vecinas (P-49) y las capas protegidas nunca encogen (P-51). La cuarta —o cabe o lanza (P-52)— sigue. El plan pasa de 104 pasos a 103. |
 | 2026-09-22 | P-43 a P-59 | `hypothesis` entra como dependencia de desarrollo para los tests de propiedades. `verification.md` §2 los exige por nombre y la spec marca cuatro requisitos como «**T**, propiedad»; escribirlos a mano daría menos cobertura y ningún contraejemplo mínimo. |
 | 2026-09-22 | P-06 | **Se parte en tres commits, dentro de una sola revisión de Alembic.** Dieciséis tablas no caben en un cambio verificable de una pieza: si el test falla, el fallo no se atribuye. Se mantiene `0001_inicial` como única revisión —lo que el plan exige— y lo que se parte es la entrega: (a) obra y manuscrito, (b) biblia y mundo, (c) canon, (d) orquestación y trazas. Cada commit añade sus tablas a la misma revisión con su test. **Ajustado el mismo día de tres a cuatro entregas:** al releer RD-01 aparecen `Personaje`, `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto` y `ReglaDeMundo`, que el corte de tres metía todas en (b). Son 21 tablas, no 16. |

@@ -8,3 +8,8 @@ __pycache__/
 *.db-wal
 *.db-shm
 .env
+
+# CLAUDE.md §15: ningun fragmento de manuscrito ni prompt de produccion queda
+# en el repositorio. La prosa generada vive en la maquina de quien la genera.
+manuscrito-*.txt
+corrida-*.log
