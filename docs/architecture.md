@@ -211,6 +211,41 @@ Cada agente recibe exactamente los almacenes que su rol necesita. Lo que no apar
 
 Los agentes tampoco leen ni escriben ficheros del repositorio: el paquete llega como datos y la salida vuelve como datos. Los prompts los carga el orquestador, no el agente.
 
+### 3.5.1 Ningún agente recibe una herramienta, y el validador visual tampoco es una excepción
+
+**Los diez agentes narrativos no reciben ninguna herramienta.** Ni fichero, ni red, ni proceso. Es la
+propiedad que permite decir que el radio de impacto está **eliminado** y no contenido: no hay
+*sandbox* porque no hay nada que aislar (`verification.md` §3).
+
+El encargo §5a pide un validador que **abra la novela en un navegador** y compruebe que el índice, la
+ficha y la portada renderizan. Parece que eso concede una herramienta a un agente. **No lo hace**, y
+la distinción importa lo bastante como para escribirla:
+
+| | |
+| --- | --- |
+| Qué es | **Código que conduce un navegador**, como el Ensamblador es código que ensambla (§3.1) |
+| Qué **no** es | Un agente. No recibe prompt, no llama al modelo, no decide nada |
+| Cuándo corre | En la puerta **G4**, sobre la lectura ya publicada |
+| Qué toca | La lectura, por HTTP. Nada más: ni ficheros, ni base de datos, ni manuscrito |
+| Qué produce | Defectos `REN-01` y su *score* en Langfuse, como cualquier otro validador |
+
+**Por qué no basta con decir «es un validador» y seguir.** Un navegador es una herramienta con acceso
+de red, y `verification.md` §5 advierte de que las filas «Aplicado por diseño» **dejan de ser ciertas
+el día que un agente recibe acceso de fichero o de red**, y hay que reabrirlas *antes* de conceder el
+permiso. Esta sección es esa reapertura, y su conclusión es que **no hay permiso que conceder**: el
+navegador lo conduce código determinista, no un agente con criterio propio. La frase de arriba sigue
+siendo cierta palabra por palabra.
+
+**Y hay un segundo navegador, que es de otro sujeto.** El encargo pide además un servidor MCP de
+inspección en `.claude/mcp.json` «de forma que **Claude Code** pueda abrir la lectura y verificar el
+resultado visualmente». Ese es el **agente de código**, no un agente narrativo, y es el segundo sujeto
+de `verification.md` §1 — que ya vive sin *sandbox*, leyendo y escribiendo ficheros. Añadirle un
+navegador **no invalida ninguna fila**: la extiende, y lo que hay que decir es que ahora también tiene
+red.
+
+Los dos navegadores son cosas distintas y conviene no fundirlos: uno valida en producción y su
+resultado bloquea; el otro lo usa quien desarrolla, y su resultado es una observación.
+
 ### 3.6 Fallos y qué hace el orquestador
 
 | Causa | Qué es | Acción |
@@ -794,7 +829,25 @@ sequenceDiagram
 | G3 · Manuscrito | Al cerrar borrador | Beats, cabos sueltos, contrato con el lector, **cobertura de los elementos obligatorios** | Curva de temperatura, **naturalidad de la personalización** | Vuelta al outline |
 | **G4 · Publicación** | Antes de crear una `VersionPublicada` | **Lean sobre la cronología**, renderizado de la lectura | — | **No se publica.** El fallo vuelve al editor como *feedback* |
 
-**Por qué G1 está partida.** Lo que se puede **contar** y lo que hay que **juzgar** no se verifican igual ni están disponibles a la vez (`domain-knowledge.md` §11). G1a la resuelve código **en el contraste** —contradicciones de canon, tiempos de viaje, `sabe_desde`, edad y nivel de calor se comprueban contra el grafo y contra el esquema, no a ojo— y está disponible desde el primer día. Quién extrae las afirmaciones que se contrastan, y qué se comprueba antes de que un defecto llegue a la puerta, en el párrafo siguiente. G1b necesita al Crítico con una rúbrica calibrada contra escenas etiquetadas por el editor, que es trabajo de la fase 4 (§13). **Hasta que exista esa calibración, G1b no bloquea**: se registra el diagnóstico y se deja pasar. Fingir que la función dramática se comprueba mecánicamente sería peor que declararla pendiente.
+**Por qué G1 está partida.** Lo que se puede **contar** y lo que hay que **juzgar** no se verifican igual ni están disponibles a la vez (`domain-knowledge.md` §11). G1a la resuelve código **en el contraste** —contradicciones de canon, tiempos de viaje, `sabe_desde`, edad y nivel de calor se comprueban contra el grafo y contra el esquema, no a ojo— y está disponible desde el primer día. Quién extrae las afirmaciones que se contrastan, y qué se comprueba antes de que un defecto llegue a la puerta, en el párrafo siguiente. G1b necesita al Crítico con una rúbrica calibrada contra lecturas humanas. **G1b no bloquea**: se registra el diagnóstico y se deja pasar. Fingir que la función dramática se comprueba mecánicamente sería peor que declararla pendiente.
+
+**Y esa condición lleva umbral, a propósito.** Hasta la v1.3 esta sección decía «hasta que exista
+esa calibración», y eso la habría disparado sola: `verification.md` §3 convierte en obligatoria una
+revisión humana de **una** novela completa con la misma rúbrica, así que la calibración va a existir
+— y con ella G1b habría pasado a bloquear sin que nadie lo decidiera.
+
+Una lectura humana mide **la distancia entre dos jueces**; no dice que el automático acierte. Para
+que un juicio de modelo detenga una publicación hace falta saber que coincide con el humano **de
+forma repetida**, y eso no se obtiene de una novela.
+
+**La condición de reapertura, escrita para que no se dispare sola:** G1b pasará a bloquear cuando la
+correlación entre el Crítico y la revisión humana se haya medido sobre un conjunto etiquetado y
+alguien decida, **con ese número delante**, que basta. No es una fecha ni un hito: es un dato y una
+firma. Decisión de `maujimenez4`, 2026-09-23.
+
+*Se escribe así porque la redacción anterior es justo el modo de fallo que este proyecto ha
+encontrado dos veces hoy: una invariante sostenida por una ausencia, con una condición de
+reapertura que caduca sin que nadie mire. La condición que se escribe es la que uno imagina.*
 
 **Comprobación de forma antes de G1a.** El Continuista es un modelo, así que lo que afirma es una
 señal con varianza: lo que hace mecánica a G1a es el **contraste**, no la extracción
