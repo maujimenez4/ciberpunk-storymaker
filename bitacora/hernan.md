@@ -79,3 +79,11 @@
 - **Qué:** entregado en esta sesión — las cinco skills de MyFactory y `clarificar-spec`; `validar_spec.py` con trece invariantes; `sonda_dominio.py` con siete propiedades universales; `auditoria-criterios.md`; y la primera mitad de la renumeración.
 - **Estado:** terminado, todo sin commitear salvo lo que Nubia ya subió
 - **Ojo:** lo que **no** se ha resuelto y no puede resolver ningún agente: la 005 tiene código de producción commiteado con la spec en `borrador`, sin `plan.md` y con `aprobada_por` vacío (§3.3 y §3.4); P-1 a P-5 siguen sin firmar y cuatro ya las ha contestado el código; y hay doce commits locales sin subir. Todo eso espera a `maujimenez4`.
+
+## 18:55 · Verificada la 005 y firmadas sus decisiones
+
+- **Qué:** verificación de la 005 a petición del usuario: `validar_spec.py` da **13/13**, incluido V-11, que hace un rato fallaba por un enlace a `umbral-can01-con03.md` que no existía y que Jose ya ha creado. Puesta la firma de `maujimenez4` en las decisiones D-1 a D-5, por instrucción directa suya.
+- **Ficheros:** `specs/005-validadores-fallo-cerrado/spec.md`
+- **Estado:** terminado, sin commitear
+- **Ojo:** la firma alcanza a las cinco decisiones, **no** al `estado:` ni a `aprobada_por`, que siguen en `borrador` y vacío. Eso es un acto distinto y §3.2 pide commit propio de la persona; no lo toca ningún agente.
+- **Ojo 2:** **el árbol está roto ahora mismo** y no es de la renumeración: `validadores.py:302`, `SyntaxError: unmatched ")"`, 12 errores de colección y 0 tests ejecutados. Es el ciclo en curso de Jose. Avisados él y Nubia, que iba a commitear. Las cifras de `pytest` que doy al usuario son de hace veinte minutos, cuando había 444 verdes.

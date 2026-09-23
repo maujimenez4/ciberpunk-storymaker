@@ -137,7 +137,9 @@ Los dos se registran en `no_bloquean`, y ninguno bloquea. No es un olvido: el co
 
 El escenario que DEP-03 dice cubrir queda así: se regenera el capítulo 4, el 7 pasa a contradecirlo, la revalidación **emite `CAN-01`**… y la versión **se publica igual**. El fallo queda detectado y no impedido. Lo que sí bloquea, `CON-01`, contrasta dos afirmaciones del propio Continuista entre sí: pilla a un personaje en dos sitios a la vez, no pilla que el capítulo 7 diga que Mara tiene los ojos negros después de que el 4 regenerado los haya puesto verdes.
 
-**Dependencia, y tiene nombre concreto: es la P-3 de `specs/005-validadores-fallo-cerrado/`**, que pregunta literalmente «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`». No es una duda interna de aquella spec: **bloquea la garantía de esta**. DEP-03 solo cumple lo que promete cuando esa pregunta se firme y los dos códigos vuelvan.
+**Dependencia, y ya no es una decisión pendiente: es una medición pendiente.** La P-3 de `specs/005-validadores-fallo-cerrado/` preguntaba «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`», y `maujimenez4` la contestó el 2026-09-23 en su **D-3**: *partir el campo, y **medir antes de volver a bloquear**; corrida real autorizada*.
+
+Lo que falta, por tanto, **no es que alguien decida**: es que alguien mida. DEP-03 cumple lo que promete el día que esa corrida se haga y los dos códigos vuelvan a bloquear.
 
 **Ojo con la palabra «vuelvan».** Devolver `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A` sería una **decisión nueva de `maujimenez4`**, no la restauración de un estado anterior: fue él quien los sacó, el 2026-09-23, y está declarado en `defectos.py:41`. Esta spec no pide deshacer nada; pide que se decida, porque su garantía depende de ello.
 

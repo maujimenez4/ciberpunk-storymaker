@@ -125,3 +125,10 @@
 - **Ficheros:** `specs/005-validadores-fallo-cerrado/spec.md` (Cierre ampliado)
 - **Estado:** terminado
 - **Ojo:** el segundo `CA-14` de la 001 (`spec.md:362`) dice que un defecto con cita inventada «no bloquea, no gasta intento y queda contado como mal formado». **Mi corrida lo falsifica:** con cita inventada la corrida muere, 0 de 10. Si la 001 va a marcarse `implementada`, eso hay que declararlo. Y esa spec tiene **dos criterios con el número `CA-14`**, así que ni se puede citar sin ambigüedad.
+
+## 19:45 · Canal nuevo hacia el usuario, y dos avisos que llegaron caducados
+
+- **Qué:** Ezequiel comunica que lo que vaya para `maujimenez4` pasa por Jose, que hace de embudo. Lo acato para lo que yo inicie. **Salvedad:** mi usuario me escribe directamente en mi sesión, así que lo que me pregunte se lo contesto ahí; el embudo no puede dejar sin respuesta lo que él me pregunta a mí.
+- **Estado:** terminado
+- **Ojo:** dos de sus tres avisos venían de lecturas anteriores a mis arreglos. (1) `docs/verification.md:345` **ya no cita el número** de la spec: le quité el número entero, que es mejor que actualizarlo. (2) Me avisó de la renumeración y de las firmas, ambas cosas ya sabidas y hechas. Tercera vez hoy que circula información medida hace horas como si fuera estado actual — es el patrón que propuse llevar a `verification.md`, y sigue ocurriendo mientras lo propongo.
+- **Lo que sí aportó, y es lo importante:** su DEP-04 iba a reescribirse citando mi D-3 como «pendiente de medición». Le avisé de que no es pendiente, es **bloqueada por H-7**: cualquier corrida nueva muere igual. Su escenario —regenerar un capítulo rompe la continuidad de otro y se publica— sigue vivo y con el camino más largo de lo que parecía esta mañana.

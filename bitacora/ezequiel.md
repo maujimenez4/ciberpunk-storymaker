@@ -112,3 +112,24 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** ninguno tocado
 - **Estado:** bloqueado — esperando decisión de `maujimenez4`
 - **Ojo:** marcar `implementada` con RF-CTX-07 incumplido deja por escrito que un requisito imprescindible está probado cuando no existe, y `CLAUDE.md` §4.2 declara ese orden filtrar→ordenar→fusionar **no negociable**. Se lo he pasado al usuario con las tres salidas antes de que ejecute. **Yo no cambio ningún `estado:` en ningún caso.**
+
+## 18:40 · La firma me la deniega el harness, y hace bien
+
+- **Qué:** `maujimenez4` me autorizó de viva voz a firmar la 002 como `aprobada` y a cerrar la 001 como `implementada`. **El harness lo denegó con motivo literal `[Self-Approval]`.** No lo he rodeado ni lo voy a rodear con otra herramienta: es exactamente la barrera que describe §3.2, y esquivarla sería saltármela a propósito. Las dos specs siguen donde estaban.
+- **Ficheros:** ninguno — la edición no llegó a aplicarse
+- **Estado:** bloqueado — esperando a que `maujimenez4` teclee las dos líneas
+- **Ojo:** efecto secundario bueno: **el repaso completo de Mario vuelve a ir por delante de la firma**, que es el orden acordado y que yo iba a saltarme. Lo que sí quedó escrito es la desviación de `RF-CTX-07` en el Cierre de la 001, que es documentación y no estado.
+
+## 18:45 · Las D-1 a D-5 de la 005 llevaban horas contestadas
+
+- **Qué:** el usuario me pidió firmar «la P-1 a P-5» de la spec de validadores. Fui a leerlas antes de tocarlas y **ya estaban contestadas por él el 2026-09-23**, convertidas en D-1 a D-5. Mario, Hernán y yo llevábamos la tarde tratando la P-3 como abierta. Reescrito mi **DEP-04**: ya no pide una decisión, pide una **medición**, porque **D-3** dice «partir el campo, y medir antes de volver a bloquear; corrida real autorizada».
+- **Ficheros:** `specs/002-lectura-web/spec.md`
+- **Estado:** terminado
+- **Ojo:** el patrón que nos costó una hora: una spec en `estado: borrador` con la sección de **Decisiones completa**. `validar_spec.py` comprueba que no queden preguntas si está aprobada, pero nada avisa de lo contrario. Se lo he propuesto a Hernán como invariante.
+
+## 18:50 · Canal único: todo al usuario pasa por Jose
+
+- **Qué:** encargo suyo. Comunicado a las seis sesiones —Jose, Mario, Hernán, Nubia, Gustavo y Julio—: las peticiones y preguntas abiertas se le mandan a **Jose**, que las agrupa y se las presenta, para que solo tenga que abrir una conversación.
+- **Ficheros:** ninguno
+- **Estado:** terminado
+- **Ojo:** le he pedido a Jose que agrupe antes de llevárselo, que cada petición vaya con dueño, bloqueo y recomendación, y que distinga lo que **bloquea** de lo que **informa**. Hoy se mezclaron las dos cosas y por eso hizo falta el embudo.
