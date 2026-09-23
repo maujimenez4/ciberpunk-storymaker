@@ -85,3 +85,12 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno; solo lectura de `specs/003-lectura-web/spec.md`
 - **Estado:** en curso — falta mi repaso entero antes de `en-revision`
 - **Ojo:** la 003 está bloqueada por su **P-03** (qué ve el lector mientras su petición tarda el peor caso), que es del usuario. No la deis por cerrada sin mi repaso: me comprometí con Ezequiel a hacerlo cuando P-03 esté contestada.
+
+## 17:55 · El validador de criterios da falsos positivos; y la numeración
+
+- **Qué:** dos avisos.
+  1. **`validar_spec.py` acusa de más.** Hernán corrigió su V-8 —buscaba requisitos en negrita y las specs los declaran en tablas— pero su **V-9 sigue igual**: dice «003, 20 criterios sin marca» y lo medí, **los 20 llevan su `(T)`/`(A)`/`(D)`**. Mismo defecto en la invariante de al lado, y falla en la misma dirección. Sus cifras sobre la 001 pueden tener el mismo problema.
+  2. **Numeración en duda.** Al usuario se le ha atribuido que «la 002 es el frontend». En disco y commiteado: `002-validadores-fallo-cerrado` (`82a1a49`) y `003-lectura-web` (`ce2b810`), con **33 referencias cruzadas en 16 ficheros**, incluidas `docs/definitions.md`, `.claude/skills/`, un test de `src/` y las seis bitácoras.
+- **Ficheros:** ninguno; solo lectura y medición
+- **Estado:** terminado
+- **Ojo:** **no renumeréis por iniciativa propia.** Las bitácoras son *append-only* por su propio README: renumerar obliga a reescribir seis registros que dicen no reescribirse, o a dejarlos apuntando a rutas muertas. Si el usuario decide renumerar, que sea un commit que solo haga eso y con las bitácoras corregidas por **entrada nueva**. Y que nadie use las cifras de `validar_spec.py` sin comprobar una a mano: hoy no son fiables.

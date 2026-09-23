@@ -72,3 +72,10 @@
 - **Ficheros:** ninguno ahora. Cuando toque, me quedo `.claude/skills/verification-methods/references/lenguajes-formales.md` (§2.4 y §6 citan la ruta) y `.claude/skills/SOURCES.md`.
 - **Estado:** bloqueado — por la decisión de Ezequiel sobre el número
 - **Ojo:** esos dos son una **skill**, no una spec. Se cargan solos cuando alguien toca verificación, así que una ruta muerta ahí no es un enlace roto en un documento: es un agente siguiendo un camino que no existe. Que no se queden fuera del renombrado.
+
+## 18:20 · No hay renumeración, y cada criterio nombra ya su requisito
+
+- **Qué:** dos avisos de Hernán. (1) Ezequiel decidió que la 002 se queda como está, así que **no muevo nada** y los dos ficheros de skill que me había reservado siguen con rutas válidas. (2) Corrigió su propia cifra: el validador de specs solo reconocía requisitos en negrita y daba por buena una cobertura que no había leído —fallando en abierto, que es justo el pecado que persigue esta spec—. Con el validador arreglado se ve el hueco real: mis criterios no **nombraban** su requisito en la línea, solo en la tabla de Trazabilidad. Ya lo hacen los nueve.
+- **Ficheros:** `specs/002-validadores-fallo-cerrado/spec.md`
+- **Estado:** terminado
+- **Ojo:** `RF-CAL-07` aparecerá en cualquier comprobador como requisito mío sin criterio, y **no lo es**: es de la 001 y aquí solo se cita al explicar el arrastre de CON-02. Queda dicho en la propia spec para que nadie lo persiga dos veces.

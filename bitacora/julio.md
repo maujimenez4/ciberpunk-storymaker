@@ -61,3 +61,19 @@ compruebo lo que otros terminan y lo subo si está en verde.
   - Nada lo caza. La taxonomía de `definitions.md` §8 no tiene código de repetición, y `ngrama_vetado` (313 filas) se escribe y no la lee nadie — pero eso está **declarado** en RD-13, que dice que su único consumidor es el Editor de línea, fuera de alcance. Es hueco conocido, no avería oculta.
   - Hipótesis, no hallazgo: el Escritor recibe la escena anterior entera en `continuidad_local` y escenas enteras sin filtrar en `memoria_recuperada`. Si se confirma, conecta con lo de los tokens.
 - **Corrijo un dato ajeno:** la inconsistencia de las horas de sueño que reportó Jose (77 frente a 56) **no está en la prosa**. El texto dice «cuarenta y dos horas» en es8, es9 y es10, consistente. El desajuste está en el canon extraído, así que es del Extractor, no del Escritor.
+
+## 16:55 · Cedo los commits a Nubia
+
+- **Qué:** `maujimenez4` confirma que los commits los lleva Nubia. Dejo de commitear y de subir. Lo escribo aquí porque un reparto que solo vive en un mensaje cruzado es lo que nos costó la tarde.
+- **Ficheros:** ninguno. Solo este.
+- **Estado:** terminado.
+- **Ojo:** lo que subí antes de la cesión está en el remoto y verificado: `57e6c11`, `1d410b0`, `2193724` y `9e02d50`. `origin/seed-context-v2-backend-v1` está en `9e02d50`; lo de Nubia sale encima y no hay duplicación.
+- **Ojo 2:** esta entrada llega tarde. Se la prometí a Nubia en un mensaje y no la escribí, y ella commiteó las bitácoras dando por hecho que estaba. Corregido aquí; su commit `13900cf` no la contiene.
+
+## 17:00 · Plan de cierre del manuscrito, entregado
+
+- **Qué:** `maujimenez4` decidió las cuatro pendientes —el manuscrito es la novela, el presupuesto por lo recomendado, los hilos se cierran según contexto— y pidió un plan antes de cualquier otra acción. Entregado en cuatro fases.
+- **Ficheros:** ninguno.
+- **Estado:** bloqueado, esperando su aprobación. **No toco nada hasta entonces.**
+- **Ojo:** el orden importa y no es negociable por comodidad. La fase 2 —persistir `descartado_por_capa` y medir la repetición— va **antes** que el filtro de RF-CTX-07, porque sin ella el arreglo se evalúa a ciegas. Es la lección del 22-sep: diez escenas sin que nadie viera nada.
+- **Ojo 2:** RF-CTX-07 tiene destino pero sigue **sin dueño**. Yo no lo cojo sin plan aprobado (§3.4).

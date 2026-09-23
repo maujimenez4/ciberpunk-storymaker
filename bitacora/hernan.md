@@ -34,3 +34,10 @@
 - **Estado:** terminado, sin commitear — el usuario encargó los commits a Ezequiel y a Mario
 - **Ojo:** de mi auditoría solo sobrevive una objeción: **CA-2 dice «lanza» y RF-CAL-13 pide error tipado de `commons/errors/`**. Ahora es gratis apretarlo porque el código ya lanza `EntradaFueraDeDominio`. Lo demás es deuda de trazabilidad: cuatro requisitos que ningún CA nombra. Mario y yo reconstruimos la cobertura por separado y nos salieron mapas distintos — esa es la medida del coste, no una discrepancia entre nosotros.
 - **Ojo 2:** las dos propiedades de H-7 se quedan en `sonda_dominio.py` aunque el defecto esté cerrado: ahora protegen el arreglo de una regresión. Las siete propiedades pasan.
+
+## 17:35 · Numeración, y un fallo en abierto en mi propio validador
+
+- **Qué:** el usuario encargó comunicar a todas las sesiones que **la 002 es el frontend**, con **Ezequiel con prioridad de decisiones**. Ezequiel decidió **no renumerar** y se lo planteó al usuario; comunicado a las seis sesiones alcanzables (la séptima, sin nombre, se cerró antes). Aparte: al pasar `validar_spec.py` sobre la 003 a petición de Nubia descubrí que **mi regex solo veía requisitos en negrita** y las specs los declaran en tablas — en la 001 veía 14 de 142. Mi validador fallaba en abierto, el mismo pecado que audita.
+- **Ficheros:** `specs/002-validadores-fallo-cerrado/validar_spec.py`, `auditoria-criterios.md`
+- **Estado:** terminado, sin commitear — los commits los lleva Nubia
+- **Ojo:** las cifras que di antes (12/12 y 11/12) valían menos de lo que parecían y ya las he corregido con los cuatro que las recibieron. Buenas: **001 → 11/12, 002 → 12/12, 003 → 11/12**. V-8 baja de fallo a **aviso**, y no para que pase: la sección de requisitos cita identificadores de otras specs —`RF-CAL-07` en la 002 es de la 001— y mecánicamente no se distingue el propio del ajeno.

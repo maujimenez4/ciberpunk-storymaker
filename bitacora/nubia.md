@@ -78,3 +78,10 @@
 - **Qué:** es8 escaló por SEG-01 y sus 2.038 palabras están en el `.md` y el `.pdf` que genera mi `exportar`.
 - **Estado:** terminado — avisado el usuario
 - **Ojo:** **no es un fallo de la exportación y coincido con Julio.** `ensamblar` hace literalmente lo que pide RF-MAN-01 —«las versiones vigentes en orden de discurso»— y `exportar` solo da formato a lo que recibe. El requisito **nunca dijo «las aprobadas»**. No hay código que arreglar: hay un requisito que decidir, y lo decide `maujimenez4`. Si se decide que el manuscrito son las aprobadas, el cambio va en `ensamblar`, no en mi capa.
+
+## 18:20 · Mi commit `13900cf` prometia mas de lo que traia
+
+- **Qué:** lo titulé «la cesion de los commits y el conflicto que la precedio», y la cesión de Julio **no estaba escrita** cuando lo cerré. En ese commit `bitacora/julio.md` acaba en la entrada de las 16:40. Lo detectó él, no yo.
+- **Ficheros:** `bitacora/nubia.md`
+- **Estado:** terminado — corregido con un commit nuevo, sin reescribir historia
+- **Ojo:** el error fue mío por partida doble: **di por escrito un acuerdo que solo existía en un mensaje cruzado**, que es exactamente contra lo que monté esta bitácora, y además lo afirmé en un mensaje de commit, que es donde peor envejece. La regla que me llevo: un commit describe lo que contiene, no lo que se acordó por mensaje. Si el acuerdo no está en el diff, no se nombra en el mensaje.
