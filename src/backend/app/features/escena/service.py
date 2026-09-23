@@ -1,14 +1,9 @@
 """Casos de uso de la feature `escena`."""
 
-from pydantic import ValidationError
-
 from app.commons.domain import ParametrosDeDiscurso, Reloj
-from app.commons.llm import ClienteDeModelo, extraer_json
-from app.features.escena.schemas import (
-    FichaDeEscena,
-    FichaInvalida,
-    PropuestaDeFicha,
-)
+from app.commons.llm import ClienteDeModelo
+from app.features.escena.agents import invocar_planificador
+from app.features.escena.schemas import FichaDeEscena
 
 
 def planificar_escena(
@@ -24,14 +19,7 @@ def planificar_escena(
     parametros de discurso. Al reves, una propuesta con un nivel de calor mas
     alto podria colarse si algun dia se relaja la validacion.
     """
-    respuesta = cliente.generar(prompt)
-    try:
-        propuesta = PropuestaDeFicha.model_validate_json(extraer_json(respuesta.texto))
-    except ValidationError as error:
-        raise FichaInvalida(
-            f"la salida del Planificador no valida contra PropuestaDeFicha: {error}"
-        ) from error
-
+    propuesta = invocar_planificador(cliente, prompt)
     return FichaDeEscena(
         escena_id=escena_id,
         **propuesta.model_dump(),

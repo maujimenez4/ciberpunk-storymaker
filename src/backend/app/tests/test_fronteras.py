@@ -66,3 +66,34 @@ def test_commons_no_importa_de_ninguna_feature() -> None:
         assert "app.features" not in fichero.read_text(encoding="utf-8"), (
             f"{fichero.relative_to(RAIZ)} importa de una feature"
         )
+
+
+def test_solo_agents_habla_con_el_modelo() -> None:
+    """`CLAUDE.md` §9.3: el codigo de cada agente vive en el `agents.py` de su
+    feature.
+
+    Se comprueba como regla y no como lista de ficheros, a proposito. Exigir un
+    `agents.py` en las ocho obligaria a crear cascarones vacios en las features
+    cuyo agente todavia no existe -el Escritor, el Continuista-, y un fichero
+    vacio que cumple un test es justo lo que hace que el test deje de significar
+    algo. Esto en cambio crece solo: el dia que `escritura` invoque al modelo,
+    tendra que hacerlo desde su `agents.py` o este test se pone rojo.
+    """
+    infractores = []
+    for feature in FEATURES:
+        for fichero in (RAIZ / "features" / feature).glob("*.py"):
+            if fichero.name == "agents.py":
+                continue
+            if ".generar(" in fichero.read_text():
+                infractores.append(f"{feature}/{fichero.name}")
+
+    assert not infractores, (
+        f"invocan al modelo fuera de agents.py: {', '.join(infractores)}"
+    )
+
+
+def test_los_agentes_declarados_existen() -> None:
+    """Guardia del anterior: si `agents.py` desapareciera, aquel pasaria en
+    vacio y nadie se enteraria. Las cuatro son las que hoy tienen agente."""
+    for feature in ("obra", "outline", "escena", "canon"):
+        assert (RAIZ / "features" / feature / "agents.py").is_file()

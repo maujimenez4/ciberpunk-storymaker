@@ -1,10 +1,9 @@
 """Casos de uso de la feature `obra`."""
 
-from pydantic import ValidationError
-
 from app.commons.domain import Reloj
-from app.commons.llm import ClienteDeModelo, extraer_json
-from app.features.obra.biblia import Biblia, SalidaDeAgenteInvalida, VersionDeBiblia
+from app.commons.llm import ClienteDeModelo
+from app.features.obra.agents import invocar_arquitecto
+from app.features.obra.biblia import VersionDeBiblia
 from app.features.obra.repository import RepositorioDeObras
 from app.features.obra.schemas import Brief, ObraCreada
 
@@ -33,11 +32,5 @@ def generar_biblia(
     escribe nada: un paso fallido no deja media biblia guardada, que luego
     parece una biblia pobre en vez de un fallo (RF-ORQ-15).
     """
-    respuesta = cliente.generar(prompt)
-    try:
-        biblia = Biblia.model_validate_json(extraer_json(respuesta.texto))
-    except ValidationError as error:
-        raise SalidaDeAgenteInvalida(
-            f"la salida del Arquitecto no valida contra Biblia: {error}"
-        ) from error
+    biblia = invocar_arquitecto(cliente, prompt)
     return repositorio.crear_version_de_biblia(obra_id, biblia, reloj.ahora())

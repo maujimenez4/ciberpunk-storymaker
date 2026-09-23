@@ -10,12 +10,12 @@ from app.features.canon.repository import (
     RepositorioDeCanon,
     derivar_estado_en_t,
 )
-from app.features.canon.service import (
+from app.features.canon.schemas import (
     Extraccion,
     ExtraccionInvalida,
     ResultadoDeExtraccion,
-    extraer_de_escena,
 )
+from app.features.canon.service import extraer_de_escena
 
 __all__ = [
     "EstadoEnT",

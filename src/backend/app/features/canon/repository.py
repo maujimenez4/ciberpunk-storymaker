@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict
 from app.commons.domain import Reloj
 
 if TYPE_CHECKING:
-    from app.features.canon.service import Extraccion
+    from app.features.canon.schemas import Extraccion
 
 
 class HechoCanon(BaseModel):

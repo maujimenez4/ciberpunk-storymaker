@@ -1,11 +1,10 @@
 """Casos de uso de la feature `outline`."""
 
-from pydantic import ValidationError
-
 from app.commons.domain import Reloj
-from app.commons.llm import ClienteDeModelo, extraer_json
+from app.commons.llm import ClienteDeModelo
+from app.features.outline.agents import invocar_arquitecto
 from app.features.outline.repository import RepositorioDeOutline
-from app.features.outline.schemas import Outline, OutlineInvalido
+from app.features.outline.schemas import Outline
 
 
 def generar_outline(
@@ -21,10 +20,6 @@ def generar_outline(
     en la que arreglarlo es barato: mover una escena en el outline cuesta una
     linea, y en el manuscrito cuesta reescribir un capitulo.
     """
-    respuesta = cliente.generar(prompt)
-    try:
-        outline = Outline.model_validate_json(extraer_json(respuesta.texto))
-    except ValidationError as error:
-        raise OutlineInvalido(str(error)) from error
+    outline = invocar_arquitecto(cliente, prompt)
     repositorio.guardar(obra_id, outline)
     return outline
