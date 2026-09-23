@@ -1,7 +1,7 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: aprobada          # borrador | en-revision | aprobada | implementada
+estado: implementada      # borrador | en-revision | aprobada | implementada
 aprobada_por: maujimenez4 # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 ---
@@ -526,11 +526,57 @@ Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y
 
 ## Cierre
 
-Se rellena al implementar (`CLAUDE.md` §3.5). Las dos últimas entradas no son burocracia:
-son el sitio donde aterrizan D-07 y D-09, y sin ellas esas dos decisiones no tienen dónde
-comprobarse.
+Implementada el 2026-09-22. Los 103 pasos del plan, en 46 commits sobre la rama
+`seed-context-v2-backend-v1`.
 
-- **Commits:**
-- **Documentos actualizados en `docs/`:**
-- **Objetivos de rendimiento medidos** (D-07) — valor real de RNF-REN-01 a 04 sobre el capítulo de CA-1, y si se confirman o se sustituyen:
-- **Inspección (I) firmada** (D-09) — nombre y fecha del autor que leyó el capítulo de CA-1 para nivel de calor (RF-CAL-02) y edad (RF-CAL-03):
+- **Commits:** de `abed15e` (andamiaje) a `cc00d95`. Los hitos: `509dfed` a
+  `d84c3d0` la migración inicial en cuatro entregas, `2ab9d9a` la memoria de
+  largo plazo, `27d0198` y `0b2f1e5` el ensamblador, `05d8688` los once
+  validadores, `0f979a4` y `5596454` el orquestador, `0fe56b6` la API, `7eb61f4`
+  las demostraciones y `b1dc653` el proveedor real.
+- **Documentos actualizados en `docs/`:** `definitions.md` a v1.3 (código
+  `VOZ-03` y axioma 13), `architecture.md` a v1.4 (se retira la búsqueda
+  vectorial y §4.6 cambia de dueño), `verification.md` (dos filas de §4.1 y una
+  de la matriz de §7 dejaron de ser ciertas con D-02). Y `CLAUDE.md` §4.2, §8
+  y §12.
+
+### Lo que se demostró
+
+**CA-1:** un capítulo de diez escenas, todas `INTEGRADA`, 10.236 palabras, 0,5233
+USD con Haiku. Cero defectos y cero escalados.
+
+**CA-4:** `verificar_ca4.py` desactiva las diez validaciones principales una a
+una y comprueba que su test se pone en rojo. Las diez lo hacen.
+
+### Lo que **no** se demostró, y conviene no confundir
+
+- **Cero defectos no significa texto impecable.** En la corrida corren tres de
+  los once validadores y el Continuista no está en el bucle. Significa que nadie
+  miró, no que no hubiera nada que mirar.
+- **El reparto de §2.1 no se ha puesto a prueba.** La continuidad local se lleva
+  1.504 tokens de media y el canon aporta 36: ningún tope ha tenido ocasión de
+  recortar nada.
+- **El riesgo del contador local sigue abierto.** Los paquetes de esta corrida
+  son demasiado pequeños para que una diferencia de tokenización se note.
+- **Las capas se precargan a mano en `corrida.py`**, no salen de los almacenes.
+  El ensamblador funciona; la recolección real queda por cablear.
+
+### D-07: los objetivos de rendimiento, medidos
+
+| Qué | Objetivo | Medido |
+| --- | --- | --- |
+| Coste por escena | sin objetivo declarado | 0,052 USD |
+| Tokens del paquete | ≤ 90.000 más reserva | 537 a 2.781 |
+| Escalados por cien escenas | sin umbral | 0 |
+
+RNF-REN-01 a 04 quedan **sin confirmar**: los paquetes de esta corrida son
+demasiado pequeños para medir el ensamblado contra su tope, y la búsqueda por
+fuerza bruta de RNF-REN-04 desapareció con D-02.
+
+### D-09: firma de la inspección
+
+La parte **I** de RF-CAL-02 y RF-CAL-03 —que la prosa se mantenga dentro del
+nivel de calor declarado y no insinúe contenido prohibido— no la cubre ninguna
+prueba automática, y por eso necesita firma.
+
+- **maujimenez4**, 2026-09-23, sobre el capítulo completo de CA-1.

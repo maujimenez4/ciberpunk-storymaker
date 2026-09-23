@@ -1,7 +1,7 @@
 ---
 id: 001-backend-v1
 titulo: Plan de implementación — Backend, versión 1
-estado: aprobado          # borrador | en-revision | aprobado | completado
+estado: completado        # borrador | en-revision | aprobado | completado
 aprobado_por: maujimenez4 # lo rellena una persona, nunca un agente
 fecha: 2026-09-22
 spec: spec.md             # aprobada en e4afc47

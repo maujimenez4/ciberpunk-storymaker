@@ -152,8 +152,8 @@ chocarían con subsecciones reales —§3.5 es «Cierre», no el quinto principi
 | La cita de un `Defecto` es subcadena exacta del texto que señala | def. §11, axioma 11 | **T** | Comprobación de forma en código antes de G1a (arq. §8.3): se contrasta la subcadena y su desplazamiento sobre la `VersionDeTexto`, sin volver a llamar al modelo |
 | Todo `CAN-01` declara un `hecho_canon_id` que existe en el grafo | def. §11, axioma 12 | **T** | Misma comprobación, contra el grafo de canon |
 | Un defecto mal formado no bloquea ni consume reintento | arq. §8.3 | **T** | Emitir un defecto con cita inventada y comprobar que no llega al prompt de reparación, que no gasta intento y que se cuenta aparte (arq. §9) |
-| El sistema funciona con y sin extensión vectorial | arq. §2 | **T + D** | La suite corre en los dos modos; además, arranque real con la extensión ausente |
-| Una ejecución se puede reproducir | CLAUDE §3, principio 6 | **D**, no T | Se reproduce el **paquete de contexto**, que es determinista; la prosa no, porque el modelo no lo es. Es justo la razón de que el ensamblador sea código: lo reproducible es lo auditable. **Con fecha de caducidad:** el paquete se reproduce mientras el estado de almacenes sea el de entonces, y el canon crece en cada escena, así que reconstruir una escena antigua desde los almacenes de hoy da otro paquete |
+| El sistema funciona con una sola credencial | arq. §2 | **T + D** | La suite corre sin red y con dobles; además, arranque real sin más clave que la de generación. *Sustituye a «funciona con y sin extensión vectorial», retirada con D-02 el 2026-09-22* |
+| Una ejecución se puede **auditar** | CLAUDE §3, principio 6 | **D**, no T | *Cambiada el 2026-09-22 con D-02: antes decía «se puede reproducir».* Desde que la ordenación semántica la resuelve el modelo, el paquete **no** se puede prometer reproducible: dos ensamblados del mismo estado pueden devolver otro orden en la capa de memoria recuperada. Lo que sí se afirma es que una ejecución concreta se reconstruye: el prompt exacto por su `hash`, los IDs recuperados y el desglose por capa, todo en `ejecucion`. El presupuesto, el recorte y el orden de las capas siguen siendo deterministas, y es ahí donde un fallo hace daño en silencio |
 | Ninguna escena excede el nivel de calor declarado | CLAUDE §8, regla 5 | **T** parcial **+ I** | El esquema comprueba el nivel declarado; que la prosa se mantenga dentro lo juzga el Crítico (defecto SEG-01) y, en última instancia, una lectura humana |
 | Ningún contenido romántico o sexual con personajes menores de 18 | CLAUDE §8, regla 6 | **T + I** | La edad se valida en esquema y bloquea por construcción; que la prosa no lo insinúe se inspecciona |
 | El coste **por llamada** se mantiene acotado | arq. §2.1 y §2.2 | **T** | El contador inyectado y los topes por capa lo acotan antes de llamar, y el límite de concurrencia acota el proceso. **El total de una novela no lo acota nada**: por eso figura como U en §4.2 y como descubierto en §7, y no como un requisito verificado aquí |
@@ -217,7 +217,7 @@ hacemos sin pruebas.
   trabajo, no una condición de aceptación.
 - Un método marcado «Aplicado» puede dejar de estarlo sin que nada cambie en su fila: la
   revisión humana se degrada por volumen, la supresión del alcance por una configuración
-  de permisos, la suite en dos modos por una prueba que se omite en silencio. El estado
+  de permisos, la suite sin credenciales por un doble que empieza a llamar de verdad. El estado
   de una fila es una afirmación sobre hoy, no una propiedad estable.
 - Al actualizar este documento, mantén separados los dos sujetos. Verificar al agente
   de código no dice nada sobre el comportamiento de los agentes narrativos en
@@ -319,7 +319,7 @@ de los puntos ciegos de §2.1 y §3.1. Tres estados:
 | Contenido prohibido con menores | Validación en esquema, que bloquea por construcción, más inspección | **Cubierto** en lo tipificado |
 | Prosa con instrucciones incrustadas realimentada como canon | Red teaming, **previsto** y no ejecutado | **Descubierto** hoy |
 | Un defecto inventado bloquea una escena o consume un reintento | Comprobación de forma en código antes de G1a: axiomas 11 y 12 de `definitions.md` §11 (arq. §8.3) | **Cubierto** |
-| El modo sin extensión vectorial no es el que se prueba | Suite declarada en los dos modos | **Parcial** — §3.1: una prueba omitida se ve igual que el verde |
+| Lo que la suite prueba con dobles no es lo que corre en producción | Suite con dobles más la demostración de CA-1 | **Parcial**, y se midió: la corrida en seco no vio ninguno de los cuatro fallos de integración de la primera corrida real, porque `DobleDeModelo` **ignora el prompt**. Un doble que ignora su entrada no puede validar lo que se le pide al modelo |
 | El ledger deja de ser *append-only*, o el estado en T se edita | Lectura del repositorio (**A**) | **Parcial** — un solo validador, y humano |
 | Un agente recibe una herramienta y las filas «Aplicado por diseño» caducan | La advertencia del §5 | **Descubierto** — nada lo detecta el día que ocurre, y de hecho ya ocurrió con el agente de código sin que nada lo señalara (§3) |
 | La revisión humana se degrada por volumen | Métrica de escalados por cada cien escenas (`architecture.md` §9), sin umbral declarado | **Parcial** |
