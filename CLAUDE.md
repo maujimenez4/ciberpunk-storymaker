@@ -117,15 +117,18 @@ Cada paso, en este orden:
 
 ## 4. Requisitos técnicos (no negociables)
 
-| Requisito | Decisión | Implicación |
-| --- | --- | --- |
-| Backend | **FastAPI** (Python 3.12+), Pydantic v2 | Async por defecto, OpenAPI como contrato |
-| Frontend | **React 19 + TypeScript + Vite** | SPA; cliente de API generado del OpenAPI |
-| Contexto del modelo | **Límite duro de 100.000 tokens por llamada** | Presupuesto por capa, contador obligatorio, fallo antes de llamar |
-| Persistencia | **SQLite — obligatorio** | Es la *story bible* del encargo. Un fichero por obra. Sin segunda base de datos |
-| Observabilidad | **Langfuse** | Una sesión por novela; cada rol y cada tool, un span; cada validador, un *score* |
-| Verificación formal | **Lean 4** sobre la cronología · **TLA+ / TLC** sobre el harness | Lean bloquea la publicación; TLC corre en desarrollo |
-| Guardarraíles | Vetos en SQLite + registro de auditoría | Se aplican **en código** sobre cada capítulo, antes de aceptarlo |
+**El stack es fijo.** La columna de origen dice quién lo impone, y no es un adorno: lo que viene del encargo **no se reinterpreta**, y lo que es nuestro se cambia con ceremonia pero se puede cambiar. Confundir las dos cosas produjo el error de §4.1.
+
+| Requisito | Decisión | Origen | Implicación |
+| --- | --- | --- | --- |
+| Backend | **FastAPI** (Python 3.12+), Pydantic v2 | **Nuestro**, presupuesto por el encargo | Async por defecto, OpenAPI como contrato. El encargo lo nombra una vez, en una sección opcional: «el FastAPI que ya tienen» |
+| Frontend | **React 19 + TypeScript + Vite** | **Nuestro** | El encargo §2 dice «web o PDF» y **no nombra tecnología**. Elegir web y elegir React fue decisión de `maujimenez4` |
+| Contexto del modelo | **Dos techos de 100.000 tokens**: por llamada y sobre la suma en vuelo | El concurrente, **encargo §7, literal**; el otro, nuestro | Presupuesto por capa, contador obligatorio, fallo antes de llamar. Ver §4.1 |
+| Modelo | **Anthropic**, por **consumo de cuenta, sin clave de API**. Haiku 4.5 escribe; Opus 5 juzga | **Nuestro** | **Haiku 4.5** escribe y edita; **Opus 5** juzga —Crítico y Continuista—. Separarlos es deliberado: un juez que comparte modelo con quien escribió tiende a aprobar su propio estilo, y ese punto ciego está declarado en la spec. El juez corre una o dos veces por capítulo frente a las muchas del escritor, así que el consumo apenas sube. Sin cargo por llamada, el **coste se deriva** de los tokens y la tarifa declarada |
+| Persistencia | **SQLite — obligatorio** | **Encargo §4, literal** | Es la *story bible* del encargo. Un fichero por obra. Sin segunda base de datos |
+| Observabilidad | **Langfuse** | **Encargo §6** | Una sesión por novela; cada rol y cada tool, un span; cada validador, un *score* |
+| Verificación formal | **Lean 4** sobre la cronología · **TLA+ / TLC** sobre el harness | **Encargo §5c y §5d** | Lean bloquea la publicación; TLC corre en desarrollo |
+| Guardarraíles | Vetos en SQLite + registro de auditoría | **Encargo §7** | Se aplican **en código** sobre cada capítulo, antes de aceptarlo |
 
 **La extensión vectorial `sqlite-vec` es opcional y es decisión nuestra.** El encargo obliga a SQLite y **no menciona vectores en ninguna parte**. Mantener `VectorStore` con dos implementaciones cuesta una interfaz y una suite que corre en dos modos; a cambio, el sistema arranca en una máquina sin la extensión. Si ese coste deja de pagarse, se retira y **no se incumple nada**.
 
@@ -149,7 +152,10 @@ Es la restricción de diseño más importante del proyecto.
 
 - El ensamblador devuelve siempre el desglose por capa junto al paquete; se guarda en `ejecucion`.
 - Si tras recortar no cabe, se lanza `ContextBudgetExceeded`. **Nunca se trunca por el final en silencio.**
-- Ese tope es **por llamada**, y es el único techo de tokens. La concurrencia se acota aparte, **contando llamadas en vuelo, no sumando tokens** (`docs/architecture.md` §2.2): una llamada al modelo por proceso. Si no hay turno, la llamada espera; **nunca se recorta el paquete para hacerla caber**.
+- **Hay un segundo techo, y es del encargo.** Su §7 dice literalmente «uso de un máximo de 100.000 tokens **concurrentes**»: eso es la **suma** de las llamadas en vuelo, no el tope de una. Este fichero decía hasta hoy que el tope por llamada era «el único techo de tokens», y eso **reinterpretaba el encargo** en vez de cumplirlo.
+- **Hoy los dos números coinciden porque la concurrencia es 1**, y ahí está el peligro: se cumple **por consecuencia, no por regla**. Nada cuenta la suma, así que subir la concurrencia a dos incumpliría el encargo **sin que fallara ningún test**. Por eso el techo concurrente se aplica y se comprueba aunque hoy sea trivial.
+- **Se permite el paralelismo dentro del techo sumado** (decisión de `maujimenez4`, 2026-09-23): varias llamadas a la vez mientras sus paquetes sumen 100.000 o menos. El turno lo da el orquestador **contando tokens, no llamadas**. Si admitir una llamada pasaría del techo, esa llamada **espera**; **nunca se recorta el paquete para hacerla caber**.
+- **Eso no acorta una novela.** Los diez capítulos siguen siendo secuenciales porque cada uno necesita integrado el anterior, no por el límite de concurrencia (`docs/architecture.md` §2.3). Lo que se solapa son **obras distintas**, y el **Continuista con el Crítico** sobre el mismo capítulo.
 
 ### 4.2 Persistencia
 

@@ -1,524 +1,520 @@
 ---
 id: 001-backend-v1
-titulo: Backend, versión 1 — el ciclo completo de una escena
-estado: aprobada          # borrador | en-revision | aprobada | implementada
-aprobada_por: maujimenez4 # lo rellena una persona, nunca un agente
-fecha: 2026-09-22
+titulo: Backend, versión 1 — de la entrevista a la novela publicada
+estado: en-revision       # borrador | en-revision | aprobada | implementada
+aprobada_por:             # lo rellena una persona, nunca un agente
+fecha: 2026-09-23
 ---
 
 # 001-backend-v1 — Backend, versión 1
 
-Qué debe hacer la primera versión del backend y cómo se sabrá que lo hace. **Aquí no se decide cómo se implementa:** eso es el plan, y no se escribe hasta que esta spec esté `aprobada`.
+Qué tiene que hacer el backend para que una persona encargue una novela personalizada y otra la reciba, y cómo se sabrá que lo hace. **Aquí no se decide cómo se implementa:** eso es el plan, y no se escribe hasta que esta spec esté `aprobada`.
 
-Es una spec completa y única: cubre el backend entero de la v1 en lugar de trocearse por funcionalidad, porque las piezas del ciclo de una escena no se pueden entregar por separado —un ensamblador sin orquestador no se puede probar, y un orquestador sin memoria no cierra el bucle.
+> **Esta spec reemplaza a la aprobada el 2026-09-22, y por eso vuelve a `borrador`.**
+>
+> Aquella cubría *el ciclo completo de una escena* para una novela larga de 80.000–120.000 palabras. El producto es otro: diez capítulos personalizados para una persona concreta, con entrevista, guardarraíles, observabilidad, verificación formal y publicación. Casi nada de su alcance sobrevive intacto.
+>
+> **Mantenerla en `aprobada` con este contenido sería afirmar que alguien firmó algo que no leyó.** La firma anterior valía para aquel alcance; este necesita otra.
+
+Es una spec única y grande a propósito: cubre **el backend entero**. Las piezas no se pueden entregar por separado —un ensamblador sin orquestador no se prueba, un orquestador sin memoria no cierra el bucle, y una publicación sin validadores no es una publicación— y trocearlas habría multiplicado las puertas de `CLAUDE.md` §3 sin añadir información.
 
 ---
 
 ## Problema
 
-Hoy no se puede escribir una novela larga con un modelo de lenguaje sin que se deshaga por el camino. La novela terminada no cabe en una llamada, y meterla entera empeora el resultado: el modelo imita lo reciente y diluye lo importante (`domain-knowledge.md` §1 y §10).
+**Una novela personalizada se rompe por dos sitios a la vez, y ninguno de los dos se ve mirando un capítulo suelto.**
 
-Quien lo sufre es el autor: escribe veinte escenas, y en la veintiuna el personaje tiene otros ojos, sabe algo que nadie le contó y habla como el capítulo 3 no hablaba. Los fallos son baratos de cometer y carísimos de encontrar, porque cada escena por separado parece correcta.
+**Por la coherencia.** La novela terminada no cabe en una llamada, y meterla entera empeora el resultado (`domain-knowledge.md` §1 y §10). Se escribe por partes, y cada parte por separado parece correcta: el capítulo siete no sabe que el cuatro dijo otra cosa. A diez capítulos esto **no se afloja, se aprieta**: el lector se la lee de una sentada y compara sin esfuerzo.
 
-No existe hoy en este repositorio nada ejecutable: ni ensamblado de contexto, ni memoria, ni validación. Solo documentación.
+**Por la personalización.** El destinatario existe, conoce de primera mano la mitad de los hechos y **detecta errores que ningún editor podría detectar**. Si el perro se llama Luna en el capítulo siete, no lo lee como un descuido: lo lee como que el regalo no era para él.
+
+Lo sufren tres personas distintas: el **comprador**, que encarga y no sabe si lo que pidió llegó al texto; el **destinatario**, que recibe; y el **operador**, que no puede responder por qué una novela salió como salió.
+
+Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de contexto, un encargo, y ni una línea de código contra ellos.
 
 ---
 
 ## Alcance
 
-El objetivo es el de la fase 1 de la hoja de ruta (`architecture.md` §13): **un capítulo coherente**. El ciclo completo de una escena, de principio a fin, con la memoria cerrándose sobre sí misma.
+**El backend entero.** Todo lo que no sea la interfaz de lectura.
 
-| Capacidad | Motivo |
-| --- | --- |
-| Obra desde un brief, biblia y outline | Sin outline no hay ficha de escena |
-| Planificar, ensamblar, escribir e integrar una escena | Es el bucle completo; sin él no hay producto |
-| Presupuesto por capa y límite de concurrencia | Restricción no negociable (`CLAUDE.md` §4.1) |
-| Orquestador con estado persistido y reanudación | Sin él, una caída pierde trabajo y nada se puede depurar |
-| Memoria de largo plazo: canon, ledger, resúmenes, índice | Es lo que cierra el bucle entre escenas |
-| Esquema preparado para `Serie` desde la migración inicial | Añadirlo después obliga a reescribir el canon (`definitions.md` §4.1) |
-| Validadores **mecánicos** | Son los que se cuentan, no los que se juzgan (`domain-knowledge.md` §11) |
-
-**Ámbito:** backend. El frontend queda fuera.
+| Capacidad | Encargo | Motivo |
+| --- | --- | --- |
+| Entrevista: datos del destinatario, vetos, texto libre no confiable, brief validado | §1 | Es la mitad del producto y hoy no existe |
+| Detección de datos que faltan y de al menos un tipo de contradicción | §1 | Una contradicción del brief no se arregla escribiendo mejor |
+| Ciclo de capítulo: planificar, ensamblar, escribir, validar, reparar, integrar | §3 | Es el motor |
+| Presupuesto por capa, **los dos techos de 100.000 tokens** y límite de llamadas en vuelo | §7 | Restricción no negociable, y el techo **concurrente** es literal del encargo (`CLAUDE.md` §4.1) |
+| Orquestador con estado persistido y **checkpoint por capítulo** | §4 | Sin él, una caída pierde la novela |
+| *Story bible* en SQLite: canon con **uso por capítulos**, ledger, cronología, resúmenes | §4 | Cierra el bucle entre capítulos, y es la entrada de Lean |
+| Guardarraíles: vetos en tres ámbitos con normalización, y registro de auditoría | §7 | Se aplican en código, antes de aceptar el capítulo |
+| Validadores programáticos, con nombre y punto de ejecución | §5a | Son los que se cuentan |
+| Juez con rúbrica, **revisión del equipo** con la misma rúbrica y **aceptación del comprador** | §5b | Sin la revisión con rúbrica, el juez emite números que nadie contrastó; sin la aceptación, nadie decide si se entrega |
+| Verificación formal: **Lean** sobre la cronología, **TLA+** sobre el harness | §5c, §5d | Dos sujetos distintos (`architecture.md` §9.3) |
+| Observabilidad en Langfuse: sesión por novela, spans, *scores*, plantillas versionadas | §6 | Sin ella no hay *tuning* documentable |
+| Publicación: `VersionPublicada` inmutable, conservando la anterior | §2 | La interfaz es de la 002; el concepto es de aquí |
+| Petición de cambio del lector y regeneración acotada | §2 | Ídem: el flujo es backend |
+| API que la 002 consume | §2 | Es su contrato |
 
 ---
 
 ## Fuera de alcance
 
-| Excluido | Motivo | Cuándo |
+| Excluido | Motivo | Dónde |
 | --- | --- | --- |
-| Crítico con rúbrica y juez calibrado | Necesita escenas etiquetadas por un editor; sin calibrar, estorba | Fase 4 |
-| Métricas de prosa: repetición, tics, variedad sintáctica, deriva de estilo | Son umbrales, no bloqueantes; sin corpus aprobado no hay referencia | Fase 4 |
-| Validación de voz: distancia a muestras ancla, clasificador de POV | Exige criterio, no cuenta (`domain-knowledge.md` §11) | Fase 4 |
-| Editor de línea | Introduce una segunda escritura sobre texto ya aprobado | Fase 6 |
-| Auditoría de manuscrito: hitos, plantados, curva de temperatura | No tiene sentido con un capítulo | Fase 5 |
-| Puertas G2 (capítulo) y G3 (manuscrito) | Mismo motivo | Fases 4–5 |
-| Frontend | Spec aparte | — |
-| Modo servidor multiusuario | El modo de referencia es local | Fase 6 |
-| Tests de mutación automatizados | Hoy no hay suite que mutar; tendrán sentido sobre la del ensamblador (`verification.md` §2) | Cuando exista esa suite |
+| La interfaz de lectura: portada, índice, ficha, petición desde la página | Es otra feature y otra capa | `specs/002-frontend-v1/` |
+| Servidor MCP de consulta | Opcional del encargo; requiere la API cerrada antes | Después |
+| Login y multiusuario | Opcional, y las cuentas están fuera del encargo | — |
+| *Linters* de prosa más allá de los obligatorios | Opcional | — |
+| Edición manual del texto con *linter* en vivo | Opcional, y exige la lectura web | — |
+| Despliegue en producción, pagos, ilustraciones, audio | Fuera del encargo por escrito | — |
+| El **filtro estructural** de la recuperación híbrida | **No está excluido: se implementa aquí** (RF-CTX-04). Se nombra porque en la versión anterior de esta spec quedó como deuda declarada con un requisito que decía estar probado, y no debe repetirse | — |
 
-**Sobre `Serie`:** ya **no** está fuera de alcance. `definitions.md` §4.1 advierte que, si existe, el canon debe compartirse **desde el primer día** y que añadirlo después obliga a reescribir referencias, así que el esquema de la v1 lo contempla desde la migración inicial (RD-11). La v1 no expone funcionalidad de serie: solo deja el canon preparado para compartirse.
+---
 
-La exclusión no es «se hará mal»: es «no se hará», y el esquema de datos no debe impedirlo después.
+## Restricciones de diseño
+
+**El stack es fijo y no lo decide esta spec.** Se escribe aquí porque un requisito que lo contradiga es un requisito mal escrito, no una alternativa a considerar.
+
+| Restricción | Origen | Dónde se detalla |
+| --- | --- | --- |
+| **FastAPI** (Python 3.12+), Pydantic v2 | **Nuestro**, presupuesto por el encargo, que lo nombra una vez en una sección opcional | `CLAUDE.md` §4 |
+| **SQLite**, un fichero por obra, sin segunda base de datos | **Encargo §4, literal:** «story bible en SQLite (obligatorio)» | `CLAUDE.md` §4.2 · RD-01 |
+| **React 19 + TypeScript + Vite** en el frontend | **Nuestro.** El encargo §2 dice «web o PDF» y no nombra tecnología | `CLAUDE.md` §5.2 · es de la 002 |
+| **Techo de 100.000 tokens por llamada** | **Nuestro**, derivado del presupuesto por capas | `CLAUDE.md` §4.1 · RF-CTX-02, RF-CTX-03 |
+| **Techo de 100.000 tokens concurrentes** —el **presupuesto concurrente**: la suma de lo que está en vuelo— | **Encargo §7, literal** | `architecture.md` §2.2 · RF-ORQ-10 |
+| **Anthropic** por consumo de cuenta, **sin clave de API**. Haiku 4.5 escribe; **Opus 5 juzga** | **Nuestro** (P-02) | `CLAUDE.md` §4 · RF-OBS-03 |
+
+**Los dos techos no son el mismo, y hasta hoy los docs los confundían.** Decían que el de 100.000 era «por llamada» y «el único techo de tokens». El encargo §7 dice «concurrentes», que es una **suma**. Mientras la concurrencia fue 1 los dos números coincidían y el sistema cumplía **por consecuencia, no por regla**. Con el paralelismo admitido (P-06), dejan de coincidir: **RF-ORQ-10 es desde el primer día el único requisito que comprueba lo que el encargo pide.**
+
+React es del frontend y esta spec no lo implementa; se lista porque **fija el contrato**: el OpenAPI de RI-13 es lo que la 002 consume, y se genera para un cliente TypeScript.
 
 ---
 
 ## Requisitos
 
-Convenciones de esta sección:
-
 | Prefijo | Tipo | | Marca | Significado |
 | --- | --- | --- | --- | --- |
-| `CU-` | Caso de uso | | `M` | Imprescindible: si falta, no se cumple un criterio de aceptación |
-| `RI-` | Interfaz externa | | `S` | Necesario pero degradable sin invalidar la entrega |
+| `CU-` | Caso de uso | | `M` | Imprescindible: si falta, no se cumple un criterio |
+| `RI-` | Interfaz externa | | `S` | Necesario pero degradable |
 | `RF-` | Funcional | | **T/A/I/D/U** | Prueba / Análisis / Inspección / Demostración / No verificable (`verification.md` §4) |
 | `RD-` | Datos | | | |
 | `RNF-` | No funcional | | | |
 
-**Todo requisito cita su origen.** Uno sin origen es una invención y se rechaza en revisión. Las palabras **debe**, **no debe** y **puede** se usan en sentido normativo.
+**125 requisitos en total:** 14 interfaces, 99 funcionales, 6 de datos y 6 no funcionales. Se desglosa porque «123» a secas obliga a contar a mano para saber si incluye las interfaces, y un número que hay que recontar caduca en silencio.
 
-**Una letra por requisito.** `verification.md` §4 fija **una letra principal**: la del método que **establece** el requisito. Cuando un segundo método lo refuerza sin establecerlo se anota entre paréntesis —`**A** (+T)` se lee «se verifica leyendo el código, y un test lo refuerza»— y no sustituye a la letra. **Ningún requisito de esta spec lleva U:** lo que hoy nadie puede comprobar no es requisito, y está enumerado en «Lo que esta spec no verifica».
+**Todo requisito cita su origen.** Uno sin origen es una invención y se rechaza en revisión. **Una letra por requisito:** la del método que lo **establece**; un segundo método que lo refuerza va entre paréntesis.
 
 ### Casos de uso
 
-**CU-01 · Arrancar una obra.** *Precondición:* ninguna. *Flujo:* el autor envía un brief → se crea la `Obra` con sus parámetros de discurso → se lanza la biblia como trabajo. *Postcondición:* existe una obra con `persona`, `tiempo_verbal`, `esquema_de_pov` y `nivel_de_calor` fijados, y una biblia versionada. → RI-01, RI-02, RF-OBR-01 a 04.
+**CU-01 · Encargar una novela.** *Precondición:* ninguna. *Flujo:* el comprador responde la entrevista y puede pegar texto libre → el Entrevistador extrae hechos, detecta lo que falta y lo que se contradice → cuando no falta nada y nada se contradice, se valida el brief con esquema y se crea la obra. *Postcondición:* existe una `Obra` con su `Destinatario`, sus vetos y sus elementos obligatorios. *Excepción:* falta un dato o hay contradicción → **se vuelve a preguntar; no se escribe nada**. → RI-01, RI-02, RI-03, RF-ENT-01 a RF-ENT-08.
 
-**CU-02 · Generar el outline.** *Precondición:* biblia vigente. *Flujo:* se produce `Parte → Capitulo → Escena` y cada hito obligatorio de género se asigna a exactamente una escena. *Postcondición:* cada escena tiene `pov`, `lugar`, objetivo, obstáculo y giro previsto. *Excepción:* hito sin escena o duplicado → `FALLIDA` con `ReglaDeDominioViolada`. → RI-03, RF-OUT-01 a 05, RG-06.
+**CU-02 · Planificar la obra.** *Precondición:* brief válido. *Flujo:* se produce biblia y outline de diez capítulos, y cada beat obligatorio de género se asigna a exactamente un capítulo. *Postcondición:* cada capítulo tiene POV, lugar, objetivo, obstáculo y giro previsto. → RI-04, RF-PLA-01, RF-PLA-02, RF-PLA-03, RF-PLA-04.
 
-**CU-03 · Escribir una escena** *(caso central)*. *Precondición:* la escena existe en el outline y la anterior está `INTEGRADA`.
+**CU-03 · Escribir un capítulo** *(caso central)*. *Precondición:* el capítulo existe en el outline y el anterior está integrado.
 
-*Flujo principal:* `PLANIFICANDO` (ficha) → `ENSAMBLANDO` (paquete presupuestado y recortado) → `ESCRIBIENDO` (turno, llamada, versión guardada) → `VALIDANDO` (validadores mecánicos) → `EXTRAYENDO` (canon, ledger, resumen, hilos e índice en una transacción) → `INTEGRADA`.
+*Flujo principal:* `PLANIFICANDO` → `ENSAMBLANDO` (paquete presupuestado y recortado) → `ESCRIBIENDO` → `VALIDANDO` (mecánicos, guardarraíles y juez) → `EXTRAYENDO` (canon, ledger, resumen, hilos y **uso por capítulo**, en una transacción) → `INTEGRADA`, con **checkpoint**.
 
 *Flujos alternativos:*
-- Defecto bloqueante → `REPARANDO` con el defecto y su cita → vuelve a `ESCRIBIENDO`. Máximo dos veces; después `ESCALADA`.
+- Defecto bloqueante → `REPARANDO` con el defecto y su cita → vuelve a `ESCRIBIENDO`. **Máximo dos veces**; después `ESCALADA`.
+- Palabra vetada → vuelve al escritor con el término concreto, con el mismo límite. Agotado, **la generación se detiene y se informa**.
 - El paquete no cabe tras recortar → `FALLIDA` con `ContextBudgetExceeded`, **sin llamar al modelo**.
-- Sin turno para llamar antes del *timeout* → `FALLIDA` con `TiempoAgotado`, sin coste porque no se llegó a llamar.
-- Cancelación del autor → `CANCELADA` en el primer punto seguro.
+- Sin turno antes del *timeout* → `FALLIDA` con `TiempoAgotado`, sin coste. **Se espera turno igual si la llamada cabe pero la suma en vuelo no**: el techo concurrente se cumple esperando, nunca recortando.
 
-*Postcondición de éxito:* la escena está en el manuscrito y la memoria de largo plazo la incluye. *Postcondición de fracaso:* **la memoria de largo plazo no ha cambiado.** → RI-05, RI-09, RF-ESC-*, RF-CTX-*, RF-ORQ-*, RF-CAL-*, RF-CAN-*.
+*Postcondición de éxito:* el capítulo está en el manuscrito y la memoria lo incluye. *Postcondición de fracaso:* **la memoria de largo plazo no ha cambiado.** → RF-ORQ-01 a RF-ORQ-09, RF-CTX-01 a RF-CTX-09, RF-ESC-01, RF-ESC-02, RF-ESC-03, RF-VAL-01 a RF-VAL-08, RF-GUA-01 a RF-GUA-07, RF-MEM-01 a RF-MEM-08.
 
-**CU-04 · Resolver un escalado.** *Precondición:* un trabajo en `ESCALADA`. *Flujo:* el autor consulta el defecto con su cita, edita o acepta → versión nueva marcada vigente → se reanuda. *Postcondición:* la escena acaba `INTEGRADA` o `CANCELADA`, nunca indefinidamente en `ESCALADA`. → RI-07, RI-09, RF-ESC-03, RF-ESC-04, RF-ORQ-17, RF-ORQ-18.
+**CU-04 · Reanudar tras una caída.** *Precondición:* el proceso se detiene con capítulos pendientes. *Flujo:* al arrancar se lee el último capítulo completado y se sigue desde ahí. *Postcondición:* **ni se duplica ni se pierde ningún capítulo.** → RF-ORQ-05, RF-ORQ-06, RF-ORQ-07.
 
-*Reentrada (D-08):* el trabajo vuelve a **`VALIDANDO`**, no entra por `EXTRAYENDO`. Revalidar es barato; escribir en canon un error introducido a mano cuesta un hecho sustitutorio y la invalidación de *snapshots* (RF-CAN-07, RF-CAN-13). Esa revalidación **no consume** el contador de RF-ORQ-07, y un fallo devuelve a `ESCALADA`, nunca a `REPARANDO`: no hay nada que reparar con el modelo en un texto humano. El autor puede además **aceptar** la versión pese al defecto, y entonces queda registrado cuál se anuló (RF-ORQ-18).
+**CU-05 · Publicar.** *Precondición:* los diez capítulos integrados. *Flujo:* se verifica la cronología con Lean → se comprueba que ningún capítulo quedó fuera de su puerta → se fijan los textos, se deriva la ficha y se guarda el cuadro de defectos. *Postcondición:* existe una `VersionPublicada` inmutable. *Excepción:* Lean falla o un capítulo no pasó su puerta → **no se publica**, y el fallo vuelve al editor. → RI-08, RF-PUB-01 a RF-PUB-08, RF-FOR-01, RF-FOR-02, RF-FOR-03.
 
-**CU-05 · Inspeccionar el contexto enviado.** *Precondición:* al menos una ejecución. *Flujo:* se consulta paquete y desglose. *Postcondición:* el desglose suma lo que dice y respeta los topes. → RI-06, RF-CTX-06, RF-CTX-10.
+**CU-06 · Atender una petición del lector.** *Precondición:* existe una versión publicada. *Flujo:* se registra la petición sobre un hecho → se determinan los capítulos que lo usan → se corrige el canon **sin editarlo** → se regeneran esos capítulos → se revalida sobre los posteriores al origen del hecho sustituido → se compara con el cuadro guardado → si no hay defecto **introducido**, se publica una versión nueva. *Postcondición de fracaso:* la vigente no cambia y **la petición se conserva con su resultado**. → RI-09, RI-10, RF-PET-01 a RF-PET-08.
 
-**CU-06 · Reanudar tras una caída.** *Precondición:* el proceso se detiene con trabajos no terminales. *Flujo:* al arrancar se leen los trabajos vivos y se repite entero el paso interrumpido. *Postcondición:* ninguna escritura duplicada; el trabajo avanza o falla, pero no queda colgado. → RF-ORQ-04 a 06, RNF-FIA-01.
+**CU-07 · Auditar qué se envió al modelo.** *Precondición:* una fila de `ejecucion`. *Flujo:* se leen los identificadores de lo que entró en el paquete. *Postcondición:* se sabe **qué hechos de canon** se enviaron, no solo qué memoria se recuperó. → RI-07, RF-CTX-08, RF-CTX-09, RF-OBS-06.
+
+**CU-08 · Evaluar el sistema.** *Precondición:* el ciclo completo funciona. *Flujo:* se corren cinco briefs de prueba —uno adversarial, uno con trampa temporal— y se recoge por brief qué validadores pasaron y cuáles fallaron. *Postcondición:* existe la tabla y una iteración de *tuning* con resultados antes y después. → RF-EVA-01, RF-EVA-02, RF-EVA-03, RF-EVA-04.
 
 ### Interfaces externas
 
-Identificadores opacos para el cliente. Toda operación larga devuelve un `trabajo` y **no** bloquea la petición.
+| ID | Interfaz | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RI-01 | `POST /entrevistas` — abre una entrevista | M | Test |
+| RI-02 | `POST /entrevistas/{id}/respuestas` — aporta datos o texto libre; devuelve **faltantes y contradicciones** | M | Test |
+| RI-03 | `POST /entrevistas/{id}/cerrar` — valida el brief con esquema y crea la obra | M | Test |
+| RI-04 | `POST /obras/{id}/outline` — biblia y outline de diez capítulos | M | Test |
+| RI-05 | `POST /capitulos/{id}/escribir` — lanza el ciclo | M | Test |
+| RI-06 | `GET /trabajos/{id}` — estado del trabajo, **legible por capítulo** | M | Test |
+| RI-07 | `GET /capitulos/{id}/contexto` — paquete y desglose de tokens (depuración) | S | Test |
+| RI-08 | `POST /obras/{id}/publicar` | M | Test |
+| RI-09 | `POST /obras/{id}/peticiones` — petición de cambio del lector | M | Test |
+| RI-10 | `POST /obras/{id}/versiones/{v}/revertir` | M | Test |
+| RI-11 | `GET /obras/{id}/versiones`, `…/{v}`, `…/{v}/ficha`, `…/{v}/pdf` — lo que consume la 002 | M | Test |
+| RI-12 | `GET /obras/{id}/canon` — consulta del grafo | S | Test |
+| RI-13 | Todo aparece en el **OpenAPI** con sus modelos: es el contrato del que la 002 genera su cliente | M | Análisis (+Test) |
+| RI-14 | El cliente de modelo, el contador de tokens y el reloj se **inyectan**: ninguna prueba llama al proveedor | M | Análisis (+Test) |
 
-| ID | Método y ruta | Entrada esencial | Salida | Pr. |
-| --- | --- | --- | --- | --- |
-| RI-01 | `POST /obras` | `Brief`: género, subgénero, tropo, tono, extensión, parámetros de discurso | 201 + `obra` | M |
-| RI-02 | `POST /obras/{id}/biblia` | — | 202 + `trabajo` | M |
-| RI-03 | `POST /obras/{id}/outline` | — | 202 + `trabajo` | M |
-| RI-04 | `POST /escenas/{id}/planificar` | — | 202 + `trabajo` | M |
-| RI-05 | `POST /escenas/{id}/escribir` | — | 202 + `trabajo` | M |
-| RI-06 | `GET /escenas/{id}/contexto` | — | 200 + paquete y desglose por capa | M |
-| RI-07 | `GET /escenas/{id}/versiones` | — | 200 + historial inmutable, con la vigente marcada | M |
-| RI-08 | `GET /obras/{id}/canon` | filtros: entidad, atributo | 200 + hechos con `escena_de_origen` | S |
-| RI-09 | `GET /trabajos/{id}` | — | 200 + estado del trabajo (RI-18) | M |
+### Funcionales — entrevista y configuración (§1)
 
-*Origen: `architecture.md` §5.4. Verificación: **T**.*
-
-*RI-10 no existe: era `POST /obras/{id}/auditoria`, y la auditoría de manuscrito quedó fuera de alcance. Los identificadores no se renumeran.*
+**Nada se escribe hasta que el brief está completo y no se contradice.** Estos ocho requisitos son esa puerta.
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RI-11 | Ningún servicio lanza `HTTPException`: las excepciones de dominio las traduce el handler central. `ContextBudgetExceeded` → 422 con la capa que desbordó; `TiempoAgotado` en la espera de turno → 503, relanzable sin coste; `ReglaDeDominioViolada` → 422 con el axioma incumplido; `RecursoNoEncontrado` → 404; `FalloDeProveedor` agotado → 502 | M | **T**, uno por caso |
-| RI-12 | Modelos de entrada y de salida distintos; ninguno expone el modelo de base de datos | M | **A** |
-| RI-13 | Cliente de modelo, contador de tokens y reloj se inyectan. Ninguna prueba llama al proveedor real | M | **A** (+T) |
-| RI-14 | Toda llamada registra `run_id`, escena, `prompt_id` con su `version` y **`hash` del fichero**, `version_obra`, IDs recuperados, modelo, parámetros, semilla, tokens por capa, coste y veredicto | M | **T** |
-| RI-15 | Las claves se leen de entorno. Nunca del repositorio ni de la base de datos | M | **I** (+A) |
-| RI-16 | SQLite con `WAL`, `foreign_keys=ON` y `busy_timeout`. Migraciones con Alembic desde el primer commit | M | **T** |
-| RI-17 | La búsqueda semántica vive tras `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta la extensión; si no carga, se degrada y se avisa. **El sistema nunca falla por falta de extensión vectorial.** Además del paso de la suite en ambos modos, se demuestra un **arranque real con la extensión ausente** | M | **T** en ambos modos (+D) |
-| RI-18 | La respuesta de RI-09 expone `id`, `tipo`, `estado` (uno de los diez de `architecture.md` §3.3), `intento`, `causa_fallo`, `creado_en`, `actualizado_en` y, en `ESCALADA`, los defectos con **código y cita** en el formato de RF-CAL-08 | M | **T** |
-| RI-19 | Existe forma de cancelar un trabajo en curso; el efecto es `CANCELADA` en el primer punto seguro, nunca a mitad de una escritura | S | **T** |
-| RI-20 | El proveedor de *embeddings* está tras una interfaz propia, y su consumo no cuenta contra ningún presupuesto de contexto. La v1 usa **Voyage AI `voyage-3`, 1024 dimensiones** (D-02); **no** coincide con el de generación porque la API de Anthropic no ofrece *embeddings* | M | **A** |
-| RI-21 | La configuración se lee de entorno con valores por defecto explícitos, y el arranque **falla de inmediato** si falta uno obligatorio: clave y punto de acceso del proveedor de generación, modelo, clave del proveedor de *embeddings*, llamadas simultáneas permitidas (**1**, D-03), *timeout* de espera de turno (**300 s**, D-03), **plazo por paso de código (30 s) y plazo por paso con llamada al modelo (600 s)** (D-04), N de los *snapshots* (**5**, D-01), dimensión de los *embeddings* (**1024**, D-02) y ruta del fichero | M | **T** |
-| RI-24 | El plazo de un paso con llamada al modelo **debe superar** el *timeout* de espera de turno más la duración de la llamada; el arranque rechaza una configuración que no lo cumpla. Si el plazo del paso vence antes, RNF-TOK-05 no llega a ejecutarse nunca y queda como código muerto | M | **T** |
-| RI-22 | El arranque registra, una vez, qué implementación de `VectorStore` quedó activa | M | **T** |
-| RI-23 | El backend **publica su esquema OpenAPI** y toda ruta declara su modelo de respuesta: el contrato con cualquier cliente es el esquema generado, no una descripción escrita aparte | M | **A** (+T) |
+| RF-ENT-01 | La entrevista recoge del destinatario nombre, edad, rasgos y recuerdos; y de la obra género, tono y extensión | M | Test |
+| RF-ENT-02 | Recoge **las palabras y temas que el cliente no quiere que aparezcan**, que pasan al ámbito `brief` de los vetos | M | Test |
+| RF-ENT-03 | Detecta **qué datos obligatorios faltan** y los devuelve nombrados, no como un error genérico | M | Test |
+| RF-ENT-04 | Detecta **al menos un tipo de contradicción** —por ejemplo edad contra tono, o contra género— y la devuelve explicada. **El esquema no la ve**: un brief puede ser válido y contradictorio a la vez | M | Test |
+| RF-ENT-05 | El texto libre se guarda como `TextoAportado` y **se trata como contenido no confiable**: entra marcado como dato y **nunca se concatena a un prompt sin esa marca** | M | Análisis (+Test) |
+| RF-ENT-06 | De ese texto se extraen hechos, que entran al canon con `origen: brief` y **sin escena de origen** | M | Test |
+| RF-ENT-07 | El brief **se valida con esquema** antes de persistirse. Un brief que no valida no crea obra | M | Test |
+| RF-ENT-08 | El brief declara sus **elementos obligatorios**: los datos que deben aparecer en el texto | M | Test |
 
-*Origen: `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3 (principio 5), §4.2, §4 (OpenAPI como contrato), §6; RI-23 y la parte **D** de RI-17, `verification.md` §2 (tests de contrato) y §4.1.*
+### Funcionales — planificación
 
-### Funcionales
-
-**Feature `obra`** — *origen: `definitions.md` §4.1, §4.3, §9 y §12.*
+**Los diez capítulos existen antes de escribir el primero, y cada beat de género tiene dueño.**
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-OBR-01 | Crear una `Obra` desde un `Brief`, fijando `persona`, `tiempo_verbal`, `esquema_de_pov` y `nivel_de_calor`, que heredan todas sus escenas | M | **T** |
-| RF-OBR-02 | Generar la `Biblia`: personajes con parte fija, lugares con `tiempo_de_viaje`, reglas de mundo, tropo y `promesa_de_apertura` | M | **T** |
-| RF-OBR-03 | La biblia es **versionada**: cambiarla crea versión nueva de obra, no se edita en sitio | M | **T** |
-| RF-OBR-04 | Registrar el catálogo de temas sensibles declarados | S | **T** |
+| RF-PLA-01 | Se produce una biblia versionada a partir del brief | M | Test |
+| RF-PLA-02 | El outline tiene **diez capítulos**, cada uno con una escena (`definitions.md` §10) | M | Test |
+| RF-PLA-03 | Cada beat obligatorio de género se asigna a **exactamente un** capítulo. Uno sin asignar o duplicado es error de dominio | M | Test |
+| RF-PLA-04 | Cada capítulo lleva POV, lugar, objetivo, obstáculo y giro de valor previsto | M | Test |
 
-**Feature `outline`** — *origen: `definitions.md` §4.1 y §6; el porqué del orden, `domain-knowledge.md` §8.1.*
+### Funcionales — contexto (§7 del encargo, §4.1 de `CLAUDE.md`)
 
-| ID | Requisito | Pr. | Verif. |
-| --- | --- | --- | --- |
-| RF-OUT-01 | Generar el `Outline` jerárquico `Parte → Capitulo → Escena` | M | **T** |
-| RF-OUT-02 | Asignar cada `BeatDeGenero` obligatorio a **exactamente una** `Escena`, dentro de su franja | M | **T** |
-| RF-OUT-03 | Cada `Escena` nace con `pov`, `lugar`, `objetivo_del_pov`, `obstaculo` y giro previsto (`valor_entrada` ≠ `valor_salida`) | M | **T** |
-| RF-OUT-04 | El outline de la v1 cubre al menos un capítulo completo; no se exige la novela entera | M | **D** |
-| RF-OUT-05 | Respetar el orden de los hitos: ninguno se asigna a una escena anterior a la del hito que lo precede | S | **T** |
-
-**Feature `escena`** — *origen: `definitions.md` §4.1, §4.4 y §9; `CLAUDE.md` §14; los dos relojes, `domain-knowledge.md` §3.1.*
+**Nunca se llama al modelo sin haber contado, y lo que no cabe falla en vez de truncarse en silencio.**
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-ESC-01 | Producir la `FichaDeEscena` desde el outline y el estado en T | M | **T** |
-| RF-ESC-02 | La ficha declara las restricciones duras: `pov`, `presentes[]`, `lugar`, `distancia_psiquica`, `densidad_de_dialogo_objetivo`, `extension_objetivo` y el `nivel_de_calor` heredado | M | **T** |
-| RF-ESC-03 | Guardar cada `VersionDeTexto` como **inmutable**, con su `run_id` y una sola versión `vigente` | M | **T** |
-| RF-ESC-04 | Editar **crea versión nueva** y marca la vigente. Ninguna ruta modifica texto en sitio | M | **A** (+T) |
-| RF-ESC-05 | Los dos relojes son campos distintos: `tiempo_historia` y `orden_discurso`. La coherencia se calcula por el primero | M | **A** (+T) |
-| RF-ESC-06 | Cada `Escena` registra la `VersionDeObra` con la que se escribió. Cambiar la biblia crea versión nueva y **no reescribe** las escenas anteriores | M | **T** |
+| RF-CTX-01 | El paquete se ensambla por **código determinista**, nunca por un modelo | M | Análisis |
+| RF-CTX-02 | **Nunca se llama al modelo sin haber contado los tokens.** El contador es inyectado, no una estimación por caracteres | M | Test |
+| RF-CTX-03 | Cada capa respeta su tope; si una se pasa se recorta **esa**, no las demás. Si tras recortar no cabe, `ContextBudgetExceeded` **sin llamar** | M | Test |
+| RF-CTX-04 | Recuperación híbrida **en este orden**: filtro estructural —presentes, lugar, hilos abiertos, rango de capítulos— → orden semántico sobre lo ya filtrado → fusión con recencia. **El filtro estructural existe y filtra**, no solo pone un tope | M | Test |
+| RF-CTX-05 | El ensamblador devuelve el desglose por capa junto al paquete, y se persiste | M | Test |
+| RF-CTX-06 | Una capa vacía cuando debería tener contenido **falla antes de llamar**: es un fallo del almacén, no del escritor | M | Test |
+| RF-CTX-07 | Las capas constitucional e instrucción **nunca se recortan** | M | Análisis (+Test) |
+| RF-CTX-08 | La capa de canon etiqueta cada pieza por **`hc_id`**, no por posición: la posición cambia con el recorte y el identificador no | M | Test |
+| RF-CTX-09 | `ejecucion` persiste los identificadores de **todas** las capas que los tienen, con su capa, y **solo de las piezas que sobrevivieron al recorte** | M | Test |
 
-**Feature `contexto`** — el corazón de la v1, y el único componente cuyo fallo es silencioso si no se mide. *Origen: `definitions.md` §7; `architecture.md` §2.1, §4.2 y §4.6; el orden de recuperación, `domain-knowledge.md` §7.*
+### Funcionales — escritura y orquestación (§3)
 
-| ID | Requisito | Pr. | Verif. |
-| --- | --- | --- | --- |
-| RF-CTX-01 | Ensamblar el `PaqueteDeContexto` **por código**: mismo estado de almacenes y misma semilla producen el mismo paquete | M | **T**, propiedad |
-| RF-CTX-02 | Respetar los topes por capa de `architecture.md` §2.1 (5.000 / 10.000 / 20.000 / 15.000 / 20.000 / 10.000 / 10.000 / 10.000) | M | **T** |
-| RF-CTX-03 | El recorte es **por capa**: si una se pasa, se recorta esa y no las vecinas, en el orden declarado | M | **T**, propiedad |
-| RF-CTX-04 | Las capas **constitucional** e **instrucción** no se recortan nunca | M | **A** (+T, propiedad) |
-| RF-CTX-05 | Si tras recortar no cabe, lanzar `ContextBudgetExceeded`. **Nunca truncar por el final** | M | **T**, propiedad |
-| RF-CTX-06 | Devolver el desglose por capa junto al paquete y persistirlo en `ejecucion`; el desglose **suma el total contado** | M | **T**, propiedad |
-| RF-CTX-07 | Recuperación **híbrida en este orden**: filtro estructural → similitud semántica sobre lo ya filtrado → fusión con recencia | M | **T** |
-| RF-CTX-08 | Inyectar `MuestraAncla` de prosa aprobada del mismo POV | M | **T** |
-| RF-CTX-09 | Colocar lo importante al **principio y al final** | S | **I** |
-| RF-CTX-10 | Exponer paquete y desglose para depuración | M | **D** |
-| RF-CTX-11 | La reserva del 10 % permanece libre en la primera llamada: el reintento con el defecto añadido debe caber | M | **T** |
-| RF-CTX-12 | El paquete se **reconstruye entero** en cada llamada, también en un reintento. Nada se arrastra | M | **A** (+T) |
-| RF-CTX-13 | Desde una fila de `ejecucion` y el estado de almacenes de esa escena se **reconstruye el mismo paquete**: prompt por su `hash`, semilla e IDs recuperados. Lo reproducible es el paquete, **no la prosa**, y **caduca**: reconstruir una escena antigua desde los almacenes de hoy da otro paquete (`verification.md` §4.1) | M | **D** |
-
-| RF-CTX-14 | Ninguna capa con origen declarado en `architecture.md` §4.8 llega **vacía** al paquete. Si una lo hace, es fallo del almacén que la surte y se lanza **antes de llamar al modelo**, como `ContextBudgetExceeded`. Sin esto, un paquete puede estar dentro de presupuesto y con el desglose cuadrado, y a la vez dejar al Escritor sin canon: el fallo de ensamblado que `verification.md` §6.1 señala como la correlación más fuerte, porque ciega a la vez al Escritor y al Continuista | M | **T** |
-
-**Las cuatro propiedades mínimas del ensamblador** (`verification.md` §2, fila de tests basados en propiedades). Son el conjunto que no puede faltar, no el conjunto completo:
-
-1. El desglose por capa **suma el total contado** (RF-CTX-06).
-2. Recortar una capa **no altera** las demás (RF-CTX-03).
-3. Las capas constitucional e instrucción **nunca encogen** (RF-CTX-04).
-4. O el paquete cabe en 100.000 tokens, **o** se lanza `ContextBudgetExceeded`: nunca un truncado silencioso (RF-CTX-05).
-
-Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede reproducir» como **D, no T**, y la razón es justo la de RF-CTX-01 —el ensamblador es código— frente al modelo, que no es determinista. Lo que se demuestra reproducible es el paquete; la prosa no se promete.
-
-**Feature `escritura` — el orquestador** — *origen: `architecture.md` §3.*
+**Quien decide el siguiente paso es código; quien escribe solo ve el paquete.** De ahí sale que un defecto sea atribuible.
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-ORQ-01 | El orquestador es **código determinista**, máquina de estados explícita. Ningún agente decide el siguiente paso | M | **A** |
-| RF-ORQ-02 | **Topología en estrella**: ningún agente invoca a otro | M | **A** |
-| RF-ORQ-03 | Implementar los diez estados y transiciones de `architecture.md` §3.3. **No se salta ningún estado** | M | **T** |
-| RF-ORQ-04 | El estado del `trabajo` se persiste tras cada paso, nunca solo en memoria | M | **T** |
-| RF-ORQ-05 | Al arrancar, retomar los trabajos no terminales desde su último estado persistido | M | **T** |
-| RF-ORQ-06 | Un paso interrumpido se **repite entero**; la idempotencia por `run_id` evita duplicados | M | **T** |
-| RF-ORQ-07 | Reparación dirigida con el **defecto concreto y su cita**. Máximo dos; después `ESCALADA` | M | **T** |
-| RF-ORQ-08 | Prohibido el reintento genérico: ninguna ruta reintenta sin defecto adjunto | M | **A** |
-| RF-ORQ-09 | Tratar cada causa de fallo de `architecture.md` §3.6 con su acción declarada | M | **T**, una por caso |
-| RF-ORQ-10 | `ESCALADA` y `FALLIDA` son estados distintos y se cuentan por separado | M | **T** |
-| RF-ORQ-11 | Una escena en vuelo por obra; escrituras serializadas con cerrojo por obra, sin confiar en `busy_timeout` | M | **T** de concurrencia |
-| RF-ORQ-13 | Tomar turno antes de llamar al modelo y liberarlo al responder o fallar, **incluso si el paso lanza excepción**. Un turno que no se libera cuelga el proceso entero | M | **T** |
-| RF-ORQ-14 | El orquestador **persiste la salida de cada paso y la vuelve a leer** en vez de encadenar objetos en memoria: es lo que hace que reanudar sea idéntico a ejecutar | M | **A** |
-| RF-ORQ-15 | Cada paso recibe y devuelve un **modelo validado** (`architecture.md` §3.4). Una salida de agente que no valida contra su esquema es **fallo del paso**, no texto que se arrastre al siguiente | M | **T** |
-| RF-ORQ-16 | Ningún agente narrativo dispone de herramientas: no accede a los almacenes, ni al sistema de ficheros, ni a la red fuera del cliente de modelo. Los prompts los **carga el orquestador**, y el Escritor solo ve el paquete recibido (`architecture.md` §3.5) | M | **A** |
-| RF-ORQ-17 | Tras la edición humana de un trabajo en `ESCALADA`, el trabajo reentra por **`VALIDANDO`** (D-08). Esa revalidación **no incrementa** el contador de RF-ORQ-07, y un fallo devuelve a `ESCALADA`, nunca a `REPARANDO` | M | **T** |
-| RF-ORQ-18 | El autor puede **aceptar** una versión pese a un defecto bloqueante. La aceptación registra en el `trabajo` qué defecto se anuló y quién lo anuló; sin ese registro no se avanza a `EXTRAYENDO`. Es lo que impide que un validador equivocado deje el trabajo atrapado, contra la postcondición de CU-04 | M | **T** |
-| RF-ORQ-19 | Un defecto **mal formado** (RF-CAL-11) no bloquea, **no consume reintento** y no entra en el prompt de reparación. Tampoco se descarta en silencio: se registra y se cuenta aparte (`architecture.md` §8.3 y §9) | M | **T** |
+| RF-ESC-01 | El Escritor **solo ve el paquete**. Nunca accede a la base de datos | M | Análisis |
+| RF-ESC-02 | Cada versión de texto es **inmutable**: editar crea una nueva y marca la vigente | M | Test |
+| RF-ESC-03 | El reintento lleva **el defecto concreto con su cita** en el prompt. Nunca un reintento genérico | M | Test |
+| RF-ORQ-01 | El orquestador es una **máquina de estados en código**. Ningún agente decide el siguiente paso | M | Análisis |
+| RF-ORQ-02 | El estado vive en SQLite, no en memoria del proceso | M | Test |
+| RF-ORQ-03 | Idempotencia por `run_id`: repetir un paso no duplica escrituras | M | Test |
+| RF-ORQ-04 | **Máximo dos reparaciones dirigidas** por capítulo; después `ESCALADA`. El contador **solo crece dentro del capítulo** y **avanzar al siguiente no lo consume** | M | Test |
+| RF-ORQ-05 | Al integrar un capítulo se persiste **checkpoint** | M | Test |
+| RF-ORQ-06 | Tras una caída se reanuda **desde el último capítulo completado** | M | Test |
+| RF-ORQ-07 | La reanudación **no duplica ni pierde capítulos** | M | Test |
+| RF-ORQ-08 | **Una escena en vuelo por obra.** Las llamadas de obras distintas, y las del Continuista y el Crítico sobre el mismo capítulo, **pueden solaparse**. Si no hay turno, la llamada **espera**: nunca se recorta el paquete para hacerla caber | M | Test |
+| RF-ORQ-09 | La E/S de cada agente se **valida con esquema**. Un agente que devuelve algo fuera de su esquema es un fallo, no una respuesta | M | Test |
+| RF-ORQ-10 | **La suma de tokens de las llamadas en vuelo no pasa de 100.000** (encargo §7). El turno se da **contando tokens, no llamadas**. Si admitir una llamada la haría pasar, esa llamada **espera**: no se recorta el paquete ni se lanza igualmente | M | Test |
 
-*RF-ORQ-12 no existe: se retiró en revisión por ser una convención permanente de `CLAUDE.md` §6 —el `router.py` no contiene lógica— y no un requisito de esta spec. Los identificadores no se renumeran.*
+### Funcionales — memoria (§4)
 
-**Feature `calidad` — validadores de la v1.** Solo los mecánicos. *Origen: `definitions.md` §8 y §11; `architecture.md` §8.3; el porqué de cada familia, `domain-knowledge.md` §12.*
-
-| ID | Requisito | Defecto | Pr. | Verif. |
-| --- | --- | --- | --- | --- |
-| RF-CAL-01 | Rechazar la escena cuya **ficha** no declara giro de valor (`valor_entrada` = `valor_salida` o nulo). Que la prosa *entregue* el giro es juicio, no cuenta: es G1b y queda fuera (§Fuera de alcance) | EST-01 | M | **T** |
-| RF-CAL-02 | Rechazar contenido que exceda el `nivel_de_calor` declarado en la `Obra`, mediante **lista de términos versionada por nivel** (D-05): mecánica, determinista y sin llamada al modelo. Cobertura **parcial**: véase la nota bajo esta tabla | SEG-01 | M | **T** parcial (+I) |
-| RF-CAL-03 | Rechazar contenido romántico o sexual con menores de 18, **por esquema**: bloquea por construcción | SEG-01 | M | **T** (+I) |
-| RF-CAL-04 | Detectar desplazamiento en menos del `tiempo_de_viaje`, o presencia simultánea en dos lugares | CON-01 | M | **T** |
-| RF-CAL-05 | Detectar uso de información sin `sabe_desde` de escena anterior | CON-03 | M | **T** |
-| RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
-| RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
-| RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_texto_id, desplazamiento_inicio, desplazamiento_fin)` **más el texto literal recortado** (D-06, `definitions.md` §8): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Si el código es `CAN-01`, el defecto declara además el `hecho_canon_id` con el que choca. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
-| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 y de RF-CAL-12 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
-| RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
-| RF-CAL-11 | Comprobar la **forma** de cada defecto en código y **sin volver a llamar al modelo** (`architecture.md` §8.3): el `codigo` está en la taxonomía, la `cita` es subcadena exacta de la `VersionDeTexto` que señala en el desplazamiento declarado (axioma 11), y si el `codigo` es `CAN-01` el `hecho_canon_id` existe en el grafo (axioma 12). El que no pasa las tres está **mal formado** | — | M | **T** |
-| RF-CAL-12 | Rechazar la prosa cuya **persona** o **tiempo verbal** no sean los declarados en la `Obra` (axioma 13). Es mecánico: persona gramatical y tiempo verbal se detectan por morfología, sin llamar al modelo. Cierra una restricción dura que hasta ahora sostenía **solo el prompt**, pese a que `CLAUDE.md` §10 exige que ninguna dependa solo de él | VOZ-03 | M | **T** |
-
-**Cobertura parcial reconocida.** `verification.md` §4.1 asigna a dos de estos requisitos un método de refuerzo porque lo mecánico solo cubre una parte, y callarlo sería dar por verificado lo que no lo está:
-
-- **RF-CAL-02** — el código comprueba el nivel **declarado**; que la prosa se mantenga dentro lo juzga el Crítico, que está fuera de alcance, y en última instancia una lectura humana. La v1 entrega la parte **T**; la **I** la firma el autor sobre el capítulo de CA-1 (D-09).
-- **RF-CAL-03** — la edad se valida en esquema y bloquea por construcción (**T**); que la prosa no lo insinúe se **inspecciona**, y esa inspección no la hace la suite.
-
-Ninguna de las dos partes pendientes es **U**: son verificables, solo que por lectura humana y no por `pytest`.
-
-**Feature `canon` — memoria de largo plazo** — *origen: `architecture.md` §4; `definitions.md` §4.5 y §7; la corrección sin edición, `domain-knowledge.md` §7.1.*
+**Lo que un capítulo aprende llega al siguiente; lo que se rechaza no deja rastro.**
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-CAN-01 | **Solo el Extractor** escribe memoria de largo plazo, y solo desde `EXTRAYENDO` | M | **A** (+T) |
-| RF-CAN-02 | Una escena rechazada **no deja rastro**: ni canon, ni ledger, ni índice | M | **T** |
-| RF-CAN-03 | Escribir en una transacción por escena: canon → ledger → resumen → hilos → *embeddings*. O entra todo, o nada | M | **T** |
-| RF-CAN-04 | Todo `HechoCanon` cita la `escena_de_origen` | M | **T** |
-| RF-CAN-05 | El `Ledger` es *append-only*: ninguna ruta actualiza ni borra un evento | M | **A** (+T) |
-| RF-CAN-06 | `EstadoEnT` es **derivado**, con *snapshots* cada **N = 5** escenas (D-01; configurable por RI-21). No es una tabla editable | M | **A** (+T) |
-| RF-CAN-07 | Corregir un hecho **no lo edita**: registra uno nuevo que lo sustituye y cita al anterior | M | **T** |
-| RF-CAN-08 | Generar resumen de escena al integrarla y de capítulo al cerrarlo | M | **T** |
-| RF-CAN-09 | No se compactan nunca la capa constitucional, los hechos de canon ni el ledger | M | **A** |
-| RF-CAN-10 | Registrar `Plantado`, `Pago` y `HiloNarrativo` con su estado. La v1 los **registra**; no los audita | S | **T** |
-| RF-CAN-11 | Derivar el conocimiento de los `testigos[]` de cada `Evento`: es lo que alimenta RF-CAL-05 | M | **T** |
-| RF-CAN-12 | El índice vectorial es **reconstruible entero** desde el texto aprobado | S | **T** |
-| RF-CAN-13 | Un hecho que sustituye a otro **invalida los *snapshots* posteriores** a la escena de origen del sustituido; se recalculan desde el último válido | M | **T** |
+| RF-MEM-01 | *Story bible* en **SQLite**: canon, ledger, manuscrito, hilos | M | Test |
+| RF-MEM-02 | **Cada hecho registra en qué capítulos se usa.** Lo escribe quien integra el capítulo | M | Test |
+| RF-MEM-03 | Tabla de **cronología** —eventos con momento, lugar y presentes— **derivada del ledger**, no escrita a mano | M | Test |
+| RF-MEM-04 | **Resumen por capítulo**, derivado del texto aprobado, que alimenta el contexto de los siguientes | M | Test |
+| RF-MEM-05 | El ledger es *append-only* y `estado_en_t` es vista derivada. **Nunca se editan** | M | Análisis (+Test) |
+| RF-MEM-06 | Solo el Extractor escribe memoria de largo plazo, y solo desde el paso de extracción | M | Análisis |
+| RF-MEM-07 | Un capítulo rechazado **no deja rastro** en canon, ledger ni índice | M | Test |
+| RF-MEM-08 | Corregir un hecho **no lo edita**: crea uno nuevo que lo sustituye y cita al anterior, e invalida los *snapshots* posteriores a su origen | M | Test |
 
-**Feature `manuscrito`** — *origen: `architecture.md` §11.*
+### Funcionales — validadores (§5a)
+
+**Cada comprobación tiene nombre y punto de ejecución declarados, y las que corren dentro de una generación emiten *score*.** Lo que no se puede nombrar no se puede contar.
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RF-MAN-01 | Ensamblar el manuscrito con las versiones vigentes, en `orden_discurso` | M | **T** |
-| RF-MAN-02 | Registrar la autoría de cada fragmento: generado, editado o humano | M | **T** |
+| RF-VAL-01 | Cada validador tiene **nombre** y corre en un **punto declarado** del harness. Todo validador **que corre dentro de una generación** emite su resultado a Langfuse como *score*. **La excepción es TLC**, que corre en desarrollo y no en cada generación, como el propio encargo §6 establece. El catálogo vive en `verification.md` §8 y esta spec lo cita, no lo duplica | M | Test |
+| RF-VAL-02 | El brief y la salida de cada rol **cumplen su esquema** | M | Test |
+| RF-VAL-03 | El nombre del destinatario y los de los personajes aparecen **tal y como el canon los declara**: su forma canónica o una de sus **variantes declaradas** —apodos, hipocorísticos, diminutivos—. Una grafía que no es ninguna de las dos es defecto `PER-02` | M | Test |
+| RF-VAL-04 | La longitud de cada capítulo está **dentro del rango declarado** | M | Test |
+| RF-VAL-05 | **Cada elemento obligatorio del brief aparece en al menos un capítulo**, comprobado contra la tabla de hechos | M | Test |
+| RF-VAL-06 | Los validadores de canon, continuidad y conocimiento contrastan **contra el grafo**, no a ojo | M | Test |
+| RF-VAL-07 | Antes de llegar a la puerta se comprueba la **forma** de cada defecto: código de la taxonomía, cita que es subcadena en su desplazamiento, y `hecho_canon_id` existente si es `CAN-01`. Un defecto mal formado **no bloquea, no gasta reintento y se cuenta aparte** | M | Test |
+| RF-VAL-08 | La validación visual abre la lectura en un navegador y comprueba que índice, ficha y portada **renderizan**; un fallo se registra como `REN-01`. **Es código conduciendo un navegador, no un agente** (`architecture.md` §3.5.1) | M | Demostración |
+
+### Funcionales — juicio semántico (§5b)
+
+**El juez emite números, y esos números no valen nada hasta que se miden contra una persona.** Son dos personas distintas y dos actos distintos: el **equipo** puntúa la rúbrica para calibrar, y el **comprador** acepta o rechaza el regalo.
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-JUZ-01 | Existe una `Rubrica` versionada con criterios y **anclajes descritos**: qué es un 1 y qué un máximo | M | Inspección |
+| RF-JUZ-02 | Cubre continuidad, tono, calidad narrativa —arco, coherencia de personajes, ritmo— **y naturalidad de la personalización** | M | Inspección |
+| RF-JUZ-03 | El juez devuelve **puntuación por criterio y justificación**. Una puntuación de juicio sin justificación **no se acepta** | M | Test |
+| RF-JUZ-04 | Existe una **revisión humana de al menos una novela completa con la misma rúbrica**, criterio a criterio. La hace **el equipo**, como parte de la evaluación de §5, **no el comprador**: el encargo §5b la exige con rúbrica, y una aceptación comercial no la sustituye | M | Inspección |
+| RF-JUZ-05 | Se registra la **distancia** entre el juicio automático y el humano. Es la única medida de cuánto vale el juez | M | Test |
+| RF-JUZ-06 | **El juez no bloquea** mientras esa correlación no se haya medido sobre un conjunto y firmado (`architecture.md` §8.3) | M | Análisis |
+| RF-JUZ-07 | **El comprador aprueba o rechaza la entrega**, y su veredicto se registra con la versión publicada. Es un booleano, es la aceptación del producto, y **no alimenta la distancia de RF-JUZ-05**: de un sí o un no no sale una distancia | M | Test |
+
+### Funcionales — verificación formal (§5c, §5d)
+
+**Dos herramientas sobre dos sujetos distintos:** Lean sobre la cronología de la historia, TLC sobre el harness (`architecture.md` §9.3). Solo la primera bloquea una publicación.
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-FOR-01 | De la cronología en SQLite se **genera un fichero Lean** con eventos, momento, presentes, lugar y fechas de nacimiento | M | Test |
+| RF-FOR-02 | Se definen **al menos dos invariantes** en Lean, entre ellas el orden temporal y la edad contra la fecha de nacimiento | M | Test |
+| RF-FOR-03 | Se ejecuta con `lake build`, **es una puerta**, y si falla **la versión no se publica**: el fallo vuelve al editor | M | Test |
+| RF-FOR-04 | Se documenta **un caso real** en que Lean detecta una incoherencia que los demás no vieron, **o se justifica por qué no se encontró ninguno** | M | Demostración |
+| RF-FOR-05 | Existe una especificación **TLA+ o PlusCal** de la máquina de la novela (`architecture.md` §3.9), con **tres invariantes de seguridad** y **una de liveness** | M | Análisis |
+| RF-FOR-06 | Se comprueba con **TLC** sobre un modelo pequeño —cinco capítulos, dos reintentos—, con la configuración en el repositorio | M | Demostración |
+| RF-FOR-07 | El README empareja **cada acción de la especificación con el estado o transición del código** que la implementa | M | Inspección |
+| RF-FOR-08 | Si TLC encuentra un contraejemplo, se documenta **junto al cambio que provocó** | M | Inspección |
+
+### Funcionales — guardarraíles (§7)
+
+**Los vetos se aplican en código, antes de aceptar el capítulo, y cada decisión queda registrada.**
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-GUA-01 | Las listas de vetos viven en SQLite en **tres ámbitos**: global, obra y brief | M | Test |
+| RF-GUA-02 | La comparación es sobre **texto normalizado**: mayúsculas, acentos, plurales y variantes simples | M | Test |
+| RF-GUA-03 | Una coincidencia devuelve el capítulo al escritor **con el término concreto**, con límite de intentos. Agotado, **la generación se detiene y se informa** | M | Test |
+| RF-GUA-04 | Cada coincidencia queda en el **registro de auditoría** y en Langfuse | M | Test |
+| RF-GUA-05 | El registro de auditoría es *append-only* y dice **qué se permitió, qué se bloqueó y por qué** | M | Test |
+| RF-GUA-06 | Edad mínima y nivel de calor se validan **en esquema**, no en el prompt | M | Test |
+| RF-GUA-07 | **Dos hooks**: uno de validación de capítulo y otro de policy, fuera del bucle del modelo | M | Análisis (+Test) |
+
+### Funcionales — observabilidad (§6)
+
+**Una novela es una sesión, y todo lo que costó y todo lo que se juzgó cuelga de ella.**
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-OBS-01 | Cada novela es **una sesión** en Langfuse, que abarca la entrevista, la generación y **todas las regeneraciones posteriores** | M | Test |
+| RF-OBS-02 | Cada uno de los **diez roles** y cada llamada a tool es un **span** con nombre identificable | M | Test |
+| RF-OBS-03 | Tokens, coste y latencia visibles **por llamada, por capítulo y por novela**. El coste se **deriva de los tokens y de la tarifa declarada del modelo**, no se lee de una factura: con consumo de cuenta (P-02) no existe cargo por llamada. Es una cifra imputada, y sirve igual para comparar y para el *tuning* | M | Test |
+| RF-OBS-04 | El resultado de **todos** los validadores llega como *score* asociado a su traza. **TLC no**: corre en desarrollo | M | Test |
+| RF-OBS-05 | Las **plantillas** de prompt se versionan en Langfuse, de forma que el *tuning* pueda decir qué versión produjo qué resultado | M | Test |
+| RF-OBS-06 | Cada ejecución guarda en `ejecucion`: plantilla con su hash, versión de biblia, IDs recuperados, modelo, semilla, tokens por capa, coste y veredicto | M | Test |
+| RF-OBS-07 | Ninguna clave de proveedor se lee del repositorio ni de la base de datos: solo del entorno | M | Análisis |
+
+### Funcionales — publicación y petición del lector (§2)
+
+**Publicar fija, y regenerar no destruye.** El lector no paga una deuda anterior a su petición.
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-PUB-01 | Publicar **fija** los `version_texto_id` de cada capítulo; no se recalcula por vigencia al leer | M | Test |
+| RF-PUB-02 | Publicar una versión **no altera** ninguna anterior | M | Test |
+| RF-PUB-03 | **No se publica ningún capítulo que no haya pasado su puerta.** Un intento con un capítulo escalado falla con error de dominio | M | Test |
+| RF-PUB-04 | Al publicar se guarda el **cuadro de defectos** de esa versión | M | Test |
+| RF-PUB-05 | Al publicar se deriva y guarda la `FichaDeLectura`, que es **reproducible** desde el ledger | M | Test |
+| RF-PUB-06 | Cada versión apunta a la que sucede, y los capítulos cambiados se calculan por **diferencia de texto** | M | Test |
+| RF-PUB-07 | El identificador de una obra publicada **no es adivinable** | M | Test |
+| RF-PUB-08 | Publicar es **atómico**: o queda la versión entera con su ficha y su cuadro, o no queda nada | M | Test |
+| RF-PET-01 | La petición se registra con el hecho afectado, la versión de origen y el texto pedido | M | Test |
+| RF-PET-02 | La petición **no edita** el hecho: la corrección es un hecho nuevo que sustituye | M | Test |
+| RF-PET-03 | Los capítulos afectados se determinan por el **uso registrado** del hecho | M | Test |
+| RF-PET-04 | Se revalida sobre los capítulos posteriores **al origen del hecho sustituido**, no a los regenerados | M | Test |
+| RF-PET-05 | Cada defecto de la revalidación se clasifica en **preexistente** o **introducido**, contra el cuadro guardado | M | Test |
+| RF-PET-06 | **Solo un defecto introducido impide publicar.** El lector no paga una deuda anterior a su petición | M | Test |
+| RF-PET-07 | Si no se publica, la vigente no cambia, no queda rastro de la prosa descartada, y **la petición se conserva con su resultado** | M | Test |
+| RF-PET-08 | Revertir devuelve la anterior a vigente y **no borra** la revertida | M | Test |
+
+### Funcionales — evaluación (§5)
+
+**Cinco briefs, una tabla y una iteración documentada.** Es lo que demuestra que el sistema se probó, no solo que funcionó una vez.
+
+| ID | Requisito | Pr. | Verif. |
+| --- | --- | --- | --- |
+| RF-EVA-01 | Existen **cinco briefs de prueba**, uno **adversarial** —instrucciones incrustadas en el texto libre— y uno construido para **provocar una incoherencia temporal** | M | Test |
+| RF-EVA-02 | Existe una **tabla** que dice, por brief, qué validadores pasaron y cuáles fallaron | M | Demostración |
+| RF-EVA-03 | Se documenta **una iteración de *tuning***, con resultados antes y después y **qué versión de plantilla** produjo cada uno | M | Demostración |
+| RF-EVA-04 | El brief adversarial **no altera ningún prompt**: sus instrucciones llegan como dato | M | Test |
 
 ### Datos
 
-*Origen: `definitions.md` completo; `architecture.md` §3.2 y §5.5; `CLAUDE.md` §2 y §15.*
-
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RD-01 | El esquema implementa las clases necesarias en la v1: `Serie`, `Obra`, `VersionDeObra`, `Parte`, `Capitulo`, `Escena`, `Personaje` (parte fija), `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto`, `ReglaDeMundo`, `Evento`, `HechoCanon`, `Plantado`, `HiloNarrativo`, `VersionDeTexto`, `Defecto`, `Ejecucion`, y las tablas `trabajo` y `ngrama_vetado`. `Prompt` **no es una tabla**: es un fichero del repositorio del que `ejecucion` guarda `prompt_id`, `version` y `hash` | M | **A** |
-| RD-02 | Nombres de tablas, columnas y enumeraciones **son los de `definitions.md`**: no se traducen, no se abrevian, no se inventan sinónimos | M | **I** (+A) |
-| RD-03 | Parte fija y parte móvil del `Personaje` en estructuras separadas | M | **A** |
-| RD-04 | `tiempo_historia` y `orden_discurso` son campos distintos en `Escena` | M | **A** |
-| RD-05 | Tabla `trabajo` con los campos de `architecture.md` §3.2 | M | **T** |
-| RD-06 | Tabla `ejecucion` con el registro completo de RI-14, una fila por llamada | M | **T** |
-| RD-07 | Los *embeddings* se guardan de forma legible por **ambas** implementaciones de `VectorStore`, a **1024 dimensiones** (D-02): `float[1024]` en `vec0`, BLOB legible por NumPy en `BruteForceStore` | M | **T** en ambos modos |
-| RD-08 | Toda migración lleva su revisión de Alembic y **funciona con y sin extensión vectorial** | M | **T** |
-| RD-09 | Los identificadores son estables y opacos; no se reutilizan tras un borrado. **En la v1 nada borra** —ledger *append-only*, versiones inmutables, canon por sustitución—, así que lo que se prueba es el **generador de identificadores**, no un ciclo de borrado y realta que no existe. El requisito se mantiene porque el esquema no debe impedirlo después | M | **T** |
-| RD-10 | El esquema **no impide** añadir después la auditoría de plantados ni el arco romántico | S | **A** |
-| RD-11 | El canon cuelga de una `Serie`, no de una `Obra`: `serie_id` existe desde la migración inicial, aunque la v1 solo maneje una obra y una serie implícita | M | **A** (+T) |
-| RD-12 | Tabla `version_obra`: una fila por versión de biblia, y cada `Escena` guarda con cuál se escribió | M | **T** |
-| RD-13 | Tabla `ngrama_vetado` para la lista negra, escrita por el Extractor. **Ningún componente de la v1 la lee**: su único consumidor es el Editor de línea, que está fuera de alcance. Se escribe desde el primer día porque reconstruirla después exigiría releer el manuscrito entero; lo que la v1 verifica es que se escribe, no que sirva | S | **T** |
-| RD-14 | Tabla `defecto` con la forma de `definitions.md` §8: `defecto_id`, `codigo`, `version_texto_id`, `cita`, `desplazamiento_inicio`, `desplazamiento_fin` y `hecho_canon_id` (0..1, **obligatorio en `CAN-01`**). Es la salida del Continuista y lo que hace comprobable RF-CAL-11 | M | **T** |
+| RD-01 | **SQLite, un fichero por obra**, con WAL, `foreign_keys=ON` y `busy_timeout`. Sin segunda base de datos | M | Test |
+| RD-02 | Migraciones con **Alembic desde el primer commit** | M | Test |
+| RD-03 | Esquema para: canon con **uso por capítulos**, ledger, cronología, resúmenes, manuscrito versionado, vetos, auditoría, ejecuciones, defectos, personalización y entrega | M | Test |
+| RD-04 | `Serie` contemplada **desde la migración inicial**: si existe, el canon se comparte desde el primer día (`definitions.md` §4.1) | M | Test |
+| RD-05 | La `Dedicatoria` **no es una versión de texto**: no entra en el ensamblado, ni en el PDF como capítulo, ni en la lista negra de n-gramas | M | Test |
+| RD-06 | Toda la prosa generada queda **fuera del repositorio** | M | Análisis |
 
 ### No funcionales
 
-**Presupuesto de contexto** — *origen: `architecture.md` §2.1 y §2.2; `CLAUDE.md` §4.1.*
-
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RNF-TOK-01 | Ninguna llamada supera los 100.000 tokens | M | **T** |
-| RNF-TOK-02 | El contador es una dependencia inyectada, **no** una estimación por caracteres, y es **local**: confirmar RNF-REN-01 (ensamblar en menos de 2 s) excluye un contador remoto (D-07) | M | **A** |
-| RNF-TOK-03 | Nunca hay más llamadas al modelo en vuelo de las configuradas (**1 por proceso**, confirmado en D-03 sobre `architecture.md` §2.2) | M | **T** de concurrencia |
-| RNF-TOK-04 | Sin turno, la llamada **espera**; nunca se recorta el paquete por carga del sistema | M | **T** |
-| RNF-TOK-05 | La espera de turno tiene *timeout* (**300 s**, D-03); al vencer, `FALLIDA` con `TiempoAgotado` y sin coste | M | **T** |
-| RNF-TOK-06 | Nunca se llama al modelo sin haber contado antes los tokens | M | **A** (+T) |
-
-**Rendimiento.** Objetivos **confirmados como provisionales** (D-07): se miden en la v1 y los valores reales se anotan en el Cierre. Los cuatro son `S`, así que ninguno invalida la entrega.
-
-| ID | Requisito | Pr. | Verif. |
-| --- | --- | --- | --- |
-| RNF-REN-01 | El ensamblado de un paquete, sin la llamada al modelo, termina en **menos de 2 s** para una obra de 40 escenas | S | **T** |
-| RNF-REN-02 | La derivación del estado en T desde el último *snapshot* termina en **menos de 1 s** | S | **T** |
-| RNF-REN-03 | `GET /trabajos/{id}` y `GET /escenas/{id}/contexto` responden en **menos de 300 ms** | S | **T** |
-| RNF-REN-04 | La búsqueda por fuerza bruta se mantiene utilizable hasta **10.000 fragmentos**; por encima, se avisa | S | **T** |
-
-**Fiabilidad, observabilidad y seguridad** — *origen: `architecture.md` §3.6, §3.7, §9 y §11; `domain-knowledge.md` §13; RNF-SEG-05 y RNF-SEG-06, `verification.md` §3 (red teaming).*
-
-| ID | Requisito | Pr. | Verif. |
-| --- | --- | --- | --- |
-| RNF-FIA-01 | Una caída no pierde trabajo: se reanuda desde el último estado persistido | M | **T** |
-| RNF-FIA-02 | `FalloDeProveedor` se reintenta con espera creciente, hasta 3 veces; después `FALLIDA` | M | **T** |
-| RNF-FIA-03 | Ninguna ejecución depende de que la extensión vectorial esté cargada | M | **T** en ambos modos |
-| RNF-FIA-04 | Un paso que supera su plazo termina en `FALLIDA` con el paso anotado; no queda colgado. El plazo **depende del tipo de paso** (D-04): 30 s los de código (`ENSAMBLANDO`, `VALIDANDO`, `REPARANDO`), 600 s los que llaman al modelo (`PLANIFICANDO`, `ESCRIBIENDO`, `EXTRAYENDO`) | M | **T** |
-| RNF-OBS-01 | Métricas: coste por escena, tokens medios por capa, defectos por código, **tasa de defectos mal formados** (`architecture.md` §9), tasa de reintento, escalados por cada cien escenas, latencia por fase, porcentaje de contexto por capa | M | **D** |
-| RNF-OBS-02 | Métricas de concurrencia: tiempo de espera por turno y número de esperas vencidas | M | **D** |
-| RNF-OBS-03 | La traza es **estructural, no textual**: ni prompts de producción ni fragmentos de manuscrito en los logs por defecto | M | **A** |
-| RNF-SEG-01 | Edad mínima y nivel de calor se validan **en esquema**, no solo en el prompt | M | **T** |
-| RNF-SEG-02 | Ninguna regla de seguridad depende únicamente del prompt | M | **A** |
-| RNF-SEG-03 | Claves de proveedor solo desde entorno | M | **I** |
-| RNF-SEG-04 | El repositorio no contiene claves, prompts de producción ni fragmentos de manuscrito | M | **A** (+I) |
-| RNF-SEG-05 | Todo lo recuperado de los almacenes —canon, resúmenes, continuidad local, muestras ancla— entra en el paquete como **datos delimitados, nunca como instrucciones**: ninguna capa recuperada puede alterar las restricciones duras de la capa constitucional ni de la de instrucción | M | **T**, con casos adversarios |
-| RNF-SEG-06 | Un `Brief` que empuje contra la edad mínima o el `nivel_de_calor` lo rechaza el **esquema**, no el prompt | M | **T**, con casos adversarios |
+| RNF-SEG-01 | Ninguna regla de seguridad depende solo del prompt | M | Análisis |
+| RNF-SEG-02 | Un brief que empuja contra la edad mínima o el nivel de calor **se rechaza en el esquema** | M | Test |
+| RNF-SEG-03 | Prosa con instrucciones incrustadas **no altera el paquete del capítulo siguiente** al pasar por el Extractor | M | Test |
+| RNF-FIA-01 | La suite pasa **sin red y sin credenciales**: el proveedor se sustituye por un doble determinista | M | Test |
+| RNF-FIA-02 | La suite corre en **los dos modos de `VectorStore`**, con y sin la extensión | M | Test |
+| RNF-REN-01 | El peor caso de revalidación —diez llamadas en serie— no se da por perdido ni por terminado | M | Test |
 
 ---
 
 ## Criterios de aceptación
 
-Observables y comprobables: cada uno acabará siendo un test.
+**Treinta y siete criterios, y cinco deciden si el sistema existe:** CA-1 (sale una novela entera), CA-5 (sobrevive a una caída), CA-7 (el presupuesto falla antes de llamar), CA-21 (Lean detiene una publicación) y CA-25 (una petición no rompe lo que ya estaba). Los otros treinta protegen partes; estos cinco son el producto.
 
-- [ ] **CA-1** — Un **capítulo completo** se genera de principio a fin, con todas sus escenas en `INTEGRADA`. *(Demostración)*
-- [ ] **CA-2** — La suite pasa **en los dos modos de `VectorStore`**, con y sin extensión cargada.
-- [ ] **CA-3** — Se puede matar el proceso en cualquier estado no terminal y el trabajo se reanuda **sin duplicar escrituras**.
-- [ ] **CA-4** — Toda regla de dominio marcada «Sí» tiene test, y el test **falla** si se quita la validación.
-- [ ] **CA-5** — El desglose por capa **suma lo que dice** y respeta los topes.
-- [ ] **CA-6** — Una escena con defecto bloqueante se repara dirigidamente y a la tercera acaba en `ESCALADA`, no en bucle.
-- [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice.
-- [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
-- [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
-- [ ] **CA-10** — Desde una fila de `ejecucion`, **y con el estado de almacenes de esa escena**, se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
-- [ ] **CA-11** — Con la extensión vectorial **ausente del sistema**, el proceso arranca, avisa de la degradación y escribe una escena completa. *(Demostración)*
-- [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
-- [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
-- [ ] **CA-14** — Una escena escrita en una persona o un tiempo verbal distintos de los de la `Obra` se **rechaza con `VOZ-03`**, y un paquete con una capa vacía **falla antes de llamar al modelo**.
-- [ ] **CA-14** — Un defecto con la **cita inventada** —que no es subcadena del texto— no bloquea la escena, no gasta intento y queda contado como mal formado.
+- [ ] **CA-1** — Se genera **una novela completa de diez capítulos** de principio a fin, desde el brief de ejemplo, con todos los capítulos integrados. *(Demostración)* → CU-01 a CU-05.
+- [ ] **CA-2** — Cuando el brief tiene una contradicción o le falta un dato obligatorio, entonces **no se crea la obra** y se devuelve qué falta o qué se contradice, nombrado. *(Test)* → RF-ENT-03, RF-ENT-04, RF-ENT-07.
+- [ ] **CA-3** — Cuando el texto libre contiene «ignora tus instrucciones», entonces se extraen sus hechos y **ningún prompt cambia**. *(Test)* → RF-ENT-05, RF-ENT-06, RF-EVA-04, RNF-SEG-03.
+- [ ] **CA-4** — La suite pasa **sin red y sin credenciales**. *(Test)* → RNF-FIA-01, RI-14.
+- [ ] **CA-5** — Se mata el proceso en cualquier estado no terminal y el trabajo **se reanuda desde el último capítulo completado, sin duplicar ni perder ninguno**. *(Test)* → RF-ORQ-02, RF-ORQ-03, RF-ORQ-05, RF-ORQ-06, RF-ORQ-07.
+- [ ] **CA-6** — Toda regla de dominio de `CLAUDE.md` §8 tiene test, y **el test falla si se quita la validación**. *(Test)* → RF-GUA-06, RF-MEM-05, RF-VAL-06.
+- [ ] **CA-7** — El desglose por capa **suma lo que dice** y respeta los topes; y si no cabe tras recortar, se lanza `ContextBudgetExceeded` **sin haber llamado al modelo**. Y una capa vacía cuando debería tener contenido **falla igualmente antes de llamar**. *(Test)* → RF-CTX-02, RF-CTX-03, RF-CTX-05, RF-CTX-06, RF-CTX-07.
+- [ ] **CA-8** — La recuperación **filtra antes de ordenar**: con un corpus donde lo parecido y lo pertinente difieren, devuelve lo pertinente. *(Test)* → RF-CTX-04.
+- [ ] **CA-9** — Un capítulo con defecto bloqueante se repara dirigidamente y **a la tercera acaba en `ESCALADA`**, no en bucle. Y **avanzar de capítulo no consume reintentos**. *(Test)* → RF-ESC-03, RF-ORQ-04.
+- [ ] **CA-10** — Un capítulo rechazado **no ha dejado rastro** en canon, ledger ni índice. *(Test)* → RF-MEM-06, RF-MEM-07.
+- [ ] **CA-11** — Dos capítulos de **la misma obra** nunca están en vuelo a la vez; dos de **obras distintas** sí, y el Continuista y el Crítico del mismo capítulo también. *(Test)* → RF-ORQ-08.
+- [ ] **CA-12** — Desde una fila de `ejecucion`, **y con el estado de almacenes de ese capítulo**, se reconstruye el mismo paquete con el mismo desglose, y se sabe **qué hechos de canon** entraron. *(Demostración)* → RF-CTX-01, RF-CTX-08, RF-CTX-09, RF-OBS-06.
+- [ ] **CA-13** — Una palabra vetada escrita **con acento distinto o en plural** se detecta igual, en los tres ámbitos. *(Test)* → RF-GUA-01, RF-GUA-02.
+- [ ] **CA-14** — Agotado el límite de reescrituras por veto, **la generación se detiene y se informa**, y la coincidencia está en el registro de auditoría y en Langfuse. *(Test)* → RF-GUA-03, RF-GUA-04, RF-GUA-05, RF-GUA-07.
+- [ ] **CA-15** — **Cada elemento obligatorio del brief aparece en al menos un capítulo**, comprobado contra la tabla de hechos; si falta uno, se señala cuál. *(Test)* → RF-ENT-08, RF-VAL-05, RF-MEM-02.
+- [ ] **CA-16** — Una grafía que no está en el canon —«Maria» por «María»— se detecta como defecto; una **variante declarada** —«Mari» por «María», si el canon la declara— **no**. *(Test)* → RF-VAL-03.
+- [ ] **CA-17** — Un defecto con **cita inventada** no bloquea, no gasta intento y **se cuenta aparte** como mal formado. *(Test)* → RF-VAL-07, RF-ORQ-09.
+- [ ] **CA-18** — Cada validador emite su *score* a Langfuse, y la traza agrupa **por novela**: la entrevista, la generación y una regeneración posterior caen en la misma sesión. *(Test)* → RF-VAL-01, RF-OBS-01, RF-OBS-02, RF-OBS-03, RF-OBS-04.
+- [ ] **CA-19** — Dos versiones de plantilla producen dos entradas distinguibles en Langfuse, y el *tuning* puede decir **cuál produjo qué**. *(Test)* → RF-OBS-05, RF-EVA-03.
+- [ ] **CA-20** — Una puntuación del juez **sin justificación se rechaza**, y la rúbrica que usa es la misma que la de la revisión humana. *(Test)* → RF-JUZ-01, RF-JUZ-02, RF-JUZ-03, RF-JUZ-04, RF-JUZ-05, RF-JUZ-06.
+- [ ] **CA-21** — `lake build` pasa sobre la cronología generada; y con una cronología **imposible a propósito** —alguien en dos sitios a la vez— **falla y la versión no se publica**. *(Test)* → RF-MEM-03, RF-FOR-01, RF-FOR-02, RF-FOR-03.
+- [ ] **CA-22** — TLC pasa sobre el modelo pequeño con los tres invariantes de seguridad y el de liveness, y el README empareja cada acción con su transición. *(Demostración)* → RF-FOR-05, RF-FOR-06, RF-FOR-07, RF-FOR-08.
+- [ ] **CA-23** — Cuando se intenta publicar con un capítulo escalado, **no se crea ninguna versión**. *(Test)* → RF-PUB-03, RF-PUB-08.
+- [ ] **CA-24** — Publicar y después regenerar: pedir la versión antigua devuelve **el mismo texto**, y la ficha reconstruida desde el ledger **coincide con la guardada**. *(Test)* → RF-PUB-01, RF-PUB-02, RF-PUB-04, RF-PUB-05, RF-PUB-06, RF-PUB-07.
+- [ ] **CA-25** — Un defecto **preexistente** no impide publicar; uno **introducido** sí, y entonces la vigente no cambia y la petición se conserva. *(Test)* → RF-PET-01, RF-PET-02, RF-PET-03, RF-PET-04, RF-PET-05, RF-PET-06, RF-PET-07, RF-PET-08, RNF-REN-01.
+- [ ] **CA-26** — Los cinco briefs corren y producen la tabla de qué validador pasó y cuál falló; el de trampa temporal **lo caza Lean**. *(Demostración)* → RF-EVA-01, RF-EVA-02, RF-FOR-04.
+- [ ] **CA-27** — La validación visual abre la lectura en un navegador y **registra un fallo** cuando índice, ficha o portada no renderizan. *(Demostración)* → RF-VAL-08.
+- [ ] **CA-28** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio, **en los dos modos de `VectorStore`**. *(Test)* → RD-01, RD-02, RD-03, RD-04, RNF-FIA-02, RNF-SEG-01.
+- [ ] **CA-29** — Ninguna clave, prosa generada ni fragmento de manuscrito queda en el repositorio. *(Análisis)* → RD-06, RF-OBS-07.
+- [ ] **CA-30** — La dedicatoria **no aparece** en el manuscrito ensamblado, ni en el PDF como capítulo, ni en `ngrama_vetado`. *(Test)* → RD-05.
+- [ ] **CA-31** — Un brief que empuja contra la edad mínima o el nivel de calor **se rechaza al construirlo**, no en el prompt. *(Test)* → RNF-SEG-02.
+- [ ] **CA-32** — El outline asigna cada beat obligatorio a **exactamente un** capítulo; uno duplicado o sin asignar falla. *(Test)* → RF-PLA-01, RF-PLA-02, RF-PLA-03, RF-PLA-04.
+- [ ] **CA-33** — Los catorce endpoints aparecen en el OpenAPI con sus modelos, y el estado de un trabajo se lee **por capítulo**. *(Test)* → RI-01, RI-02, RI-03, RI-04, RI-05, RI-06, RI-07, RI-08, RI-09, RI-10, RI-11, RI-12, RI-13, RF-ESC-01, RF-ESC-02, RF-MEM-01, RF-MEM-04, RF-MEM-08, RF-ORQ-01.
 
-**Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
+- [ ] **CA-34** — Cuando la entrevista se completa sin faltantes ni contradicciones, entonces el brief resultante contiene **el destinatario con sus datos, los vetos del cliente y sus elementos obligatorios**, y valida contra su esquema; y la salida de cada rol valida contra el suyo. *(Test)* → RF-ENT-01, RF-ENT-02, RF-VAL-02.
+- [ ] **CA-35** — Un capítulo por debajo o por encima del rango declarado **se detecta y vuelve al escritor**; uno dentro del rango pasa. *(Test)* → RF-VAL-04.
+- [ ] **CA-37** — La revisión humana de una novela completa produce **puntuación por criterio**, y de ahí se **registra y se consulta la distancia** frente al juicio del modelo. Y el veredicto del comprador —aprobar o rechazar— queda asociado a su versión **sin entrar en ese cálculo**. *(Test)* → RF-JUZ-04, RF-JUZ-05, RF-JUZ-07.
+- [ ] **CA-36** — Dos paquetes que suman más de 100.000 tokens **no corren a la vez**: el segundo espera, y arranca en cuanto el primero libera. Dos que suman menos **sí se solapan**. El contador de tokens en vuelo es **observable**, no implícito. *(Test)* → RF-ORQ-10.
+
+**Sobre CA-6.** No basta con que el test pase: si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y sustituye a mano a los tests de mutación mientras estén aplazados (`verification.md` §2).
+
+**Sobre CA-8.** Es el criterio que la versión anterior de esta spec **no tuvo**, y por eso el filtro estructural quedó sin implementar con un requisito que decía estar probado. Un criterio que solo comprueba el tope se cumple sin filtrar.
+
+**Sobre CA-37, y por qué RF-JUZ-05 necesitaba criterio propio.** Su único criterio era CA-20, que comprueba que una puntuación sin justificación se rechaza y que la rúbrica es la misma — **nunca que la distancia se registre**. La palabra «distancia» aparecía en el requisito, en Decisiones y en «lo que no se verifica», y en ningún criterio. El cruce mecánico daba cero huérfanos, porque RF-JUZ-05 **sí** estaba citado por CA-20: citado no es lo mismo que comprobado, y esa diferencia no la ve ningún script. Lo encontró Nubia leyendo.
+
+**Sobre CA-36, y sus dos mitades.** El criterio comprueba que el techo **frena** y que **deja pasar**. Solo la primera mitad es la obvia, y una implementación que no diera turno nunca la pasaría igual: un sistema que serializa todo cumple el techo y no cumple la decisión. Por eso la segunda mitad —dos paquetes pequeños **sí se solapan**— es la que de verdad distingue.
+
+**Sobre CA-16, y por qué RF-VAL-03 no dice «exactamente».** La primera redacción exigía que los nombres aparecieran *exactamente* como en la *story bible*, y eso **prohibía por escrito que a María la llamaran Mari** — que en una novela de regalo es justo lo que uno espera encontrar. Un validador de comparación literal no distingue un error de un apodo; la diferencia tiene que estar **en el canon**, declarada, no en la astucia del validador.
 
 ---
 
 ## Reglas de dominio afectadas
 
-Los doce axiomas de `definitions.md` §11. Las dos diferidas lo están porque **no son comprobables con un solo capítulo**, no porque sean opcionales; las dos últimas entraron con la v1.2 del documento y son las que dan forma comprobable al defecto.
+Las quince de `CLAUDE.md` §8, todas. Las que esta spec **establece por primera vez**:
 
-| Regla | Cómo se respeta |
+| Regla | Dónde se cumple |
 | --- | --- |
-| RG-01 · Un personaje solo usa un hecho si existe `sabe_desde` anterior | RF-CAL-05 sobre el conocimiento derivado en RF-CAN-11 |
-| RG-02 · Todo `Plantado` de importancia alta tiene `Pago` | **Diferida.** Se registra (RF-CAN-10); se audita en fase 5 |
-| RG-03 · Dos `HechoCanon` sobre el mismo atributo no difieren | RF-CAL-06, con arbitraje por `orden_discurso` |
-| RG-04 · Nadie está en dos lugares a la vez ni viaja en menos del `tiempo_de_viaje` | RF-CAL-04, contra los `tiempo_de_viaje` de la biblia (RF-OBR-02) |
-| RG-05 · Un objeto `perdido`, `roto` o `destruido` no se usa sin recuperarlo | RF-CAL-07 |
-| RG-06 · Cada `BeatDeGenero` obligatorio en exactamente una `Escena` | RF-OUT-02, comprobado al generar el outline |
-| RG-07 · El arco romántico no se resuelve antes del 90 % | **Diferida.** Requiere manuscrito completo |
-| RG-08 · Toda `Escena` tiene un `pov` y un giro de valor no nulo | RF-OUT-03 al planificar y RF-CAL-01 al validar |
-| RG-09 · Ningún contenido romántico o sexual con menores de 18 | RF-CAL-03, **por esquema**, sin excepción |
-| RG-10 · Ninguna escena excede el `nivel_de_calor` declarado | RF-CAL-02, contra el valor fijado en RF-OBR-01 |
-| RG-11 · La `cita` de un `Defecto` es subcadena exacta de la `VersionDeTexto` que señala | RF-CAL-11, en la comprobación de forma previa a G1a |
-| RG-12 · Todo `Defecto` con código `CAN-01` declara un `hecho_canon_id` que existe | RF-CAL-11, contra el grafo de canon |
-| RG-13 · La prosa usa la `persona` y el `tiempo_verbal` declarados en la `Obra` | RF-CAL-12, en G1a |
+| 4 — el hecho de `origen: brief` no tiene escena | RF-ENT-06 |
+| 7 — la ejecución guarda los IDs recuperados, **de memoria y de canon** | RF-CTX-09, RF-OBS-06 |
+| 11 — todo elemento obligatorio aparece en un capítulo | RF-VAL-05, CA-15 |
+| 12 — ninguna palabra prohibida, comparando normalizado | RF-GUA-02, CA-13 |
+| 13 — la edad concuerda con la fecha de nacimiento | RF-FOR-02, CA-21 |
+| 14 — no se publica un capítulo que no pasó su puerta | RF-PUB-03, CA-23 |
+| 15 — la dedicatoria no es prosa del manuscrito | RD-05, CA-30 |
 
 ---
 
 ## Impacto técnico
 
-**Presupuesto de contexto (`CLAUDE.md` §4.1).** Esta spec no añade capas ni cambia los topes: los implementa por primera vez. La capa que más riesgo tiene de crecer es **canon relevante** (20.000), porque su tamaño depende de cuántos personajes estén presentes; se recorta por personajes mencionados y no presentes, según `architecture.md` §2.1. El límite de concurrencia de §2.2 se estrena aquí, y su consecuencia —el sistema es secuencial por defecto— es lo que hace que la v1 no necesite paralelismo.
+**Lo que cambia los plazos, antes que la tabla:** cuatro comprobaciones —cobertura de personalización, dedicatoria, inspección visual y Lean— **bloquean en G4, con la novela ya escrita**. Es su sitio correcto, porque ninguna es comprobable sobre un capítulo suelto, y es el más caro: **un fallo en G4 no cuesta un capítulo, cuesta lo que haya que rehacer.**
 
-**Esquema.** Es la migración inicial: no hay esquema previo que migrar. Debe funcionar **con y sin `sqlite-vec`** (RD-08), lo que obliga a que el almacenamiento de *embeddings* sea legible por las dos implementaciones (RD-07). El canon cuelga de `serie_id` desde el primer día (RD-11), no de la obra.
-
-**Fronteras (`CLAUDE.md` §5).** Features implicadas: `obra`, `outline`, `escena`, `contexto`, `escritura`, `calidad`, `canon`, `manuscrito`, más `commons/` para orquestación, base de datos, cliente de modelo y errores. **Ninguna necesita cruzar una frontera.** Las convenciones permanentes —`import-linter` que falla la build, `commons/domain/` sin framework, `mypy` estricto, promoción al tercer uso, operaciones largas como trabajo en segundo plano— son de `CLAUDE.md` §5, §6 y §13: aplican, pero no son requisitos de esta spec. Tampoco lo es dónde vive cada pieza de código: eso es el plan.
-
-**Agentes narrativos (`architecture.md` §7).** Intervienen seis de los nueve: **Arquitecto** (biblia y outline), **Planificador** (ficha), **Ensamblador** (paquete, y es código, no modelo), **Escritor** (prosa), **Continuista** (defectos mecánicos) y **Extractor** (memoria). Quedan fuera **Crítico**, **Editor de línea** y **Auditor**.
-
-Cambio en sus contratos: ninguno existía antes, así que todos se definen aquí por primera vez. Lo que sí se fija y no debe relajarse después: el **Escritor no accede a la base de datos**, solo ve el paquete recibido (`architecture.md` §3.5), y el **Extractor es el único que escribe memoria de largo plazo** (RF-CAN-01).
-
-**Verificación (`verification.md`).** Los métodos a los que esta spec se compromete, cada uno con la fila que lo respalda. **Los `§` de la primera columna son de `verification.md`**, no de esta spec:
-
-| Método | Dónde aterriza aquí |
+| Aspecto | Impacto |
 | --- | --- |
-| Tests basados en propiedades (§2) | Las cuatro propiedades mínimas del ensamblador, bajo la tabla de `contexto` |
-| Análisis estático (§2) | `import-linter` falla la build: es la verificación de las fronteras, y por eso no hay requisito que las repita (CA-9) |
-| Tests de contrato (§2) | Esquema OpenAPI (RI-23), `__init__.py` como única superficie importable (CA-9) y E/S de cada agente validada por esquema (RF-ORQ-15) |
-| CI/CD en los dos modos (§3) | CA-2, y CA-11 para el arranque real sin la extensión. Si la suite solo corre con `sqlite-vec` cargado, el modo degradado **no está verificado** |
-| Demostración de la vertical mínima (§4) | CA-1: un capítulo coherente de principio a fin |
-| Supresión de alcance en vez de *sandbox* (§3) | RF-ORQ-16. `verification.md` §5 advierte que esa fila deja de ser cierta el día que un agente reciba una herramienta de fichero o de red: se reabre **antes** de concederla, no después |
-| Red teaming, con el modelo de amenaza del bucle (§3) | RNF-SEG-05 y RNF-SEG-06, más CA-12. La vía realista no es un atacante externo: es el Extractor convirtiendo en canon prosa que el propio sistema generó |
-| Comprobación de modelos: **no aplicable** (§3) | Lo es mientras se mantenga **una escena en vuelo por obra** (RF-ORQ-11). Levantar esa restricción no es subir un número: obliga a reabrir la decisión |
-| Tests de mutación: **aplazados** (§2) | Fuera de alcance; CA-4 hace su trabajo a mano mientras tanto |
-| Puntos ciegos declarados (§2.1 y §3.1) | Ningún método de esta spec se lee solo: la comprobación de forma de RF-CAL-11 cierra el punto ciego que §2.1 atribuía a los tests de contrato —el defecto bien formado con la cita inventada— y no alcanza el resto |
-| Matriz de riesgo × validadores (§7) | La v1 deja **siete riesgos descubiertos**. Dos no tienen método en ninguna fase: el hecho nuevo que entra en el canon y el dato que le faltó al paquete. Ni RF-CAL-11 ni RNF-SEG-05 los alcanzan |
+| Esquema | **Toda la base de datos.** Es la migración inicial, y contempla `Serie` desde el principio |
+| Presupuesto de contexto | Es el núcleo: ocho capas con tope propio y fallo explícito |
+| Fronteras | Nueve features de backend (`CLAUDE.md` §5.1). **Ninguna nueva** |
+| Dependencias nuevas | FastAPI, Pydantic v2, SQLAlchemy, aiosqlite, Alembic, tiktoken, NumPy, `sqlite-vec` opcional, **Langfuse**, **Lean 4**, **TLA+/TLC**, Playwright. Requieren aprobación (`CLAUDE.md` §3, punto 7) |
+| **Concentración en G4** | Cobertura de personalización, dedicatoria, inspección visual y Lean **bloquean al final, con la novela ya escrita**. Es el sitio correcto —ninguno es comprobable sobre un capítulo suelto— y es el más caro: **un fallo en G4 no cuesta un capítulo, cuesta lo que haya que rehacer.** Va escrito aquí y no en el plan, porque cambia cómo se calculan los plazos |
+| Coste | **El total de una novela no lo acota nada.** El techo es por llamada y la concurrencia por proceso; la suma de diez capítulos con reintentos y regeneraciones es un riesgo abierto declarado |
+| `docs/` al cerrar | `verification.md` §4.1 gana las letras de todo lo que aquí se verifica; `architecture.md` §13 avanza de fase |
 
 ---
 
 ## Vocabulario
 
-Términos del dominio usados en esta spec. Todos existen ya en `docs/definitions.md`; **ninguno es nuevo**, así que no hay nada que proponer ni confirmar.
+Todos los términos existen en `docs/definitions.md` v2.0. Los que esta spec usa y entraron con esa versión: `Destinatario`, `Comprador`, `Dedicatoria`, `TextoAportado`, `PalabraProhibida`, `RegistroDeAuditoria`, `VersionPublicada`, `PeticionDeCambio`, `FichaDeLectura`, `Cronologia`, `Rubrica`, `Puntuacion`, `RevisionHumana`, `ResumenDeCapitulo`.
 
-`Obra` · `Parte` · `Capitulo` · `Escena` · `Beat` · `Biblia` · `Brief` · `Outline` · `FichaDeEscena` · `Personaje` · `PerfilDeVoz` · `Relacion` · `Lugar` · `Objeto` · `ReglaDeMundo` · `Evento` · `HechoCanon` · `Plantado` · `Pago` · `Revelacion` · `HiloNarrativo` · `EstadoEnT` · `Ledger` · `PaqueteDeContexto` · `MuestraAncla` · `BeatDeGenero` · `NivelDeCalor` · `Tropo` · `PuertaDeCalidad` · `Defecto` · `Cita` · `Ejecucion` · `VersionDeTexto` · `VersionDeObra` · `Prompt` · `Serie`
+**Dos términos entran con esta spec**, aprobados por `maujimenez4` el 2026-09-23 y escritos en `definitions.md` antes de cerrarla:
 
-Atributos citados: `pov` · `lugar` · `presentes[]` · `testigos[]` · `objetivo_del_pov` · `obstaculo` · `valor_entrada` · `valor_salida` · `orden_discurso` · `tiempo_historia` · `tiempo_de_viaje` · `escena_de_origen` · `sabe_desde` · `persona` · `tiempo_verbal` · `esquema_de_pov` · `nivel_de_calor` · `distancia_psiquica` · `densidad_de_dialogo_objetivo` · `extension_objetivo` · `promesa_de_apertura` · `run_id` · `codigo` · `version_texto_id` · `cita` · `desplazamiento_inicio` · `desplazamiento_fin` · `hecho_canon_id`
-
-Un término que aquí no aparece y conviene no confundir: `trabajo` es una tabla de orquestación (`architecture.md` §3.2), **no** una clase del dominio.
+- **cuadro de defectos** — el conjunto de defectos vigentes de una `VersionPublicada`. Es contra lo que RF-PET-05 clasifica **preexistente** frente a **introducido** (P-04).
+- **presupuesto concurrente** — la suma de los tokens de las llamadas en vuelo de un proceso, en un instante. **No es** el presupuesto de contexto, que es el techo de *una* llamada: aquel se comprueba al ensamblar el paquete, este al conceder el turno. Que las dos cifras sean 100.000 es **casualidad de números, no el mismo límite** — confundirlos es exactamente lo que hizo que el encargo §7 quedara sin cumplir durante meses (P-06).
 
 ---
 
 ## Decisiones
 
-Las nueve preguntas abiertas quedaron **cerradas el 2026-09-22**. Se conservan aquí con su decisión y su porqué: un valor sin motivo es un número que nadie se atreve a cambiar después.
+**P-05 · Quién aprueba la novela y quién calibra al juez son dos personas distintas.** Decidido por `maujimenez4`, 2026-09-23.
 
-| ID | Decisión | Aterriza en |
-| --- | --- | --- |
-| D-01 | N de los *snapshots* de `EstadoEnT` = **5** | RF-CAN-06, RI-21 |
-| D-02 | *Embeddings*: **Voyage AI `voyage-3`, 1024 dimensiones**, distinto del proveedor de generación | RI-17, RI-20, RD-07 |
-| D-03 | **1** llamada en vuelo por proceso; *timeout* de turno **300 s** | RNF-TOK-03, RNF-TOK-05, RI-21 |
-| D-04 | Plazo por paso **en dos valores**: 30 s los de código, 600 s los que llaman al modelo | RF-ORQ-09, RNF-FIA-04, RI-21, RI-24 |
-| D-05 | Nivel de calor por **lista de términos versionada**, no por clasificador | RF-CAL-02 |
-| D-06 | Cita del pasaje: **desplazamiento de caracteres sobre la `VersionDeTexto` más el literal** | RF-CAL-08, RI-18 |
-| D-07 | Objetivos de rendimiento **confirmados como provisionales**; se miden y se anotan en el Cierre | RNF-REN-01 a 04, RNF-TOK-02 |
-| D-08 | Un `ESCALADA` editado reentra por **`VALIDANDO`**; el autor puede aceptar registrando el defecto anulado | CU-04, RF-ORQ-17, RF-ORQ-18, CA-13 |
-| D-09 | La inspección **(I)** la firma el **autor**, sobre el capítulo de CA-1, por nombre y fecha en el Cierre | RF-CAL-02, RF-CAL-03 |
+**El comprador aprueba o rechaza la entrega.** Eso, y no más: un veredicto, no una rúbrica puntuada. Es la respuesta correcta para un producto de regalo —quien decide si el regalo sirve es quien lo paga, no un crítico literario— y es lo único que se le puede pedir de verdad a un cliente.
 
-**D-01 — N = 5.** El compromiso es entre derivación rápida (N bajo) y menos recálculo al corregir un hecho (N alto), porque RF-CAN-13 invalida los *snapshots* posteriores al hecho sustituido. La v1 es **un capítulo**: con N = 10 o N = 20 el camino del *snapshot* se dispararía una vez o ninguna, y sería código entregado sin ejercitar. Con N = 5 hay dos o tres en el capítulo y RF-CAN-13 se prueba de verdad. Se sube cuando haya medición contra RNF-REN-02.
+**Y por eso la revisión humana del encargo §5b no la hace él.** El §5b pide, literalmente, «una revisión humana de al menos una novela completa, **con la misma rúbrica**, para comparar el juicio humano con el del LLM». De un sí o un no no sale ninguna comparación por criterio, así que si el comprador fuera el único revisor, **el encargo quedaría incumplido**. La revisión con rúbrica la hace **el equipo**, en desarrollo, junto a los cinco briefs de evaluación de §5.
 
-**D-02 — Voyage `voyage-3` a 1024.** La pregunta incluía «si coincide con el de generación», y no puede: **la API de Anthropic no ofrece endpoint de *embeddings***. Voyage es el proveedor que Anthropic documenta para esto y es multilingüe, que hace falta porque el corpus es castellano. 1024 deja `BruteForceStore` en ~40 MB para los 10.000 fragmentos de RNF-REN-04 y es `float[1024]` nativo en `vec0`. **Introduce una dependencia nueva y una segunda clave de proveedor** (`CLAUDE.md` §3, punto 7). El riesgo es bajo: RF-CAN-12 hace el índice reconstruible entero, así que cambiar de proveedor cuesta un reindexado, no una migración rota.
+| Acto | Quién | Qué produce | Para qué |
+| --- | --- | --- | --- |
+| Aceptación de la entrega | **Comprador** | Un booleano, asociado a su versión | Es el producto: decide si se entrega |
+| Revisión con rúbrica | **Equipo** | Puntuación por criterio | Es la calibración: mide la distancia con el juez |
 
-**D-03 — 1 llamada, 300 s.** La concurrencia no se decide aquí: `architecture.md` §2.2 ya fija «1 por proceso, configurable», y esta spec solo lo confirma. Lo decidido es el *timeout*: con concurrencia 1 y un paso de escritura de 1–2 min, 300 s dejan encolarse dos o tres llamadas sin que una cola legítima se confunda con un fallo.
+**Qué sigue sin cerrarse:** una novela es una novela. La distancia medida sobre un solo manuscrito dice muy poco, así que RF-JUZ-06 sigue en pie — **el juez no bloquea** hasta que haya un número firmado sobre un conjunto (`architecture.md` §8.3). El encargo pide *al menos* una; nosotros no fingimos que una baste.
 
-**D-04 — dos plazos, no uno.** Un único número global no sirve: `ENSAMBLANDO` es código puro y debe terminar en menos de 2 s (RNF-REN-01), mientras `ESCRIBIENDO` es una llamada al modelo que tarda minutos. Un plazo que tolere al segundo no vigila al primero. De aquí sale **RI-24**: el plazo de un paso con llamada debe superar el *timeout* de turno más la llamada (300 + ~120 < 600), o RNF-TOK-05 nunca llega a ejecutarse.
+*Esta decisión corrige un supuesto que esta spec declaró y que resultó falso: se había asumido que el comprador puntuaría la rúbrica criterio a criterio. Se declaró como supuesto en vez de darlo por hecho, y por eso se pudo preguntar y corregir en el mismo día.*
 
-**D-05 — lista de términos.** No es preferencia: la spec ya marcó RF-CAL-02 como **T**, y un clasificador LLM no puede entregar una T —no es determinista y, además, es el Crítico, que está fuera de alcance—. La lista es la única opción compatible con la letra que el requisito ya tenía. Lo que la lista no cubre es exactamente la parte **I** de D-09.
+**P-02 · Claude, por consumo de cuenta, y Haiku para generar.** Decidido por `maujimenez4`, 2026-09-23.
 
-**D-06 — desplazamiento más literal.** El identificador de beat **no es viable en la v1**: el outline asigna beats a escenas, no a pasajes, así que dentro de una escena no existe esa estructura a la que apuntar. Los desplazamientos no se pudren porque la `VersionDeTexto` es inmutable (RF-ESC-03). El literal va además porque RI-18 expone los defectos a una persona en `ESCALADA`, y el prompt de reparación necesita el pasaje, no dos números.
+Proveedor **Anthropic**, y **sin clave de API**: el consumo va contra la cuenta. **Haiku 4.5** escribe y edita, que es el volumen; **Opus 5 juzga** —Crítico y Continuista—.
 
-**D-07 — objetivos confirmados, y una consecuencia.** Los cuatro son `S` y salen holgados: la derivación con N = 5 es trivial, y 10.000 fragmentos a 1024 dimensiones son ~40 MB de producto matricial. La consecuencia que nadie había escrito: confirmar RNF-REN-01 decide que **el contador de tokens es local**, porque con un contador remoto no se cumplen 2 s. Queda anotado en RNF-TOK-02.
+**Que el juez no comparta modelo con el escritor es lo que más gana aquí.** Esta spec ya declaraba como punto ciego que «la naturalidad la juzga un juez que comparte modelo con quien escribió»: un modelo tiende a aprobar su propio estilo. Separarlos lo rompe antes de que RF-JUZ-05 mida nada, y cuesta poco, porque el juez corre una o dos veces por capítulo y el escritor muchas más.
 
-**D-08 — reentra por `VALIDANDO`.** Si una edición humana mete un CON-01 y el trabajo entra por `EXTRAYENDO`, ese error se escribe en canon, y deshacerlo cuesta un hecho sustitutorio más la invalidación de *snapshots* (RF-CAN-07, RF-CAN-13). Revalidar es barato; deshacer no. Dos cautelas para que no sea un bucle: la revalidación **no consume** el contador de RF-ORQ-07, y un fallo vuelve a `ESCALADA`, nunca a `REPARANDO`, porque RF-ORQ-08 prohíbe el reintento genérico y no hay nada que reparar con el modelo en un texto humano. Y como un validador puede equivocarse, el autor puede **aceptar** registrando qué defecto anuló (RF-ORQ-18): sin esa salida, la postcondición de CU-04 —nunca indefinidamente en `ESCALADA`— no se puede prometer.
+Dos consecuencias que se escriben aquí porque cambian requisitos:
 
-**D-09 — firma el autor.** Con el Crítico fuera de alcance y un modo de referencia local de un solo autor, no hay otro candidato. Lo que importa no es quién, sino que tenga dueño y fecha: una **I** sin firma es una afirmación hecha sin pruebas, que es justo lo que esta spec dice evitar. No es **U**: es verificable por lectura humana.
+- **No hay coste por llamada que leer.** El encargo §6 pide coste visible por llamada, capítulo y novela, así que RF-OBS-03 lo **deriva de los tokens y la tarifa declarada**. Es una cifra imputada, no dinero gastado; vale para comparar plantillas y para el *tuning*, que es para lo que el encargo la pide.
+- **RF-OBS-07 no se relaja.** Sigue diciendo que ninguna clave se lee del repositorio ni de la base de datos. Que hoy no haya clave que leer no es motivo para retirar la regla: es motivo para que siga siendo barata.
 
----
+**P-03 · La entrevista se implementa antes que el ciclo de capítulo.** Decidido por `maujimenez4`, 2026-09-23. Demuestra primero que el sistema **personaliza**, que es la mitad del producto que hoy no existe.
 
-## Trazabilidad
+**P-04 · El «cuadro de defectos» entra en `definitions.md` con ese nombre.** Decidido por `maujimenez4`, 2026-09-23. Es el conjunto de defectos vigentes de una `VersionPublicada`, y es contra lo que RF-PET-05 clasifica **preexistente** frente a **introducido**.
 
-Todo requisito nace de un documento anterior. Solo son originales de esta spec los objetivos de rendimiento, marcados como propuestos, y lo que fijan las nueve decisiones D-01 a D-09.
+**P-01 · Las catorce dependencias se aprueban en bloque al firmar la spec.** Decidido por `maujimenez4`, 2026-09-23. Ninguna es opcional —cada una la exige un requisito del encargo—, así que discutirlas una a una en el plan habría repetido catorce veces una conversación cuya respuesta ya estaba determinada. La firma de esta spec **es** la aprobación de `CLAUDE.md` §3, punto 7.
 
-| Bloque | Origen |
-| --- | --- |
-| RI-01 a RI-22 | `architecture.md` §3.2, §3.6, §5.4, §9, §11; `CLAUDE.md` §3 (principio 5), §4.2, §6 |
-| RF-OBR, RF-OUT, RF-ESC | `definitions.md` §4, §6, §9; `domain-knowledge.md` §3, §8 |
-| RF-CTX | `definitions.md` §7; `architecture.md` §2.1, §4.2, §4.6; `domain-knowledge.md` §7 |
-| RF-ORQ | `architecture.md` §3 |
-| RF-CAL | `definitions.md` §8, §11; `architecture.md` §8.3; `domain-knowledge.md` §11, §12 |
-| RF-CAN | `architecture.md` §4; `definitions.md` §4.5, §7; `domain-knowledge.md` §7.1 |
-| RF-MAN | `architecture.md` §11 |
-| RD-01 a RD-14 | `definitions.md` completo; `architecture.md` §3.2, §5.5 |
-| RNF-TOK | `architecture.md` §2.1, §2.2; `CLAUDE.md` §4.1 |
-| RNF-REN | **Propuesta de esta spec, sin medir** (D-07) |
-| RI-24, RF-ORQ-17, RF-ORQ-18, CA-13 | **Decisiones D-03, D-04 y D-08 de esta spec** |
-| RF-CAL-12, RG-13, CA-14 | `definitions.md` §8 y §11 (código `VOZ-03` y axioma 13, desde su v1.3); `CLAUDE.md` §8, regla 10 |
-| RF-CTX-14 | `architecture.md` §4.8; `verification.md` §6.1 |
-| RNF-FIA, RNF-OBS | `architecture.md` §3.6, §3.7, §9, §11; `domain-knowledge.md` §13 |
-| RNF-SEG-01 a 04 | `architecture.md` §11; `CLAUDE.md` §10 |
-| RI-17 (parte **D**), RI-23, RF-CTX-13, RF-ORQ-15, RF-ORQ-16, RNF-SEG-05, RNF-SEG-06 | `verification.md` §2, §3 y §4.1 |
-| RG-01 a RG-12 | `definitions.md` §11; los axiomas 11 y 12, desde su v1.2 |
-| RF-CAL-08, RF-CAL-11, RF-ORQ-19, RD-14, RG-11, RG-12 | `definitions.md` §8 y §10 (predicados `señala` y `choca_con`); `architecture.md` §8.3 y §9 |
+**P-06 · Se permite el paralelismo dentro del techo sumado.** Decidido por `maujimenez4`, 2026-09-23. Varias llamadas a la vez mientras sus paquetes sumen 100.000 o menos; el turno se da contando tokens, no llamadas.
 
-Lo que `docs/verification.md` clasifica como **U — no verificable** no aparece como requisito, y se enumera en el apartado siguiente.
+**Y hay que decir qué no acelera, porque la pregunta se planteó de forma que sugería lo contrario.** Los diez capítulos de una novela siguen siendo **estrictamente secuenciales**, y no por el límite de concurrencia sino por CU-03: cada capítulo necesita integrado el anterior. Lo que se solapa son **obras distintas**, el **Continuista con el Crítico** sobre el mismo capítulo, y los **cinco briefs** de RF-EVA-01. Sobre una novela sola el efecto no es nulo pero sí pequeño: **le quita una espera de validación por capítulo**, diez en total, sin tocar la cadena de diez pasos (`architecture.md` §2.3).
 
 ---
 
 ## Lo que esta spec no verifica
 
-`verification.md` §4.2 nombra lo que hoy nadie puede comprobar. **Ninguna de estas afirmaciones es un requisito de esta spec:** un requisito que nadie puede comprobar no es un requisito, es un deseo. Se listan porque una U sin marcar es una afirmación que se hace sin pruebas.
-
-| No verificable | Qué toca de la v1 | Qué se entrega en su lugar |
+| Qué no se verifica | Por qué | Qué lo cubriría |
 | --- | --- | --- |
-| Calidad narrativa | Nada: ningún requisito la afirma | El juicio humano sobre la demostración de CA-1 |
-| Pertinencia de la memoria recuperada | **RF-CTX-07**: se verifica el **orden** de la recuperación híbrida, no que lo recuperado sea lo pertinente | Nada. La **presencia** de un dato concreto sí sería comprobable —`verification.md` §4.2 la separa de la pertinencia—, pero la v1 no declara esa comprobación |
-| Que un hecho nuevo deba entrar en el canon | **RF-CAN-01 a 04**: el Extractor consolida el hecho citando su escena de origen, que es trazabilidad y no veracidad; un hecho que no contradice nada no tiene contra qué contrastarse | Nada. `verification.md` §7 lo registra como riesgo descubierto |
-| Calibración del Crítico | Nada: el Crítico está fuera de alcance, y por eso G1b no bloquea (RF-CAL-09) | — |
-| Ausencia de fallos semánticos sutiles | Toda la suite: detecta aquello para lo que se escribió | CA-4, a mano, mientras los tests de mutación siguen aplazados |
-| Comportamiento del modelo entre versiones | El veredicto de los validadores depende del modelo que los ejecuta | `ejecucion` registra modelo y parámetros (RI-14): la regresión se detecta después, no se previene |
-| Coste total de una novela | RNF-OBS-01 lo **mide**; ningún requisito lo acota | Los topes por llamada (RNF-TOK-01) y por proceso (RNF-TOK-03) acotan la llamada y la concurrencia, no el total |
-
-Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y prosa que no insinúe lo prohibido (RF-CAL-03)— **no están en esta tabla**: son verificables por lectura humana, y quien la firma es el autor, sobre el capítulo completo de CA-1, por nombre y fecha en el Cierre (D-09).
+| Que la novela **se lea bien** | Ningún test juzga prosa. Las evals miden aproximaciones | Lectura humana. Es **U** y sigue siéndolo |
+| Que el **destinatario se reconozca** | La cobertura comprueba que el dato **está**, no que haga algo; la naturalidad la juzga un juez que comparte modelo con quien escribió | Solo lo sabe él |
+| Que un hecho nuevo **deba** entrar en el canon | El grafo solo sabe si algo **choca**. Un hecho que no contradice nada no tiene contra qué contrastarse | Nada hoy. Riesgo declarado en `verification.md` §7 |
+| Que el juez **acierte** | La revisión humana mide la **distancia entre dos jueces**, no que el automático tenga razón | Un conjunto etiquetado suficiente. Por eso G1b no bloquea |
+| El **coste total** de una novela | El techo es por llamada; nada acota la suma | Nada. Es **U** |
+| Que **«bien formado» signifique «cierto»** | La comprobación de forma verifica la transcripción, no el juicio | Nada dentro de esta spec |
+| Que la especificación **TLA+ siga correspondiendo al código** | Es una inspección que nadie repite cuando el orquestador cambia | El checklist de `CLAUDE.md` §16. Sigue siendo **I** |
+| Que «fuera de Langfuse no sale nada» **se cumpla** | Es una promesa que ningún método vigila | Nada hoy |
 
 ---
 
 ## Cierre
 
-Se rellena al implementar (`CLAUDE.md` §3.5). Las dos últimas entradas no son burocracia:
-son el sitio donde aterrizan D-07 y D-09, y sin ellas esas dos decisiones no tienen dónde
-comprobarse.
+**No queda ninguna pregunta abierta**, que es la única condición que `CLAUDE.md` §3.2 pone para que una spec pueda aprobarse. Por eso pasa a `en-revision`.
 
-- **Commits:**
-- **Documentos actualizados en `docs/`:**
-- **Objetivos de rendimiento medidos** (D-07) — valor real de RNF-REN-01 a 04 sobre el capítulo de CA-1, y si se confirman o se sustituyen:
-- **Inspección (I) firmada** (D-09) — nombre y fecha del autor que leyó el capítulo de CA-1 para nivel de calor (RF-CAL-02) y edad (RF-CAL-03):
+**No pasa a `aprobada`.** Eso lo hace una persona, en un commit suyo que no contenga nada más (§3.2 y §15). Ningún agente de este repositorio lo ha tocado ni debe tocarlo.
+
+Y necesita **firma nueva**, no la heredada: reemplaza a la spec aprobada el 2026-09-22, cuyo alcance era otro. Firmarla aprueba además, en bloque, las catorce dependencias de Impacto técnico (P-01).

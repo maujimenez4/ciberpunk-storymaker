@@ -53,16 +53,21 @@ flowchart TD
 
 ## 2. Stack y restricciones
 
-| Capa | Tecnología | Restricción derivada |
-| --- | --- | --- |
-| Frontend | React 19 + TypeScript + Vite | SPA; cliente de API generado del OpenAPI |
-| Backend | FastAPI, Python 3.12+, Pydantic v2 | Async por defecto; OpenAPI como contrato |
-| Persistencia | **SQLite (WAL) + Alembic — obligatorio** | Fichero único por obra; sin segunda base de datos. Es la *story bible* del encargo |
-| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Decisión propia, no requisito del encargo**, que no menciona ninguna extensión. El sistema nunca falla por falta de ella |
-| Modelo | Límite **duro** de 100.000 tokens por llamada | Presupuesto por capa; fallo explícito, nunca truncado silencioso |
-| Observabilidad | **Langfuse** | Una sesión por novela; cada rol y cada tool, un span; validadores como *scores* (§9) |
-| Verificación formal | **Lean 4** sobre la cronología; **TLA+/TLC** sobre el harness | Lean corre en cada publicación y bloquea; TLC corre en desarrollo (§9.3) |
-| Guardarraíles | Vetos en SQLite + registro de auditoría | Se aplican **en código** sobre cada capítulo, antes de aceptarlo (§11) |
+**El stack es fijo.** Y la columna de origen no es burocracia: separa lo que **impone el encargo** de lo que **elegimos nosotros**, porque lo primero no se puede negociar ni reinterpretar y lo segundo sí. Confundirlos es lo que produjo el error que corrige §2.2.
+
+| Capa | Tecnología | Origen | Restricción derivada |
+| --- | --- | --- | --- |
+| Frontend | React 19 + TypeScript + Vite | **Nuestro** | El encargo §2 dice «web o PDF» y **no nombra ninguna tecnología de frontend**. Elegir web, y elegir React, fue decisión de `maujimenez4` |
+| Backend | FastAPI, Python 3.12+, Pydantic v2 | **Nuestro**, presupuesto por el encargo | Async por defecto; OpenAPI como contrato. El encargo lo menciona **una vez y en una sección opcional** —«el FastAPI que ya tienen»—: da por hecho que existe, no lo exige |
+| Persistencia | **SQLite (WAL) + Alembic** | **Encargo §4, literal** | «Story bible en SQLite (obligatorio)». Fichero único por obra; sin segunda base de datos |
+| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Nuestro** | El encargo **no menciona vectores en ninguna parte**. El sistema nunca falla por falta de la extensión |
+| Modelo | **Dos techos de 100.000 tokens**: uno por llamada y otro sobre la suma en vuelo | El segundo, **encargo §7, literal**; el primero, nuestro | Presupuesto por capa; fallo explícito, nunca truncado silencioso. Ver §2.1 y §2.2 |
+| Modelo | **Anthropic**, consumo de cuenta **sin clave de API**. **Haiku 4.5** escribe y edita; **Opus 5** juzga | **Nuestro** | Escritor y juez **no comparten modelo**, a propósito (§8.3). Sin cargo por llamada, el coste de §9.2 es **derivado**, no facturado |
+| Observabilidad | **Langfuse** | **Encargo §6** | Una sesión por novela; cada rol y cada tool, un span; validadores como *scores* (§9) |
+| Verificación formal | **Lean 4** sobre la cronología; **TLA+/TLC** sobre el harness | **Encargo §5c y §5d** | Lean corre en cada publicación y bloquea; TLC corre en desarrollo (§9.3) |
+| Guardarraíles | Vetos en SQLite + registro de auditoría | **Encargo §7** | Se aplican **en código** sobre cada capítulo, antes de aceptarlo (§11) |
+
+**Que algo sea nuestro no lo hace negociable sobre la marcha:** las cuatro decisiones propias están tomadas y se cambian con la misma ceremonia que cualquier otra. Lo que cambia es **quién puede cambiarlas**. Una fila del encargo no la mueve este equipo.
 
 **Sobre la extensión vectorial, para que no se lea como una exigencia externa.** El encargo obliga a SQLite y no dice nada de vectores. Mantener `VectorStore` con dos implementaciones es una decisión de este proyecto: el coste es una interfaz y una suite que corre en dos modos; a cambio, el sistema arranca en una máquina sin la extensión. **Si algún día ese coste deja de pagarse, se retira el camino vectorial y no se incumple nada.**
 
@@ -89,26 +94,53 @@ Reglas de implementación:
 
 ### 2.2 Llamadas simultáneas
 
-Los 100.000 tokens de §2.1 son el techo **de una llamada**, y es el único techo de tokens del sistema. **No hay un presupuesto agregado** que sume las llamadas en vuelo: sumar tokens de llamadas distintas no acota nada que no acote ya un límite de concurrencia, y obliga a mantener una reserva compartida que deja de significar nada en cuanto hay más de un proceso.
+**Hay dos techos de tokens, no uno, y el segundo lo impone el encargo.**
 
-Lo que sí hay es un límite de concurrencia, **contado en llamadas**:
+| Techo | Valor | Sobre qué se mide | Origen | Quién lo aplica |
+| --- | --- | --- | --- | --- |
+| **Por llamada** | 100.000 | El paquete de **una** llamada | Nuestro (§2.1) | Ensamblador, al construir el paquete |
+| **Concurrente** | 100.000 | La **suma** de las llamadas en vuelo | **Encargo §7, literal** | Orquestador, antes de dar turno |
+
+Y el límite de concurrencia, contado en llamadas y no en tokens:
 
 | Límite | Valor | Quién lo aplica |
 | --- | --- | --- |
-| Tokens por llamada | 100.000 | Ensamblador, al construir el paquete |
-| Llamadas al modelo en vuelo | **1 por proceso**, configurable | Orquestador, antes de lanzar cada llamada |
+| Llamadas al modelo en vuelo | **Varias por proceso**, acotadas por el techo concurrente de arriba | Orquestador, antes de dar turno a cada llamada |
 | Escenas en vuelo por obra | 1 | Orquestador (§3.1, punto 4) |
+
+**Por qué esto cambia, y qué decía antes.** Hasta hoy esta sección afirmaba que los 100.000 eran «el techo **de una llamada**, y el único techo de tokens del sistema», y que **no había presupuesto agregado** porque sumar tokens de llamadas distintas no acota nada que no acote ya un límite de concurrencia. Como razonamiento de ingeniería sigue siendo defendible. Como lectura del encargo era **incorrecta**: el encargo §7 dice literalmente «uso de un máximo de 100.000 tokens **concurrentes**», y concurrente es una suma. Cambiamos su palabra por la nuestra y después razonamos sobre la nuestra.
+
+**Y lo grave no es el cambio de palabra: es por qué no se notaba.** Con la concurrencia en **1**, las dos lecturas dan el mismo número —la suma de lo que hay en vuelo *es* esa única llamada—, así que el sistema cumple el encargo **por consecuencia y no por regla**. Nada cuenta la suma. Subir la concurrencia a dos incumpliría el encargo **sin que fallara nada**: es una invariante sostenida por una ausencia, igual que las que `verification.md` §5 obliga a reabrir antes de conceder el permiso, no después.
+
+Por eso el techo concurrente se aplica **aunque hoy sea trivial**: para que el día que la concurrencia suba, el que falle sea el sistema y no la entrega.
 
 Reglas de implementación:
 
-1. Si no hay turno, la llamada **espera**. Nunca se recorta el paquete para que quepa antes: recortar obedece a §2.1, no a la carga del sistema.
-2. La espera tiene *timeout*. Si vence, el trabajo pasa a `FALLIDA` con causa `TiempoAgotado` (§3.6).
-3. El límite es **por proceso**, y por eso en modo servidor los trabajos corren en el proceso de la API (§10). Repartirlos en un *worker* aparte duplicaría el límite en silencio.
+1. **El techo concurrente se hace cumplir esperando, no recortando.** Si admitir una llamada haría que la suma en vuelo pasara de 100.000, esa llamada **espera turno**. Nunca se recorta el paquete para hacerla caber: recortar obedece a §2.1, no a la carga del sistema.
+2. Si no hay turno, la llamada espera. La espera tiene *timeout*; si vence, el trabajo pasa a `FALLIDA` con causa `TiempoAgotado` (§3.6).
+3. Los dos techos son **por proceso**, y por eso en modo servidor los trabajos corren en el proceso de la API (§10). Repartirlos en un *worker* aparte duplicaría los dos en silencio, que es la forma más barata de incumplir el encargo sin enterarse.
 4. El límite de tasa del proveedor es un techo distinto y externo. Si el proveedor rechaza por tasa, es fallo de proveedor (§3.6).
+5. La reserva del 10 % de §2.1 protege el reintento **dentro** de una llamada; estos techos protegen la latencia y la factura **del proceso**. Son independientes y se aplican a la vez.
 
-La reserva del 10 % de §2.1 protege el reintento **dentro** de una llamada; este límite protege la latencia y la factura **del proceso**. Son independientes y se aplican a la vez.
+**Lo que estos límites no acotan:** el coste total de una novela. Sigue siendo un riesgo abierto (§12).
 
-**Lo que este límite no acota:** el coste total de una novela. Sigue siendo un riesgo abierto (§12).
+### 2.3 Qué paraleliza de verdad el techo sumado
+
+**Decisión de `maujimenez4`, 2026-09-23 (P-06): se permite el paralelismo dentro del techo.** Varias llamadas a la vez mientras la suma de sus paquetes no pase de 100.000. El turno lo da el orquestador contando tokens, no llamadas.
+
+**Y conviene escribir qué no acelera, porque es contraintuitivo.** Los diez capítulos de una novela **siguen siendo estrictamente secuenciales**, y no por el límite de concurrencia: por `CU-03`, que exige como precondición que el capítulo anterior esté **integrado**. El capítulo 5 necesita el canon, el ledger y el resumen que produce el 4. Ningún techo de tokens cambia eso.
+
+Lo que el paralelismo compra es otra cosa, y es real:
+
+| Qué se solapa | Por qué se puede | Qué gana |
+| --- | --- | --- |
+| **Varias obras a la vez** | No comparten canon ni ledger; son ficheros SQLite distintos | El rendimiento del sistema, que es lo que escala |
+| **Continuista y Crítico sobre el mismo capítulo** | Reciben la misma prosa, no se leen entre sí y escriben resultados distintos (§9.2) | Latencia de la puerta de validación, en cada capítulo |
+| **Los cinco briefs de evaluación** | Son cinco obras independientes | La corrida de `RF-EVA-01` deja de ser cinco novelas en fila |
+
+**Dicho con precisión: el paralelismo no acorta la novela, le quita una espera por capítulo.** El Continuista y el Crítico corren una vez por capítulo, así que solaparlos ahorra diez esperas de validación —no es cero—, pero no toca la cadena de diez pasos ni el bucle de reparación. Quien espere de esta decisión que una novela salga en la mitad de tiempo se va a llevar una sorpresa, y por eso está aquí y no en una nota al pie.
+
+**Lo que esto reabre, y hay que mirarlo ahora y no después.** Con más de una llamada viva dejan de ser gratis tres cosas que con el turno único lo eran: el cerrojo de escritura por obra (§3.7), la atribución de un fallo a la llamada que lo causó, y la reproducción de una corrida. La primera ya estaba resuelta —las escrituras se serializan por obra— y las otras dos se apoyan en `run_id`, que es por llamada y no por proceso. Ninguna se rompe, pero ninguna vuelve a ser cierta *por construcción*.
 
 ---
 
@@ -267,7 +299,7 @@ El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamad
 ### 3.8 Concurrencia
 
 - **Una escena en vuelo por obra.** Es una restricción de corrección, no de rendimiento (§3.1, punto 4).
-- **Varias obras pueden estar en curso a la vez, pero sus llamadas al modelo se serializan:** comparten el turno único de §2.2. El paralelismo entre obras es de trabajo, no de llamadas.
+- **Varias obras pueden estar en curso a la vez, y sus llamadas al modelo pueden solaparse** mientras la suma de sus paquetes quepa en el techo concurrente de §2.2. El paralelismo entre obras es de trabajo **y de llamadas**; el que no existe es el paralelismo entre capítulos de una misma obra, que `CU-03` impide por precondición (§2.3).
 - **Lo único que paraleliza de verdad es lo que no consume presupuesto de contexto:** ensamblado, lectura de almacenes, persistencia y cálculo de embeddings. La auditoría por lotes y la revisión de escenas ya aprobadas sí llaman al modelo, así que pasan por la misma cola.
 - **Las escrituras se serializan por obra.** SQLite con WAL admite lectores concurrentes y un solo escritor; el orquestador respeta eso con un cerrojo por obra en vez de confiar en `busy_timeout` para resolver colisiones.
 

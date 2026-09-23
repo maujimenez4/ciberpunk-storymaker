@@ -83,7 +83,7 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 | Evals | Pruebas estructuradas del comportamiento del agente contra un conjunto de datos y un método de puntuación | **Obligatorio (narrativos)** — deja de ser trabajo de una fase futura: **cinco briefs de prueba**, uno **adversarial** (instrucciones incrustadas en el texto libre) y uno construido para **provocar una incoherencia temporal**, una tabla que diga por brief qué validadores pasaron y cuáles fallaron, y **una iteración de tuning documentada** con resultados antes y después. Sigue valiendo lo que ya decía esta fila: sin conjunto etiquetado no se distingue un cambio de prompt que mejora de uno que solo desplaza la salida | [HELM — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
 | Juicio por modelo con rúbrica | Un modelo puntúa la salida de otro contra criterios escritos, con una puntuación y una justificación por criterio | **Obligatorio (narrativos)** — el Crítico deja de puntuar a ojo: la rúbrica es un artefacto con nombre (`Rubrica` en `definitions.md` §9) y cubre continuidad, tono, calidad narrativa —arco, coherencia de personajes, ritmo— y **naturalidad de la personalización**. Cada criterio devuelve puntuación **y** justificación: una nota sin motivo no se puede contrastar ni discutir | [LLM-as-a-judge — Zheng et al., 2023](https://arxiv.org/abs/2306.05685) |
 | Revisión humana con la misma rúbrica | Una persona puntúa con los mismos criterios que el modelo, para medir la distancia entre los dos juicios | **Obligatorio (narrativos)** — al menos **una novela completa** leída por una persona con la **misma** rúbrica. Que sea la misma es lo que hace comparables las dos columnas: con rúbricas distintas se obtienen dos opiniones y ninguna medida. Es lo que convierte la calibración del Crítico de intención en dato, y es la única fila de este documento que produce el patrón contra el que se mide todo juicio semántico | [Inter-rater reliability](https://en.wikipedia.org/wiki/Inter-rater_reliability) |
-| Ejecución en sandbox *(narrativos)* | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (arq. §3.5). Se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox. **La condición exacta es que los diez agentes narrativos no reciben ninguna herramienta** —ni fichero, ni red, ni proceso— y así está declarado en arq. §3.5. Hasta hoy esta fila decía «ningún agente», que era más amplio de lo que podía sostener: el inspector visual **sí** tiene navegador, y no es uno de los diez (arq. §3.5.1) | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
+| Ejecución en sandbox *(narrativos)* | Ejecutar el código del agente en un entorno aislado para que las acciones dañinas fallen sin consecuencias | **Sustituido por supresión del alcance** — los agentes narrativos no ejecutan código, y el Escritor no accede a la base de datos: solo ve el paquete recibido (arq. §3.5). Se **elimina** el radio de impacto en lugar de contenerlo: más fuerte que un sandbox. **La condición exacta es que los diez agentes narrativos no reciben ninguna herramienta** —ni fichero, ni red, ni proceso— y así está declarado en arq. §3.5. La formulación «ningún agente recibe una herramienta» **sobrevive intacta**, y estuvo a punto de debilitarse sin motivo: el validador visual conduce un navegador pero **no es un agente** —no recibe prompt, no llama al modelo, no decide— igual que el Ensamblador es código que ensambla (arq. §3.5.1). Lo que sí tiene navegador es el **agente de código**, y eso está dos filas más abajo | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Ejecución en sandbox *(agente de código)* | Lo mismo, aplicado al asistente que escribe este repositorio | **No aplicado** — el agente de código lee y escribe ficheros y ejecuta órdenes directamente: no hay entorno aislado ni intermediario que lo haga por él. Lo que acota el daño es otra cosa, y está dos filas más abajo: toda escritura pasa por una persona, y por la tubería de `CLAUDE.md` §15. Hasta el 2026-09-22 esta fila afirmaba lo contrario —que corría sin herramientas de fichero— y siguió afirmándolo después de dejar de ser cierto | [Sandbox (computer security)](https://en.wikipedia.org/wiki/Sandbox_%28computer_security%29) |
 | Guardarraíles *(narrativos)* | Políticas y filtros que restringen qué acciones puede producir un agente | **Aplicado en código** — edad mínima y nivel de calor se validan **en esquema**, no en el prompt (arq. §11); el presupuesto de contexto falla explícitamente en vez de truncar; el reintento dirigido tiene tope de dos; cada agente recibe el mínimo de permisos que su nodo necesita (arq. §3.5); y un defecto mal formado no llega a la puerta (arq. §8.3). Regla que lo sostiene: ninguna regla de seguridad depende solo del prompt | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
 | Guardarraíles *(agente de código)* | Lo mismo, aplicado al asistente que escribe este repositorio | **Aplicado, pero a posteriori** — no hay filtro sobre lo que el agente puede producir: hay una tubería que lo rechaza después. Las fronteras entre features fallan la build, `mypy` es estricto sobre `commons/domain/` y los `service.py`, y el proceso de `CLAUDE.md` §3 no deja entrar código sin spec y plan aprobados. La diferencia con la fila de arriba importa: allí el guardarraíl impide, aquí detecta | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
@@ -92,7 +92,7 @@ es lo que impide volver a proponerlo como solución de algo que tampoco resolver
 | Integración en CI/CD | Hacer pasar los cambios generados por el agente por la misma tubería que los escritos por personas | **Previsto (agente de código)** — sin una vía aparte y más débil para los diffs del agente. La tubería es la lista de `CLAUDE.md` §15: `ruff`, `mypy`, `pytest`, `lint-imports`, `pnpm typecheck`, `pnpm lint` y migraciones de Alembic. Exigencia propia de este proyecto: la suite debe correr **en los dos modos de `VectorStore`**; si solo se ejecuta con `sqlite-vec` cargado, el modo degradado que promete arq. §2 no está verificado | [Continuous integration](https://en.wikipedia.org/wiki/Continuous_integration) |
 | Despliegue progresivo | Enviar un cambio a un pequeño porcentaje del tráfico tras un flag antes de la publicación completa | **No aplicable** — el modo de referencia es local, con un fichero SQLite por obra (arq. §10): no hay tráfico que repartir. Lo que sí cumple la función de comparar variantes sin desplegar son las versiones de texto inmutables y la comparación de estrategias de contexto de la fase 6 | [Feature toggle](https://en.wikipedia.org/wiki/Feature_toggle) |
 | Red teaming / pruebas adversarias | Sondear deliberadamente en busca de fallos bajo un modelo de amenaza adversario | **Previsto (narrativos), con modelo de amenaza concreto** — la vía realista no es un atacante externo, es el propio bucle: el Extractor convierte prosa generada en canon, de modo que un texto con instrucciones incrustadas se realimenta al sistema por un canal legítimo. Segundo objetivo: empujar desde el brief contra los guardarraíles de edad y nivel de calor, para comprobar que lo que aguanta es el esquema y no el prompt | [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) |
-| Inspección visual automatizada *(browser MCP)* | Abrir el artefacto en un navegador real y comprobar sobre el renderizado lo que el código fuente no dice | **Obligatorio, y son dos usos con sujetos distintos** — (a) el **inspector visual** en la puerta G4, que no es uno de los diez narrativos y recibe navegador de solo lectura sobre la lectura ya publicada (arq. §3.5.1); y (b) el **agente de código**, que el encargo obliga a conectar por `.claude/mcp.json` y cuyo uso real —qué inspeccionó, qué detectó, qué cambió— se documenta. Separarlos importa: §5 de este documento prohíbe mezclar sujetos en una fila, y aquí la misma herramienta la reciben dos. El agente abre la lectura web, navega los capítulos y verifica que el **índice**, la **ficha de personajes y lugares** y la **portada con dedicatoria** se ven; si algo no renderiza, es un fallo que vuelve al rol que lo produjo. Es el único método de este documento que mira **el producto tal y como lo recibe el destinatario**, y caza la clase de defecto que ningún test de unidad ve: el enlace que apunta a un capítulo que no existe, la ficha vacía, la dedicatoria que se sale. Su **uso real se documenta**: qué se inspeccionó, qué se detectó y qué cambió a consecuencia | [Browser automation](https://en.wikipedia.org/wiki/Browser_automation) |
+| Inspección visual automatizada *(browser MCP)* | Abrir el artefacto en un navegador real y comprobar sobre el renderizado lo que el código fuente no dice | **Obligatorio, y el encargo lo pide en dos sitios que no son el mismo** — (a) el **validador visual** de la puerta G4, que es **código conduciendo un navegador y no un agente** (arq. §3.5.1), así que no añade sujeto ninguno a §1; y (b) el **agente de código**, que sí es un sujeto de este documento y a quien el encargo obliga a conectar un navegador por `.claude/mcp.json`, documentando su uso real: qué inspeccionó, qué detectó y qué cambió. Solo el segundo recibe una herramienta. El código abre la lectura web, navega los capítulos y verifica que el **índice**, la **ficha de personajes y lugares** y la **portada con dedicatoria** se ven; si algo no renderiza, es un fallo que vuelve al rol que lo produjo. Es el único método de este documento que mira **el producto tal y como lo recibe el destinatario**, y caza la clase de defecto que ningún test de unidad ve: el enlace que apunta a un capítulo que no existe, la ficha vacía, la dedicatoria que se sale. Su **uso real se documenta**: qué se inspeccionó, qué se detectó y qué cambió a consecuencia | [Browser automation](https://en.wikipedia.org/wiki/Browser_automation) |
 | Comprobación de modelos | Explorar exhaustivamente los estados y transiciones alcanzables del agente para verificar invariantes | **Obligatorio (TLA+ / PlusCal, con TLC)** — sobre el **harness**, no sobre la historia: configuración → planificación → escritura → validación → publicación, con reintentos, reanudación desde checkpoint y regeneración por petición del lector. Al menos tres invariantes de seguridad —no se publica una versión con un capítulo que no pasó todos los validadores; la reanudación no duplica ni pierde capítulos; la versión anterior se conserva— y una de liveness: toda generación termina publicando o parando con error. Se comprueba con TLC sobre un modelo pequeño, con la configuración en el repositorio. **El argumento con el que se descartó en la v3.1 —«la máquina es pequeña y la cubren los tests»— ha dejado de valer**: publicación de versiones, checkpoint por capítulo y regeneración parcial son tres ejes nuevos que se multiplican entre sí, y ahí es donde un model checker gana a los tests | [Model checking](https://en.wikipedia.org/wiki/Model_checking) |
 
 ### 3.1 Lo que no detecta cada método
@@ -104,7 +104,7 @@ en §3 partidos por sujeto, y el punto ciego que sigue es el del método, común
 | --- | --- |
 | Observabilidad / trazas | Registra lo que se decidió registrar, y aquí, a propósito, no el texto. La traza dice qué se envió y cuánto costó, **no si lo enviado era lo que la escena necesitaba**: un fallo de pertinencia del ensamblado es invisible en ella |
 | Evals | Puntúan contra un conjunto y un criterio, y miden lo que ese conjunto representa. **Cinco briefs son cinco puntos**: cubren los modos de fallo que alguien imaginó al escribirlos, y el sexto brief —el que un cliente real traerá— no está representado. Una tabla con cinco filas en verde mide la cobertura del conjunto, no la del sistema |
-| Juicio por modelo con rúbrica | Puntúa contra los criterios **enunciados en la rúbrica**, así que la calidad que nadie supo enunciar no se puntúa. Y comparte modelo con lo que juzga (§6.1): un texto que le suena bien al modelo por las mismas razones por las que lo escribió obtiene buena nota sin que nadie pueda notarlo desde dentro |
+| Juicio por modelo con rúbrica | Puntúa contra los criterios **enunciados en la rúbrica**, así que la calidad que nadie supo enunciar no se puntúa. Y comparte **proveedor** con lo que juzga, aunque desde P-02 ya no el modelo (§6.1): un texto que le suena bien por las mismas razones por las que se escribió obtiene buena nota sin que nadie pueda notarlo desde dentro |
 | Revisión humana con la misma rúbrica | Mide **la distancia entre dos jueces**, no si alguno acierta. Si los dos comparten el sesgo —y una rúbrica común empuja a eso—, una correlación alta confirma que se entienden entre ellos, no que la novela sea buena. Y es una sola novela: dice lo que pasó con esa |
 | Sandbox / supresión del alcance | Acota el daño, no la corrección: un agente sin herramientas produce texto equivocado con la misma facilidad que uno con ellas. Y la propiedad depende de una configuración de permisos que nada vigila de forma continua |
 | Guardarraíles | Bloquean lo que está **tipificado** como prohibido. Lo que no está tipificado —el caso del §7, un hecho nuevo que no contradice nada— atraviesa el guardarraíl sin activarlo |
@@ -268,9 +268,12 @@ estaba escrita: que Escritor, Continuista, Crítico y Extractor fallan de forma
 **independiente**. La separación por rol (`architecture.md` §12, decisión 6) compra parte
 de esa independencia —quien escribe no se juzga a sí mismo— y no compra el resto:
 
-- **Comparten modelo.** Son el mismo proveedor y, salvo configuración explícita, el mismo
-  modelo. Un sesgo del modelo lo tienen los cuatro a la vez, y ninguno está en posición de
-  notarlo.
+- **Comparten proveedor, y desde el 2026-09-23 ya no el modelo.** P-02 fija **Haiku 4.5
+  para escribir y Opus 5 para juzgar**, así que el Escritor y el Crítico dejan de tener el
+  mismo sesgo por la vía más directa. **Es la primera mitigación real de este apartado** y
+  conviene medir lo que compra y lo que no: rompe la correlación por *modelo*, no por
+  *proveedor* —siguen siendo el mismo entrenamiento y la misma familia—, y no toca las tres
+  causas de abajo. Un sesgo del proveedor lo siguen teniendo los cuatro a la vez.
 - **Comparten la redacción de las restricciones.** Las restricciones duras se enuncian con
   las mismas palabras en todos los prompts (`CLAUDE.md` §10). Un malentendido en cómo está
   enunciada una restricción se propaga a todos los roles que la reciben.
@@ -347,7 +350,7 @@ de los puntos ciegos de §2.1 y §3.1. Tres estados:
 | --- | --- | --- |
 | El paquete se trunca en silencio | Propiedades sobre el ensamblador, `ContextBudgetExceeded`, desglose por capa persistido en `ejecucion` | **Cubierto** |
 | Una llamada supera el techo de 100.000 tokens | Contador inyectado antes de llamar, propiedades, unitarios | **Cubierto** |
-| Hay más llamadas en vuelo de las permitidas | Prueba de concurrencia sobre el turno único | **Cubierto** |
+| Hay más llamadas en vuelo de las permitidas | Prueba de concurrencia sobre el limitador de llamadas en vuelo | **Cubierto** |
 | Un trabajo interrumpido duplica escrituras | Tests de reanudación estado por estado, idempotencia por `run_id` | **Parcial** — la exhaustividad sobre los diez estados la sostiene quien escribe los tests, no un método |
 | Una contradicción de canon pasa desapercibida | Continuista (extracción, probabilística) más contraste contra el grafo (determinista), más la comprobación de forma que exige `hecho_canon_id` en `CAN-01` (arq. §8.3) | **Parcial** — §6.2: lo que no se extrae no se contrasta, y esa tasa sigue sin medirse |
 | **Un hecho nuevo, inventado, entra en el canon** | Nada. El Continuista contrasta contra lo ya sabido y un hecho que no contradice no colisiona; el Extractor lo consolida citando su escena de origen, que es trazabilidad, no veracidad. **La comprobación de forma de arq. §8.3 no alcanza aquí**: ata lo que afirma el Continuista sobre el texto, no lo que el Extractor escribe en el canon | **Descubierto** |
@@ -385,44 +388,96 @@ sobre un sistema que no es el que se ejecuta.
 Enumerarlos es el sentido de la matriz, igual que enumerar las U lo es del §4.2: un riesgo
 sin casilla es un riesgo que se está corriendo sin decirlo.
 
-## 8. Los validadores, uno a uno: nombre, punto de ejecución y qué bloquean
+## 8. Los validadores, uno a uno: dónde corren, qué bloquean y qué se les escapa
 
-Las tablas anteriores ordenan por **método** (§2, §3) y por **riesgo** (§7). Falta el eje
-operativo, que es el que hace falta para construir el sistema y el que permite comprobar
-que la afirmación «cada validador corre en un punto concreto» es cierta y no un deseo.
+Las tablas anteriores ordenan por **método** (§2, §3) y por **riesgo** (§7). Este es el eje
+operativo, el que hace falta para construir el sistema y el único que permite comprobar que
+la afirmación «cada validador corre en un punto concreto» es cierta y no un deseo.
 
-Tres columnas hacen el trabajo. **Dónde corre** decide qué información tiene disponible:
-un validador en el *hook* del capítulo no puede mirar la novela entera. **Qué bloquea**
-separa la verificación de la telemetría: un validador que se ejecuta y no detiene nada no
-verifica, informa. Y **el score** es lo que lo hace comparable entre ejecuciones.
+Cuatro columnas, y la última es la que da valor a las otras tres. **Dónde corre** decide qué
+información tiene disponible: uno que corre en el *hook* del capítulo no puede mirar la
+novela entera. **Qué bloquea** separa verificación de telemetría — uno que se ejecuta y no
+detiene nada informa, no verifica. Y **qué no detecta** es lo que impide leer esta tabla
+como una lista de defensas: un catálogo sin puntos ciegos se cuenta, y contar no es cubrir.
 
-| Nombre | Tipo | Dónde corre | Qué bloquea | Score |
-| --- | --- | --- | --- | --- |
-| `esquema_de_brief` | Programático | Puerta G0, al cerrar la entrevista | No se planifica con un brief inválido o contradictorio | Sí |
-| `esquema_de_salida_de_rol` | Programático | Tras cada llamada a un rol | La salida mal formada es fallo del paso, no resultado vacío | Sí |
-| `extension_de_capitulo` | Programático | *Hook* de validación de capítulo | Fuera del rango declarado, vuelve al escritor (EST-02) | Sí |
-| `nombres_literales` | Programático | *Hook* de validación de capítulo | Un nombre escrito distinto que en el canon (PER-02) | Sí |
-| `palabras_vetadas` | Programático | *Hook* de *policy*, antes de aceptar | Con tope de intentos; agotado, **se detiene la generación** (SEG-02) | Sí |
-| `cobertura_de_personalizacion` | Programático | Puerta G4, antes de publicar | Un elemento obligatorio del brief que no está en ningún capítulo (PER-01) | Sí |
-| `continuidad_y_canon` | Programático | Puerta G1a, por escena | Contradicción contra el grafo; el Continuista extrae y el código contrasta (§6.2) | Sí |
-| `inspeccion_visual` | Programático | Sobre la lectura publicada | Índice, ficha o portada que no renderizan | Sí |
-| `cronologia_lean` | Formal | Puerta G4, en cada publicación | **No se publica**; el fallo vuelve al editor | Sí |
-| `juez_con_rubrica` | Semántico | Puerta G1b, por capítulo | **Hoy no bloquea** — sin correlación medida ni firmada (§6.3) | Sí |
-| `revision_humana` | Semántico | Fuera del bucle, una novela completa | No bloquea: produce el patrón contra el que se mide el juez | Sí |
-| `spec_tla` | Formal | **En desarrollo**, no en generación | Nada en ejecución: su resultado cambia el código o la spec | No |
+**Todos emiten *score* a Langfuse salvo `spec_tla`**, que corre en desarrollo y no dentro de
+una generación. Un validador que no emite score no es comprobable a posteriori: no se puede
+decir si mejoró o empeoró entre dos versiones de prompt.
 
-**Dos cosas que esta tabla deja ver y las otras no.**
+### 8.1 Programáticos — deterministas
 
-La primera: **de doce validadores, dos no bloquean nada y uno no corre en producción.** El
-juez con rúbrica es el más caro de los tres semánticos y hoy es telemetría, porque no está
-calibrado. Eso no es un defecto de la tabla, es el estado real — pero verlo en una columna
-evita la lectura optimista de contar doce validadores como doce defensas.
+**En la configuración, puerta G0.**
 
-La segunda: **la concentración en G4.** Cobertura de personalización y cronología en Lean
-bloquean ahí, al final, cuando la novela ya está escrita. Es el sitio correcto —ninguna de
-las dos es comprobable sobre una escena suelta— y a la vez es el más caro: un fallo en G4
-no cuesta un capítulo, cuesta lo que haya que rehacer. Conviene saberlo antes de calcular
-plazos, no después.
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `esquema_de_brief` | Al cerrar la entrevista | No se planifica con un brief inválido | Que el brief diga lo que el comprador quería decir. Un brief válido puede describir a otra persona |
+| `contradiccion_en_brief` | Al cerrar la entrevista | `CFG-01`: se resuelve **en la entrevista**, no escribiendo | Solo ve las contradicciones **tipificadas** —edad contra tono, contra género—. Dos recuerdos aportados que no encajan entre sí pasan enteros |
+| `texto_aportado_marcado` | Al entrar el `TextoAportado` | Que el texto del comprador llegue a un prompt sin su marca de dato | Que el contenido marcado sea inofensivo. Marca el origen; no juzga el texto |
+
+**Por capítulo, en el *hook* de validación.**
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `esquema_de_salida_de_rol` | Tras cada llamada a un rol | Salida mal formada: es fallo del paso, no resultado vacío | Nada del contenido. Un JSON perfecto puede afirmar una barbaridad |
+| `extension_de_capitulo` | *Hook* | `EST-02`: fuera del rango declarado | Si lo que sobra o falta es lo correcto. Un capítulo en rango puede ser todo relleno |
+| `nombres_literales` | *Hook* | `PER-02`: un nombre escrito distinto que en el canon | El nombre **inventado y coherente**: si el personaje no está en el canon, no hay contra qué comparar |
+| `giro_de_valor` | *Hook*, sobre la ficha | `EST-01`: valor de entrada y de salida iguales o nulos | Que la prosa **entregue** el giro que la ficha declara. Eso es juicio y vive en G1b |
+| `nivel_de_calor` | *Hook* | `SEG-01`: término por encima del nivel declarado | Lo que excede sin vocabulario explícito. Es léxico: cierra el camino fácil, no entiende la escena |
+| `edad_minima` | Esquema, al crear personaje | Contenido romántico con menores; **bloquea por construcción** | La insinuación sobre un personaje **sin edad declarada**. Lo que protege es el campo, y un campo vacío no dispara nada |
+| `discurso` | *Hook* | `VOZ-03`: persona o tiempo verbal distintos de los declarados | La deriva de voz: que el capítulo 8 no suene como el 2 respetando los dos. Y excluye el diálogo a propósito |
+| `palabras_vetadas` | *Hook* de *policy*, antes de aceptar | `SEG-02`, con tope de intentos; agotado, **se detiene la generación** | La alusión. Quien pidió no leer sobre su expareja no la nombra: el tema entra sin que ningún término de la lista aparezca |
+| `continuidad_y_canon` | Puerta G1a | `CAN-01`, `CON-01` y `CON-03` contra el grafo | **Lo que el Continuista no extrae no se contrasta** (§6.2). El contraste es determinista; la extracción de la que depende, no |
+| `presupuesto_de_contexto` | Antes de **cada** llamada al modelo | `ContextBudgetExceeded`: nunca un truncado silencioso | Que el paquete que cabe sea el **pertinente**. Los números cuadran igual con el contexto equivocado |
+| `techo_concurrente` | Antes de conceder turno de modelo, en el orquestador | Que la **suma de tokens de las llamadas en vuelo** supere 100.000 (encargo §7, línea 264: «máximo de 100.000 tokens **concurrentes**») | Que el reparto sea el bueno: dos llamadas de 50.000 pasan igual que una de 100.000, y una de ellas puede ser la equivocada. **Esta fila nació el 2026-09-23 declarando que no podía dispararse, porque la concurrencia era uno — y la decisión de P-06 la activó el mismo día.** Desde entonces es el **único** validador que comprueba lo que pide el encargo §7: `presupuesto_de_contexto` acota cada llamada por separado y **nadie más suma** |
+| `limite_de_reintentos` | Orquestador, en cada reparación | Superar el tope: la única salida pasa a ser `DETENIDA` | Si los intentos gastados sirvieron de algo. Cuenta reintentos, no progreso |
+
+**En la memoria.**
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `hecho_usado_en` | Al integrar un capítulo | Un hecho sin registro de en qué capítulos se usa: sin eso no se puede regenerar tras una corrección | Si el hecho se usó **bien**. Registra dónde apareció, no si hacía algo allí |
+| `checkpoint_reanudacion` | Al reanudar tras una caída | Duplicar o perder un capítulo | Los estados que nadie probó. La exhaustividad la sostiene quien escribe los casos — por eso `spec_tla` cubre el mismo requisito por otra vía |
+
+**En la publicación, puerta G4.**
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `cobertura_de_personalizacion` | G4 | `PER-01`: un elemento obligatorio que no aparece en ningún capítulo | Si está **integrado o incrustado** (`domain-knowledge.md` §14.1). Comprueba presencia, y la presencia es lo barato |
+| `dedicatoria_fuera` | G4 | Que la dedicatoria entre como fragmento del manuscrito, al PDF como capítulo o a la lista de n-gramas | Si la dedicatoria es buena, ni si va dirigida a quien debe |
+| `inspeccion_visual` | G4, sobre la lectura publicada | Índice, ficha de personajes o portada que no renderizan | Que lo que se ve sea **correcto**: un índice con once entradas para diez capítulos renderiza perfectamente |
+
+### 8.2 Semánticos
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `juez_con_rubrica` | Puerta G1b, por capítulo | **Hoy no bloquea** — sin correlación medida ni firmada (§6.3) | La calidad que nadie supo enunciar en la rúbrica. Ya **no** comparte modelo con quien escribe —Opus 5 juzga, Haiku 4.5 escribe (P-02)—, pero sí proveedor y familia: la correlación baja, no desaparece (§6.1) |
+| `revision_humana` | Fuera del bucle, una novela completa | No bloquea: **produce el patrón** contra el que se mide el juez | Si alguno de los dos jueces acierta. Mide la distancia entre ellos, y una rúbrica común empuja a que compartan sesgo |
+
+### 8.3 Formales
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `cronologia_lean` | G4, en cada publicación | **No se publica.** El fallo vuelve al editor | Lo que nunca llegó a la biblia. Demuestra sobre el fichero generado desde la cronología, no sobre la prosa |
+| `spec_tla` | **En desarrollo**, no en generación | Nada en ejecución: su resultado cambia el código o la especificación | Que el código implemente esa máquina. La correspondencia es una lectura humana (§7) |
+
+### 8.4 Qué deja ver este eje y los otros dos no
+
+**De los veinticuatro, tres no bloquean nada y uno de esos tres no corre siquiera en producción.** El juez con
+rúbrica es el más caro de los dos semánticos y hoy es telemetría. No es un defecto de la
+tabla: es el estado real, y verlo en una columna evita contar veinticuatro validadores como veinticuatro
+defensas.
+
+**La concentración en G4.** Cobertura de personalización, dedicatoria, inspección visual y
+Lean bloquean al final, con la novela ya escrita. Es el sitio correcto —ninguno es
+comprobable sobre un capítulo suelto— y a la vez el más caro: un fallo en G4 no cuesta un
+capítulo, cuesta lo que haya que rehacer. Conviene saberlo antes de calcular plazos.
+
+**Y el patrón que recorre la última columna.** Casi todos los puntos ciegos son la misma
+misma frase dicha de veinte maneras: **el validador comprueba la forma y no el fondo**. El
+esquema no juzga el contenido, la extensión no juzga el relleno, la cobertura no juzga la
+integración, el renderizado no juzga la corrección. Es una propiedad de lo determinista, no
+un defecto de diseño — pero explica por qué los dos semánticos, que son los únicos que miran
+el fondo, son también los únicos que hoy no detienen nada.
 
 ## 9. Registro de cambios
 
@@ -431,7 +486,7 @@ plazos, no después.
 | 1.0 | Catálogo de metodologías con veredicto por método, y clasificación T/A/I/D/U de los requisitos del proyecto |
 | 2.0 | Se separan los dos sujetos del §1, se detalla el estado de cada método en este repositorio y se nombra lo que es U |
 | 3.0 | El documento pasa de catálogo a conjunto: §2.1 y §3.1 añaden el punto ciego de cada método; §6, las reglas del conjunto —independencia correlacionada, determinista frente a probabilístico, quién mide a los validadores—; §7, la matriz de riesgo × validadores con los descubiertos. §4 fija la letra principal con refuerzo; §4.1 anota que la reproducción del paquete caduca con el estado de almacenes y que el techo por llamada no acota el total; §4.2 separa pertinencia de presencia y añade el hecho nuevo que no contradice nada |
-| **4.1** | **Pasada de coherencia cruzada con `architecture.md`, hecha por dos sesiones por separado y fundida en un plan.** La fila de supresión del alcance decía «ningún agente recibe una herramienta» y el inspector visual **sí** tiene navegador: se afila a «los diez agentes narrativos», que es lo que arq. §3.5 sostiene, y la fila del browser separa sus **dos sujetos**. G1b deja de no bloquear «hasta que exista la calibración» —condición que se habría disparado sola— y pasa a exigir correlación medida **y firmada**. Entran en §4.1 las dos reglas de `CLAUDE.md` §8 que no tenían letra: la **10** (`VOZ-03`), sin clasificar desde la v1.3 y única regla con código de defecto propio y sin ella, y la **15**. Y las reglas 11 a 14 pasan a citarse también por su número, no solo por su origen en el encargo |
+| **4.1** | **Pasada de coherencia cruzada con `architecture.md`, hecha por dos sesiones por separado y fundida en un plan.** La fila de supresión del alcance se cruzó con la del navegador: **la primera resultó no estar caducada**, porque el validador visual es código conduciendo un navegador y no un agente (arq. §3.5.1), y quien sí recibe la herramienta es el **agente de código**. Se afila igualmente a «los diez agentes narrativos» y se deja escrito que la formulación original sobrevive, para que nadie la debilite otra vez por el mismo camino. G1b deja de no bloquear «hasta que exista la calibración» —condición que se habría disparado sola— y pasa a exigir correlación medida **y firmada**. Entran en §4.1 las dos reglas de `CLAUDE.md` §8 que no tenían letra: la **10** (`VOZ-03`), sin clasificar desde la v1.3 y única regla con código de defecto propio y sin ella, y la **15**. Y las reglas 11 a 14 pasan a citarse también por su número, no solo por su origen en el encargo |
 | **4.0** | **Al cruzar el documento contra `docs/entregable/examen-final.md`, dos veredictos se invierten y uno se corrige.** Verificación formal deja de ser «No aplicable»: entra **Lean 4** sobre la cronología, con dos invariantes y **puerta de publicación** (§2). Comprobación de modelos deja de ser «No aplicable, por ahora»: entra **TLA+ con TLC** sobre el harness, con tres invariantes de seguridad y una de liveness (§3). Las **evals** dejan de esperar a la fase 4 y son obligatorias, con cinco briefs —uno adversarial y uno de trampa temporal— y una iteración de tuning; entran además el **juicio por modelo con rúbrica** y la **revisión humana con la misma rúbrica**, que es lo que convierte la calibración del Crítico en dato. §4.1 clasifica los once requisitos nuevos, §8 es nueva —cada validador con su nombre, dónde corre y qué bloquea, que es el eje que faltaba—, entra la **inspección visual por browser MCP** (§3), que era el único método del encargo ausente, §7 gana cuatro riesgos —incoherencia temporal, palabra vetada, el destinatario que no se reconoce y la correspondencia TLA+/código— y el porqué de las dos inversiones está en el §10. **Corrección de hecho:** §6.3 decía que la tasa de defectos mal formados mide al Continuista; no lo mide a él, mide su capacidad de copiar |
 | 3.1 | Se clasifican los axiomas 11 y 12 y la comprobación de forma previa a G1a (§4.1), y la matriz gana la casilla que cubren (§7). El punto ciego de los tests de contrato (§2.1) se corrige: la comprobación de forma elimina el defecto bien formado con la cita inventada. §6.3 deja de decir que nada mide a los validadores: la tasa de defectos mal formados es la primera señal, y se nombra lo que no alcanza. Guardarraíles deja de mezclar los dos sujetos (§3) |
 

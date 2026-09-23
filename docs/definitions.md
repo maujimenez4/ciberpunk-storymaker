@@ -16,9 +16,11 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | --- | --- |
 | 1.0 | Primera versión de la ontología |
 | 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
-| 1.3 | Entra el código `VOZ-03` en la taxonomía (§8) y el axioma 13 (§11): la prosa debe usar la `persona` y el `tiempo_verbal` declarados en la `Obra`. Cubre un hueco detectado al cruzar las restricciones duras contra sus validadores —las dos se fijaban en la obra, se heredaban a la ficha y se repetían en el prompt, pero ningún validador las comprobaba en el texto |
 | 1.2 | `Defecto` deja de ser una tabla de códigos y pasa a clase con atributos (§8): la `cita` se ancla por desplazamiento a una `VersionDeTexto` y `hecho_canon_id` es obligatorio en `CAN-01`. Entran el término `Cita` (§8 y §13), los predicados `señala` y `choca_con` (§10) y los axiomas 11 y 12 (§11) |
+| 1.3 | Entra el código `VOZ-03` en la taxonomía (§8) y el axioma 13 (§11): la prosa debe usar la `persona` y el `tiempo_verbal` declarados en la `Obra`. Cubre un hueco detectado al cruzar las restricciones duras contra sus validadores —las dos se fijaban en la obra, se heredaban a la ficha y se repetían en el prompt, pero ningún validador las comprobaba en el texto |
 | **2.0** | **El producto deja de ser «una novela» y pasa a ser «una novela para alguien».** Cambio mayor, no aditivo, al cruzar el documento contra `docs/entregable/examen-final.md`. Entran: la **personalización** como capa de primera clase (`Destinatario`, `Comprador`, `Dedicatoria`, `TextoAportado`), la **entrega** (`VersionPublicada`, `PeticionDeCambio`, `FichaDeLectura`), los **guardarraíles** (`PalabraProhibida`, `RegistroDeAuditoria`), la **evaluación con rúbrica** (`Rubrica`, `Puntuacion`, `RevisionHumana`) y el **resumen por capítulo**. `Cronologia` deja de ser un concepto y pasa a estructura consultable, porque es la entrada del validador formal. Y se corrigen dos cosas que impedían cumplir: `HechoCanon` ya no exige escena de origen —un hecho del brief no tiene ninguna— y registra **en qué capítulos se usa**; `Capitulo` pasa a 1.000–1.500 palabras y a contener **exactamente una** `Escena`. Detalle del porqué en §15 |
+
+| **2.1** | Entran **`PresupuestoConcurrente`** (§9) y **`CuadroDeDefectos`** (§9.2), con sus tres entradas de glosario (§13) y su sitio en los árboles (§14.6 y §14.7). Los dos salen de decisiones de `maujimenez4` del 2026-09-23 sobre `specs/001-backend-v1/`: P-06 admite el paralelismo, y con él la suma de tokens en vuelo pasa a ser una magnitud calculable que hay que nombrar; P-04 da nombre al conjunto de defectos que se guarda con una versión publicada. **Aditiva:** no retira ni redefine nada de la v2.0 |
 
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
 
@@ -289,6 +291,13 @@ Sus ocho capas, que son vocabulario de todo el sistema: **constitucional**, **es
 
 > El tope en tokens de cada capa, el orden de recorte y las reglas de ensamblado son mecanismo, no definición: viven en `architecture.md` §2.1, y la correspondencia entre capa y almacén en su §4.8. Aquí no se repiten, para que no diverjan.
 
+#### `PresupuestoConcurrente`
+Suma de los tokens de **todas las llamadas al modelo en vuelo** en un proceso, en un instante dado.
+
+Se distingue del **presupuesto de contexto**, que es el techo de **una** llamada: aquel se comprueba al ensamblar el paquete, este al conceder el turno. El encargo (`docs/entregable/examen-final.md` §7) acota el concurrente en 100.000 tokens; `CLAUDE.md` §4.1 acota el de contexto en la misma cifra, y **que las dos coincidan es casualidad de números, no el mismo límite**.
+
+> Entra con la v2.1, al resolverse P-06 hacia permitir paralelismo. Antes no hacía falta: con una sola llamada en vuelo la suma *era* esa llamada, y nombrar una magnitud que el diseño impedía calcular habría sido vocabulario por si acaso.
+
 #### `MuestraAncla`
 Fragmento de prosa ya aprobada que se inyecta como referencia de voz. Es la contención principal de la deriva estilística.
 
@@ -462,6 +471,7 @@ Cómo la novela deja de ser filas en una base de datos y pasa a ser algo que alg
 | `VersionPublicada` | Conjunto **inmutable** de `VersionDeTexto`, una por capítulo, entregado como una sola cosa. Una regeneración crea otra y **conserva la anterior**; nunca se edita ni se borra | `version_publicada_id`, `numero`, `publicada_en`, `sucede_a`, `capitulos_cambiados[]` |
 | `PeticionDeCambio` | Lo que el lector pide sobre un `HechoCanon` concreto de lo que está leyendo. **No edita el canon**: la corrección es un hecho nuevo que sustituye al anterior | `peticion_id`, `version_publicada_id`, `hecho_canon_id`, `texto_pedido`, `estado` |
 | `FichaDeLectura` | Vista de los `Personaje` y `Lugar` de una `VersionPublicada`, con los capítulos donde aparece cada uno. **Derivable y reproducible** desde el ledger y la versión | `version_publicada_id`, entradas con sus capítulos |
+| `CuadroDeDefectos` | Los `Defecto` de una `VersionPublicada`, **guardados con ella al publicar**. Es contra lo que se decide si un defecto que aparece en una revalidación posterior es **preexistente** o **introducido** | `version_publicada_id`, los defectos con su código y su cita |
 
 **`VersionPublicada` se llama así, y no `VersionDeNovela`, a propósito.** Ya existen `VersionDeTexto` (el texto de una escena) y `VersionDeObra` (la biblia congelada). Una tercera «versión de» sería la deriva terminológica que el §2 de este documento existe para evitar: **«publicada» nombra lo que la distingue**, que es el acto de entregarla.
 
@@ -615,6 +625,9 @@ El validador debe poder comprobar mecánicamente:
 | Rúbrica | Criterios y escala con anclajes, **compartidos por el juez automático y el humano** |
 | Puntuación | Resultado de un validador sobre una unidad. Si es de juicio, lleva justificación |
 | Resumen de capítulo | Síntesis derivada del capítulo aprobado, para contextualizar los siguientes |
+| Presupuesto de contexto | Techo de tokens de **una** llamada al modelo, repartido por capas. Se comprueba al ensamblar el paquete |
+| Presupuesto concurrente | Suma de los tokens de **todas las llamadas en vuelo** de un proceso en un instante. Se comprueba al conceder el turno, no al ensamblar |
+| Cuadro de defectos | Los defectos de una versión publicada, guardados con ella. Es contra lo que se decide si un defecto posterior es preexistente o introducido |
 
 ---
 
@@ -785,11 +798,17 @@ flowchart TD
   E3 --> E31["PaqueteDeContexto por escena"]
   E3 --> E32["Presupuesto por capa"]
   E3 --> E33["Recuperación híbrida"]
+  E3 --> E34["PresupuestoConcurrente"]
+
+  E32 -.->|"techo de una llamada"| E32b["100.000 · se comprueba al ensamblar"]
+  E34 -.->|"techo de la suma en vuelo"| E34b["100.000 · se comprueba al dar turno"]
 
   E4 --> E41["MuestraAncla de voz"]
   E4 --> E42["Lista negra de n-gramas"]
   E4 --> E43["Curva de tensión planificada"]
 ```
+
+> **Los dos techos cuelgan del mismo nodo y no son el mismo límite.** Que las dos cifras sean 100.000 es casualidad de números: uno acota **una** llamada y se comprueba al ensamblar el paquete; el otro acota **la suma de las que están en vuelo** y se comprueba al conceder el turno. El árbol los separa a propósito, porque confundirlos mantuvo el §7 del encargo sin cumplir hasta el 2026-09-23.
 
 ### 14.7 Árbol de la capa de Producción
 
@@ -819,6 +838,7 @@ flowchart TD
   P5 --> P51["VersionPublicada"]
   P5 --> P52["PeticionDeCambio"]
   P5 --> P53["FichaDeLectura"]
+  P5 --> P54["CuadroDeDefectos"]
 
   P6 --> P61["PalabraProhibida"]
   P6 --> P62["RegistroDeAuditoria"]
