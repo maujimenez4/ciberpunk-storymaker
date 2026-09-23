@@ -158,3 +158,29 @@ Ninguna skill pública cubre esto; vive en `CLAUDE.md` y
 No se han leído íntegros los ~330 KB de ficheros `references/` copiados. Si se
 quiere descartar contenido inyectado o instrucciones indeseadas, hay que revisarlos
 aparte.
+
+
+---
+
+## Skills de proceso (añadidas el 2026-09-23)
+
+Cinco skills que implementan las puertas de `CLAUDE.md` §3. Cuatro vienen de **superpowers** y
+la quinta se escribió aquí.
+
+| Skill | Origen | Por qué entra |
+| --- | --- | --- |
+| `brainstorming` | superpowers | Es la puerta **Spec** de §3.2: clasifica cuánto proceso pide el trabajo y su `<HARD-GATE>` impide implementar sin aprobación de spec **y** de plan por separado |
+| `writing-plans` | superpowers | Es §3.2, puerta Plan: pasos del tamaño de un commit verificable, cada uno con su test |
+| `test-driven-development` | superpowers | Es §3.4: rojo → verde → refactor, con el test visto fallar |
+| `verification-before-completion` | superpowers | Es el checklist de §16: evidencia ejecutada antes de afirmar nada |
+| `clarificar-spec` | **escrita en este repositorio** | Barrido de ambigüedad por once categorías, con umbral que bloquea la aprobación. Ninguna skill descargable conoce `specs/NNN-slug/`, los estados `borrador → en-revision → aprobada → implementada` ni la nomenclatura `RF-*`/`CA-*` |
+
+**Las cuatro de superpowers son markdown puro**, sin referencias a ficheros fuera de su carpeta:
+se copian y funcionan. Se descartaron los demás sistemas de desarrollo dirigido por specs —Spec
+Kit, OpenSpec, GSD, BMAD, MUSUBI, Agent OS— porque ninguno es auto-contenido: necesitan su CLI o
+su framework, y traen un proceso propio que competiría con el de §3. De ellos se tomaron tres
+técnicas, que son las que `clarificar-spec` implementa: el barrido por taxonomía con cinco
+preguntas, el umbral de ambigüedad como puerta, y «un requisito sin criterio no es un requisito».
+
+**Regla de instalación:** una skill no entra sin sus tres filas —aquí, en `CLAUDE.md` §13 y en
+`docs/architecture.md` §7.2—. Sin las tres no está instalada: está copiada.
