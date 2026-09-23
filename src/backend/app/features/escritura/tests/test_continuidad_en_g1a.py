@@ -404,3 +404,54 @@ def test_la_llamada_al_continuista_queda_registrada_con_su_veredicto(
 
     assert "continuista" in prompts
     assert veredictos and all(v == "aprobada" for v in veredictos)
+
+
+# --- CA-14: la cita inventada, por el camino que la corrida recorrio --------
+
+
+def test_una_cita_que_el_continuista_se_invento_no_mata_el_ciclo(
+    obra_con_dos_escenas: Path,
+) -> None:
+    """La corrida real con Continuista murio en la escena 1 por esto.
+
+    El test que decia cubrirlo -`test_puerta.py`- construye el defecto con un
+    fragmento que **si** esta en el texto y luego le corrompe los
+    desplazamientos con `model_copy`: prueba un anclaje corrompido, no una cita
+    inventada, y el `model_copy` rodea justo el punto donde el sistema reventaba
+    con entrada real. Este entra por donde entro la corrida: el Continuista
+    devuelve una cita que no existe en la prosa.
+
+    Lo que CA-14 promete y aqui se comprueba entero: no bloquea, **no gasta
+    intento** y queda contada como mal formada.
+    """
+    inventada = json.dumps(
+        [
+            {
+                "cita": "conozco a todos los clientes de este barrio",
+                "sujeto": "pj-noe",
+                "atributo": "postura",
+                "valor": "firma sin leerlo",
+                "momento": 1,
+            }
+        ]
+    )
+
+    resultado, _ = _correr_dos(obra_con_dos_escenas, inventada)
+
+    assert resultado.estado == "INTEGRADA"
+    assert resultado.defectos == []
+
+    with sqlite3.connect(obra_con_dos_escenas) as conexion:
+        registrados = conexion.execute(
+            "SELECT codigo, cita, bien_formado FROM defecto"
+        ).fetchall()
+        intentos = conexion.execute(
+            "SELECT intento FROM trabajo WHERE escena_id = 'es2'"
+        ).fetchone()[0]
+
+    assert registrados, "la cita inventada tiene que quedar contada"
+    codigo, cita, bien_formado = registrados[0]
+    assert codigo == "CAN-01"
+    assert cita == "conozco a todos los clientes de este barrio"
+    assert bien_formado == 0, "una cita que no esta en el texto no es bien formada"
+    assert intentos == 0, "un defecto mal formado no gasta reintento (RF-ORQ-19)"
