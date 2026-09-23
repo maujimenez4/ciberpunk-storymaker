@@ -8,5 +8,13 @@ from app.features.manuscrito.repository import (
     Manuscrito,
     RepositorioDeManuscrito,
 )
+from app.features.manuscrito.service import a_markdown, a_pdf, exportar
 
-__all__ = ["FragmentoDeManuscrito", "Manuscrito", "RepositorioDeManuscrito"]
+__all__ = [
+    "FragmentoDeManuscrito",
+    "Manuscrito",
+    "RepositorioDeManuscrito",
+    "a_markdown",
+    "a_pdf",
+    "exportar",
+]

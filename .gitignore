@@ -11,5 +11,8 @@ __pycache__/
 
 # CLAUDE.md §15: ningun fragmento de manuscrito ni prompt de produccion queda
 # en el repositorio. La prosa generada vive en la maquina de quien la genera.
+# Todo lo que sale de una corrida aterriza en `manuscritos/`; el
+# patron del `.txt` se queda para los ficheros sueltos de corridas anteriores.
+manuscritos/
 manuscrito-*.txt
 corrida-*.log
