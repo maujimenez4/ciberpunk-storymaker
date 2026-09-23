@@ -44,9 +44,9 @@ Cada paso cabe en un commit verificable por separado, empieza por un test que se
 | P-07 | `test_migracion_funciona_sin_extension_vectorial` | La misma revisión, sin `vec0` | `alembic/versions/` | RD-08, RNF-FIA-03 |
 | P-08 | `test_contador_de_tokens_es_local_y_no_estima_por_caracteres` | Contador inyectado | `commons/llm/` | RNF-TOK-02, D-07 |
 | P-09 | `test_el_doble_de_modelo_sustituye_al_proveedor_en_toda_la_suite` | Cliente y reloj por `Depends()` | `commons/llm/` | RI-13 |
-| P-10 | `test_vector_store_degrada_a_fuerza_bruta_si_la_extension_no_carga` | `VectorStore` + dos implementaciones | `commons/db/` | RI-17, RI-22 |
-| P-11 | `test_embeddings_legibles_por_ambas_implementaciones` | Formato común, 1024 dimensiones | `commons/db/` | RD-07, D-02 |
-| P-12 | `test_embeddings_no_cuentan_contra_ningun_presupuesto` | Interfaz propia de *embeddings* | `commons/llm/` | RI-20 |
+| ~~P-10~~ | — | **Retirado por D-02**: no hay extensión vectorial que degradar | — | ~~RI-17, RI-22~~ |
+| ~~P-11~~ | — | **Retirado por D-02**: no hay *embeddings* | — | ~~RD-07~~ |
+| ~~P-12~~ | — | **Retirado por D-02**: no hay proveedor de *embeddings* | — | ~~RI-20~~ |
 | P-13 | `test_los_trabajos_corren_en_el_proceso_de_la_api` | Sin *worker* aparte: el turno es por proceso y repartirlo lo duplicaría | `commons/jobs/` | §2.2 r3, §10 |
 
 ### Fase 1 · Dominio y fronteras
@@ -94,7 +94,7 @@ Cada paso cabe en un commit verificable por separado, empieza por un test que se
 | P-37 | `test_no_se_compactan_constitucional_hechos_de_canon_ni_ledger` | El olvido es de selección, no de destrucción | `features/canon/` | RF-CAN-09, §4.5 |
 | P-38 | `test_el_conocimiento_se_deriva_de_los_testigos_del_evento` | Derivación de `sabe_desde` | `features/canon/` | RF-CAN-11 |
 | P-39 | `test_resumen_de_escena_al_integrar_y_de_capitulo_al_cerrar` | Cascada de resúmenes | `features/canon/` | RF-CAN-08 |
-| P-40 | `test_el_indice_vectorial_se_reconstruye_entero_desde_el_texto` | Reindexado | `features/canon/` | RF-CAN-12 |
+| P-40 | `test_los_fragmentos_se_reconstruyen_enteros_desde_el_texto` | Reindexado **sin vectores**: garantiza que el índice no es una verdad paralela al manuscrito | `features/canon/` | RF-CAN-12 |
 | P-41 | `test_el_extractor_escribe_la_lista_negra_de_ngramas` | Tabla `ngrama_vetado`. **Nadie la lee en la v1**: su consumidor es el Editor de línea | `features/canon/` | RD-13, §4.3 |
 | P-42 | `test_solo_el_extractor_escribe_memoria_de_largo_plazo` | Permisos de escritura | `features/canon/` | RF-CAN-01 |
 
@@ -184,7 +184,7 @@ Los criterios marcados **D** en la spec: no los cubre `pytest` solo.
 | --- | --- | --- |
 | P-99 | Un capítulo completo, todas las escenas `INTEGRADA` | CA-1, RF-OUT-04 |
 | P-100 | Desde una fila de `ejecucion` se reconstruye el mismo paquete | CA-10, RF-CTX-13 |
-| P-101 | Con la extensión **ausente del sistema**: arranca, avisa y escribe una escena | CA-11, RI-17 |
+| P-101 | Arranca y escribe una escena **sin ninguna credencial**: el proveedor es el CLI de Claude Code y su sesión vive fuera del proceso | CA-11 |
 | P-102 | Se desactiva cada validación y su test **se ve fallar** | CA-4 |
 | P-103 | Coste por escena, tokens medios por capa, defectos por código, latencia por fase | RNF-OBS-01 |
 | P-104 | Firma de la inspección de prosa, por nombre y fecha en el Cierre | D-09 |
@@ -228,16 +228,16 @@ La razón de esta tabla: el plan se puede quedar corto respecto a la arquitectur
 
 | Sección | Qué manda | Pasos |
 | --- | --- | --- |
-| §2 Stack | WAL, Alembic, degradación vectorial, 100 k | P-05 a P-07, P-10, P-44 |
+| §2 Stack | WAL, Alembic, 100 k. La degradación vectorial cayó con D-02 | P-05 a P-07, P-44 |
 | §2.1 Presupuesto | Ocho topes, **y qué se recorta primero en cada capa** | P-45, P-48 a P-52 |
 | §2.2 Concurrencia | 1 llamada, espera, *timeout*, por proceso, tasa del proveedor | P-13, P-77, P-78, P-80, P-88 |
 | §3.1 Principios | Estrella, estado en SQLite, idempotencia, una escena, permiso mínimo | P-72 a P-76, P-87 |
 | §3.2 Unidad de trabajo | Campos de `trabajo` | P-06, P-95 |
-| §3.3 Estados | Diez estados, ninguno se salta | P-71 |
+| §3.3 Estados | Diez estados en el ciclo de escena, ninguno se salta; los trabajos simples tienen su propia tabla | P-71, **P-115 a P-117** |
 | §3.4 Contrato entre pasos | Pydantic, persistir y releer, desglose en la salida | P-74, P-86, P-94 |
 | §3.5 Permisos por agente | Cada uno solo sus almacenes; el Escritor solo el paquete | P-42, P-73 |
 | §3.6 Fallos | Cinco causas con su acción | P-52, P-80, P-81, P-83, P-88, P-89 |
-| §3.7 Reanudación | Repetir el paso entero | P-75, P-76 |
+| §3.7 Reanudación | Repetir el paso entero | P-75, P-76, **P-113** |
 | §3.8 Concurrencia | Varias obras, llamadas serializadas, cerrojo por obra | P-82, P-87 |
 | §3.9 Dónde vive el código | `commons/jobs/`, `features/escritura/`, `commons/llm/`, `agents.py` | Columna **Dónde** |
 | §4.2 Corto plazo | N-1 íntegra, N-2 resumida, ancla, hilos | P-47, P-58 |
@@ -246,10 +246,10 @@ La razón de esta tabla: el plan se puede quedar corto respecto a la arquitectur
 | §4.5 Compactación | Cascada; **nunca** constitucional, canon ni ledger | P-37, P-39 |
 | §4.6 Recuperación | Filtro → similitud → recencia | P-57 |
 | §4.7 Corrección sin edición | Hecho nuevo; invalida *snapshots* | P-33, P-34 |
-| §4.8 Memoria → paquete | Cada capa, su almacén; capa vacía es fallo | P-46, P-53 |
+| §4.8 Memoria → paquete | Cada capa, su almacén; capa vacía es fallo | P-46, P-53, **P-108 a P-110** |
 | §5.1 Estructura | Ocho features, segmentos con nombre fijo | P-17 |
 | §5.2 Dependencias | Seis reglas, verificadas por build | P-16, P-92 |
-| §5.4 Endpoints | Nueve de los diez; `/auditoria` queda fuera | P-91, P-93 |
+| §5.4 Endpoints | Nueve de los diez; `/auditoria` queda fuera | P-91, P-93, **P-114 a P-121** |
 | §5.5 Persistencia | Tablas, y prompts como ficheros con hash | P-06, P-21, P-94 |
 | §8.3 Puertas | G1a bloquea, G1b no; comprobación de forma | P-67, P-69 |
 | §9 Trazabilidad | Registro por llamada y ocho métricas | P-94, P-97, P-98, P-103 |
@@ -344,7 +344,7 @@ cerca del techo para saberlo.
 
 **La extracción del Continuista es probabilística.** `verification.md` §6.2: G1a es mecánica en el contraste, no en la extracción. P-97 mide lo único medible hoy —los defectos mal formados—; los **falsos negativos siguen sin medirse**, y ningún paso de este plan los alcanza.
 
-**Voyage añade proveedor y clave.** Sin red o sin clave, P-10 a P-12 y la fase 4 dependen de un doble. El arranque falla de inmediato si falta (P-01), que es lo correcto, pero la puesta en marcha necesita dos claves.
+**~~Voyage añade proveedor y clave.~~** Retirado con D-02 y cerrado en P-105: no hay segundo proveedor, y desde la decisión (a) del 22-09-2026 tampoco hay primero. El proveedor es el CLI de Claude Code y autentica con la sesión de la cuenta, fuera del proceso. La aplicación no guarda ninguna credencial.
 
 **El orden concentra el riesgo al final.** El orquestador es la fase 7 y es donde aparecen los fallos de integración. Mitigación: P-99 es el primer paso de la fase 9, no el último posible; si obliga a volver atrás, se vuelve.
 
@@ -371,6 +371,7 @@ Se anotan **antes** de seguir, no al final.
 | 2026-09-22 | P-99 | **Resultado de CA-1:** 10/10 escenas `INTEGRADA`, 10.236 palabras, 0,5233 USD con Haiku. Cero defectos, y eso **no** significa que el texto sea impecable: en esta corrida corren tres de los once validadores y el Continuista no está en el bucle. Cero defectos significa que nadie miró. |
 | 2026-09-22 | P-56 | **Se retira.** Era `prop_mismo_estado_y_misma_semilla_dan_el_mismo_paquete`, es decir RF-CTX-01, que D-02 retiró al sustituir el índice vectorial por una ordenación semántica con varianza. La fase 5 pasa de cuatro propiedades mínimas a tres: el desglose suma (P-48), recortar una capa no altera las vecinas (P-49) y las capas protegidas nunca encogen (P-51). La cuarta —o cabe o lanza (P-52)— sigue. El plan pasa de 104 pasos a 103. |
 | 2026-09-22 | P-43 a P-59 | `hypothesis` entra como dependencia de desarrollo para los tests de propiedades. `verification.md` §2 los exige por nombre y la spec marca cuatro requisitos como «**T**, propiedad»; escribirlos a mano daría menos cobertura y ningún contraejemplo mínimo. |
+| 2026-09-22 | P-122 y P-123 | **Tres erratas y un recuento falso.** `CLAUDE.md` §13 documentaba `uvicorn app.main:app`, que no puede funcionar porque `main.py` expone `crear_app()` y no un `app` de modulo. `pyproject` declaraba `sqlalchemy` sin el extra `[asyncio]`, asi que una instalacion limpia con pip dejaba en rojo los tres tests de la fabrica de conexion -con `uv sync` no se notaba porque el lock ya fijaba `greenlet`-. `verificar.sh` no ejecutaba `corrida.py`, que esta fuera de `testpaths`, y por eso se rompio en silencio en P-115. Y el Cierre decia «los 103 pasos», contando como hechos los cinco que D-02 habia dejado sin objeto: quedan retirados en sus tablas. |
 | 2026-09-22 | P-115 a P-117 | **Las transiciones pasan a depender del tipo de trabajo**, decidido por maujimenez4 el 22-09-2026. Los diez estados de §3.3 describen el ciclo de una escena: `INTEGRADA` solo se alcanza desde `EXTRAYENDO`, asi que un trabajo de biblia, outline o ficha **no tenia ningun camino a un terminal de exito**. Entra `TRANSICIONES_SIMPLES` -`PLANIFICANDO` a `INTEGRADA | FALLIDA | CANCELADA`- y quien no declara tipo se lleva la tabla estricta: si un tipo nuevo se olvidara de declararse, como mucho no podra avanzar, en vez de poder marcar exito sin haber hecho nada. `architecture.md` §3.3 y RI-02 quedan al dia en el mismo commit. `Dependencias` gana `arquitecto` -es otro agente segun §9.3, aunque hoy apunte al mismo cliente- y el repositorio de `outline`. |
 | 2026-09-22 | P-99 | **`corrida.py` no lo cubre ninguna puerta.** Ni `pytest` -esta fuera de `testpaths`- ni `verificar.sh` lo ejecutan, asi que al anadir dos campos a `Dependencias` se rompio en silencio y no se supo hasta lanzarlo a mano. Es la demostracion de CA-1: si se rompe sin que nada avise, deja de demostrar nada. Queda anotado; anadirlo a `verificar.sh` es trabajo del bloque E. |
 | 2026-09-22 | P-118 a P-120 | **Salen juntos** los tres endpoints de consulta: son la misma forma -leer y serializar- y separarlos daria tres commits sin nada que decidir en dos de ellos. Aparecieron dos cosas por el camino. `canon` no tenia forma de dar los hechos de una **obra** con filtros, solo los de una escena: entra `hechos_de_obra`, que sube por capitulo y parte igual que `outline` y devuelve solo lo vigente. Y el endpoint de contexto necesita almacenes, ordenador y contador, pero **no puede importar `escritura`** sin crear un ciclo entre features (§5.2 regla 5), asi que declara un `Protocol` que `Dependencias` cumple por forma sin que ninguno de los dos lo sepa. |

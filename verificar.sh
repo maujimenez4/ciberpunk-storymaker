@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Las cuatro puertas de CLAUDE.md §15. Falla entera si falla cualquiera:
+# Las puertas de CLAUDE.md §15, mas la corrida en seco de CA-1. Falla entera si falla cualquiera:
 # encadenarlas con tuberias enmascara el codigo de salida detras del tail.
 set -e
 # import-linter dibuja un spinner con `rich`, que revienta si stdout es
@@ -12,4 +12,8 @@ python -m uv run ruff check .
 python -m uv run ruff format --check .
 python -m uv run mypy
 python -m uv run lint-imports
-echo "las cuatro puertas en verde"
+# CA-1 con dobles. Entra aqui porque `corrida.py` esta fuera de `testpaths` y
+# se rompio en silencio al cambiar `Dependencias`: una demostracion que puede
+# romperse sin que nada avise deja de demostrar nada.
+python -m uv run python corrida.py --seco
+echo "las cinco puertas en verde"

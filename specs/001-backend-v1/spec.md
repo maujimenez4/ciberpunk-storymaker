@@ -526,8 +526,60 @@ Las dos partes **I** pendientes —prosa dentro del nivel de calor (RF-CAL-02) y
 
 ## Cierre
 
-Implementada el 2026-09-22. Los 103 pasos del plan, en 46 commits sobre la rama
-`seed-context-v2-backend-v1`.
+### Primer cierre, 2026-09-22 — retirado el mismo día
+
+Se dio por implementada con «los 103 pasos del plan, en 46 commits». **No lo
+estaba, y el recuento tampoco era cierto**: cinco de esos pasos —P-10 a P-12,
+P-40 y P-101— habían quedado sin objeto con D-02 y nunca se hicieron, porque no
+había nada que hacer. Lo que faltaba de verdad:
+
+- **Siete de los nueve endpoints de RI-01 a RI-09 no existían.** Siete
+  `router.py` eran cascarones de cuatro líneas.
+- `POST /escenas/{id}/escribir` creaba la fila de `trabajo` y **nadie la
+  ejecutaba**: `encolar()` no se llamaba desde ningún sitio salvo un test.
+- El protocolo `Almacenes` del Ensamblador **no lo implementaba nadie**, así que
+  la memoria de largo plazo se escribía y no se leía. De ahí el síntoma que este
+  mismo apartado anotó sin explicar: el canon aportaba 36 tokens al paquete.
+- `vivos()` existía y estaba probado, y **ningún arranque lo leía**.
+
+La spec y el plan volvieron a revisión en `3c23058`, y la fase 10 del plan
+recoge lo que quedaba.
+
+### Estado
+
+`en-revision`. **Lo cierra una persona, no un agente** (§3.2): el trabajo de la
+fase 10 está hecho y verificado, pero el cambio a `implementada` va en un commit
+firmado por quien lo apruebe.
+
+### Lo que se hizo en la fase 10
+
+Los pasos P-105 a P-123, sobre la misma rama. Las cuatro puertas en verde en cada
+commit: 398 tests, `ruff`, `mypy` estricto sobre 137 ficheros y los 10 contratos
+de `import-linter`.
+
+| Qué | Pasos |
+| --- | --- |
+| La aplicación deja de guardar credenciales que nadie leía | P-105 a P-107 |
+| La memoria de largo plazo **se lee**: `AlmacenesDeLaObra` cablea cada capa | P-108 a P-110 |
+| El ciclo sale de `corrida.py` a `features/escritura/` y las capas se recolectan | P-111 |
+| El endpoint encola y el ejecutor ejecuta; los trabajos interrumpidos se retoman | P-112, P-113 |
+| Los nueve endpoints de RI-01 a RI-09 | P-114 a P-121 |
+
+El efecto se mide en el reparto del paquete, con la misma corrida en seco:
+
+| Capa | Con capas fijas | Desde los almacenes |
+| --- | --- | --- |
+| Constitucional | 13 | 117 |
+| Estructural | 15 | 225 |
+| Canon relevante | 36 | 109 |
+| Estado en T | 32 | 105 |
+| Memoria recuperada | 32 | 606 |
+
+No es que aporten más: es que antes no se leían.
+
+### Primer cierre — lo que sí valía
+
+Los 46 commits originales, de `abed15e` a `cc00d95`.
 
 - **Commits:** de `abed15e` (andamiaje) a `cc00d95`. Los hitos: `509dfed` a
   `d84c3d0` la migración inicial en cuatro entregas, `2ab9d9a` la memoria de
@@ -558,8 +610,9 @@ una y comprueba que su test se pone en rojo. Las diez lo hacen.
   recortar nada.
 - **El riesgo del contador local sigue abierto.** Los paquetes de esta corrida
   son demasiado pequeños para que una diferencia de tokenización se note.
-- **Las capas se precargan a mano en `corrida.py`**, no salen de los almacenes.
-  El ensamblador funciona; la recolección real queda por cablear.
+- ~~**Las capas se precargan a mano en `corrida.py`.**~~ Resuelto en P-108 a
+  P-111: salen de los almacenes reales y `corrida.py` llama al mismo ciclo que
+  la API.
 
 ### D-07: los objetivos de rendimiento, medidos
 
@@ -571,7 +624,9 @@ una y comprueba que su test se pone en rojo. Las diez lo hacen.
 
 RNF-REN-01 a 04 quedan **sin confirmar**: los paquetes de esta corrida son
 demasiado pequeños para medir el ensamblado contra su tope, y la búsqueda por
-fuerza bruta de RNF-REN-04 desapareció con D-02.
+fuerza bruta de RNF-REN-04 desapareció con D-02. Sigue sin confirmarse tras la
+fase 10: el paquete crece de 537 a unos 1.700 tokens al leer los almacenes, que
+sigue siendo dos órdenes de magnitud por debajo del tope de 100.000.
 
 ### D-09: firma de la inspección
 

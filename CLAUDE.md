@@ -361,8 +361,11 @@ Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de 
 ```bash
 # backend
 uv sync
-uv run uvicorn app.main:app --reload
+# `--factory`: `main.py` expone `crear_app()`, no un `app` de modulo. Sin esto
+# uvicorn no encuentra nada que servir.
+uv run uvicorn --factory app.main:crear_app --reload --app-dir src/backend
 uv run pytest
+uv run python corrida.py --seco     # CA-1 con dobles: no gasta cuota
 uv run ruff check --fix . && uv run ruff format .
 uv run lint-imports                 # reglas de frontera entre features
 uv run alembic upgrade head
