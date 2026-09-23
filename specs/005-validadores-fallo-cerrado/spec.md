@@ -278,6 +278,15 @@ puerta de calidad, nivel de calor, ledger— existen en `docs/definitions.md`. E
 Las cinco las contestó **`maujimenez4`** el **2026-09-23**. Se conserva cada pregunta con
 su porqué, como pide `CLAUDE.md` §3.2.
 
+> **Firmadas por `maujimenez4` el 2026-09-23.** D-1 a D-5 llevan su firma, puesta por
+> instrucción suya directa en la sesión **Hernán**. Con ella no queda ninguna pregunta
+> abierta en esta spec.
+>
+> La firma alcanza **a las cinco decisiones, no al `estado:` de la spec**, que sigue en
+> `borrador` con `aprobada_por` vacío. Cambiarlo es un acto distinto y va en un commit
+> suyo que no contenga nada más (`CLAUDE.md` §3.2), para que la aprobación quede
+> localizable en el historial. Ningún agente lo toca.
+
 **Desviación que hay que declarar, y va la primera porque no se arregla contestándola.**
 Las cinco se implementaron y se commitearon (`accb8e9`) con esta spec en `borrador`. Estas
 decisiones **documentan** lo que el código ya hacía; no vuelven retroactivo el orden de
@@ -394,3 +403,78 @@ como mínimo, actualizar en `verification.md`:
 - la fila «Una contradicción de canon pasa desapercibida» de §7, si H-3 y H-5 cambian su
   estado;
 - el registro de cambios de §8.
+
+### Cómo se hizo esta spec, que no fue en el orden de §3
+
+**No hay `plan.md`, y no va a haberlo con sentido: el código ya existía cuando se firmaron
+las decisiones.** §3.5 dice que el plan queda como registro de cómo se hizo el trabajo;
+aquí no hay plan, así que el registro es este apartado. Lo escribe la sesión **Gustavo** a
+petición de la sesión **Mario**, el 2026-09-23.
+
+El orden real fue:
+
+1. Se evaluaron quince lenguajes formales y se adoptaron tres técnicas (commit `1c7dbe1`).
+2. Se sondeó `validadores.py` con esas técnicas y cayeron cuatro invariantes de cinco; una
+   sexta la aportó la sesión **Nubia** leyendo el acoplamiento entre features.
+3. Se escribió esta spec, en `borrador`, con cinco preguntas abiertas.
+4. **Se implementó y se commiteó el código (`accb8e9`), con la spec todavía en
+   `borrador`.** Eso incumple §3.3 y §3.4: no hay plan sin spec aprobada, ni código sin
+   plan aprobado.
+5. `maujimenez4` firmó las cinco decisiones **después**, el 2026-09-23.
+
+De ahí se sigue una cosa que conviene leer con cuidado al revisar D-1 a D-5: **cuatro de
+las cinco son confirmaciones de decisiones que el código ya había tomado**, no decisiones
+tomadas antes de programar. La única que se planteó como pregunta de verdad, con su
+límite delante, fue **D-4** —y es la que mejor salió—. No parece casualidad, y por eso se
+deja escrito en vez de resumirlo como «cinco decisiones firmadas».
+
+Esto no se disimula por la misma razón por la que `defectos.py` documenta RF-CAL-09
+incumplido a propósito en lugar de callarlo: **aquella decisión se pudo revisar hoy porque
+estaba escrita.** Una desviación anotada es recuperable; una disimulada deja un historial
+que dice que hubo spec, decisiones e implementación en ese orden, y no fue ese el orden.
+
+### Lo que la corrida de D-3 encontró, y por qué no cierra
+
+La medición que autorizó D-3 **no se pudo hacer**: la corrida murió en la escena 1 porque
+una cita inventada por el Continuista revienta el ciclo en vez de registrarse como defecto
+mal formado. Es un séptimo hallazgo —**H-7**— y está documentado con su evidencia en
+[`umbral-can01-con03.md`](umbral-can01-con03.md).
+
+**No se ha añadido como requisito de esta spec a propósito.** Meter un `RF-CAL-19` por
+decisión de un agente reabriría en `borrador` una spec cuyas preguntas acaban de cerrarse,
+y §3.2 dice que una spec no se aprueba —ni se reabre— a medias. Quién lo recoge y dónde
+lo decide `maujimenez4`. Lo que sí es un hecho: **D-3 no se puede cerrar hasta que H-7 esté
+resuelto**, porque cualquier corrida nueva morirá igual en cuanto el Continuista
+parafrasee.
+
+### Lo que dice de la suite, y no lo dice ningún test verde
+
+**Los seis hallazgos estaban cerrados en el código, con 444 tests en verde, y la primera
+corrida real murió en la escena 1.** Conviene dejarlo escrito tal cual, porque es la
+conclusión más útil de toda esta spec y no se deduce de ninguna casilla.
+
+La sesión **Mario** encontró el 2026-09-23 a las 19:30 el porqué exacto, y es de manual.
+`test_puerta.py:31` se llama `test_una_cita_que_no_coincide_con_el_texto_queda_mal_formada`
+y su docstring dice cubrir «**la** categoría que esta comprobación elimina». Lo que hace es:
+
+```python
+defecto = _defecto(CodigoDeDefecto.CON_01, "cortaba la red").model_copy(
+    update={"desplazamiento_inicio": 0, "desplazamiento_fin": 10}
+)
+```
+
+`"cortaba la red"` **sí está** en el texto de prueba —comprobado—. El test construye un
+defecto válido y luego le corrompe los **desplazamientos**. Prueba un anclaje corrompido,
+no una cita inventada; y el `model_copy` rodea exactamente el punto donde el sistema
+revienta con entrada real, porque construir el `Defecto` por la vía normal habría lanzado.
+
+Es el párrafo de apertura de esta spec cumpliéndose sobre la propia spec: *los ejemplos se
+escriben con la entrada que el autor tenía en la cabeza*. Esta vez el ejemplo estaba
+escrito para pasar por encima del fallo.
+
+**Y falsifica un criterio de la 001.** Su segundo `CA-14` (`specs/001-backend-v1/spec.md:362`)
+dice que un defecto con la cita inventada «no bloquea la escena, no gasta intento y queda
+contado como mal formado». Con una cita inventada la corrida **muere**: 0 de 10. Ese
+criterio está sin cumplir, y la 001 no debería marcarse `implementada` sin declararlo.
+—Con el agravante de que hay **dos criterios con el número `CA-14`** en esa spec, así que
+ni siquiera se puede citar sin ambigüedad.—

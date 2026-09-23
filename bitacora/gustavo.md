@@ -111,3 +111,17 @@
 - **Qué:** Mario me dijo a la vez que la sonda pasa 7/7 y que `RF-CAL-18` sigue sin implementar, que son incompatibles. Comprobado: la sonda pasa **7 de 7** desde `specs/005-`, y sobre `—Yo no fui —dijo ella. Yo camine hasta la puerta y yo espere.` la narración ya es `' dijo ella. Yo camine hasta la puerta y yo espere.'` y VOZ-03 emite dos defectos. **Los seis hallazgos están corregidos en el código.**
 - **Estado:** terminado
 - **Ojo:** eso cambia lo que hay que pedirle al usuario. P-4 **no** está sin respuesta: el código la contestó —los segmentos separados por raya alternan, y los de índice par son narración—. Lo que falta es **confirmarla**, no decidirla en blanco. Que se pida como pregunta virgen invita a responder deprisa algo que ya está funcionando.
+
+## 16:45 · Corrida real autorizada: muere en la escena 1, y compra un hallazgo
+
+- **Qué:** `maujimenez4` firmó las cinco decisiones (D-1 a D-5) y autorizó la corrida real con el Continuista dentro para medir el umbral de D-3. **La corrida murió en la escena 1**: `citar()` lanza `ValueError` porque el Continuista devolvió una cita que no es subcadena literal de la prosa. 0 de 10 escenas, 0 defectos registrados, **0,0517 USD**.
+- **Ficheros:** `specs/005-validadores-fallo-cerrado/umbral-can01-con03.md` (nuevo), `spec.md` (Decisiones y Cierre). Evidencia fuera del repositorio, en `Documents/evidencia-corridas/corrida-continuista-2026-09-23/`, porque contiene prosa generada (§15).
+- **Estado:** bloqueado — D-3 no se puede medir hasta que se cierre H-7
+- **Ojo para quien lleve `calidad/` y `escritura/`:** **H-7.** Los cuatro validadores de continuidad llaman a `citar(texto, a.cita, …)` con la cita **que devuelve el modelo**, y `citar` lanza si no la encuentra. Toda la defensa contra la cita inventada —`comprobar_forma`, axiomas 11 y 12, la tasa de mal formados de `verification.md` §6.3— vive en `puerta.py`, **aguas abajo**: para que un defecto mal formado se registre, primero tiene que construirse, y aquí revienta antes. **No lo he arreglado**: no es mi área y añadir un requisito reabriría una spec cuyas preguntas acaban de cerrarse.
+
+## 19:35 · H-7 falsifica un criterio de la spec 001
+
+- **Qué:** Mario rastreó H-7 hasta su causa y la verifiqué yo: `test_puerta.py:31` dice cubrir «la categoría que esta comprobación elimina» —la cita inventada— y lo que prueba es **otra cosa**. Usa `"cortaba la red"`, que **sí está** en el texto, y luego corrompe los desplazamientos con `model_copy`. Prueba un anclaje corrompido, no una cita inventada, y el `model_copy` rodea justo el punto donde el sistema revienta con entrada real.
+- **Ficheros:** `specs/005-validadores-fallo-cerrado/spec.md` (Cierre ampliado)
+- **Estado:** terminado
+- **Ojo:** el segundo `CA-14` de la 001 (`spec.md:362`) dice que un defecto con cita inventada «no bloquea, no gasta intento y queda contado como mal formado». **Mi corrida lo falsifica:** con cita inventada la corrida muere, 0 de 10. Si la 001 va a marcarse `implementada`, eso hay que declararlo. Y esa spec tiene **dos criterios con el número `CA-14`**, así que ni se puede citar sin ambigüedad.

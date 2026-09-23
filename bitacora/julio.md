@@ -90,3 +90,16 @@ compruebo lo que otros terminan y lo subo si está en verde.
   - **No medirá el filtro estructural**, que sigue sin existir, ni protegerá el entregable: la escena escalada volverá a entrar en el manuscrito.
   - Le pedí que mida la repetición entre escenas consecutivas. Es el número nuevo y el que dice si esto aguanta sesenta escenas.
 - **Estado del árbol al escribir esto:** renumeración hecha (`002-lectura-web`, `005-validadores-fallo-cerrado`), 444 tests en verde.
+
+## 17:30 · H-7 bloquea el plan: el Continuista no puede correr en real
+
+- **Qué:** la corrida de Gustavo murió en la escena 1. Verificado por mí sobre su base, no dado por bueno.
+- **Ficheros:** ninguno míos. El fallo está en `calidad/validadores.py` y `calidad/defectos.py:106`.
+- **Estado:** bloqueado. Avisado Jose, que es quien lleva `calidad` y `escritura`.
+- **Ojo:** esto para la fase 3 del plan aprobado, así que afecta a todos.
+  - `validar_conocimiento` pasa a `citar()` la cita **que escribe el modelo**, y `citar` lanza `ValueError` si no la encuentra literal. El Continuista parafraseó y mató el proceso.
+  - Su base: 1 trabajo en `VALIDANDO`, 1 ejecución del escritor, 0 defectos, 0,0517 USD.
+  - **La defensa está aguas abajo y por eso no sirve.** `comprobar_forma` y los axiomas 11 y 12 viven en `puerta.py`: para que un defecto mal formado se registre, antes tiene que construirse, y aquí revienta antes de existir. El mecanismo contra la cita inventada existe y ese caso no le llega nunca.
+  - **Nada lo podía ver:** el seco pasa `[]`, los tests y la sonda construyen las `Afirmacion` a mano con citas que sí están. Ningún camino ejercía esos validadores con una cita escrita por el modelo.
+  - **No relajar `citar`.** La regla de dominio 8 exige subcadena exacta. La salida es que una cita del modelo que no case sea **defecto mal formado**, registrado y sin bloquear: respeta la regla, alimenta la tasa que mide al Continuista y convierte un proceso muerto en un número.
+  - La llamada del Continuista **tampoco quedó en `ejecucion`**: se pagó y no hay registro, porque la excepción saltó antes de persistir.
