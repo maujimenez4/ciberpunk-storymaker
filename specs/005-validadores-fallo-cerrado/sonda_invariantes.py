@@ -1,4 +1,4 @@
-"""Sonda de invariantes sobre `validadores.py` — evidencia de la spec 002.
+"""Sonda de invariantes sobre `validadores.py` — evidencia de la spec 005.
 
 **No es parte de la suite.** `pyproject.toml` fija `testpaths = ["src/backend"]`,
 así que `pytest` no la recoge. Vive aquí porque es la evidencia de los seis
@@ -6,7 +6,7 @@ hallazgos, y porque un hallazgo sin reproducción es una opinión.
 
 Cómo correrla:
 
-    uv run pytest specs/002-validadores-fallo-cerrado/sonda_invariantes.py -q
+    uv run pytest specs/005-validadores-fallo-cerrado/sonda_invariantes.py -q
 
 Hoy **falla**, y eso es lo que documenta. Cuando la spec se implemente, RF-CAL-17
 la convierte en tests permanentes dentro de `features/calidad/tests/`; entonces

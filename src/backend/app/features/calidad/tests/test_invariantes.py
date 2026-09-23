@@ -6,7 +6,7 @@ leyendo el codigo, y ninguno lo habria cazado un test de ejemplo: cada funcion
 tenia su caso bueno y su caso malo en verde desde la fase 6. Un ejemplo
 arreglado protege ese ejemplo; una propiedad protege la funcion.
 
-La sonda original vive en `specs/002-validadores-fallo-cerrado/` como registro
+La sonda original vive en `specs/005-validadores-fallo-cerrado/` como registro
 de los hallazgos. Esto es lo que queda vigilandolos.
 """
 

@@ -1,18 +1,18 @@
 ---
-id: 003-lectura-web
+id: 002-lectura-web
 titulo: Lectura web de la novela publicada
 estado: borrador          # borrador | en-revision | aprobada | implementada
 aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-23
 ---
 
-# 003-lectura-web — Lectura web de la novela publicada
+# 002-lectura-web — Lectura web de la novela publicada
 
 Qué debe poder hacer quien recibe la novela, y cómo se sabrá que lo hace. **Aquí no se decide cómo se implementa:** eso es el plan, y no se escribe hasta que esta spec esté `aprobada`.
 
 Es la primera spec de frontend del repositorio. Cubre **solo la lectura**: el taller del autor —inspector de contexto, panel de defectos, outline, auditoría— es una spec aparte, para que esta sea aprobable sin esperar a las dependencias de aquella.
 
-**Número.** Esta spec es la **003** y no la 002 porque `specs/002-validadores-fallo-cerrado/` ya ocupa ese número en disco, en `estado: borrador` y con fecha del mismo día.
+**Número.** Esta spec nació como **003** porque el 002 estaba ocupado, y pasó a **002** el 2026-09-23 por decisión de `maujimenez4`, que movió `validadores-fallo-cerrado` al **005**. Se deja escrito porque los commits `82a1a49` y `ce2b810` nombran las rutas antiguas en el historial y no se pueden reescribir: quien los lea necesita saber que `003-lectura-web` y esta spec son la misma.
 
 ---
 
@@ -137,7 +137,7 @@ Los dos se registran en `no_bloquean`, y ninguno bloquea. No es un olvido: el co
 
 El escenario que DEP-03 dice cubrir queda así: se regenera el capítulo 4, el 7 pasa a contradecirlo, la revalidación **emite `CAN-01`**… y la versión **se publica igual**. El fallo queda detectado y no impedido. Lo que sí bloquea, `CON-01`, contrasta dos afirmaciones del propio Continuista entre sí: pilla a un personaje en dos sitios a la vez, no pilla que el capítulo 7 diga que Mara tiene los ojos negros después de que el 4 regenerado los haya puesto verdes.
 
-**Dependencia, y tiene nombre concreto: es la P-3 de `specs/002-validadores-fallo-cerrado/`**, que pregunta literalmente «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`». No es una duda interna de aquella spec: **bloquea la garantía de esta**. DEP-03 solo cumple lo que promete cuando esa pregunta se firme y los dos códigos vuelvan.
+**Dependencia, y tiene nombre concreto: es la P-3 de `specs/005-validadores-fallo-cerrado/`**, que pregunta literalmente «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`». No es una duda interna de aquella spec: **bloquea la garantía de esta**. DEP-03 solo cumple lo que promete cuando esa pregunta se firme y los dos códigos vuelvan.
 
 **Ojo con la palabra «vuelvan».** Devolver `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A` sería una **decisión nueva de `maujimenez4`**, no la restauración de un estado anterior: fue él quien los sacó, el 2026-09-23, y está declarado en `defectos.py:41`. Esta spec no pide deshacer nada; pide que se decida, porque su garantía depende de ello.
 
@@ -227,7 +227,7 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 | RF-PET-01 | El lector puede seleccionar un fragmento del capítulo, o una entrada de la ficha, y abrir la petición desde ahí | M | T |
 | RF-PET-02 | La petición se registra con el `hecho_canon_id` afectado, la `VersionPublicada` de origen y el texto pedido | M | T |
 | RF-PET-03 | Enviar la petición **no bloquea la lectura**: devuelve un trabajo y el lector sigue leyendo | M | T |
-| RF-PET-04 | El progreso del trabajo es visible y se sondea con RI-06 | M | T |
+| RF-PET-04 | El progreso del trabajo es visible **por capítulo** —«regenerando el capítulo 4 de 7»—, no como un indicador indistinto, y se sondea con RI-06 | M | T |
 | RF-PET-05 | Si el trabajo termina publicando, la lectura ofrece saltar a la versión nueva; no salta sin que el lector lo pida | S | T |
 | RF-PET-06 | Si el trabajo termina **sin** publicar, se muestra que la petición no se atendió y el motivo, y la versión vigente no cambia | M | T |
 | RF-PET-07 | El texto que el lector escribe en la petición se trata como **contenido no confiable**: se envía como dato, nunca concatenado a un prompt desde el frontend | M | A (+T) |
@@ -251,6 +251,7 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 | --- | --- | --- | --- |
 | RD-01 | El frontend **no persiste nada** del dominio: toda la verdad vive en el backend | M | A |
 | RD-02 | La `VersionPublicada` que se lee viaja en la URL, de modo que un enlace compartido abre exactamente el mismo texto | M | T |
+| RD-04 | La URL de una novela lleva un **identificador no adivinable** (aleatorio, no correlativo): `obra/1` deja leer la novela ajena probando números. **No es autenticación**, que sigue fuera de alcance; es que el enlace se pueda compartir sin publicar de paso todas las demás | M | T |
 | RD-03 | El frontend no deriva la `FichaDeLectura` ni recalcula el canon: la recibe hecha (RI-03) | M | A |
 
 ### No funcionales
@@ -283,10 +284,11 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 - [ ] **CA-14** — Cuando hay una petición en curso, entonces la lectura sigue siendo navegable y la interfaz indica cuántas peticiones hay vivas. *(Test)* → RF-PET-03, RF-PET-08.
 - [ ] **CA-15** — Abrir un capítulo no espera a los otros nueve: se comprueba que la vista pinta con una sola respuesta de capítulo. *(Test)* → RNF-REN-01, RD-01, RD-02, RD-03.
 
+- [ ] **CA-21** — Cuando se piden identificadores de dos obras seguidas, entonces no son correlativos ni derivables uno del otro. *(Test)* → RD-04.
 - [ ] **CA-16** — Cuando se recarga la página de un capítulo, o se abre el mismo enlace en otra pestaña, entonces se ve exactamente el mismo texto. *(Test)* → RF-LEC-05, RD-02.
 - [ ] **CA-17** — Ningún componente contiene un `fetch` ni un cliente HTTP, no hay store global que mezcle estado de servidor con estado de interfaz, y cada test vive junto a su componente. *(Análisis)* → RF-LEC-10, RF-UI-02, RNF-MAN-01.
 - [ ] **CA-18** — Cuando el lector selecciona un fragmento del capítulo o una entrada de la ficha, entonces la petición se abre con el hecho afectado ya identificado. *(Test)* → RF-PET-01.
-- [ ] **CA-19** — Cuando un trabajo tarda el peor caso de DEP-03, entonces la interfaz lo sigue dando por vivo: no lo declara perdido ni terminado. Se comprueba con un doble que retrasa la respuesta. *(Test)* → RNF-REN-02.
+- [ ] **CA-19** — Cuando un trabajo tarda el peor caso de DEP-03, entonces la interfaz lo sigue dando por vivo —no lo declara perdido ni terminado— y muestra **por qué capítulo va**, no un indicador indistinto. Se comprueba con un doble que retrasa la respuesta y devuelve avance parcial. *(Test)* → RNF-REN-02, RF-PET-04.
 - [ ] **CA-20** — El *bundle* construido no contiene ninguna clave de proveedor, y la única URL de red que usa es la del backend propio. *(Análisis)* → RNF-SEG-02.
 
 **Sobre CA-5.** Su primera redacción decía «la vigente es byte a byte la de antes», y eso no era un criterio: `CLAUDE.md` §14 prohíbe editar en sitio, así que los bytes de una versión anterior **no pueden** cambiar y la comprobación pasaba siempre, hubiera funcionado el mecanismo o no. Un criterio que no puede fallar no verifica nada. Los tres riesgos reales son los de arriba, y el tercero es el que muerde: hechos extraídos de una prosa que se descartó. La letra (c) es **CA-7 de la 001** —«una escena rechazada no ha dejado rastro en canon, ledger ni índice»— aplicada a una regeneración rechazada.
@@ -335,18 +337,18 @@ El resto de términos usados —`Obra`, `Capitulo`, `Escena`, `HechoCanon`, `Ver
 
 ---
 
-## Preguntas abiertas
+## Decisiones
 
-Mientras quede una sin responder, esta spec **no se aprueba** (`CLAUDE.md` §3.2).
+**No queda ninguna pregunta abierta.** Las seis se cerraron el 2026-09-23 y cada una conserva quién la respondió, qué se decidió, por qué y dónde aterriza — que es lo que permite cambiarla después sabiendo qué se rompe (`CLAUDE.md` §3.2).
 
 | ID | Pregunta | Quién responde |
 | --- | --- | --- |
-| P-01 | ¿Cómo llega el destinatario a la URL de su novela? Sin autenticación (fuera de alcance), cualquiera con el enlace la lee. ¿Es aceptable para el modo local de referencia, o hace falta al menos un identificador no adivinable? | Autor |
-| P-02 | La revalidación de DEP-03, ¿se especifica en esta spec como requisito de la interfaz, o pertenece entera a la spec de backend y aquí solo se asume? Hoy está asumida | Autor |
-| P-03 | ¿Qué ve el lector mientras su petición se procesa en el peor caso de diez llamadas en serie? ¿Progreso por capítulo, o solo «en curso»? Afecta a RF-PET-04 y RNF-REN-02 | Autor |
-| P-04 | ~~¿Qué número toma la spec del taller?~~ **Contestada por verificación:** la 002 es de Gustavo, reclama `RF-CAL-13` a `RF-CAL-18` y sigue en `borrador`. El taller toma el **004** | — |
-| P-05 | Las dependencias de frontend de Impacto técnico necesitan aprobación explícita antes de instalarse (`CLAUDE.md` §3, punto 7). ¿Se aprueban en bloque al aprobar esta spec, o una a una en el plan? | Autor |
-| P-06 | El histórico de publicaciones exige **tablas nuevas**, que es cambio de esquema y por tanto pregunta de §3, punto 7. ¿Se aprueba el cambio, y en qué spec vive la migración? | Autor |
+| P-01 | ~~¿Cómo llega el destinatario a la URL?~~ **Contestada por `maujimenez4` el 2026-09-23: identificador no adivinable.** No es autenticación —sigue fuera de alcance—: evita leer la novela ajena probando números, y el enlace se sigue pudiendo regalar. Aterriza en RD-04 y CA-21 | — |
+| P-02 | ~~¿Dónde se especifica la revalidación de DEP-03?~~ **Contestada por `maujimenez4` el 2026-09-23: en la spec de backend.** Aquí se declara como dependencia y no como requisito: el frontend no especifica comportamiento de orquestación que no puede implementar ni probar | — |
+| P-03 | ~~¿Qué ve el lector mientras su petición se procesa?~~ **Contestada por `maujimenez4` el 2026-09-23: progreso por capítulo.** Un indicador mudo durante diez llamadas en serie se confunde con un cuelgue. Aterriza en RF-PET-04 y CA-19 | — |
+| P-04 | ~~¿Qué número toma la spec del taller?~~ **Contestada por verificación:** la spec de validadores es de Gustavo, reclama `RF-CAL-13` a `RF-CAL-18` y sigue en `borrador`; tras la renumeración es la **005**. El taller toma el **004** | — |
+| P-05 | ~~¿Cómo se aprueban las dependencias de frontend?~~ **Contestada por `maujimenez4` el 2026-09-23: aprobadas en bloque, y el cliente se genera con una herramienta estándar desde el OpenAPI**, no escribiéndolo un modelo. Es lo que exige `CLAUDE.md` §7, y además hace que un cambio de contrato del backend lo cace el `typecheck` en vez de nadie | — |
+| P-06 | ~~¿Se aprueba el cambio de esquema?~~ **Contestada por `maujimenez4` el 2026-09-23: aprobado, y la migración vive en la spec de backend que implemente DEP-02.** Sin esas tablas no hay versión anterior que conservar, y conservarla es requisito del encargo | — |
 
 ---
 
@@ -357,7 +359,7 @@ Va escrito aquí, y no escondido, porque es lo que un revisor debe poder ver de 
 | Qué no se verifica | Por qué | Qué lo cubriría |
 | --- | --- | --- |
 | Que la petición del lector se haya **atendido de verdad** | Las puertas de calidad responden «está bien formado y es coherente», no «es lo que se pidió». Un capítulo regenerado puede pasar G1a entero sin haber cambiado el nombre del perro | La reversión (RF-PET-09) devuelve el veto al lector. Comprobarlo de verdad exige un juez con rúbrica, que es otra spec |
-| Que una contradicción de canon, o una cadena de conocimiento rota, **impidan** publicar | `CAN-01` y `CON-03` no están hoy en `BLOQUEANTES_EN_G1A` (DEP-04): se detectan y se registran, no bloquean | DEP-04, que es la P-3 de la spec 002. Hasta que se firme, la protección de DEP-03 es parcial |
+| Que una contradicción de canon, o una cadena de conocimiento rota, **impidan** publicar | `CAN-01` y `CON-03` no están hoy en `BLOQUEANTES_EN_G1A` (DEP-04): se detectan y se registran, no bloquean | DEP-04, que es la P-3 de la spec **005**. Hasta que se firme, la protección de DEP-03 es parcial |
 | Que **la novela siga funcionando como novela** tras una regeneración | DEP-03 revalida **G1a, que es por escena**: mira canon, continuidad, conocimiento y voz. Ninguna de sus comprobaciones pregunta si el manuscrito sigue cubriendo sus beats. Se puede quitar un objeto del capítulo 4, revalidar del 3 al 10, pasar los diez, y dejar sin plantar el beat de clímax del 9: diez escenas correctas y una novela rota | El **Auditor de manuscrito** (`CLAUDE.md` §9), que **no entra en este flujo**. Invocarlo en cada petición es caro y es otra spec |
 | Que la novela **se lea bien** | Ningún test de frontend juzga prosa | Lectura humana, y el LLM-as-judge de la spec de evaluación |
 | Que la relación de DEP-01 sea exacta | Es «recuperado», no «usado»: sobre-reporta por construcción | Nada dentro de esta spec. Se mitiga usando diferencia real de texto para marcar (RF-LEC-08) |

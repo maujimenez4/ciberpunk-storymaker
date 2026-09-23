@@ -1,4 +1,4 @@
-# Auditoría de los criterios de la spec 002
+# Auditoría de los criterios de la spec 005
 
 Sesión **Hernán**, 2026-09-23. Encargo: construir validadores para esta spec y comprobar
 si los tests que declara son válidos.
@@ -13,8 +13,8 @@ que ya estaban resueltos cuando se escribieron.
 aprobación es de una persona (`CLAUDE.md` §3.2 y §14).
 
 ```bash
-uv run python specs/002-validadores-fallo-cerrado/validar_spec.py
-uv run pytest specs/002-validadores-fallo-cerrado/sonda_dominio.py -q
+uv run python specs/005-validadores-fallo-cerrado/validar_spec.py
+uv run pytest specs/005-validadores-fallo-cerrado/sonda_dominio.py -q
 ```
 
 ---
@@ -119,11 +119,11 @@ G1a, aplicada al validador de la spec.
 
 | Spec | Invariantes | Lo que falla |
 | --- | --- | --- |
-| 001-backend-v1 | 11/12 | V-9: once criterios no declaran su marca de verificación |
-| 002-validadores | **12/12** | — |
-| 003-lectura-web | **12/12** | — |
+| 001-backend-v1 | 11/13 | V-9: once criterios sin marca · V-13: dos criterios distintos llamados `CA-14` |
+| 005-validadores | **13/13** | — |
+| 002-lectura-web (antes 003) | **13/13** | — |
 
-*Medido a las 17:45. La 002 y la 003 llegaron a 12/12 esta tarde: Gustavo etiquetó sus
+*Medido a las 17:45. La 005 —entonces 002— y la 003 llegaron a 12/12 esta tarde: Gustavo etiquetó sus
 nueve criterios con su requisito y Ezequiel añadió marca y flecha a los veinte suyos.*
 
 **Una versión anterior de este informe daba 12/12 y 11/12 sobre un validador que no veía
@@ -134,7 +134,7 @@ spec persigue en los validadores de G1a. Lo delató la 003 al devolver «0 requi
 criterios» — un resultado demasiado absurdo para no mirarlo. Corregido el 2026-09-23.
 
 De ahí salió también la degradación de V-8 a aviso: al ver los requisitos de verdad
-apareció que la sección de requisitos **cita identificadores de otras specs** —la 002
+apareció que la sección de requisitos **cita identificadores de otras specs** —esta spec
 menciona `RF-CAL-07`, que es de la 001— y desde el texto no hay forma mecánica de
 distinguir el propio del ajeno. No se relajó la invariante para que pasara: como fallo
 binario no era decidible con la información disponible, y un validador que acusa en falso

@@ -1,22 +1,22 @@
 """Validador estructural de una spec, contra `CLAUDE.md` §3.2.
 
-No juzga si la spec es *buena*: comprueba que es **evaluable**. Doce invariantes
+No juzga si la spec es *buena*: comprueba que es **evaluable**. Trece invariantes
 mecánicas, todas con contraejemplo posible, ninguna que dependa de leer prosa.
 
-Falla cerrado, igual que pide la spec 002 de los validadores de G1a: si no puede
+Falla cerrado, igual que pide la spec 005 de los validadores de G1a: si no puede
 evaluar una invariante —falta la sección, el enlace no resuelve, el frontmatter no
 parsea— **eso es un fallo**, no un «no aplica». Un validador de specs que calla
 cuando no entiende lo que lee no sirve para abrir una puerta.
 
 Cómo correrlo:
 
-    uv run python specs/002-validadores-fallo-cerrado/validar_spec.py
-    uv run python specs/002-validadores-fallo-cerrado/validar_spec.py \
+    uv run python specs/005-validadores-fallo-cerrado/validar_spec.py
+    uv run python specs/005-validadores-fallo-cerrado/validar_spec.py \
         --spec specs/001-backend-v1/spec.md
 
 Salida: una línea por invariante, y código de salida 1 si alguna falla.
 
-**Fuera de `testpaths`**, como la sonda: es evidencia y herramienta de la spec 002,
+**Fuera de `testpaths`**, como la sonda: es evidencia y herramienta de la spec 005,
 no parte de la suite. Si la spec se aprueba, el plan decide si se promueve a
 `verificar_spec.py` en la raíz, junto a `verificar_ca4.py`.
 """
@@ -65,12 +65,14 @@ RE_MARCA_BREVE = re.compile(r"\*?\([TAIDU]\)\*?")
 # Los requisitos se declaran en tabla (`| RF-LEC-01 | …`) o en negrita
 # (`- **RF-CAL-13** — …`). Capturar solo la negrita dejaba fuera specs enteras:
 # la 003 declara los suyos en tabla y este validador veía **cero**, que es el
-# fallo en abierto que la 002 persigue. Se busca el identificador, no su adorno.
+# fallo en abierto que esta misma spec persigue. Se busca el identificador, no
+# su adorno.
 PREFIJOS = ("CU", "RI", "RF", "RD", "RNF")
 RE_REQUISITO = re.compile(
     r"\b((?:" + "|".join(PREFIJOS) + r")-(?:[A-Z]{2,4}-)?\d{2,3})\b"
 )
 RE_CRITERIO = re.compile(r"\*\*(CA-\d+)\*\*")
+RE_DECLARACION_CA = re.compile(r"^\s*-\s*\[[ xX]\]\s*\*\*(CA-\d+)\*\*", re.MULTILINE)
 RE_HALLAZGO = re.compile(r"^###\s+(H-\d+)", re.MULTILINE)
 RE_PREGUNTA = re.compile(r"\*\*(P-\d+)[^*]*\*\*")
 RE_ENLACE = re.compile(r"\[[^\]]+\]\(([^)#]+\.(?:md|py))\)")
@@ -178,7 +180,7 @@ def validar(ruta: Path) -> Resultado:
     ca_txt = seccion(cuerpo, "Criterios de aceptación") or ""
     # Un requisito es **propio** si la seccion lo declara: como identificador de
     # fila (`| RF-LEC-01 | …`) o en negrita (`- **RF-CAL-13** — …`). Si solo
-    # aparece suelto en prosa es una cita a otra spec —la 002 menciona
+    # aparece suelto en prosa es una cita a otra spec —la de validadores menciona
     # `RF-CAL-07`, que es de la 001— y contarlo como propio acusa en falso.
     # Regla propuesta por la sesion Mario el 2026-09-23.
     declarados: set[str] = set()
@@ -213,7 +215,8 @@ def validar(ruta: Path) -> Resultado:
     sin_criterio = [q for q in requisitos if q not in ca_txt]
 
     # Es aviso, no fallo, y el motivo es una limitacion real: la seccion de
-    # requisitos tambien cita identificadores de OTRAS specs —la 002 menciona
+    # requisitos tambien cita identificadores de OTRAS specs —la de validadores
+    # menciona
     # `RF-CAL-07`, que es de la 001— y desde el texto no hay forma mecanica de
     # distinguir el requisito propio del ajeno. Un fallo binario sobre ese dato
     # acusaria a specs correctas, y un validador que acusa en falso se acaba
@@ -272,6 +275,24 @@ def validar(ruta: Path) -> Resultado:
         "V-12 sin criterios dados por buenos",
         estado == "implementada" or marcadas == 0,
         f"{marcadas} criterios marcados [x] con estado={estado!r}",
+    )
+
+    # V-13 — ningun criterio se declara dos veces. Lo propuso la sesion Mario el
+    # 2026-09-23 tras encontrar **dos** `CA-14` distintos en la 001, y es la mas
+    # solida de las trece: decidible sin heuristica de formato, sin falso positivo
+    # posible, y arregla de paso el recuento —contar identificadores unicos sobre
+    # un documento con duplicados desplaza la cifra hacia abajo sin avisar—.
+    #
+    # Solo sobre criterios, no sobre requisitos: la 001 explica `RF-CAL-02` en una
+    # nota en negrita bajo su tabla, y eso es una aclaracion, no una segunda
+    # declaracion. Aplicarlo alli daria el tercer falso positivo del dia.
+    declaraciones = RE_DECLARACION_CA.findall(cuerpo)
+    repetidos = sorted({c for c in declaraciones if declaraciones.count(c) > 1})
+    r.comprobar(
+        "V-13 ningun criterio declarado dos veces",
+        not repetidos,
+        f"criterios declarados mas de una vez: {repetidos}. "
+        f"Una cita cruzada a ese identificador no senala nada",
     )
 
     return r

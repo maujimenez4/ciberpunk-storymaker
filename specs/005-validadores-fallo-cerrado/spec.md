@@ -1,12 +1,12 @@
 ---
-id: 002-validadores-fallo-cerrado
+id: 005-validadores-fallo-cerrado
 titulo: Los validadores mecánicos fallan cerrado y son deterministas
 estado: borrador          # borrador | en-revision | aprobada | implementada
 aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-23
 ---
 
-# 002-validadores-fallo-cerrado — Los validadores mecánicos fallan cerrado y son deterministas
+# 005-validadores-fallo-cerrado — Los validadores mecánicos fallan cerrado y son deterministas
 
 Seis defectos encontrados en `features/calidad/validadores.py`, cada uno con contraejemplo
 ejecutado. **Aquí no se decide cómo se arreglan:** eso es el plan, y no se escribe hasta
@@ -175,8 +175,7 @@ vacía, que la puerta lee como «sin defectos».
   todavía, y enunciarlos mal protege menos que un ejemplo honesto. *(Evita la
   reaparición: un ejemplo arreglado no protege la función.)*
 - **RF-CAL-18** — `solo_narracion` conserva la narración que sigue al inciso del
-  narrador, y VOZ-03 la evalúa. *(Corrige H-6.)* **No se implementa hasta que P-4 esté
-  contestada:** el fallo no está en la entrada sino en el criterio de qué es diálogo en
+  narrador, y VOZ-03 la evalúa. *(Corrige H-6.)* **Dependía de P-4, hoy resuelta en D-4:** el fallo no está en la entrada sino en el criterio de qué es diálogo en
   español, y ese criterio es la pregunta abierta. RF-CAL-13 no sirve aquí —un párrafo con
   diálogo y narración en la misma línea es entrada perfectamente **de dominio**, así que
   no hay nada que lanzar—, y darlo por cubierto fue un error de esta spec que señaló la
@@ -185,14 +184,14 @@ vacía, que la puerta lee como «sin defectos».
 ## Criterios de aceptación
 
 - [ ] **CA-1** *(transversal)* — La sonda de [`sonda_invariantes.py`](sonda_invariantes.py), **actualizada
-      con las respuestas firmadas a P-1 a P-5**, pasa entera sobre el código de
+      con las decisiones firmadas D-1 a D-5**, pasa entera sobre el código de
       producción. *(Test)*
 
       La redacción anterior —«pasa entera, sin relajar ninguna invariante»— era
       incumplible, y lo señaló la sesión **Mario** el 2026-09-23: la sonda codificaba
-      **una** respuesta a P-2 (con texto vacío se **devuelve** un defecto) y el código
-      eligió la otra (**lanza**). Con aquella redacción, o se relajaba la invariante
-      —prohibido por el propio criterio— o P-2 no estaba abierta. Un criterio de
+      **una** respuesta a la entonces abierta P-2 (con texto vacío se **devuelve** un
+      defecto) y el código eligió la otra (**lanza**, hoy D-2). Con aquella redacción, o se
+      relajaba la invariante —prohibido por el propio criterio— o P-2 no estaba abierta. Un criterio de
       aceptación no puede prejuzgar una pregunta que la spec declara abierta.
 - [ ] **CA-2** *(RF-CAL-13)* — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza un error de
       dominio **de `commons/errors/`**, y el test nombra el tipo: `pytest.raises` sobre esa
@@ -201,16 +200,14 @@ vacía, que la puerta lee como «sin defectos».
       «Lanza», a secas, era demasiado flojo y lo señaló la sesión **Hernán** vía **Mario**
       el 2026-09-23: un `ValueError` pelado —o el `KeyError` que tenía `validar_discurso`—
       pasaría el criterio sin cumplir RF-CAL-13, que pide el error **tipado**. La clase
-      concreta la fija P-5; hoy la implementación usa `EntradaFueraDeDominio`, subclase de
-      `ErrorDeDominio`, y el criterio se cumple con cualquier decisión de P-5 que respete
-      RF-CAL-13.
+      concreta la fijó D-5: `EntradaFueraDeDominio`, subclase de `ErrorDeDominio`.
 
       Alcanza a los cuatro puntos donde hoy se lanza, no solo al nivel de calor: la sonda
-      usa `pytest.raises(Exception)` con un `noqa: B017` precisamente porque el tipo estaba
-      sin decidir, y ese `noqa` desaparece cuando P-5 se firme.
+      usaba `pytest.raises(Exception)` con un `noqa: B017` porque el tipo estaba sin
+      decidir. **Con D-5 firmada, ese `noqa` sobra y el `raises` debe nombrar la clase.**
 - [ ] **CA-3** *(RF-CAL-14)* — `validar_giro_de_valor` trata los **dos** casos de H-1 y los trata igual:
       ni `""` produce un `ValidationError` ni `"   "` produce un defecto cuya cita sean
-      espacios. Qué hace en su lugar lo decide P-2. *(Test)*
+      espacios. Qué hace en su lugar lo fijó D-2: lanza. *(Test)*
 - [ ] **CA-4** *(RF-CAL-15)* — Barajar `canon` y barajar `afirmaciones` no cambia la salida de
       `validar_canon` ni la de `validar_continuidad_fisica`, comprobado con `hypothesis`
       sobre alcance pequeño. *(Test)*
@@ -232,10 +229,14 @@ vacía, que la puerta lee como «sin defectos».
       era el único requisito sin criterio, y es justo el que evita que esto se repita.
 - [ ] **CA-9** *(transversal, y fuera de la aprobación)* — *(Pendiente de umbral, y por eso no se puede marcar.)* «La tasa de
       defectos mal formados no empeora» no declara línea base, y `verification.md` §5 dice
-      que lo que no se puede incumplir no verifica. Es el mismo reproche que P-3 le hace al
+      que lo que no se puede incumplir no verifica. Es el mismo reproche que D-3 le hace al
       comentario de `defectos.py`, y esta spec lo cometía a su vez: lo señaló la sesión
-      **Mario** el 2026-09-23. La línea base no existe todavía —la corrida de CA-1 de la
-      spec 001 no está registrada y la 001 sigue en `en-revision`—, así que este criterio
+      **Mario** el 2026-09-23. La línea base no existe todavía: la corrida de un
+      **capítulo completo de principio a fin** —el CA-1 de la 001 a día de hoy— no
+      está registrada, y la 001 sigue en `en-revision`. Se nombra por lo que es y no
+      solo por su número a propósito: la sesión **Mario** encontró el 2026-09-23 que la
+      001 tiene **dos criterios distintos con el mismo `CA-14`**, así que citar sus
+      criterios por número no es fiable ahora mismo—, así que este criterio
       **no entra en la aprobación**: se fija con el primer número real o se retira. Va el
       último a propósito: es el único que no se puede marcar. *(Demostración)*
 
@@ -272,40 +273,74 @@ Todos los términos usados —escena, canon, hecho de canon, estado en T, defect
 puerta de calidad, nivel de calor, ledger— existen en `docs/definitions.md`. Esta spec
 **no introduce ninguno nuevo**.
 
-## Preguntas abiertas
+## Decisiones
 
-Mientras quede una, esta spec no se aprueba (`CLAUDE.md` §3.2).
+Las cinco las contestó **`maujimenez4`** el **2026-09-23**. Se conserva cada pregunta con
+su porqué, como pide `CLAUDE.md` §3.2.
 
-- **P-1 (H-3)** — Empate en `orden_discurso`: ¿se desempata en el validador (por ejemplo
-  por `hc_id`) o se prohíbe el empate en el esquema, haciendo `orden_discurso` único por
-  obra? Lo segundo es más fuerte y toca migración.
-- **P-2 (H-1)** — Prosa vacía: ¿es EST-01 con una cita convencional, o un error de dominio
-  que escala directamente a una persona sin gastar reintento? Un texto vacío no es una
-  escena mal escrita: es una llamada que no devolvió nada.
-- **P-3 (H-5)** — La mitigación está **decidida y aplicada**: `maujimenez4` sacó CON-03 y
-  CAN-01 de `BLOQUEANTES_EN_G1A` el 2026-09-23. Queda el fondo, y es pregunta del punto 7
-  de `CLAUDE.md` §3 porque toca prompt y probablemente esquema: ¿se parte
-  `Afirmacion.objeto` en `objeto` + `informacion` con prompt nuevo, o se cambia el
-  contraste a algo que no sea igualdad de cadenas, o ambas? Y la que hay que responder
-  con ella: **qué evidencia devuelve a CAN-01 y CON-03 a `BLOQUEANTES_EN_G1A`.** El
-  comentario del código dice «cuando ese contraste deje de comparar cadenas»; eso es una
-  condición, no un umbral, y sin umbral no se puede incumplir (`verification.md` §5).
+**Desviación que hay que declarar, y va la primera porque no se arregla contestándola.**
+Las cinco se implementaron y se commitearon (`accb8e9`) con esta spec en `borrador`. Estas
+decisiones **documentan** lo que el código ya hacía; no vuelven retroactivo el orden de
+§3.4, que pide plan aprobado antes del código. Queda anotado aquí en vez de disimulado:
+una desviación anotada es recuperable, una disimulada no.
 
-  La forma que tendría que tener la respuesta la aporta la sesión **Jose** (2026-09-23), y
-  conviene que quede escrita porque convierte la pregunta en algo medible: el dato que
-  falta es **cuántos de esos defectos son falsos positivos sobre una corrida real con el
-  Continuista dentro**. Es justo para eso que hoy se registran en `no_bloquean` aunque no
-  bloqueen. Sin esa tasa, cualquier umbral que se fije ahora sería inventado; con ella, la
-  condición pasa a ser un número y el regreso a `BLOQUEANTES_EN_G1A` deja de depender del
-  criterio de quien mire. Nótese que esa medición **no** la da `corrida.py --seco`: el
-  doble pasa `AFIRMACIONES_FALSAS = "[]"` y el Continuista no afirma nada, así que los
-  validadores devuelven cero por construcción. Hace falta una corrida real.
-- **P-4 (H-6)** — ¿Cuál es el criterio correcto de diálogo en español? La raya abre pero
-  no cierra, y el inciso del narrador va detrás de una segunda raya. Hace falta decidir la
-  regla antes de escribir la expresión regular.
-- **P-5 (H-2)** — ¿El nivel de calor se tipa como enum en el esquema de la obra —y
-  entonces un nivel inválido no llega nunca al validador— o el validador lanza igualmente?
-  Las dos cosas no sobran: la primera impide, la segunda detecta.
+| | Pregunta | Decisión |
+| --- | --- | --- |
+| **D-1** | Empate en `orden_discurso` (H-3) | **Desempatar en el validador.** `sorted(canon, key=(orden_discurso, hc_id, valor))` |
+| **D-2** | Prosa vacía (H-1) | **Error de dominio.** `EntradaFueraDeDominio` con `not texto.strip()`, que cubre `""` y `"   "` igual |
+| **D-3** | El contraste de CON-03 (H-5) | **Partir el campo, y medir antes de volver a bloquear.** Corrida real autorizada |
+| **D-4** | Criterio de diálogo (H-6) | **Segmentos alternos separados por raya**, los de índice par son narración |
+| **D-5** | Nivel de calor (H-2) | **Las dos cosas.** Enum en el esquema y el validador lanza |
+
+### D-1 · El desempate vive en el validador, no en el esquema
+
+La alternativa era prohibir el empate haciendo `orden_discurso` único por obra. Es más
+fuerte, y por eso mismo se deja para cuando haga falta: el desempate en código ya hace
+determinista el arbitraje sin coste de migración, y la unicidad en esquema puede añadirse
+después sin deshacer nada. Lo que no podía seguir es que el `hecho_canon_id` que exige el
+axioma 12 dependiera del orden de una lista.
+
+### D-2 · Una prosa vacía no es una escena mal escrita
+
+Es una llamada que no devolvió nada, y se dice en voz alta. El argumento decisivo es el
+axioma 11: sin texto no hay pasaje que citar, y un EST-01 con una cita convencional sería
+un defecto bien formado que no ancla nada.
+
+**Consecuencia asumida:** esto escala a una persona sin gastar reintento, así que un fallo
+del proveedor llega a la bandeja de alguien como trabajo humano. Es preferible a que se
+lea como una escena defectuosa.
+
+### D-3 · El umbral se mide, no se estima
+
+El corte `objeto` / `informacion` se confirma, y con él el paso de igualdad exacta a
+inclusión normalizada. Pero eso **baja** el falso positivo, no lo cierra: el contraste
+sigue siendo léxico, y así lo dice el propio código.
+
+Para devolver CAN-01 y CON-03 a `BLOQUEANTES_EN_G1A` hace falta un número, no una
+condición. `maujimenez4` **autorizó la corrida real con el Continuista dentro** el
+2026-09-23 para medir la tasa. Recuérdese por qué no basta con la de siempre:
+`corrida.py --seco` pasa `AFIRMACIONES_FALSAS = "[]"`, el Continuista no afirma nada y los
+validadores devuelven cero por construcción. Un cero que parece una buena noticia.
+
+La forma de la respuesta la aportó la sesión **Jose**; la medición se registra en
+[`umbral-can01-con03.md`](umbral-can01-con03.md).
+
+### D-4 · El diálogo son segmentos alternos, y el límite se declara
+
+En español la raya abre pero no cierra, y el inciso del narrador vuelve a abrirla. Los
+segmentos separados por raya **alternan**: índice par es narración, impar es réplica.
+
+**Límite conocido y aceptado:** la regla es correcta con diálogo bien puntuado y falla en
+cuanto una escena use la raya como guion o como inciso suelto. No se persigue ese caso
+aquí —la precisión léxica de VOZ-03 está fuera de alcance—, pero queda escrito para que
+el próximo falso positivo no se investigue como si fuera una sorpresa.
+
+### D-5 · Impedir y detectar no se sustituyen
+
+`NivelDeCalor` es `StrEnum` en el esquema de la obra, así que un nivel inválido no debería
+llegar nunca al validador; y el validador lanza igualmente si llega. La primera impide, la
+segunda detecta, y ninguna sobra: la regla 5 de §8 es dura y `CLAUDE.md` §10 prohibe que
+una regla de seguridad dependa de una sola capa.
 
 ## Trazabilidad
 

@@ -17,7 +17,7 @@ que también las reciben.
 
 **Fuera de `testpaths`**, igual que la otra sonda: es evidencia de la spec, no suite.
 
-    uv run pytest specs/002-validadores-fallo-cerrado/sonda_dominio.py -q
+    uv run pytest specs/005-validadores-fallo-cerrado/sonda_dominio.py -q
 
 Hoy falla en H-7 y en el guardián de RF-CAL-17. Lo demás pasa, y eso también es
 información: dice qué parte del requisito ya se cumple y no hay que tocar.

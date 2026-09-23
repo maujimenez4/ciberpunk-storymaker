@@ -225,7 +225,7 @@ carga solo cuando alguien toca el área de verificación, que es cuando hace fal
   en `pyproject.toml`. Es la misma regla que aplica el resto de este fichero: una skill o
   una herramienta no entra por ser buena, entra por cubrir un requisito.
 - **Qué produjo:** seis defectos en `features/calidad/validadores.py`, con contraejemplo
-  ejecutado, recogidos en `specs/002-validadores-fallo-cerrado/`.
+  ejecutado, recogidos en `specs/005-validadores-fallo-cerrado/`.
 
 El repositorio del que se traen las skills propias del equipo sigue siendo
 <https://github.com/maujimenez4/MyFactory>. Este catálogo **no se ha subido allí**: es

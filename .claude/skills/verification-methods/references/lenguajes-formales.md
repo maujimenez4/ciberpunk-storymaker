@@ -84,7 +84,7 @@ validador que no entiende su entrada lanza; nunca devuelve lista vacía.**
 
 Cinco invariantes sondeadas sobre `features/calidad/validadores.py`. **Cuatro cayeron**,
 con contraejemplo reproducible. Los hallazgos y sus criterios de aceptación viven en
-`specs/002-validadores-fallo-cerrado/spec.md`, no aquí: un validador nuevo o corregido es
+`specs/005-validadores-fallo-cerrado/spec.md`, no aquí: un validador nuevo o corregido es
 un requisito, y los requisitos viven en una spec (`CLAUDE.md` §3.2, `verification.md`
 §6.4).
 
@@ -137,7 +137,7 @@ condición.
 ## 4. Lo que esta evaluación **no** compra
 
 - No añade cobertura a ninguna casilla de `verification.md` §7 por sí sola. Lo que la
-  mueve son las correcciones de la spec 002, no el hecho de haber evaluado quince
+  mueve son las correcciones de la spec 005, no el hecho de haber evaluado quince
   lenguajes.
 - Las propiedades buscan violaciones de la invariante **enunciada**. La que nadie enunció
   no se busca: que un validador sea determinista y falle cerrado no dice que su criterio
