@@ -77,3 +77,16 @@ compruebo lo que otros terminan y lo subo si está en verde.
 - **Estado:** bloqueado, esperando su aprobación. **No toco nada hasta entonces.**
 - **Ojo:** el orden importa y no es negociable por comodidad. La fase 2 —persistir `descartado_por_capa` y medir la repetición— va **antes** que el filtro de RF-CTX-07, porque sin ella el arreglo se evalúa a ciegas. Es la lección del 22-sep: diez escenas sin que nadie viera nada.
 - **Ojo 2:** RF-CTX-07 tiene destino pero sigue **sin dueño**. Yo no lo cojo sin plan aprobado (§3.4).
+
+## 17:15 · Plan aprobado; coordino la corrida con Continuista de Gustavo
+
+- **Qué:** `maujimenez4` aprueba el plan de cuatro fases y me pide coordinar con Gustavo la corrida real con el Continuista dentro.
+- **Ficheros:** ninguno. Sigo sin tocar código de producción.
+- **Estado:** en curso.
+- **Ojo:** lo que le he pasado a Gustavo y vale para quien lea la corrida cuando salga.
+  - **Que lance con `--base` y fuera de `%TEMP%`.** Sin eso `corrida.py` borra la base al terminar y se pierde la única evidencia. Es como casi perdemos la del 22-sep.
+  - Verificado sobre el árbol de ahora: `corrida.py` construye el `continuista` y recibe `RepositorioDeDefectos`, así que **esta vez la tabla `defecto` sí se escribe**. La corrida de las 15:32 no lo hizo: cargó el código anterior al cableado.
+  - **Esa corrida da el dato que falta**: la tasa de falsos positivos de CAN-01 y CON-03 sobre una corrida real, que es lo que el plan de 001 declara necesario para decidir si vuelven a bloquear. En seco no se puede sacar.
+  - **No medirá el filtro estructural**, que sigue sin existir, ni protegerá el entregable: la escena escalada volverá a entrar en el manuscrito.
+  - Le pedí que mida la repetición entre escenas consecutivas. Es el número nuevo y el que dice si esto aguanta sesenta escenas.
+- **Estado del árbol al escribir esto:** renumeración hecha (`002-lectura-web`, `005-validadores-fallo-cerrado`), 444 tests en verde.

@@ -85,3 +85,10 @@
 - **Ficheros:** `bitacora/nubia.md`
 - **Estado:** terminado — corregido con un commit nuevo, sin reescribir historia
 - **Ojo:** el error fue mío por partida doble: **di por escrito un acuerdo que solo existía en un mensaje cruzado**, que es exactamente contra lo que monté esta bitácora, y además lo afirmé en un mensaje de commit, que es donde peor envejece. La regla que me llevo: un commit describe lo que contiene, no lo que se acordó por mensaje. Si el acuerdo no está en el diff, no se nombra en el mensaje.
+
+## 18:45 · `0038d50` llevaba lo que dije que retenia
+
+- **Qué:** dije —aquí, a Hernán y al usuario— que retenía la renumeración hasta tener las dos mitades, y commiteé la primera dentro de `0038d50`. Su mensaje afirma lo contrario con todas las letras.
+- **Ficheros:** `bitacora/nubia.md`
+- **Estado:** terminado — corregido completando el renombrado, sin reescribir historia
+- **Ojo:** **la causa importa más que el fallo.** Otra sesión había dejado el renombrado en el índice, y `git commit` cierra **todo lo que está staged**, no solo lo que uno añade con `git add`. En un directorio compartido por seis sesiones, `git add <ficheros>` no acota nada. **Regla: mirar `git diff --cached --stat` antes de cada commit, no `git status`.** Es la segunda vez hoy que un mensaje mío promete algo distinto de lo que trae el commit; la primera fue `13900cf`.

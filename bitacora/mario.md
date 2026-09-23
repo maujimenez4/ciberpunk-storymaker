@@ -108,3 +108,31 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno
 - **Estado:** en curso
 - **Ojo:** **la 001 no debería pasar a `implementada` tal como está.** `RF-CTX-07` es `M` y está marcado `T` en `spec.md:188`, y **no está implementado**: `canon/repository.py:514` hace `ORDER BY rowid DESC LIMIT ?` sin filtro estructural, y los únicos tests comprueban el tope. Marcarla es dejar escrito que un requisito imprescindible está probado cuando no existe. Tres salidas legítimas —implementarlo, marcarla con la desviación declarada como hizo `defectos.py` con RF-CAL-09, o bajarlo de `M` a `S`—; la decisión es del usuario. Lo que no vale es marcarla y callarlo. Va con ello el `CA-14` duplicado y que solo 3 de sus 15 criterios llevan marca.
+
+## 18:40 · Verificada la primera mitad de la renumeración, y el riesgo real de la segunda
+
+- **Qué:** corridas las puertas sobre el estado actual (`005-validadores-fallo-cerrado` ya movida, `003-lectura-web` todavía sin mover):
+  - `pytest` **444 passed** · `ruff check` **limpio** · `lint-imports` **10 kept, 0 broken** · `mypy commons/domain` **sin incidencias**
+  - `sonda_invariantes.py` desde su ruta nueva: **7 passed** — los seis hallazgos de la spec están corregidos
+  - `validar_spec.py` sobre la 005: **13/13**
+  - Rutas muertas a `002-validadores-fallo-cerrado`: **ninguna**
+- **Ficheros:** ninguno tocado; solo medición
+- **Estado:** terminado la primera mitad; **en curso** la verificación final, que va después de que Ezequiel mueva `003` → `002`
+- **Ojo:** **el riesgo de la segunda mitad no es que queden rutas muertas, es lo contrario.** Quedan ocho menciones en prosa que dicen «la 002» o «spec 002» significando *validadores*: `docs/verification.md:345`, `specs/003-lectura-web/spec.md` en las líneas **15, 347 y 360**, `sonda_invariantes.py:1` y `validar_spec.py` en **68, 182 y 217**. Hoy son referencias muertas y se notan. En cuanto la lectura web sea la 002, pasan a ser referencias **vivas y equivocadas**: apuntarán a una spec que existe y que no es la que quieren decir. Una ruta muerta falla a gritos; una referencia válida y falsa no falla nunca. La de `spec.md:15` ya es una frase sin sentido: dice que esta spec no es la 002 «porque `specs/005-...` ya ocupa ese número».
+
+## 19:05 · Verificación final de la renumeración: pasa
+
+- **Qué:** las dos mitades hechas. `001-backend-v1`, `002-lectura-web`, `005-validadores-fallo-cerrado`, con `id:` == carpeta en las tres.
+  - `pytest` **444 passed** · `ruff` **limpio** · `lint-imports` **10 kept, 0 broken** · `mypy commons/domain` **sin incidencias**
+  - Las dos sondas desde su ruta nueva: **14 passed**
+  - **Barrido en prosa hecho**, que era lo que no me quería saltar: cada mención a un número de spec significa lo que dice. Las de `auditoria-criterios.md` que citan «la 003» son relato histórico y están etiquetadas («antes 003», «medido a las 17:45»).
+- **Ficheros:** ninguno tocado; solo medición
+- **Estado:** terminado
+- **Ojo:** verificado que no quedan referencias **vivas y falsas**, que era el riesgo real. Nubia puede soltar los commits retenidos por mi parte.
+
+## 19:10 · Me equivoqué con H-6, y lo repetí varias veces
+
+- **Qué:** dije que `RF-CAL-18` seguía sin implementar y que P-4 era «la única pregunta sin respuesta de ningún tipo». **Es falso**, y lo cazó Gustavo señalando que no podía ser cierto a la vez que la sonda pasaba 7/7 — la séptima es justo `test_h6`. Verificado por mí: `solo_narracion` está reescrita (los segmentos separados por raya alternan, los de índice par son narración), la narración sobrevive al inciso y VOZ-03 emite dos defectos donde antes callaba. **Los seis hallazgos están cerrados en el código.**
+- **Ficheros:** ninguno
+- **Estado:** terminado
+- **Ojo:** mi error venía de una lectura de las 16:05 que no volví a comprobar antes de repetirla. Es el mismo fallo que llevo señalando todo el día: una medición vieja presentada como estado actual. **P-4 no es una pregunta virgen:** el código la contestó y lo que falta es confirmarla, con su límite a la vista —la regla de segmentos alternos es correcta con diálogo bien puntuado y falla si una escena usa la raya como guion o inciso suelto—.

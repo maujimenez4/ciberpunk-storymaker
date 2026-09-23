@@ -91,3 +91,24 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** `specs/003-lectura-web/spec.md`
 - **Estado:** terminado
 - **Ojo:** los commits los lleva **Nubia** desde ahora, por encargo del usuario. No commiteo yo. `ce2b810` **no incluye** la tercera ronda de Mario ni estos dos arreglos; se lo he dicho para que no dé la 003 por cerrada.
+
+## 18:05 · Segunda mitad de la renumeración: soy la 002
+
+- **Qué:** el usuario revocó mi decisión de no renumerar, así que la ejecuté. `git mv specs/003-lectura-web specs/002-lectura-web`, `id:` al día, y las **tres referencias en prosa** que Mario señaló: la nota de numeración, la P-04 y —la que más importaba— la fila que apuntaba a «la P-3 de la spec 002», que tras el movimiento se habría apuntado a sí misma. `validar_spec.py`: **13/13**.
+- **Ficheros:** `specs/002-lectura-web/spec.md` (antes `003-lectura-web`)
+- **Estado:** terminado
+- **Ojo:** el aviso de Mario era el bueno y conviene repetirlo: una ruta muerta falla a gritos, una **referencia válida y equivocada** no falla nunca. Las tres mías eran de ese segundo tipo en cuanto ocupara el número. Y queda escrito en la spec que `82a1a49` y `ce2b810` nombran las rutas viejas para siempre: quien lea el historial necesita saber que `003-lectura-web` y la 002 son la misma.
+
+## 18:10 · Cuatro preguntas cerradas, una a medias
+
+- **Qué:** `maujimenez4` contestó. **P-01:** identificador no adivinable en la URL — no es autenticación, es que el enlace se pueda regalar sin publicar de paso las demás novelas; entra **RD-04** y **CA-21**. **P-02:** la revalidación de DEP-03 se especifica en la spec de backend, aquí solo se declara. **P-03:** progreso por capítulo. **P-06:** cambio de esquema aprobado, migración en la spec de backend.
+- **Ficheros:** `specs/002-lectura-web/spec.md`
+- **Estado:** en curso — queda **P-05** a medias
+- **Ojo:** **P-05 sigue abierta y no la doy por contestada.** El usuario aprobó las ocho dependencias «solamente en el generador del cliente, vamos a utilizar el consumo de la propia cuenta». No sé qué significa y no lo voy a interpretar: si quiere decir que el cliente lo genere un modelo en vez de una herramienta, choca con `CLAUDE.md` §7, que prohíbe escribir tipos de respuesta a mano. Le he pedido que lo aclare.
+
+## 18:15 · Bloqueo sobre la 001: RF-CTX-07 no está implementado
+
+- **Qué:** el usuario decidió pasar la 001 a `implementada`. **Mario lo paró con medición y lo verifiqué yo:** `RF-CTX-07` es `M` (imprescindible) y `T` (establecido por prueba), y el filtro estructural no existe. `canon/repository.py:511` declara `candidatos_para_ordenar(self, tope: int)` — **no recibe `escena_id`**, así que no puede filtrar por presentes, lugar, hilos abiertos ni rango de capítulos. Tres docstrings prometen el filtro y cada uno apunta a otra capa.
+- **Ficheros:** ninguno tocado
+- **Estado:** bloqueado — esperando decisión de `maujimenez4`
+- **Ojo:** marcar `implementada` con RF-CTX-07 incumplido deja por escrito que un requisito imprescindible está probado cuando no existe, y `CLAUDE.md` §4.2 declara ese orden filtrar→ordenar→fusionar **no negociable**. Se lo he pasado al usuario con las tres salidas antes de que ejecute. **Yo no cambio ningún `estado:` en ningún caso.**

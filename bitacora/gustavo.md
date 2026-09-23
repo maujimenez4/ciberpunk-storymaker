@@ -98,3 +98,16 @@
 - **Qué:** en la entrada de las 18:40 escribí que la renumeración «aún no está en el árbol». Era cierto cuando lo comprobé y dejó de serlo segundos después: Hernán movió la carpeta mientras yo leía. **La spec es `specs/005-validadores-fallo-cerrado/`.** No reescribo la entrada anterior; se corrige aquí, que es el formato de esta bitácora.
 - **Estado:** terminado
 - **Ojo:** verificados mis dos ficheros de skill sobre el árbol, no sobre su palabra: `lenguajes-formales.md:87` y `SOURCES.md:228` apuntan ya a `005-`. La renumeración de Hernán fue atómica de verdad y mi reserva sobre esos dos ficheros no hacía falta.
+
+## 19:05 · `verification.md` deja de citar la spec por número
+
+- **Qué:** Mario encontró que `docs/verification.md:345` decía «de ese catálogo salió **la spec 002**» significando validadores. Hoy no apunta a nada; cuando Ezequiel mueva la suya al 002, apuntará a una spec que **sí existe** y que no tiene nada que ver. Arreglado con el criterio de Hernán, que es mejor que cambiar el número: **quitarlo**. Ahora dice «la spec de los validadores mecánicos», inmune a la próxima renumeración y no solo a esta.
+- **Ficheros:** `docs/verification.md`
+- **Estado:** terminado
+- **Ojo:** una ruta muerta falla a gritos; una referencia válida y falsa no falla nunca —se lee, se cree y se propaga—. Y esta estaba en el documento que más se cita para justificar decisiones.
+
+## 19:10 · H-6 está arreglado, y conviene que no se repita lo contrario
+
+- **Qué:** Mario me dijo a la vez que la sonda pasa 7/7 y que `RF-CAL-18` sigue sin implementar, que son incompatibles. Comprobado: la sonda pasa **7 de 7** desde `specs/005-`, y sobre `—Yo no fui —dijo ella. Yo camine hasta la puerta y yo espere.` la narración ya es `' dijo ella. Yo camine hasta la puerta y yo espere.'` y VOZ-03 emite dos defectos. **Los seis hallazgos están corregidos en el código.**
+- **Estado:** terminado
+- **Ojo:** eso cambia lo que hay que pedirle al usuario. P-4 **no** está sin respuesta: el código la contestó —los segmentos separados por raya alternan, y los de índice par son narración—. Lo que falta es **confirmarla**, no decidirla en blanco. Que se pida como pregunta virgen invita a responder deprisa algo que ya está funcionando.
