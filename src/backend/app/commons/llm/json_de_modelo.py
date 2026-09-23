@@ -27,9 +27,18 @@ def extraer_json(texto: str) -> str:
     # modelo que antepone «Aqui tienes:» sigue siendo utilizable; uno que
     # devuelve prosa no, y entonces no hay corchetes y se devuelve tal cual
     # para que el esquema lo rechace con un mensaje que se entienda.
+    #
+    # Gana el que **empieza antes**, no el que se mire primero. Mirar siempre
+    # `{` antes que `[` partia el array del Continuista: encontraba la llave del
+    # primer elemento y la de cierre del ultimo, y devolvia los objetos sueltos
+    # sin los corchetes que los hacian una lista.
+    candidatos = []
     for abre, cierra in (("{", "}"), ("[", "]")):
         inicio = limpio.find(abre)
         final = limpio.rfind(cierra)
         if 0 <= inicio < final:
-            return limpio[inicio : final + 1]
+            candidatos.append((inicio, final))
+    if candidatos:
+        inicio, final = min(candidatos)
+        return limpio[inicio : final + 1]
     return limpio

@@ -10,7 +10,7 @@ entero con dobles: si las siete features encajan y la máquina de estados llega 
 no el cableado. Verificar en seco antes de gastar es más barato que descubrir un
 `AttributeError` en la escena siete después de pagar seis.
 
-Lo que **no** hace: no es un test. Los 347 tests comprueban las piezas; esto
+Lo que **no** hace: no es un test. Los 420 tests comprueban las piezas; esto
 comprueba que juntas escriben un capítulo, que es lo que CA-1 pide demostrar.
 """
 
@@ -39,17 +39,23 @@ from app.commons.llm import (  # noqa: E402
     DobleDeModelo,
     DobleDeOrdenador,
 )
+from app.features.calidad import RepositorioDeDefectos  # noqa: E402
 from app.features.canon import RepositorioDeCanon  # noqa: E402
 from app.features.contexto import AlmacenesDeLaObra  # noqa: E402
 from app.features.escena import RepositorioDeEscenas  # noqa: E402
 from app.features.escritura import Dependencias, ciclo_de_escena  # noqa: E402
-from app.features.manuscrito import RepositorioDeManuscrito  # noqa: E402
+from app.features.manuscrito import RepositorioDeManuscrito, exportar  # noqa: E402
 from app.features.obra import RepositorioDeObras  # noqa: E402
 from app.features.outline import RepositorioDeOutline  # noqa: E402
 
 RAIZ = Path(__file__).parent
 PROMPTS = RAIZ / "src" / "backend" / "app" / "features"
 ESCENAS = 10
+
+# Todo lo que se genera aterriza aqui, junto, y `.gitignore` la deja fuera del
+# repositorio (§15: la prosa no entra). Antes cada corrida dejaba un `.txt`
+# suelto en la raiz y habia que acordarse de cual era de cual.
+MANUSCRITOS = RAIZ / "manuscritos"
 
 # La biblia tiene que validar contra `Biblia`: desde P-111c la capa
 # constitucional del paquete sale de `version_obra`, asi que un `{}` como el que
@@ -105,6 +111,13 @@ PROSA_FALSA = (
     "—No voy a firmar eso —dijo el.\n\n"
     "Ella dejo la carpeta sobre la mesa y no la solto."
 )
+# El doble no afirma nada, asi que en seco los cuatro validadores de
+# continuidad no pueden emitir un defecto. **La corrida en seco no demuestra que
+# la continuidad se vigile**: demuestra que el Continuista esta en el bucle y que
+# el ciclo sigue cerrando con el dentro. Quien lo prueba de verdad son los tests
+# de `escritura/tests/test_continuidad_en_g1a.py`, que si le hacen afirmar cosas
+# falsas y comprueban que la escena escala.
+AFIRMACIONES_FALSAS = "[]"
 EXTRACCION_FALSA = json.dumps(
     {
         "hechos": [
@@ -201,6 +214,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
 
         planificador = ClienteDeClaudeCode(modelo="haiku")
         escritor = ClienteDeClaudeCode(modelo="haiku")
+        continuista = ClienteDeClaudeCode(modelo="haiku")
         extractor = ClienteDeClaudeCode(modelo="haiku")
         ordenador = OrdenadorPorModelo(
             ClienteDeClaudeCode(modelo="haiku"), cargador.cargar("ordenador").texto
@@ -208,6 +222,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
     else:
         planificador = DobleDeModelo([FICHA_FALSA] * ESCENAS)
         escritor = DobleDeModelo([PROSA_FALSA] * ESCENAS)
+        continuista = DobleDeModelo([AFIRMACIONES_FALSAS] * ESCENAS)
         extractor = DobleDeModelo([EXTRACCION_FALSA] * ESCENAS)
         ordenador = DobleDeOrdenador()
 
@@ -235,6 +250,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
         arquitecto=planificador,
         planificador=planificador,
         escritor=escritor,
+        continuista=continuista,
         extractor=extractor,
         trabajos=RepositorioDeTrabajos(base),
         escenas=RepositorioDeEscenas(base),
@@ -243,6 +259,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
         obras=RepositorioDeObras(base),
         outline=RepositorioDeOutline(base),
         almacenes=AlmacenesDeLaObra(base),
+        defectos=RepositorioDeDefectos(base),
     )
 
     print(
@@ -284,6 +301,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
         integradas = c.execute(
             "SELECT COUNT(*) FROM trabajo WHERE estado = 'INTEGRADA'"
         ).fetchone()[0]
+        titulo = c.execute("SELECT titulo FROM obra WHERE obra_id = 'o1'").fetchone()[0]
 
     print(f"\nescenas INTEGRADA: {integradas}/{ESCENAS}")
     print(f"fragmentos en el manuscrito: {len(manuscrito.fragmentos)}")
@@ -299,9 +317,17 @@ def correr(real: bool, destino: Path | None = None) -> int:
     print(f"escalados por cien escenas: {metricas.escalados_por_cien_escenas:.0f}")
     print(f"coste total: {coste_total:.4f} USD")
 
-    salida = RAIZ / ("manuscrito-real.txt" if real else "manuscrito-seco.txt")
-    salida.write_text(manuscrito.texto, encoding="utf-8")
-    print(f"manuscrito escrito en {salida.name}")
+    # Markdown y PDF, no `.txt`: el primero se lee en cualquier editor y el
+    # segundo se le pasa a quien no abre un editor. El ensamblado no cambia;
+    # solo el formato de salida (`features/manuscrito/service.py`).
+    rutas = exportar(
+        manuscrito,
+        carpeta=MANUSCRITOS,
+        nombre="manuscrito-real" if real else "manuscrito-seco",
+        titulo=titulo,
+    )
+    escritos = ", ".join(r.relative_to(RAIZ).as_posix() for r in rutas)
+    print(f"manuscrito escrito en {escritos}")
     if efimera:
         shutil.rmtree(carpeta, ignore_errors=True)
     else:

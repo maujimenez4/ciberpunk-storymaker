@@ -241,7 +241,7 @@ Sobre RF-CTX-13: `verification.md` §4.1 clasifica «una ejecución se puede rep
 | RF-CAL-06 | Detectar contradicción de canon; prevalece el hecho de menor `orden_discurso` | CAN-01 | M | **T** |
 | RF-CAL-07 | Detectar uso de `Objeto` en estado `perdido`, `roto` o `destruido` sin evento que lo recupere | CON-02 | S | **T** |
 | RF-CAL-08 | Emitir cada defecto con **código de la taxonomía y cita del pasaje**. La cita es `(version_texto_id, desplazamiento_inicio, desplazamiento_fin)` **más el texto literal recortado** (D-06, `definitions.md` §8): los desplazamientos no se pudren porque la versión es inmutable (RF-ESC-03), y el literal es lo que leen el autor en `ESCALADA` y el prompt de reparación. Si el código es `CAN-01`, el defecto declara además el `hecho_canon_id` con el que choca. Un defecto sin cita no es reparable, y un código que no esté en la taxonomía cerrada de `definitions.md` §8 es fallo del paso (RF-ORQ-15), no un defecto | — | M | **T** |
-| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 y de RF-CAL-12 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea | — | M | **T** |
+| RF-CAL-09 | Puerta **G1a** (`architecture.md` §8.3): los defectos de RF-CAL-01 a 07 y de RF-CAL-12 son bloqueantes. **G1b no se implementa en la v1** y por tanto no bloquea. **Incumplido a proposito desde el 2026-09-23 en dos codigos**, por decision de maujimenez4: `CAN-01` y `CON-03` se registran y **no** bloquean mientras su contraste compare texto libre por igualdad exacta (ver el Cierre y las desviaciones del plan) | — | M | **T** parcial |
 | RF-CAL-10 | Un defecto de calidad **no** es un fallo técnico: produce `REPARANDO`/`ESCALADA`, nunca `FALLIDA` | — | M | **T** |
 | RF-CAL-11 | Comprobar la **forma** de cada defecto en código y **sin volver a llamar al modelo** (`architecture.md` §8.3): el `codigo` está en la taxonomía, la `cita` es subcadena exacta de la `VersionDeTexto` que señala en el desplazamiento declarado (axioma 11), y si el `codigo` es `CAN-01` el `hecho_canon_id` existe en el grafo (axioma 12). El que no pasa las tres está **mal formado** | — | M | **T** |
 | RF-CAL-12 | Rechazar la prosa cuya **persona** o **tiempo verbal** no sean los declarados en la `Obra` (axioma 13). Es mecánico: persona gramatical y tiempo verbal se detectan por morfología, sin llamar al modelo. Cierra una restricción dura que hasta ahora sostenía **solo el prompt**, pese a que `CLAUDE.md` §10 exige que ninguna dependa solo de él | VOZ-03 | M | **T** |
@@ -602,9 +602,15 @@ una y comprueba que su test se pone en rojo. Las diez lo hacen.
 
 ### Lo que **no** se demostró, y conviene no confundir
 
-- **Cero defectos no significa texto impecable.** En la corrida corren tres de
+- ~~**Cero defectos no significa texto impecable.** En la corrida corren tres de
   los once validadores y el Continuista no está en el bucle. Significa que nadie
-  miró, no que no hubiera nada que mirar.
+  miró, no que no hubiera nada que mirar.~~ Cierto de aquella corrida, y era la
+  causa: el manuscrito se contradice a sí mismo —el contrato firmado en la
+  escena 3 reaparece sin firmar en la 7, y en la 10 lo descubre quien lo firmó—
+  con cero defectos registrados. Resuelto en la fase 11 (P-124 a P-130): el
+  Continuista entra en el bucle y G1a contrasta canon, conocimiento y presencia
+  simultánea. **Sigue sin demostrarse sobre una corrida real**, que es lo que
+  mide si el arreglo basta.
 - **El reparto de §2.1 no se ha puesto a prueba.** La continuidad local se lleva
   1.504 tokens de media y el canon aporta 36: ningún tope ha tenido ocasión de
   recortar nada.

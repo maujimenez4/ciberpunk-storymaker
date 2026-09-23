@@ -27,6 +27,7 @@ from app.commons.llm import (
     DobleDeModelo,
     DobleDeOrdenador,
 )
+from app.features.calidad import RepositorioDeDefectos
 from app.features.canon import RepositorioDeCanon
 from app.features.contexto import AlmacenesDeLaObra
 from app.features.escena import RepositorioDeEscenas
@@ -152,6 +153,7 @@ def dependencias(ruta: Path) -> Dependencias:
         arquitecto=DobleDeModelo([BIBLIA.model_dump_json()]),
         planificador=DobleDeModelo([FICHA]),
         escritor=DobleDeModelo([PROSA]),
+        continuista=DobleDeModelo(["[]"]),
         extractor=DobleDeModelo([EXTRACCION]),
         trabajos=RepositorioDeTrabajos(ruta),
         escenas=RepositorioDeEscenas(ruta),
@@ -160,6 +162,7 @@ def dependencias(ruta: Path) -> Dependencias:
         obras=RepositorioDeObras(ruta),
         outline=RepositorioDeOutline(ruta),
         almacenes=AlmacenesDeLaObra(ruta),
+        defectos=RepositorioDeDefectos(ruta),
     )
 
 

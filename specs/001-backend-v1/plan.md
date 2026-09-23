@@ -220,6 +220,53 @@ maujimenez4 el 2026-09-22.
 | P-122 | — | `CLAUDE.md` §13 con el comando que arranca, y `sqlalchemy[asyncio]` | raíz | erratas |
 | P-123 | — | Desviaciones, cobertura y Cierre al día | `specs/001-backend-v1/` | §3.1 |
 
+### Fase 11 · El Continuista, en el bucle
+
+Tampoco añade alcance. RF-CAL-04 a RF-CAL-07 están **implementados y probados**
+desde la fase 6, y RF-CAL-09 los declara bloqueantes en G1a; lo que nunca se
+hizo fue llamarlos. La puerta del ciclo invoca tres de los once validadores, y
+los cuatro de continuidad reciben `Afirmacion`, que las extrae el Continuista:
+el único de los seis agentes de la v1 que se quedó sin `agents.py`, con su
+prompt escrito y sin nadie que lo invocara.
+
+Lo que costó: la primera corrida real integró diez escenas con cero defectos y
+un manuscrito que se contradice a sí mismo —el contrato que el coprotagonista
+firma en la escena 3 reaparece sin firmar en la 7, y en la 10 lo descubre—. El
+Cierre de la spec ya lo decía con todas las letras: «cero defectos significa que
+nadie miró». Esta fase pone a alguien a mirar.
+
+Encargada por maujimenez4 el 2026-09-23, en conversación con la sesión Jose. Eso
+es lo que hubo y no equivale a la aprobación de §3.2: **el `estado:` de este plan
+sigue en `en-revision` y su cambio lo firma una persona en un commit suyo**, que
+ningún agente puede dar por hecho (§14).
+
+**Dos de los cuatro no se cablean, y conviene decir por qué**, porque el hueco
+no está en el cableado sino en el dato que cada uno necesita:
+
+- **CON-02** (`validar_objetos`) pide `estado_de_objetos`. La tabla `objeto` no
+  tiene columna de estado: no hay de dónde sacarlo. Cablearlo con un diccionario
+  vacío sería teatro —no podría emitir un defecto nunca— y llenarlo es cambio de
+  esquema, que se pregunta (§3, punto 7). Queda como pregunta abierta.
+- **CON-01** (`validar_continuidad_fisica`) compara el `momento` de una
+  afirmación con el `tiempo_de_viaje` de la biblia. El primero es un entero
+  relativo a la escena y el segundo es texto libre («veinte minutos»): no son
+  magnitudes comparables, y ningún paso puede unirlas sin decidir antes en qué
+  unidad se mide `momento`. Se cablea **la mitad que sí es comparable** —estar
+  en dos lugares en el mismo `momento`, que no necesita tiempos— pasando
+  `tiempos_de_viaje={}`. La otra mitad queda como pregunta abierta.
+
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-124 | `test_el_continuista_devuelve_afirmaciones_con_su_cita` | `invocar_continuista`, que valida la salida como el Extractor | `features/calidad/agents.py` | RF-ORQ-15, §9.3 |
+| P-125 | `test_una_afirmacion_que_contradice_el_canon_escala_la_escena` | El ciclo llama al Continuista y pasa CAN-01 por G1a | `features/escritura/service.py` | RF-CAL-06, RF-CAL-09 |
+| P-126 | `test_un_personaje_que_usa_lo_que_no_sabe_escala_la_escena` | CON-03 contra el estado en T derivado | `features/escritura/service.py` | RF-CAL-05, RF-CAN-11 |
+| P-127 | `test_estar_en_dos_lugares_en_el_mismo_momento_escala_la_escena` | CON-01, mitad sin tiempos de viaje | `features/escritura/service.py` | RF-CAL-04 |
+| P-128 | `test_un_can_01_bien_formado_no_se_cuenta_como_mal_formado` | `pasar_g1a` recibe los `hc_id` reales, no `set()` | `features/escritura/service.py` | RF-CAL-11, axioma 12 |
+| P-129 | `test_la_llamada_al_continuista_queda_registrada_con_su_veredicto` | `ejecucion` del Continuista y `veredicto` de G1a | `features/escritura/service.py` | RI-14, RG-07 |
+| P-130 | — | `corrida.py` pasa el Continuista; `docs/` al día | raíz, `docs/` | §3.1 |
+
+---
+
 ---
 
 ## Cobertura de `architecture.md`
@@ -364,6 +411,12 @@ Se anotan **antes** de seguir, no al final.
 
 | Fecha | Paso | Qué cambió y por qué |
 | --- | --- | --- |
+| 2026-09-23 | P-125, P-126 | **CAN-01 y CON-03 se registran pero no bloquean**, decidido por maujimenez4 el 2026-09-23 con RF-CAL-09 incumplido a proposito. Lo encontro Nubia revisando el cableado y lo reprodujeron Gustavo y este servidor por separado: los dos contrastan **texto libre por igualdad exacta** contra lo que escribio el Extractor, y son dos llamadas independientes al modelo. Medido: CON-03 se emite con cualquier objeto fisico y con informacion que el personaje si presencio dicha con otras palabras; CAN-01 se emite cuando el mismo hecho se expresa de otra forma. Bloqueando, cada falso positivo es una `ESCALADA`, o sea trabajo humano por una contradiccion que no existe. Se registran en `no_bloquean` y de ahi a la tabla `defecto`, porque su tasa sobre una corrida real es el dato que falta para elegir el contraste bueno. CON-01 si bloquea: contrasta dos afirmaciones del propio Continuista entre si, sin casar nada contra el ledger. **Pregunta abierta, planteada por Gustavo:** que evidencia los devuelve a bloquear. «Cuando el contraste deje de comparar cadenas» es una condicion, no un umbral. |
+| 2026-09-23 | P-124 | **`extraer_json` se comia los corchetes de un array.** Buscaba `{` antes que `[`, asi que en la salida del Continuista -un array de objetos, que es lo que su prompt pide- encontraba la llave del primer elemento y la de cierre del ultimo, y devolvia dos objetos sueltos separados por una coma. No validaba contra nada. Pasa a ganar el delimitador que **empieza antes**. El caso del Extractor -un objeto que contiene un array- sigue saliendo entero, y tiene test propio para que no se rompa al reves. |
+| 2026-09-23 | P-128 | **La tabla `defecto` no la escribia nadie.** RD-14 lleva desde la migracion inicial y `calidad/repository.py` estaba vacio: los defectos vivian en memoria el tiempo de decidir si bloqueaban y se perdian. Sin esto no se puede cumplir RI-18 -el autor que recibe una escena en `ESCALADA` necesita ver codigo y cita, no un contador- ni sale la tasa de mal formados de §9, que es la unica senal que mide al Continuista. Entra `RepositorioDeDefectos`, y guarda **tambien los mal formados**, marcados: descartarlos seria perder justo esa senal. |
+| 2026-09-23 | P-125 | **`Dependencias` gana dos campos obligatorios**, `continuista` y `defectos`, y eso obliga a tocar los cinco sitios que arman el ciclo. Con valor por defecto habria bastado con tocar uno, pero entonces se podria montar un ciclo que no mira la continuidad sin que nada avise, que es exactamente como se llego al manuscrito del 22-09. El coste de la decision es el que ya enseno P-99: `corrida.py` no lo cubre ninguna puerta salvo la que P-122 anadio, asi que se comprobo lanzandolo. |
+| 2026-09-23 | P-127 | **Dos de los cuatro validadores no tienen de donde leer su dato.** `validar_objetos` (CON-02) pide `estado_de_objetos` y la tabla `objeto` no tiene columna de estado: cablearlo con un diccionario vacio no podria emitir un defecto nunca, y llenarlo es cambio de esquema, que se pregunta (§3, punto 7). `validar_continuidad_fisica` (CON-01) compara el `momento` de una afirmacion -entero relativo a la escena- con el `tiempo_de_viaje` de la biblia -texto libre, «20 minutos»-: no son magnitudes comparables. Se cablea la mitad que si lo es, estar en dos lugares en el mismo `momento`, pasando `tiempos_de_viaje={}`. Las dos mitades que faltan son preguntas abiertas, no pasos. |
+| 2026-09-23 | P-130 | **La corrida en seco no puede demostrar lo que esta fase arregla.** El doble del Continuista devuelve `[]`, asi que los cuatro validadores no emiten nada y el seco sigue diciendo «defectos: {}». Ese cero es igual de hueco que el del 22-09: demuestra que el Continuista esta en el bucle y que el ciclo cierra con el dentro, no que la continuidad se vigile. Lo que lo prueba son los seis tests de `escritura/tests/test_continuidad_en_g1a.py`, que le hacen afirmar cosas falsas y comprueban que la escena escala. Queda dicho en `corrida.py`, donde se lee el cero. |
 | 2026-09-22 | P-99 | **La corrida en seco no cubre lo que se creía.** Valida que las siete features encajan y que la máquina llega a `INTEGRADA` diez veces, pero `DobleDeModelo` **ignora el prompt** y devuelve texto fijo: ni el adaptador del proveedor ni el contrato de los prompts pasan por ella. Los cuatro fallos que mataron la primera corrida real —el `.cmd` de npm, el prompt como argumento, las vallas de markdown y los nombres de campo inventados— eran todos invisibles en seco. Un doble que ignora su entrada no puede validar lo que se le pide al modelo. |
 | 2026-09-22 | P-88 | **RNF-FIA-02 estaba implementado y era inalcanzable.** El cliente lanzaba `FalloDeProveedor` directamente y `con_reintentos` trata esa excepción como ya agotada, así que un 5xx transitorio mataba la corrida en el primer intento. La primera corrida real integró 5 de 10 escenas por eso. Entra `ErrorTransitorioDeProveedor`, que sí se reintenta; `FalloDeProveedor` queda para cuando los tres intentos se agotan. El test de P-88 pasaba porque probaba la función aislada, no su conexión. |
 | 2026-09-22 | P-43 a P-59 | **Añadido `extraer_json`.** Los prompts piden «solo JSON» y el modelo lo envuelve en vallas de markdown casi siempre. Recorta el envoltorio y **no repara**: si lo de dentro está roto, sigue siendo fallo del paso (RF-ORQ-15). Un extractor que arreglara JSON medio escrito convertiría una salida rota en una silenciosamente incompleta. |

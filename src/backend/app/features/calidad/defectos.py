@@ -37,12 +37,31 @@ class CodigoDeDefecto(StrEnum):
 # VOZ-02, PRO-*, GEN-02- necesitan al Critico, que esta fuera de alcance, y por
 # eso G1b no bloquea: fingir que la funcion dramatica se comprueba
 # mecanicamente seria peor que declararla pendiente.
+#
+# **CAN-01 y CON-03 no bloquean todavia, y no es un olvido.** Decidido por
+# maujimenez4 el 2026-09-23, con RF-CAL-09 incumplido a proposito y anotado en la
+# spec. Los dos contrastan **texto libre por igualdad exacta** contra lo que
+# escribio el Extractor, y son dos llamadas independientes al modelo: coinciden
+# palabra por palabra solo por casualidad. Medido contra los validadores reales:
+#
+#   CON-03 se emite con cualquier objeto fisico ("la carpeta") y con
+#   informacion que el personaje **si** presencio, dicha con otras palabras.
+#   CAN-01 se emite cuando el mismo hecho se expresa de otra forma
+#   ("no quiere firmar" contra "se niega a firmar").
+#
+# Bloqueando, cada falso positivo es una ESCALADA: trabajo humano por una
+# contradiccion que no existe. Se registran igual -en `no_bloquean`, y de ahi a
+# la tabla `defecto`- porque su tasa sobre una corrida real es justo el dato que
+# hace falta para elegir el contraste bueno, y hoy no lo tenemos. Vuelven a
+# bloquear cuando ese contraste deje de comparar cadenas.
+#
+# CON-01 si bloquea: contrasta dos afirmaciones **del propio Continuista** entre
+# si -el mismo sujeto en dos lugares en el mismo momento-, sin casar nada contra
+# el ledger, asi que no tiene el problema.
 BLOQUEANTES_EN_G1A = frozenset(
     {
-        CodigoDeDefecto.CAN_01,
         CodigoDeDefecto.CON_01,
         CodigoDeDefecto.CON_02,
-        CodigoDeDefecto.CON_03,
         CodigoDeDefecto.EST_01,
         CodigoDeDefecto.SEG_01,
         CodigoDeDefecto.VOZ_03,

@@ -30,6 +30,7 @@ from app.commons.llm import (
     ContadorBPE,
     OrdenadorPorModelo,
 )
+from app.features.calidad import RepositorioDeDefectos
 from app.features.canon import RepositorioDeCanon
 from app.features.contexto import AlmacenesDeLaObra
 from app.features.escena import RepositorioDeEscenas
@@ -109,6 +110,7 @@ def construir_dependencias(
         arquitecto=cliente,
         planificador=cliente,
         escritor=cliente,
+        continuista=cliente,
         extractor=cliente,
         trabajos=RepositorioDeTrabajos(ruta),
         escenas=RepositorioDeEscenas(ruta),
@@ -117,6 +119,7 @@ def construir_dependencias(
         obras=RepositorioDeObras(ruta),
         outline=RepositorioDeOutline(ruta),
         almacenes=AlmacenesDeLaObra(ruta),
+        defectos=RepositorioDeDefectos(ruta),
         snapshot_cada_n=ajustes.snapshot_cada_n_escenas,
     )
 

@@ -72,7 +72,11 @@ def test_un_can_01_bien_anclado_pasa() -> None:
 
 
 def test_g1a_bloquea_con_un_defecto_mecanico() -> None:
-    veredicto = pasar_g1a([_defecto(CodigoDeDefecto.CON_03, "Ada miro")], TEXTO, CANON)
+    """CON-01 y no CON-03: desde el 2026-09-23, CAN-01 y CON-03 se registran
+    pero no bloquean, porque su contraste da falsos positivos (`defectos.py`)."""
+    veredicto = pasar_g1a(
+        [_defecto(CodigoDeDefecto.CON_01, "cortaba la red")], TEXTO, CANON
+    )
 
     assert veredicto.aprobada is False
     assert len(veredicto.bloquean) == 1
@@ -143,7 +147,38 @@ def test_el_veredicto_no_es_una_excepcion() -> None:
     el orquestador no podría distinguirlo de un fallo técnico, y `ESCALADA` y
     `FALLIDA` se cuentan por separado a propósito (§3.6).
     """
-    veredicto = pasar_g1a([_defecto(CodigoDeDefecto.CON_03, "Ada miro")], TEXTO, CANON)
+    veredicto = pasar_g1a(
+        [_defecto(CodigoDeDefecto.CON_01, "cortaba la red")], TEXTO, CANON
+    )
 
-    assert veredicto.bloquean[0].codigo is CodigoDeDefecto.CON_03
+    assert veredicto.bloquean[0].codigo is CodigoDeDefecto.CON_01
     assert isinstance(veredicto.aprobada, bool)
+
+
+def test_can_01_y_con_03_se_registran_pero_no_bloquean() -> None:
+    """Decidido por maujimenez4 el 2026-09-23, con RF-CAL-09 incumplido a
+    proposito y anotado en la spec.
+
+    Los dos contrastan texto libre por igualdad exacta contra lo que escribio el
+    Extractor, y dan falsos positivos con objetos fisicos y con sinonimos
+    (`calidad/tests/test_validadores.py`). Bloqueando, cada falso positivo es una
+    ESCALADA. Se siguen registrando porque su tasa sobre una corrida real es lo
+    que dira si el contraste sirve.
+    """
+    veredicto = pasar_g1a(
+        [
+            # Con su `hecho_canon_id`: sin el, el axioma 12 lo marca mal
+            # formado y acabaria en el otro cubo.
+            _defecto(CodigoDeDefecto.CAN_01, "cortaba la red", hecho_canon_id="hc1"),
+            _defecto(CodigoDeDefecto.CON_03, "Ada miro"),
+        ],
+        TEXTO,
+        CANON,
+    )
+
+    assert veredicto.aprobada is True
+    assert veredicto.bloquean == []
+    assert {d.codigo for d in veredicto.no_bloquean} == {
+        CodigoDeDefecto.CAN_01,
+        CodigoDeDefecto.CON_03,
+    }

@@ -37,12 +37,22 @@ from app.commons.llm import (
     OrdenadorSemantico,
 )
 from app.features.calidad import (
+    HechoDeCanon,
+    RepositorioDeDefectos,
+    invocar_continuista,
     pasar_g1a,
+    validar_canon,
+    validar_conocimiento,
+    validar_continuidad_fisica,
     validar_discurso,
     validar_giro_de_valor,
     validar_nivel_de_calor,
 )
-from app.features.canon import RepositorioDeCanon, extraer_de_escena
+from app.features.canon import (
+    RepositorioDeCanon,
+    derivar_estado_en_t,
+    extraer_de_escena,
+)
 from app.features.contexto import (
     Almacenes,
     Capa,
@@ -87,6 +97,12 @@ class Dependencias:
     arquitecto: ClienteDeModelo
     planificador: ClienteDeModelo
     escritor: ClienteDeModelo
+    # Sin el, los cuatro validadores de continuidad no tienen entrada: reciben
+    # `Afirmacion` y nadie las produce. Es obligatorio a proposito, aunque
+    # obligue a tocar los cinco sitios que arman el ciclo. Con valor por defecto
+    # se podria montar un ciclo que no mira la continuidad sin que nada avise,
+    # que es exactamente como se llego al manuscrito del 22-09.
+    continuista: ClienteDeModelo
     extractor: ClienteDeModelo
     trabajos: RepositorioDeTrabajos
     escenas: RepositorioDeEscenas
@@ -95,6 +111,10 @@ class Dependencias:
     obras: RepositorioDeObras
     outline: RepositorioDeOutline
     almacenes: Almacenes
+    # Por el mismo motivo, obligatorio: RD-14 lleva desde la migracion inicial
+    # sin que nadie escriba una fila, y un defecto que no se guarda no llega ni
+    # al autor (RI-18) ni a la tasa de mal formados (§9).
+    defectos: RepositorioDeDefectos
     snapshot_cada_n: int = 5
 
 
@@ -209,6 +229,24 @@ def ciclo_de_escena(
         dep.trabajos.transitar(trabajo.trabajo_id, Estado.VALIDANDO, dep.reloj)
 
         # --- VALIDANDO (G1a, mecánica) ---------------------------------------
+        # Los tres primeros salen de la ficha y del texto. Los tres siguientes
+        # necesitan saber **qué afirma la prosa**, y eso lo extrae el
+        # Continuista: sin él, RF-CAL-04 a RF-CAL-06 estaban escritos, probados
+        # y sin llamar desde ningún sitio.
+        prompt_continuista = dep.cargador.cargar("continuista")
+        encargo_continuista = (
+            prompt_continuista.texto + "\n\n## Escena escrita\n\n" + prosa
+        )
+        with dep.turno.en_uso(espera_s=ESPERA_DE_TURNO_S) as hay_turno:
+            if not hay_turno:
+                raise SinTurno(escena_id)
+            lectura = con_reintentos(
+                lambda: invocar_continuista(dep.continuista, encargo_continuista)
+            )
+        afirmaciones = lectura.afirmaciones
+        coste += _coste_de(lectura.parametros)
+        canon_previo = _canon_para_contrastar(dep.canon.orden_de(escena_id), dep)
+        conocimientos = derivar_estado_en_t(dep.canon, escena_id).conocimientos
         defectos = [
             *validar_giro_de_valor(
                 ficha.valor_entrada, ficha.valor_salida, prosa, version.version_texto_id
@@ -219,8 +257,44 @@ def ciclo_de_escena(
             *validar_discurso(
                 prosa, ficha.persona, ficha.tiempo_verbal, version.version_texto_id
             ),
+            *validar_canon(afirmaciones, canon_previo, prosa, version.version_texto_id),
+            *validar_conocimiento(
+                afirmaciones, conocimientos, prosa, version.version_texto_id
+            ),
+            # RG-04, la mitad que no necesita tiempos de viaje: estar en dos
+            # lugares en el mismo `momento`. La otra mitad queda fuera porque el
+            # `momento` del Continuista es un entero relativo a la escena y el
+            # `tiempo_de_viaje` de la biblia es texto libre: no son magnitudes
+            # comparables, y unirlas es una decisión, no un paso.
+            *validar_continuidad_fisica(
+                afirmaciones, {}, prosa, version.version_texto_id
+            ),
         ]
-        veredicto = pasar_g1a(defectos, prosa, set())
+        # El grafo de canon, no `set()`: sin él, un CAN-01 perfectamente formado
+        # se marcaba mal formado (axioma 12), **no bloqueaba**, y se contaba como
+        # ruido del Continuista en la única señal que lo mide.
+        veredicto = pasar_g1a(defectos, prosa, {h.hc_id for h in canon_previo})
+        dep.defectos.registrar(
+            [*veredicto.bloquean, *veredicto.no_bloquean, *veredicto.mal_formados]
+        )
+        dep.ejecuciones.registrar(
+            RegistroDeEjecucion(
+                run_id=trabajo.run_id,
+                escena_id=escena_id,
+                prompt_id=prompt_continuista.prompt_id,
+                prompt_version=prompt_continuista.version,
+                prompt_hash=prompt_continuista.hash,
+                version_obra_id=dep.escenas.leer_escena(escena_id).version_obra_id,
+                ids_recuperados=[],
+                modelo=lectura.modelo,
+                parametros={"afirmaciones": len(afirmaciones)},
+                semilla=None,
+                tokens_por_capa={},
+                coste=_coste_de(lectura.parametros),
+                veredicto="aprobada" if veredicto.aprobada else "rechazada",
+            ),
+            dep.reloj,
+        )
         codigos = [d.codigo.value for d in veredicto.bloquean]
 
         if not veredicto.aprobada:
@@ -276,6 +350,27 @@ def ciclo_de_escena(
         coste=coste,
         defectos=codigos,
     )
+
+
+def _canon_para_contrastar(
+    orden_discurso: int, dep: Dependencias
+) -> list[HechoDeCanon]:
+    """Los hechos vigentes anteriores a la escena, con su orden.
+
+    `HechoCanon` no lleva `orden_discurso` -su clave es la escena de origen- y
+    RG-03 arbitra justo por ese orden: prevalece el hecho de menor orden, porque
+    el lector ya lo leyo y no se le puede desmentir sin pagarlo.
+    """
+    return [
+        HechoDeCanon(
+            hc_id=hecho.hc_id,
+            entidad=hecho.entidad,
+            atributo=hecho.atributo,
+            valor=hecho.valor,
+            orden_discurso=dep.canon.orden_de(hecho.escena_de_origen),
+        )
+        for hecho in dep.canon.hechos_hasta(orden_discurso)
+    ]
 
 
 def _coste_de(parametros: dict[str, object]) -> float:
