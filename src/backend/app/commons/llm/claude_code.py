@@ -73,7 +73,10 @@ class ClienteDeClaudeCode:
     """Una llamada, un proceso. Sin estado entre llamadas (§4: los agentes no
     tienen memoria; la memoria son los almacenes)."""
 
-    modelo: str = "haiku"
+    # Sin valor por defecto (P-106, RI-21). Con uno, quien olvida pasarlo se
+    # lleva un modelo en silencio y la factura o la calidad cambian sin que
+    # nadie lo haya decidido. El ajuste `modelo` lo inyecta P-111.
+    modelo: str
     sistema: str = SISTEMA_POR_DEFECTO
     plazo_s: int = 600
 

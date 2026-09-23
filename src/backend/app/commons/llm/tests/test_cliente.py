@@ -70,3 +70,22 @@ def test_el_reloj_del_sistema_avanza() -> None:
 
     assert reloj.ahora() >= primera
     assert primera.tzinfo is not None
+
+
+def test_el_modelo_del_cliente_no_esta_fijado_a_fuego() -> None:
+    """P-106, RI-21: el modelo es una decisión, no un hecho del codigo.
+
+    Con un valor por defecto, quien olvida pasarlo se lleva `haiku` en silencio
+    y la factura o la calidad cambian sin que nadie haya decidido nada. Sin el,
+    la eleccion esta siempre a la vista en el sitio que la toma.
+
+    El ajuste `modelo` de RI-21 se cablea aqui en P-111, cuando el servicio de
+    `escritura` construya el cliente con la configuracion inyectada: meterlo
+    antes dejaria otro campo sin lector, que es lo que P-105 acaba de quitar.
+    """
+    from app.commons.llm.claude_code import ClienteDeClaudeCode
+
+    with pytest.raises(TypeError):
+        ClienteDeClaudeCode()  # type: ignore[call-arg]
+
+    assert ClienteDeClaudeCode(modelo="sonnet").modelo == "sonnet"
