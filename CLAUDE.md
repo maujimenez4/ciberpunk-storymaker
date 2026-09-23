@@ -337,7 +337,7 @@ Un agente solo puede afirmar algo si procede de: `docs/definitions.md`, el grafo
 
 Las skills instaladas viven en `.claude/skills/` (compartidas, commiteadas) o llegan por plugin. Procedencia, commit exacto y licencia de cada una: `.claude/skills/SOURCES.md`. Ver `docs/architecture.md` §7.2 para el detalle por área.
 
-Hay una skill por requisito técnico de §4, más tres instaladas por decisión explícita. Estas últimas llevan «—» en la columna de requisito y aviso propio debajo de la tabla:
+Hay una skill por requisito técnico de §4, más ocho instaladas por decisión explícita. Estas últimas llevan «—» en la columna de requisito y aviso propio debajo de la tabla:
 
 | Skill | Requisito de §4 | Área del repo |
 | --- | --- | --- |
@@ -349,8 +349,30 @@ Hay una skill por requisito técnico de §4, más tres instaladas por decisión 
 | `feature-sliced-design` | — (referencia, no norma) | Ver aviso abajo |
 | `verification-methods` | — (propia del repositorio) | `docs/verification.md` |
 | `coherencia-docs` | — (proceso de §3 sobre la documentación) | `docs/`, este fichero |
+| `brainstorming` | — (proceso de §3, puerta **Spec**) | `specs/NNN-slug/spec.md` |
+| `writing-plans` | — (proceso de §3.3) | `specs/NNN-slug/plan.md` |
+| `test-driven-development` | — (proceso de §3.4) | Todo el código |
+| `verification-before-completion` | — (§15) | Cierre de cualquier tarea |
+| `clarificar-spec` | — (propia del repositorio, §3.2) | `specs/NNN-slug/spec.md` |
 
 **`feature-sliced-design` no es la arquitectura de este proyecto.** Está instalada como referencia para la migración descrita en `docs/architecture.md` §6.5. En cualquier decisión sobre dónde va un fichero, qué capas existen o cómo se cruzan las fronteras, **manda §5.2 de este fichero**.
+
+**`clarificar-spec` es la que sí conoce nuestro formato.** Es propia de este
+repositorio: barre el borrador por once categorías, pregunta como mucho cinco veces
+por ronda, puntúa lo que queda y no abre la puerta por debajo del umbral; además
+exige que cada `RF-*` tenga su `CA-N` y que todo término exista en
+`docs/definitions.md`. Escribe las respuestas en *Preguntas abiertas* → *Decisiones*
+y **no cambia el `estado`**.
+
+**Las cuatro skills de proceso no traen el formato de nuestras specs.** Cubren las
+cuatro puertas de §3 —`brainstorming` la spec, `writing-plans` el plan,
+`test-driven-development` el código, `verification-before-completion` el cierre— pero
+desconocen `specs/NNN-slug/`, los estados `borrador → en-revision → aprobada →
+implementada` y la regla de §14 de que un agente **no se aprueba a sí mismo** una
+spec. Dos de ellas traen además ruta por defecto propia, **dentro de `docs/`**, que
+§3.1 reserva para lo que ya es verdad: la spec va a `specs/NNN-slug/spec.md` (§3.2) y
+el plan a `specs/NNN-slug/plan.md` (§3.3), no a donde ellas proponen. El detalle del
+conflicto está en `.claude/skills/SOURCES.md`.
 
 **`coherencia-docs` no decide nada por su cuenta.** Compara `docs/` y este fichero entre sí y produce informe, plan y edición en tres pasos separados, con parada en cada uno; solo aplica lo aprobado. No rellena huecos escribiendo contenido nuevo ni reclasifica las letras de `docs/verification.md`: eso es §3.2 y §14 de este fichero.
 

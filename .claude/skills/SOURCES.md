@@ -5,11 +5,11 @@ clavadas al commit indicado. Sin instalación global ni de usuario; no se ha
 registrado ningún marketplace.
 
 Criterio de selección: **una skill por requisito técnico no negociable de
-`CLAUDE.md` §4**, más `feature-sliced-design` y `coherencia-docs` por decisión
-explícita. Nada más.
+`CLAUDE.md` §4**, más `feature-sliced-design`, `coherencia-docs` y las cuatro
+skills de proceso por decisión explícita. Nada más.
 
 Fecha de instalación: **2026-09-21** para todas las filas salvo `coherencia-docs`,
-instalada el **2026-09-22**.
+instalada el **2026-09-22**, y las cuatro de proceso, instaladas el **2026-09-23**.
 
 ## Instaladas
 
@@ -22,7 +22,12 @@ instalada el **2026-09-22**.
 | `react-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: React 19 — los efectos como vía de escape, `useEffectEvent`, cuándo *no* usar `useEffect` |
 | `feature-sliced-design` | `feature-sliced/skills` | `fd71da42a89e916f2ced63e5349fd865c87070a6` | **Sin licencia declarada** | Instalada por decisión explícita del equipo (2026-09-21). Ver el aviso de conflicto más abajo |
 | `verification-methods` | Propia de este repositorio | — | — | Metodologías de verificación; origen de `docs/verification.md` |
+| `clarificar-spec` | Propia de este repositorio | — | — | Escrita el 2026-09-23. Cierra la ambigüedad de una spec antes de que pueda aprobarse: barrido por taxonomía, ≤5 preguntas por ronda, umbral de ambigüedad como puerta y ningún requisito sin criterio de aceptación. Es la pieza que las cuatro de `superpowers` no traen: conoce `specs/NNN-slug/` y los estados de §3.2 |
 | `coherencia-docs` | `maujimenez4/MyFactory` | `4ca2652f900a3d3586f3aa7980f5f3f5165bc899` | **Sin licencia declarada** | Instalada por decisión explícita (2026-09-22). Revisa la coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica e invariantes condicionales caducadas. No es un requisito de §4 |
+| `brainstorming` | `obra/superpowers` (vía `maujimenez4/MyFactory`) | `5bf4e78011075bcfc0dc295f0724994cd123ee71` | MIT | Instalada por decisión explícita (2026-09-23). Es la puerta **Spec** de §3: saca la spec de la conversación y su `<HARD-GATE>` impide implementar sin aprobación separada de spec y plan |
+| `writing-plans` | `obra/superpowers` (vía `maujimenez4/MyFactory`) | `5bf4e78011075bcfc0dc295f0724994cd123ee71` | MIT | Instalada por decisión explícita (2026-09-23). Es §3.3: pasos del tamaño de un commit verificable, cada uno con su test nombrado |
+| `test-driven-development` | `obra/superpowers` (vía `maujimenez4/MyFactory`) | `5bf4e78011075bcfc0dc295f0724994cd123ee71` | MIT | Instalada por decisión explícita (2026-09-23). Es §3.4: rojo → verde → refactor, con el test visto fallar antes de implementar |
+| `verification-before-completion` | `obra/superpowers` (vía `maujimenez4/MyFactory`) | `5bf4e78011075bcfc0dc295f0724994cd123ee71` | MIT | Instalada por decisión explícita (2026-09-23). Es §15: prohíbe declarar algo terminado sin ejecutar la verificación y leer su salida |
 
 La licencia de cada origen se ha copiado como `LICENSE.upstream` dentro de la
 carpeta de la skill, salvo en `feature-sliced-design`, cuyo repositorio no publica
@@ -134,6 +139,38 @@ No hay conflicto de contenido: su jerarquía de autoridad reproduce la de
 sobre estructura y decisiones) y su regla de no editar sin aprobación explícita
 concuerda con §3.2 y §14.
 
+### Las cuatro skills de proceso — dónde guardan sus artefactos
+
+`brainstorming` y `writing-plans` traen ruta por defecto propia y **chocan con
+`CLAUDE.md` §3**, en dos sitios a la vez:
+
+| Skill | Su ruta por defecto | Dónde va en este proyecto |
+| --- | --- | --- |
+| `brainstorming` | `docs/superpowers/specs/YYYY-MM-DD-<tema>-design.md` | `specs/NNN-slug/spec.md` (§3.2) |
+| `writing-plans` | `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` | `specs/NNN-slug/plan.md` (§3.3) |
+
+Doble conflicto: además del nombre, ambas escribirían **dentro de `docs/`**, y §3.1
+reserva `docs/` para lo que **es verdad hoy** — una spec es una intención y por eso
+vive en `specs/`. Confundir los dos sitios es justo el error que §3 evita.
+
+Regla: **gana `CLAUDE.md`**. No se edita el texto de las skills. Ambas declaran que
+las preferencias del proyecto sustituyen su ruta por defecto (`writing-plans`:
+*"User preferences for plan location override this default"*), así que el conflicto
+se resuelve sin tocarlas: al invocarlas se les da la ruta de §3.2/§3.3.
+
+Ninguna de las cuatro conoce los estados `borrador → en-revision → aprobada →
+implementada` ni la regla de §14 de que **un agente no se aprueba a sí mismo** una
+spec. Aportan el rigor del proceso; la forma de nuestra spec la sigue poniendo
+`CLAUDE.md` §3.2.
+
+`test-driven-development` y `verification-before-completion` no tienen conflicto:
+la primera reproduce §3.4 paso por paso y la segunda, el checklist de §15.
+
+`writing-plans` cita `superpowers:executing-plans`,
+`superpowers:subagent-driven-development` y `superpowers:using-git-worktrees`, que
+**no están instaladas**: son menciones en prosa, no dependencias, pero esa pista no
+lleva a ninguna parte.
+
 ## Evaluadas y descartadas
 
 Para que no se vuelvan a proponer sin argumento nuevo.
@@ -145,7 +182,7 @@ Para que no se vuelvan a proponer sin argumento nuevo.
 | `Mindrally/skills` → `tanstack-query` | Buena, pero impone un árbol `src/` por tipo que choca con `CLAUDE.md` §5.2 |
 | `existential-birds/beagle` → `python-code-review` | Exige línea ≤79 caracteres; `ruff` usa 88 |
 | `existential-birds/beagle` → `fastapi-code-review` | Solapa con `python-fastapi-ops`, que además genera en vez de solo revisar |
-| `obra/superpowers` → `test-driven-development`, `systematic-debugging` | Buenas y activas, pero son skills de proceso, no requisitos técnicos de §4 |
+| `obra/superpowers` → `systematic-debugging` | Buena y activa, pero es de depuración, no de proceso de spec. `test-driven-development`, descartada aquí el 2026-09-21 por el mismo criterio, **se instaló el 2026-09-23** al ampliarse el criterio a las skills de proceso |
 | `anthropics/skills` → `frontend-design` | Va de identidad visual distintiva; el frontend es herramienta interna |
 | `awesome-skills/code-review-skill` | Megaskill de 25+ lenguajes; solapa con la `code-review` integrada |
 | `tanstack-skills`, `rafaelkamimura/claude-tools` | Sin commits en los últimos seis meses |

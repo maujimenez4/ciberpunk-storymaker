@@ -572,7 +572,7 @@ Los permisos de lectura y escritura de cada agente están en **§3.5**, junto al
 
 Instrucciones cargadas por el asistente de programación al trabajar en cada parte del repositorio.
 
-Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-22), copiadas y clavadas a un commit. Procedencia, SHA, licencia y conflictos anotados: `.claude/skills/SOURCES.md`.
+Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-22) y las cuatro skills de proceso (2026-09-23), copiadas y clavadas a un commit. Procedencia, SHA, licencia y conflictos anotados: `.claude/skills/SOURCES.md`.
 
 | Área del repo | Skill instalada | Qué aporta |
 | --- | --- | --- |
@@ -583,9 +583,14 @@ Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-
 | `src/frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
 | — | `feature-sliced-design` | **Referencia de FSD para la migración de §6.5, no la norma vigente.** En decisiones de ubicación y fronteras manda `CLAUDE.md` §5.2 |
 | `docs/verification.md` | `verification-methods` | Metodologías de verificación y la clasificación T/A/I/D/U; origen del documento |
+| `specs/NNN-slug/spec.md` | `clarificar-spec` | Propia del repositorio. Barrido de ambigüedad por once categorías, ≤5 preguntas por ronda, umbral como puerta y ningún `RF-*` sin su `CA-N`. Conoce la estructura de §3.2 y no toca el `estado` |
+| `specs/NNN-slug/spec.md` | `brainstorming` | Puerta **Spec** de `CLAUDE.md` §3: saca la spec de la conversación y no deja implementar sin aprobación humana separada de spec y de plan. Su ruta por defecto cae en `docs/`; manda §3.2 |
+| `specs/NNN-slug/plan.md` | `writing-plans` | §3.3: pasos con su test nombrado, del tamaño de un commit verificable. Su ruta por defecto cae en `docs/`; manda §3.3 |
+| Todo el código | `test-driven-development` | §3.4: rojo → verde → refactor, con el test visto fallar |
+| Cierre de cualquier tarea | `verification-before-completion` | §15: evidencia ejecutada y leída antes de declarar nada terminado |
 | `docs/`, `CLAUDE.md` | `coherencia-docs` | Revisión de coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica, invariantes condicionales caducadas. Informe, plan y edición en pasos separados; **no edita sin aprobación explícita** |
 
-Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más tres instaladas por decisión explícita (las tres últimas filas, sin área de código asociada). `sqlite-vec` se retiró el 2026-09-22 al retirarse la búsqueda vectorial (D-02): ya no había requisito que cubriera. Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
+Criterio: una skill por requisito técnico de `CLAUDE.md` §4, más ocho instaladas por decisión explícita: `feature-sliced-design`, `verification-methods`, `coherencia-docs`, `clarificar-spec` y las cuatro de proceso. Ninguna de las cuatro conoce el formato de `specs/NNN-slug/` ni los estados de aprobación de §3.2: aportan el rigor del proceso, no la forma de la spec. `sqlite-vec` se retiró el 2026-09-22 al retirarse la búsqueda vectorial (D-02): ya no había requisito que cubriera. Las herramientas de base (uv, ruff, mypy, pytest) no llevan skill: sus reglas están en `CLAUDE.md` §6 y §13, y sus comandos en la lista de verificación de `CLAUDE.md` §15.
 
 Lo específico de este proyecto —presupuesto de 100.000 tokens, ontología de escena y canon, reglas de frontera (`import-linter`, `import/no-restricted-paths`), ledger append-only— **no lo cubre ninguna skill pública**: vive en `CLAUDE.md`.
 
