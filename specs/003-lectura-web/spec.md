@@ -72,7 +72,11 @@ Para saber qué capítulos hay que regenerar cuando cambia un hecho, hace falta 
 - `ejecucion.ids_recuperados` persiste qué entró en el paquete, **pero solo de la capa `MEMORIA_RECUPERADA`**: se construye filtrando por `ETIQUETA_RECUPERADO` (`features/contexto/service.py:173-180`).
 - La capa `CANON_RELEVANTE` etiqueta sus piezas `canon-presente-{i}` / `canon-mencionado-{i}`, **por posición y no por `hc_id`** (`features/contexto/recoleccion.py:96-107`). El identificador del hecho se pierde en la frontera: `almacenes.canon_relevante(escena_id)` devuelve `(texto, presente)` y nada más.
 
-El cambio es que **la capa de canon etiquete por `hc_id` y esos identificadores se persistan en `ejecucion`**. El argumento ya está ganado en el propio repositorio para la otra capa: `recoleccion.py:178` guarda el identificador y no la posición precisamente porque «con una posición no se puede reconstruir qué se envió (CA-10)». Es el mismo argumento sin aplicar a canon, y aplicarlo refuerza CA-10 de la 001.
+**El hueco es más hondo que el formato de la etiqueta.** `canon_relevante(escena_id)` devuelve `list[tuple[str, bool]]` —texto y si está presente— en las tres implementaciones (`contexto/recoleccion.py:46`, `contexto/repository.py:103` y el doble de sus tests). El `hc_id` **no llega nunca** a `recoleccion.py`, así que no se puede etiquetar con algo que no se recibe: el cambio es **lo que devuelve el almacén**, y la etiqueta viene detrás.
+
+El cambio es, entonces, que **el almacén devuelva el `hc_id`, la capa de canon etiquete con él y esos identificadores se persistan en `ejecucion`**.
+
+**Y esto no es solo un problema de esta spec.** Con `ejecucion` sin registrar qué hechos de canon entraron en el paquete, **RI-14 de la 001 queda a medias** y la auditoría de una escena es parcial: se puede reconstruir qué se recuperó de memoria, no qué canon se envió. Arreglar DEP-01 cierra ese agujero de paso. El argumento ya está ganado en el propio repositorio para la otra capa: `recoleccion.py:178` guarda el identificador y no la posición precisamente porque «con una posición no se puede reconstruir qué se envió (CA-10)». Es el mismo argumento sin aplicar a canon, y aplicarlo refuerza CA-10 de la 001.
 
 **Letra pequeña, y va en la spec porque cambia lo que se puede prometer.** Aun con DEP-01 implementado, la relación que se obtiene es **«recuperado»**, no **«usado»**: lo que entró al paquete no es necesariamente lo que el Escritor puso en la prosa. Es una **sobreaproximación**, y tiene dos consumidores con necesidades opuestas:
 
@@ -114,7 +118,7 @@ La regla que esta spec asume, y que el backend debe cumplir antes de publicar:
 
 **Coste, que no es gratis y por eso va aquí y no en el plan:** revalidar pasa por el Continuista, que es una llamada al modelo por capítulo, y `architecture.md` §2.2 fija una llamada en vuelo por proceso. Con diez capítulos, el peor caso es **diez llamadas en serie**. La lectura debe tolerar esa latencia (RNF-REN-02), no disimularla.
 
-### DEP-04 · `CAN-01` tiene que volver a bloquear
+### DEP-04 · `CAN-01` y `CON-03` tienen que volver a bloquear
 
 **La garantía de DEP-03 no se sostiene con el código de hoy, y este es el único punto de esta spec donde eso pasa.** DEP-03 protege la continuidad diciendo «si la revalidación abre defectos **bloqueantes**, no se publica». Pero hoy:
 
@@ -122,11 +126,24 @@ La regla que esta spec asume, y que el backend debe cumplir antes de publicar:
 BLOQUEANTES_EN_G1A = {CON_01, CON_02, EST_01, SEG_01, VOZ_03}
 ```
 
-(`features/calidad/defectos.py:61-69`). **`CAN-01` no está**, y `CAN-01` es exactamente «contradicción de canon». Se registra en `no_bloquean`, pero no bloquea.
+(`features/calidad/defectos.py:61-69`). **Faltan dos**, y los dos importan aquí:
+
+| Código | Qué detecta | Por qué esta spec lo necesita |
+| --- | --- | --- |
+| `CAN-01` | Contradicción de canon | Protege de que el capítulo 7 afirme de un personaje lo contrario que el 4 regenerado |
+| `CON-03` | Personaje sabe lo que no debería (`definitions.md` §8) | **Pesa más aquí.** Regenerar el capítulo 4 cambia *qué se entera cada personaje y cuándo*. El 7 puede pasar a tener a un personaje usando algo que en la versión nueva ya no presenció: es la cadena de conocimiento, que es lo que una regeneración rompe con más facilidad |
+
+Los dos se registran en `no_bloquean`, y ninguno bloquea. No es un olvido: el comentario de `defectos.py:41` lo declara decidido.
 
 El escenario que DEP-03 dice cubrir queda así: se regenera el capítulo 4, el 7 pasa a contradecirlo, la revalidación **emite `CAN-01`**… y la versión **se publica igual**. El fallo queda detectado y no impedido. Lo que sí bloquea, `CON-01`, contrasta dos afirmaciones del propio Continuista entre sí: pilla a un personaje en dos sitios a la vez, no pilla que el capítulo 7 diga que Mara tiene los ojos negros después de que el 4 regenerado los haya puesto verdes.
 
-**Dependencia:** DEP-03 solo cumple lo que promete cuando `CAN-01` vuelva a `BLOQUEANTES_EN_G1A`, que es territorio de `specs/002-validadores-fallo-cerrado/`. Hasta entonces, la protección de continuidad de esta spec es **parcial y está declarada como tal** en «Lo que esta spec no verifica».
+**Dependencia, y tiene nombre concreto: es la P-3 de `specs/002-validadores-fallo-cerrado/`**, que pregunta literalmente «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`». No es una duda interna de aquella spec: **bloquea la garantía de esta**. DEP-03 solo cumple lo que promete cuando esa pregunta se firme y los dos códigos vuelvan.
+
+**Ojo con la palabra «vuelvan».** Devolver `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A` sería una **decisión nueva de `maujimenez4`**, no la restauración de un estado anterior: fue él quien los sacó, el 2026-09-23, y está declarado en `defectos.py:41`. Esta spec no pide deshacer nada; pide que se decida, porque su garantía depende de ello.
+
+**Y esa evidencia todavía no la ha medido nadie.** No se puede obtener con `corrida.py --seco`: el doble pasa `AFIRMACIONES_FALSAS = "[]"`, los validadores devuelven cero por construcción, y ese cero parece una buena noticia sin serlo. Hace falta una corrida real con el Continuista dentro del bucle.
+
+Hasta entonces, la protección de continuidad de esta spec es **parcial y está declarada como tal** en «Lo que esta spec no verifica».
 
 ---
 
@@ -340,7 +357,8 @@ Va escrito aquí, y no escondido, porque es lo que un revisor debe poder ver de 
 | Qué no se verifica | Por qué | Qué lo cubriría |
 | --- | --- | --- |
 | Que la petición del lector se haya **atendido de verdad** | Las puertas de calidad responden «está bien formado y es coherente», no «es lo que se pidió». Un capítulo regenerado puede pasar G1a entero sin haber cambiado el nombre del perro | La reversión (RF-PET-09) devuelve el veto al lector. Comprobarlo de verdad exige un juez con rúbrica, que es otra spec |
-| Que una contradicción de canon entre capítulos **impida** publicar | `CAN-01` no está hoy en `BLOQUEANTES_EN_G1A` (DEP-04): se detecta y se registra, no bloquea | DEP-04. Hasta que aterrice, la protección de DEP-03 es parcial |
+| Que una contradicción de canon, o una cadena de conocimiento rota, **impidan** publicar | `CAN-01` y `CON-03` no están hoy en `BLOQUEANTES_EN_G1A` (DEP-04): se detectan y se registran, no bloquean | DEP-04, que es la P-3 de la spec 002. Hasta que se firme, la protección de DEP-03 es parcial |
+| Que **la novela siga funcionando como novela** tras una regeneración | DEP-03 revalida **G1a, que es por escena**: mira canon, continuidad, conocimiento y voz. Ninguna de sus comprobaciones pregunta si el manuscrito sigue cubriendo sus beats. Se puede quitar un objeto del capítulo 4, revalidar del 3 al 10, pasar los diez, y dejar sin plantar el beat de clímax del 9: diez escenas correctas y una novela rota | El **Auditor de manuscrito** (`CLAUDE.md` §9), que **no entra en este flujo**. Invocarlo en cada petición es caro y es otra spec |
 | Que la novela **se lea bien** | Ningún test de frontend juzga prosa | Lectura humana, y el LLM-as-judge de la spec de evaluación |
 | Que la relación de DEP-01 sea exacta | Es «recuperado», no «usado»: sobre-reporta por construcción | Nada dentro de esta spec. Se mitiga usando diferencia real de texto para marcar (RF-LEC-08) |
 | Que la ficha congelada siga siendo cierta | Congelarla garantiza que **concuerda con su texto**, no que fuese correcta al publicarse | El validador formal de la cronología, en la spec de verificación formal |

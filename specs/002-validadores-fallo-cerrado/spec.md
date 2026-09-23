@@ -194,8 +194,20 @@ vacía, que la puerta lee como «sin defectos».
       eligió la otra (**lanza**). Con aquella redacción, o se relajaba la invariante
       —prohibido por el propio criterio— o P-2 no estaba abierta. Un criterio de
       aceptación no puede prejuzgar una pregunta que la spec declara abierta.
-- [ ] **CA-2** — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza, y existe un
-      test que lo comprueba con un nivel que no está en la escala. *(Test)*
+- [ ] **CA-2** — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza un error de
+      dominio **de `commons/errors/`**, y el test nombra el tipo: `pytest.raises` sobre esa
+      clase, no sobre `Exception`. *(Test)*
+
+      «Lanza», a secas, era demasiado flojo y lo señaló la sesión **Hernán** vía **Mario**
+      el 2026-09-23: un `ValueError` pelado —o el `KeyError` que tenía `validar_discurso`—
+      pasaría el criterio sin cumplir RF-CAL-13, que pide el error **tipado**. La clase
+      concreta la fija P-5; hoy la implementación usa `EntradaFueraDeDominio`, subclase de
+      `ErrorDeDominio`, y el criterio se cumple con cualquier decisión de P-5 que respete
+      RF-CAL-13.
+
+      Alcanza a los cuatro puntos donde hoy se lanza, no solo al nivel de calor: la sonda
+      usa `pytest.raises(Exception)` con un `noqa: B017` precisamente porque el tipo estaba
+      sin decidir, y ese `noqa` desaparece cuando P-5 se firme.
 - [ ] **CA-3** — `validar_giro_de_valor` trata los **dos** casos de H-1 y los trata igual:
       ni `""` produce un `ValidationError` ni `"   "` produce un defecto cuya cita sean
       espacios. Qué hace en su lugar lo decide P-2. *(Test)*
