@@ -133,3 +133,17 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** ninguno
 - **Estado:** terminado
 - **Ojo:** le he pedido a Jose que agrupe antes de llevárselo, que cada petición vaya con dueño, bloqueo y recomendación, y que distinga lo que **bloquea** de lo que **informa**. Hoy se mezclaron las dos cosas y por eso hizo falta el embudo.
+
+## 19:10 · Repaso de Mario aplicado: dos huecos de cobertura reales
+
+- **Qué:** siete correcciones. **C-1:** `RD-01` y `RD-03` tenían flecha en CA-15 pero su texto solo comprobaba el rendimiento; pasan a CA-17, que es el criterio de análisis estático. **C-2:** `RF-UI-04` es accesibilidad y CA-10 solo comprobaba **que renderizara** — un contraste 2:1 renderiza perfectamente; entra **CA-22** con foco, etiquetas y contraste AA. **R-1:** CA-5(c) decía «sin rastro» y podía leerse como borrar la `PeticionDeCambio` que CU-04 pide conservar. Más `RF-PET-05` y `RF-PET-08` de `S` a `M` —si un criterio los comprueba, no son degradables—, el orden de CA-21/RD-04, y **CA-10 apuntaba a un requisito equivocado por un fallo mío al aplicar C-2**: ahora tiene `RF-UI-06`, renderizado, que es lo que mide.
+- **Ficheros:** `specs/002-lectura-web/spec.md`
+- **Estado:** terminado — 13/13
+- **Ojo:** declarado en Impacto técnico que **la escala de diez capítulos contradice tres documentos** (`CLAUDE.md` §1, `domain-knowledge.md:78`, `definitions.md:75`) y que corregirlos es **condición de cierre** de esta spec. Un requisito `M` no debe apoyarse en una cifra que la documentación desmiente.
+
+## 19:15 · H-7 tiene arreglo: la información de la tarde estaba caducada
+
+- **Qué:** Gustavo avisó de que la corrida real de D-3 murió en la escena 1 por H-7 —los validadores pasaban a `citar()` la cita del modelo, y `citar` lanza si no la encuentra literal—. Antes de reescribir DEP-04 lo comprobé: **`validadores.py` es de las 16:46 y su corrida fue a las 16:40.** Jose añadió `citar_del_modelo` en medio, que construye el defecto y deja que `comprobar_forma` lo juzgue, «porque una cita que no aparece **es el dato**, no un error de programación». DEP-04 cuenta ahora las cuatro etapas: decidido, medido, muerto por H-7, H-7 arreglado. Falta repetir la corrida.
+- **Ficheros:** `specs/002-lectura-web/spec.md`
+- **Estado:** terminado
+- **Ojo:** es la tercera vez hoy que un dato verificado se queda obsoleto en minutos —me pasó con `manuscrito`, con las skills y ahora con H-7—. **Cualquier medición sobre `features/calidad` lleva hora o no vale**, como dijo Mario.

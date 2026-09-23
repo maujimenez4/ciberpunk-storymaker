@@ -83,3 +83,33 @@ ciclo no lo invoca. Está en `BLOQUEANTES_EN_G1A` y no puede emitir un defecto e
 una corrida real. Llenar esa columna es cambio de esquema (§3, punto 7).
 
 **Estado.** terminado. Nada mío a medias en `calidad/` ni en `escritura/`.
+
+## 2026-09-23 · La cita del modelo mataba el ciclo · terminado
+
+**Qué.** Lo encontró Julio en la primera corrida real con Continuista: murió en
+la escena 1 con `ValueError: el fragmento citado no aparece en la version`. Los
+cuatro validadores de continuidad pasaban a `citar()` la cita **que escribe el
+modelo**, y `citar` lanza si no la encuentra literal. El Continuista parafraseó,
+que es lo que hace cualquier modelo al que le pides que cite.
+
+Lo grave era **dónde** ocurría: toda la maquinaria contra la cita inventada
+—`comprobar_forma`, los axiomas 11 y 12, la tasa de mal formados— vive aguas
+abajo, en la puerta, y para que un defecto mal formado se registre primero tiene
+que construirse. Reventaba antes de existir. El sistema tenía el mecanismo y el
+caso no llegaba nunca a él.
+
+**Arreglo.** `citar_del_modelo` en `defectos.py`: si la cita no aparece, el
+defecto se construye igual anclado al principio. **No se declara mal formado**
+—eso lo sigue decidiendo `comprobar_forma`, que comparará y no cuadrará—, así
+que el juicio se queda donde estaba y lo único que cambia es que el caso llega
+hasta él. `citar` no se toca: allí la cita sale del propio texto y que aparezca
+está garantizado por construcción.
+
+**Ficheros.** `features/calidad/defectos.py`, `validadores.py`,
+`tests/test_invariantes.py`.
+
+**Ojo.** No relajé la regla de dominio 8. Una cita inventada sigue sin bloquear y
+ahora **se cuenta**, que era para lo que existía la tasa de §9.
+
+**Estado.** terminado. 446 tests, cinco puertas en verde, 14 sondas de la 005
+pasando. Sin commitear: lo lleva Nubia.

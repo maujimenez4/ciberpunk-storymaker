@@ -139,7 +139,14 @@ El escenario que DEP-03 dice cubrir queda así: se regenera el capítulo 4, el 7
 
 **Dependencia, y ya no es una decisión pendiente: es una medición pendiente.** La P-3 de `specs/005-validadores-fallo-cerrado/` preguntaba «qué evidencia devuelve a `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A`», y `maujimenez4` la contestó el 2026-09-23 en su **D-3**: *partir el campo, y **medir antes de volver a bloquear**; corrida real autorizada*.
 
-Lo que falta, por tanto, **no es que alguien decida**: es que alguien mida. DEP-03 cumple lo que promete el día que esa corrida se haga y los dos códigos vuelvan a bloquear.
+Lo que falta **no es que alguien decida**. La historia, hasta hoy:
+
+1. **Decidido** (D-3, 2026-09-23): partir el campo y medir antes de volver a bloquear.
+2. **Medición intentada** y fracasada, a las 16:40: la corrida real murió **en la escena 1**, con `ValueError: el fragmento citado no aparece en la version`. Cero de diez escenas.
+3. **Causa**: H-7. Los validadores de continuidad pasaban a `citar()` la cita que escribe el Continuista, y `citar` lanza si no la encuentra literal. La defensa contra la cita inventada —`comprobar_forma`, axiomas 11 y 12— vive **aguas abajo**, en `puerta.py`: para marcar un defecto como mal formado primero hay que construirlo, y ahí reventaba antes de existir. Que el modelo parafrasee es lo normal, así que cualquier corrida moría.
+4. **H-7 arreglado** a las 16:46: `citar_del_modelo` construye el defecto anclado al principio y deja que `comprobar_forma` lo juzgue, con el razonamiento escrito de que una cita que no aparece **es el dato**, no un error de programación.
+
+Lo que falta, por tanto, es **repetir la corrida**. DEP-03 cumple lo que promete el día que esa medición exista y los dos códigos vuelvan a bloquear.
 
 **Ojo con la palabra «vuelvan».** Devolver `CAN-01` y `CON-03` a `BLOQUEANTES_EN_G1A` sería una **decisión nueva de `maujimenez4`**, no la restauración de un estado anterior: fue él quien los sacó, el 2026-09-23, y está declarado en `defectos.py:41`. Esta spec no pide deshacer nada; pide que se decida, porque su garantía depende de ello.
 
@@ -230,10 +237,10 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 | RF-PET-02 | La petición se registra con el `hecho_canon_id` afectado, la `VersionPublicada` de origen y el texto pedido | M | T |
 | RF-PET-03 | Enviar la petición **no bloquea la lectura**: devuelve un trabajo y el lector sigue leyendo | M | T |
 | RF-PET-04 | El progreso del trabajo es visible **por capítulo** —«regenerando el capítulo 4 de 7»—, no como un indicador indistinto, y se sondea con RI-06 | M | T |
-| RF-PET-05 | Si el trabajo termina publicando, la lectura ofrece saltar a la versión nueva; no salta sin que el lector lo pida | S | T |
+| RF-PET-05 | Si el trabajo termina publicando, la lectura ofrece saltar a la versión nueva; no salta sin que el lector lo pida | M | T |
 | RF-PET-06 | Si el trabajo termina **sin** publicar, se muestra que la petición no se atendió y el motivo, y la versión vigente no cambia | M | T |
 | RF-PET-07 | El texto que el lector escribe en la petición se trata como **contenido no confiable**: se envía como dato, nunca concatenado a un prompt desde el frontend | M | A (+T) |
-| RF-PET-08 | Una petición en curso no impide abrir otra, pero la interfaz dice cuántas hay vivas | S | T |
+| RF-PET-08 | Una petición en curso no impide abrir otra, pero la interfaz dice cuántas hay vivas | M | T |
 | RF-PET-09 | El lector puede revertir a la versión anterior desde la lectura | M | T |
 | RF-PET-10 | Revertir **no borra** la versión revertida: sigue siendo navegable | M | T |
 
@@ -246,6 +253,7 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 | RF-UI-03 | Se respetan las tres reglas de frontera de `CLAUDE.md` §5.2, impuestas por ESLint `import/no-restricted-paths` y no por revisión manual | M | A (+T) |
 | RF-UI-04 | Accesibilidad mínima: foco visible, etiquetas en formularios, contraste AA | M | I |
 | RF-UI-05 | Un fallo de red o un 5xx se muestra como tal y deja reintentar; no se queda en blanco ni finge contenido | M | T |
+| RF-UI-06 | Las cuatro pantallas —portada, índice, capítulo y ficha— **renderizan en un navegador real**, no solo en el renderizador de los tests | M | D |
 
 ### Datos
 
@@ -253,8 +261,8 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 | --- | --- | --- | --- |
 | RD-01 | El frontend **no persiste nada** del dominio: toda la verdad vive en el backend | M | A |
 | RD-02 | La `VersionPublicada` que se lee viaja en la URL, de modo que un enlace compartido abre exactamente el mismo texto | M | T |
-| RD-04 | La URL de una novela lleva un **identificador no adivinable** (aleatorio, no correlativo): `obra/1` deja leer la novela ajena probando números. **No es autenticación**, que sigue fuera de alcance; es que el enlace se pueda compartir sin publicar de paso todas las demás | M | T |
 | RD-03 | El frontend no deriva la `FichaDeLectura` ni recalcula el canon: la recibe hecha (RI-03) | M | A |
+| RD-04 | La URL de una novela lleva un **identificador no adivinable** (aleatorio, no correlativo): `obra/1` deja leer la novela ajena probando números. **No es autenticación**, que sigue fuera de alcance; es que el enlace se pueda compartir sin publicar de paso todas las demás | M | T |
 
 ### No funcionales
 
@@ -274,24 +282,25 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 - [ ] **CA-2** — Cuando se abre la ficha de una versión y se pincha un personaje, entonces se llega a un capítulo donde ese personaje aparece. *(Test)* → RF-FIC-01, RF-FIC-02.
 - [ ] **CA-3** — Cuando se abre una versión anterior, entonces su ficha es la de aquella versión y no la del canon de hoy. *(Test)* → RF-FIC-03, RF-FIC-04.
 - [ ] **CA-4** — Cuando se pide un cambio y el trabajo termina publicando, entonces existe una `VersionPublicada` nueva que `sucede_a` la anterior, y la anterior sigue siendo legible entera. *(Test)* → RF-PET-02, RF-PET-03, RF-PET-04, RF-PET-05, RF-LEC-06.
-- [ ] **CA-5** — Cuando la regeneración o la revalidación de DEP-03 abren un defecto bloqueante, entonces las tres cosas: **(a)** no existe ninguna `VersionPublicada` nueva, ni siquiera creada sin marcar vigente; **(b)** el puntero de versión vigente no se ha movido; y **(c)** la regeneración rechazada **no ha dejado rastro** en canon, ledger ni índice. *(Test)* → RF-PET-06.
+- [ ] **CA-5** — Cuando la regeneración o la revalidación de DEP-03 abren un defecto bloqueante, entonces las tres cosas: **(a)** no existe ninguna `VersionPublicada` nueva, ni siquiera creada sin marcar vigente; **(b)** el puntero de versión vigente no se ha movido; y **(c)** la regeneración rechazada **no ha dejado rastro** en canon, ledger ni índice. **La `PeticionDeCambio` sí se conserva, con su resultado:** lo que no deja rastro es la prosa descartada y lo que se extrajo de ella, no la petición del lector, que CU-04 pide guardar. *(Test)* → RF-PET-06.
 - [ ] **CA-6** — Cuando dos versiones difieren en tres capítulos, entonces se marcan exactamente esos tres, ni uno más. *(Test)* → RF-LEC-07, RF-LEC-08.
 - [ ] **CA-7** — Cuando el lector revierte, entonces la versión anterior vuelve a ser la vigente y la revertida sigue siendo navegable. *(Test)* → RF-PET-09, RF-PET-10.
 - [ ] **CA-8** — Cuando se descarga el PDF desde una versión concreta, entonces el PDF es el de esa versión. *(Test)* → RF-LEC-09.
 - [ ] **CA-9** — `pnpm typecheck` y `pnpm lint` pasan en limpio, y `lint` **falla** si se añade a propósito un import de `shared/` hacia `features/`, uno entre dos features, o uno a un fichero interno de otra feature. *(Test)* → RF-UI-01, RF-UI-03.
-- [ ] **CA-10** — El agente abre la lectura con el browser MCP, recorre portada, índice, un capítulo y la ficha, y **registra un fallo** cuando cualquiera de los cuatro no renderiza. *(Demostración)* → RF-UI-04.
+- [ ] **CA-10** — El agente abre la lectura con el browser MCP, recorre portada, índice, un capítulo y la ficha, y **registra un fallo** cuando cualquiera de los cuatro no renderiza. *(Demostración)* → RF-UI-06.
+- [ ] **CA-22** — En esas mismas cuatro pantallas se inspecciona **foco visible al tabular, etiqueta en cada campo de formulario y contraste AA**, y cada incumplimiento se registra como fallo. **Renderizar no es ser accesible:** un contraste 2:1 pinta perfectamente, así que CA-10 en verde no dice nada de esto. *(Inspección)* → RF-UI-04.
 - [ ] **CA-11** — Cuando el texto de una petición contiene `<script>` o una instrucción dirigida al modelo, entonces se muestra como texto plano y llega al backend como dato, sin alterar ningún prompt. *(Test)* → RF-PET-07, RNF-SEG-01.
 - [ ] **CA-12** — La suite del frontend pasa **sin backend levantado**: las respuestas se sirven con dobles construidos desde el esquema OpenAPI. *(Test)* → RI-08.
 - [ ] **CA-13** — Cuando falla la red al abrir un capítulo, entonces se ve el error y un reintento, no una página en blanco. *(Test)* → RF-UI-05.
 - [ ] **CA-14** — Cuando hay una petición en curso, entonces la lectura sigue siendo navegable y la interfaz indica cuántas peticiones hay vivas. *(Test)* → RF-PET-03, RF-PET-08.
-- [ ] **CA-15** — Abrir un capítulo no espera a los otros nueve: se comprueba que la vista pinta con una sola respuesta de capítulo. *(Test)* → RNF-REN-01, RD-01, RD-02, RD-03.
+- [ ] **CA-15** — Abrir un capítulo no espera a los demás: se comprueba que la vista pinta con una sola respuesta de capítulo. *(Test)* → RNF-REN-01.
 
-- [ ] **CA-21** — Cuando se piden identificadores de dos obras seguidas, entonces no son correlativos ni derivables uno del otro. *(Test)* → RD-04.
 - [ ] **CA-16** — Cuando se recarga la página de un capítulo, o se abre el mismo enlace en otra pestaña, entonces se ve exactamente el mismo texto. *(Test)* → RF-LEC-05, RD-02.
-- [ ] **CA-17** — Ningún componente contiene un `fetch` ni un cliente HTTP, no hay store global que mezcle estado de servidor con estado de interfaz, y cada test vive junto a su componente. *(Análisis)* → RF-LEC-10, RF-UI-02, RNF-MAN-01.
+- [ ] **CA-17** — Ningún componente contiene un `fetch` ni un cliente HTTP; no hay store global que mezcle estado de servidor con estado de interfaz; cada test vive junto a su componente; **ningún módulo escribe estado de dominio en almacenamiento local**; y **ninguno deriva ni recalcula la `FichaDeLectura`**, que se recibe hecha. *(Análisis)* → RF-LEC-10, RF-UI-02, RNF-MAN-01, RD-01, RD-03.
 - [ ] **CA-18** — Cuando el lector selecciona un fragmento del capítulo o una entrada de la ficha, entonces la petición se abre con el hecho afectado ya identificado. *(Test)* → RF-PET-01.
 - [ ] **CA-19** — Cuando un trabajo tarda el peor caso de DEP-03, entonces la interfaz lo sigue dando por vivo —no lo declara perdido ni terminado— y muestra **por qué capítulo va**, no un indicador indistinto. Se comprueba con un doble que retrasa la respuesta y devuelve avance parcial. *(Test)* → RNF-REN-02, RF-PET-04.
 - [ ] **CA-20** — El *bundle* construido no contiene ninguna clave de proveedor, y la única URL de red que usa es la del backend propio. *(Análisis)* → RNF-SEG-02.
+- [ ] **CA-21** — Cuando se piden identificadores de dos obras seguidas, entonces no son correlativos ni derivables uno del otro. *(Test)* → RD-04.
 
 **Sobre CA-5.** Su primera redacción decía «la vigente es byte a byte la de antes», y eso no era un criterio: `CLAUDE.md` §14 prohíbe editar en sitio, así que los bytes de una versión anterior **no pueden** cambiar y la comprobación pasaba siempre, hubiera funcionado el mecanismo o no. Un criterio que no puede fallar no verifica nada. Los tres riesgos reales son los de arriba, y el tercero es el que muerde: hechos extraídos de una prosa que se descartó. La letra (c) es **CA-7 de la 001** —«una escena rechazada no ha dejado rastro en canon, ledger ni índice»— aplicada a una regeneración rechazada.
 
@@ -323,6 +332,7 @@ Y una regla nueva que esta spec introduce sobre sí misma, derivada de `architec
 | La petición de cambio, ¿dónde vive? | Dentro de `features/manuscrito`. **No** porque no pudiera ser feature propia —`app/` puede componer dos features sin que se importen entre sí—, sino porque la petición produce una `VersionPublicada`, que es el agregado de `manuscrito`. La propiedad sigue al dato, no al disparador |
 | Dependencias nuevas | React 19, Vite, TypeScript, TanStack Query, Vitest, Testing Library, ESLint con `import/no-restricted-paths`, y el generador de cliente OpenAPI. **Todas requieren aprobación** (`CLAUDE.md` §3, punto 7): la spec las declara, no las instala |
 | Agentes y prompts (`CLAUDE.md` §9 y §10) | **Ninguno.** Esta spec no crea, modifica ni versiona ningún prompt, y no toca ninguno de los nueve agentes. El único que aparece es el Continuista, y lo hace dentro de DEP-03, que es backend |
+| **La escala de diez capítulos** | RF-LEC-03 y CA-1 fijan **diez capítulos** de 1.000–1.500 palabras, por decisión de `maujimenez4` del 2026-09-23. **Tres documentos siguen diciendo lo contrario:** `CLAUDE.md` §1 y `domain-knowledge.md:78` hablan de 80.000–120.000 palabras, y `definitions.md:75` da al capítulo 2.500–4.000. Un requisito `M` no debe apoyarse en una cifra que la documentación contradice: **corregir los tres es condición de cierre de esta spec**, y hasta entonces manda la decisión, no los documentos |
 | `docs/` que habrá que tocar al cerrar | `architecture.md` §6.1 pasa a describir algo construido; `verification.md` gana la validación visual por browser MCP como método en uso |
 
 ---
