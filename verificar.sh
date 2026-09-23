@@ -7,13 +7,27 @@ set -e
 # costo tres commits entender que el fallo era de la comprobacion y no del
 # codigo. TERM=dumb desactiva el spinner y el guion se puede redirigir.
 export TERM=dumb
-python -m uv run pytest -q
-python -m uv run ruff check .
-python -m uv run ruff format --check .
-python -m uv run mypy
-python -m uv run lint-imports
+
+# `uv` se resuelve de las dos formas en que puede estar instalado. El instalador
+# oficial y Homebrew dejan un **binario**; `pip install uv` deja un **modulo**.
+# Este guion usaba solo `python -m uv`, asi que en una maquina recien preparada
+# fallaba con «No module named uv» antes de comprobar nada.
+if command -v uv >/dev/null 2>&1; then
+  UV="uv"
+elif python -m uv --version >/dev/null 2>&1; then
+  UV="python -m uv"
+else
+  echo "falta uv: https://docs.astral.sh/uv/getting-started/installation/" >&2
+  exit 1
+fi
+
+$UV run pytest -q
+$UV run ruff check .
+$UV run ruff format --check .
+$UV run mypy
+$UV run lint-imports
 # CA-1 con dobles. Entra aqui porque `corrida.py` esta fuera de `testpaths` y
 # se rompio en silencio al cambiar `Dependencias`: una demostracion que puede
 # romperse sin que nada avise deja de demostrar nada.
-python -m uv run python corrida.py --seco
+$UV run python corrida.py --seco
 echo "las cinco puertas en verde"
