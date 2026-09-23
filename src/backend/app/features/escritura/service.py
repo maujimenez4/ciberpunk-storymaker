@@ -109,16 +109,30 @@ class ResultadoDeEscena(BaseModel):
 
 
 def ciclo_de_escena(
-    escena_id: str, obra_id: str, serie_id: str, dep: Dependencias
+    escena_id: str,
+    obra_id: str,
+    serie_id: str,
+    dep: Dependencias,
+    trabajo_id: str | None = None,
 ) -> ResultadoDeEscena:
-    """Recorre los estados de §3.3 para una escena. Nunca se salta ninguno."""
+    """Recorre los estados de §3.3 para una escena. Nunca se salta ninguno.
+
+    `trabajo_id` viene dado cuando quien llama ya creo el trabajo y devolvio su
+    identificador al cliente -es lo que hace el endpoint, que no puede esperar a
+    que el ciclo termine para decir a quien pregunta por donde va-. Sin el, se
+    crea aqui: es el caso del guion de demostracion.
+    """
     with dep.cerrojo.en_uso(obra_id, espera_s=ESPERA_DE_CERROJO_S) as tomado:
         if not tomado:
             # RF-ORQ-11: una escena en vuelo por obra. Dos a la vez escribirían
             # sobre el mismo canon y el segundo leería un estado a medias.
             raise RuntimeError(f"la obra {obra_id} ya tiene una escena en vuelo")
 
-        trabajo = dep.trabajos.crear(obra_id, escena_id, "escribir_escena", dep.reloj)
+        trabajo = (
+            dep.trabajos.leer(trabajo_id)
+            if trabajo_id
+            else dep.trabajos.crear(obra_id, escena_id, "escribir_escena", dep.reloj)
+        )
         parametros = dep.obras.leer(obra_id).parametros_para_una_escena()
 
         # --- PLANIFICANDO ----------------------------------------------------
@@ -299,4 +313,27 @@ def _planificar(
                 prompt.texto + "\n\n" + material,
                 dep.reloj,
             )
+        )
+
+
+def ejecutar_en_segundo_plano(
+    trabajo_id: str, escena_id: str, obra_id: str, serie_id: str, dep: Dependencias
+) -> None:
+    """El ciclo, envuelto para que un fallo tecnico no deje el trabajo colgado.
+
+    Sin esto, el hilo del ejecutor se traga la excepcion y el cliente ve
+    `ENSAMBLANDO` para siempre: un fallo que se presenta como lentitud, que es
+    la forma mas cara de presentarse porque nadie va a buscarlo.
+
+    `FALLIDA` y no `ESCALADA`: escalada es para un defecto de calidad, que una
+    persona puede resolver leyendo (RF-CAL-10). Esto es que algo se rompio.
+    """
+    try:
+        ciclo_de_escena(escena_id, obra_id, serie_id, dep, trabajo_id=trabajo_id)
+    except Exception as error:  # noqa: BLE001 - aqui se atrapa todo a proposito
+        dep.trabajos.transitar(
+            trabajo_id,
+            Estado.FALLIDA,
+            dep.reloj,
+            causa_fallo=type(error).__name__,
         )

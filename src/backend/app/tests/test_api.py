@@ -10,6 +10,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.features.escritura.router import obtener_dependencias
+from app.features.escritura.tests.test_ciclo_completo import dependencias
 from app.main import crear_app
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -38,7 +40,16 @@ def app(base_de_datos: Path) -> FastAPI:
     )
     conexion.commit()
     conexion.close()
-    return crear_app(base_de_datos)
+
+    aplicacion = crear_app(base_de_datos)
+    # Desde P-112 el endpoint arma el ciclo con el proveedor real, que lee
+    # `Ajustes`. Aqui se mira el **contrato** de la API -202, modelos de
+    # respuesta, errores por handler-, no el ciclo, asi que entran dobles. Nada
+    # llega a ejecutarse: estos casos no drenan el ejecutor.
+    aplicacion.dependency_overrides[obtener_dependencias] = lambda: dependencias(
+        base_de_datos
+    )
+    return aplicacion
 
 
 @pytest.fixture

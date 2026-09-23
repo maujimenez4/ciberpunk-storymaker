@@ -6,11 +6,14 @@ cuenta uno, y el limite de llamadas simultaneas quedaria duplicado en silencio
 —sin error, sin aviso, solo el doble de factura y de latencia—.
 """
 
+import threading
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.commons.jobs import (
+    EjecutorDeTrabajos,
     TurnoDeModelo,
     montar_ejecutor_de_trabajos,
     turno_del_proceso,
@@ -65,3 +68,55 @@ def test_los_trabajos_se_ejecutan_en_el_proceso_de_la_api() -> None:
         assert cliente.post("/lanza").json() == {"estado": "encolado"}
 
     assert hechos == ["trabajo hecho"]
+
+
+def test_el_ejecutor_corre_los_trabajos_sin_que_nadie_lo_drene() -> None:
+    """P-112. Hasta ahora `drenar()` solo corria al **apagar** la aplicacion.
+
+    Es decir: el endpoint encolaba y el trabajo esperaba a que alguien parase el
+    servidor. Un sistema que solo procesa al morir no es asincrono, es una cola
+    que nadie atiende.
+    """
+    hecho = threading.Event()
+    ejecutor = EjecutorDeTrabajos(TurnoDeModelo(simultaneas=1))
+    ejecutor.arrancar()
+    try:
+        ejecutor.encolar(hecho.set)
+
+        assert hecho.wait(timeout=5), "el trabajo encolado no llego a ejecutarse"
+    finally:
+        ejecutor.parar()
+
+
+def test_un_trabajo_que_revienta_no_mata_al_hilo() -> None:
+    """El siguiente de la cola tiene que correr igual.
+
+    Un hilo que muere con la primera excepcion deja la cola parada para siempre
+    y sin un solo error visible: los trabajos simplemente dejan de avanzar.
+    """
+    segundo = threading.Event()
+    ejecutor = EjecutorDeTrabajos(TurnoDeModelo(simultaneas=1))
+    ejecutor.arrancar()
+    try:
+
+        def revienta() -> None:
+            raise RuntimeError("fallo del primero")
+
+        ejecutor.encolar(revienta)
+        ejecutor.encolar(segundo.set)
+
+        assert segundo.wait(timeout=5), "el hilo murio con el primer fallo"
+    finally:
+        ejecutor.parar()
+
+
+def test_parar_espera_a_lo_que_queda_en_la_cola() -> None:
+    """Al apagar no se pierde trabajo aceptado: si se devolvio 202, se hace."""
+    hechos: list[int] = []
+    ejecutor = EjecutorDeTrabajos(TurnoDeModelo(simultaneas=1))
+    for numero in range(5):
+        ejecutor.encolar(lambda n=numero: hechos.append(n))  # type: ignore[misc]
+    ejecutor.arrancar()
+    ejecutor.parar()
+
+    assert hechos == [0, 1, 2, 3, 4]

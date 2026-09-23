@@ -36,6 +36,10 @@ TITULO = "StoryMaker · backend v1"
 def crear_app(ruta_base_de_datos: Path | str = "obra.db") -> FastAPI:
     app = FastAPI(title=TITULO, version="1.0.0")
     app.state.ruta_base_de_datos = str(ruta_base_de_datos)
+    # Donde viven los prompts lo decide la composicion, no la feature. Si lo
+    # calculara el router con `Path(__file__)`, `escritura` estaria tocando el
+    # sistema de ficheros y RF-ORQ-16 dejaria de ser cierta por construccion.
+    app.state.ruta_prompts = Path(__file__).resolve().parent / "features"
     registrar_manejadores(app)
     montar_ejecutor_de_trabajos(app)
     app.include_router(router_escritura)
