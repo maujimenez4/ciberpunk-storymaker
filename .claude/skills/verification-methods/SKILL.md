@@ -1,6 +1,6 @@
 ---
 name: verification-methods
-description: Reference sheet of verification methodologies for AI-generated code and agentic systems (type checking, SAST, symbolic execution, formal verification, property-based testing, mutation testing, evals, guardrails, red-teaming, model checking, T/A/I/D/U). Use when writing or reviewing a verification plan, a verification.md / trust spec, a testing strategy for agent output, or when the user asks how to verify, validate, or gain confidence in code an agent produced.
+description: Reference sheet of verification methodologies for AI-generated code and agentic systems (type checking, SAST, symbolic execution, formal verification, property-based testing, mutation testing, evals, guardrails, red-teaming, model checking, T/A/I/D/U) plus a catalogue of formal specification languages with a verdict for this repository (TLA+, Quint, Alloy, Dafny, Lean 4, Rocq/Coq, Isabelle/HOL, SPARK, Event-B, P, F*, Agda, Idris, Verus, Kani, Z, VDM, PVS). Use when writing or reviewing a verification plan, a verification.md / trust spec, a testing strategy for agent output, when proposing or evaluating a formal method or specification language, or when the user asks how to verify, validate, or gain confidence in code an agent produced.
 ---
 
 # Verification methodologies
@@ -32,6 +32,20 @@ Index:
   integration · progressive rollout · red-teaming / adversarial testing · model checking
 - **Classification:** T / A / I / D / U (Trust Spec) — Test / Analysis / Inspection /
   Demonstration / Unverifiable, assigned per requirement
+
+## Formal specification languages
+
+Before proposing TLA+, Lean 4, Alloy, Dafny, Rocq, Isabelle, SPARK, Event-B, P, F*,
+Agda, Idris, Verus, Kani, Z, VDM, PVS or Quint for this repository, read
+[references/lenguajes-formales.md](references/lenguajes-formales.md). Fifteen languages,
+each with its official link, and a **verdict for this codebase** — three techniques
+adopted (written in Python with `hypothesis`, no new dependency), twelve discarded with
+the reason grouped, and three named conditions that reopen the question.
+
+The rule that file enforces: **none of the fifteen is installed.** What crosses over is
+the technique — small-scope counterexamples (Alloy), the safety/liveness split (TLA+ and
+Quint), and declared preconditions with fail-closed behavior (Dafny and SPARK). A formal
+model nothing runs in CI asserts a guarantee nobody is checking.
 
 ## Producing a verification document
 

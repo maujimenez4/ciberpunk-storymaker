@@ -21,7 +21,7 @@ instalada el **2026-09-22**, y las cuatro de proceso, instaladas el **2026-09-23
 | `typescript-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: TypeScript estricto — type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
 | `react-best-practices` | `0xBigBoss/claude-code` | `2921eb8a685a2589c4c3e6ecbc8eaa12ffadde73` | Apache-2.0 | §4 Frontend: React 19 — los efectos como vía de escape, `useEffectEvent`, cuándo *no* usar `useEffect` |
 | `feature-sliced-design` | `feature-sliced/skills` | `fd71da42a89e916f2ced63e5349fd865c87070a6` | **Sin licencia declarada** | Instalada por decisión explícita del equipo (2026-09-21). Ver el aviso de conflicto más abajo |
-| `verification-methods` | Propia de este repositorio | — | — | Metodologías de verificación; origen de `docs/verification.md` |
+| `verification-methods` | Propia de este repositorio | — | — | Metodologías de verificación; origen de `docs/verification.md`. Desde el 2026-09-23 incluye además `references/lenguajes-formales.md`: quince lenguajes de especificación con enlace oficial y **veredicto para este repositorio** (ver más abajo) |
 | `clarificar-spec` | Propia de este repositorio | — | — | Escrita el 2026-09-23. Cierra la ambigüedad de una spec antes de que pueda aprobarse: barrido por taxonomía, ≤5 preguntas por ronda, umbral de ambigüedad como puerta y ningún requisito sin criterio de aceptación. Es la pieza que las cuatro de `superpowers` no traen: conoce `specs/NNN-slug/` y los estados de §3.2 |
 | `coherencia-docs` | `maujimenez4/MyFactory` | `4ca2652f900a3d3586f3aa7980f5f3f5165bc899` | **Sin licencia declarada** | Instalada por decisión explícita (2026-09-22). Revisa la coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica e invariantes condicionales caducadas. No es un requisito de §4 |
 | `brainstorming` | `obra/superpowers` (vía `maujimenez4/MyFactory`) | `5bf4e78011075bcfc0dc295f0724994cd123ee71` | MIT | Instalada por decisión explícita (2026-09-23). Es la puerta **Spec** de §3: saca la spec de la conversación y su `<HARD-GATE>` impide implementar sin aprobación separada de spec y plan |
@@ -204,6 +204,33 @@ Ninguna skill pública cubre esto; vive en `CLAUDE.md` y
 - La **ontología de escena y canon** (`docs/definitions.md`).
 - **Vite** como herramienta de construcción: no se ha encontrado nada que aporte
   sobre la documentación oficial.
+
+## Lenguajes formales: enlaces y veredicto (2026-09-23)
+
+El catálogo vive en
+[`verification-methods/references/lenguajes-formales.md`](verification-methods/references/lenguajes-formales.md),
+dentro de la skill propia del repositorio en lugar de en una carpeta aparte: así se
+carga solo cuando alguien toca el área de verificación, que es cuando hace falta.
+
+- **Qué contiene:** quince lenguajes de especificación y verificación —TLA+, Quint,
+  Alloy, Dafny, SPARK, Lean 4, Rocq, Isabelle/HOL, Agda, Idris 2, F\*, Verus, Kani, P,
+  Event-B, Z, VDM, PVS— con su **sitio oficial**, su tendencia y un veredicto para este
+  repositorio.
+- **Procedencia:** la lista, los enlaces y las tendencias las aportó el equipo
+  (`maujimenez4`) el 2026-09-23. Los enlaces son sitios oficiales de cada proyecto, no
+  páginas de proveedor, igual que en `references/methodologies.md`.
+- **Nada se instala.** Ninguno de los quince entra como dependencia: tres aportan
+  **técnica** —contraejemplo en alcance pequeño, separación seguridad/vivacidad,
+  precondición declarada con fallo cerrado— y se escriben con `hypothesis`, que ya está
+  en `pyproject.toml`. Es la misma regla que aplica el resto de este fichero: una skill o
+  una herramienta no entra por ser buena, entra por cubrir un requisito.
+- **Qué produjo:** seis defectos en `features/calidad/validadores.py`, con contraejemplo
+  ejecutado, recogidos en `specs/002-validadores-fallo-cerrado/`.
+
+El repositorio del que se traen las skills propias del equipo sigue siendo
+<https://github.com/maujimenez4/MyFactory>. Este catálogo **no se ha subido allí**: es
+específico de este repositorio —sus veredictos solo valen contra este *stack* y estas
+invariantes—, y publicarlo fuera es una decisión del equipo, no de un agente.
 
 ## Pendiente de revisión humana
 
