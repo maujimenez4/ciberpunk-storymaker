@@ -142,17 +142,20 @@ def test_un_prompt_editado_en_sitio_rompe_la_auditoria_y_se_nota(
 # --- P-101 (CA-11): arranca con una sola credencial -------------------------
 
 
-def test_el_proceso_arranca_sin_mas_credencial_que_la_de_generacion(
+def test_el_proceso_arranca_sin_ninguna_credencial(
     monkeypatch: pytest.MonkeyPatch, base_de_datos: Path
 ) -> None:
-    """CA-11 tras D-02. Antes decía «con la extensión vectorial ausente»; ahora
-    lo que se demuestra es que **una sola credencial basta**, que era el motivo
-    de retirar la búsqueda vectorial."""
+    """CA-11 tras D-02 y la decisión (a) de 2026-09-22.
+
+    Decía demostrar que «una sola credencial basta» y en su propio cuerpo
+    exportaba `STORYMAKER_PROVEEDOR_EMBEDDINGS_CLAVE: "no-se-usa"`. Demostraba
+    lo contrario de lo que afirmaba, y el Cierre de la spec se apoyaba en él.
+
+    Lo que se demuestra ahora es lo que de verdad ocurre: el proveedor es el CLI
+    de Claude Code, la credencial es su sesión, y el proceso arranca **sin
+    ninguna** variable de credencial."""
     for nombre, valor in {
-        "STORYMAKER_PROVEEDOR_GENERACION_CLAVE": "clave",
-        "STORYMAKER_PROVEEDOR_GENERACION_URL": "https://ejemplo.invalid",
         "STORYMAKER_MODELO": "modelo",
-        "STORYMAKER_PROVEEDOR_EMBEDDINGS_CLAVE": "no-se-usa",
         "STORYMAKER_RUTA_BASE_DE_DATOS": str(base_de_datos),
     }.items():
         monkeypatch.setenv(nombre, valor)

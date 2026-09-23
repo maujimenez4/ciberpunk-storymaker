@@ -1,11 +1,21 @@
 """Ajustes del proceso, leidos de entorno.
 
 RI-21: valores por defecto explicitos, y el arranque falla de inmediato si falta
-una variable obligatoria. RI-15: las claves se leen de entorno, nunca del
-repositorio ni de la base de datos.
+una variable obligatoria.
+
+**Aqui no hay ninguna credencial, y es deliberado** (RI-15, RNF-SEG-03, decision
+(a) de 2026-09-22). El proveedor es el CLI de Claude Code, que autentica con la
+sesion de la cuenta: la credencial vive fuera del proceso y la aplicacion no la
+lee, no la guarda y no puede filtrarla. La unica forma segura de tratar un
+secreto es no tenerlo.
+
+Hasta hoy quedaban `proveedor_generacion_clave`, `proveedor_generacion_url` y
+`proveedor_embeddings_clave`, obligatorias y sin un solo consumidor. Un campo
+asi no se nota nunca: obliga a exportar una variable inventada y hace creer que
+el sistema necesita algo que no necesita.
 """
 
-from pydantic import SecretStr, ValidationError, model_validator
+from pydantic import ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PREFIJO = "STORYMAKER_"
@@ -21,10 +31,7 @@ class Ajustes(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=PREFIJO, frozen=True)
 
     # Sin valor por defecto: sin estas no se arranca.
-    proveedor_generacion_clave: SecretStr
-    proveedor_generacion_url: str
     modelo: str
-    proveedor_embeddings_clave: SecretStr
     ruta_base_de_datos: str
 
     # Con valor por defecto explicito.
@@ -33,7 +40,6 @@ class Ajustes(BaseSettings):
     plazo_paso_codigo_s: int = 30  # D-04
     plazo_paso_modelo_s: int = 600  # D-04
     snapshot_cada_n_escenas: int = 5  # D-01
-    dimension_embeddings: int = 1024  # D-02
 
     @model_validator(mode="after")
     def el_plazo_del_paso_supera_la_espera_de_turno(self) -> "Ajustes":

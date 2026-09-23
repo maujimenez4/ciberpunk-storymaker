@@ -1,8 +1,13 @@
-"""P-03: las claves se leen de entorno y no dejan rastro (RI-15, RNF-SEG-03).
+"""P-03 y P-107: la aplicacion no guarda ninguna credencial (RI-15, RNF-SEG-03).
 
-Tres cosas distintas, y las tres han fallado en proyectos reales:
-el codigo no trae la clave dentro, los ajustes no la buscan en un fichero,
-y el objeto de ajustes no la escupe al registrarse en un log (RNF-OBS-03).
+Tras la decision (a) de 2026-09-22, RI-15 cambia de significado. Antes decia
+«las claves se leen de entorno, nunca del repositorio»; ahora dice algo mas
+fuerte: **no hay claves**. El proveedor es el CLI de Claude Code y autentica con
+la sesion de la cuenta, fuera del proceso.
+
+Los tres casos de aqui siguen valiendo, y el primero gana: el que comprobaba que
+la clave no se filtrara al representar los ajustes se sustituye por el que
+comprueba que no hay clave que filtrar.
 """
 
 import re
@@ -14,8 +19,6 @@ from pydantic import SecretStr
 from app.commons.config import Ajustes, cargar_ajustes
 from app.commons.config.tests.test_ajustes import ENTORNO_COMPLETO
 
-CAMPOS_SECRETOS = ("proveedor_generacion_clave", "proveedor_embeddings_clave")
-
 RAIZ = Path(__file__).resolve().parents[6]  # raiz del repositorio
 
 # Formas habituales de una clave escrita a mano en el codigo.
@@ -26,19 +29,27 @@ SOSPECHOSOS = re.compile(
 )
 
 
-def test_las_claves_son_secretas_y_no_aparecen_al_representar_los_ajustes(
+def test_los_ajustes_no_declaran_ninguna_credencial(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """RNF-OBS-03: registrar los ajustes no puede filtrar la clave."""
+    """RI-15 y RNF-SEG-03: no se protege un secreto, no se tiene.
+
+    Un `SecretStr` aqui significaria que el proceso vuelve a custodiar una
+    credencial, y con ella vuelven las tres formas de perderla: el log, el repr
+    y el volcado de configuracion.
+    """
     for nombre, valor in ENTORNO_COMPLETO.items():
         monkeypatch.setenv(nombre, valor)
 
     ajustes = cargar_ajustes()
 
-    for campo in CAMPOS_SECRETOS:
-        assert isinstance(getattr(ajustes, campo), SecretStr)
-    assert "clave-de-prueba" not in repr(ajustes)
-    assert "clave-de-prueba" not in str(ajustes)
+    secretos = [
+        nombre
+        for nombre, campo in Ajustes.model_fields.items()
+        if campo.annotation is SecretStr
+    ]
+    assert not secretos, f"vuelve a haber credenciales en los ajustes: {secretos}"
+    assert "SecretStr" not in repr(ajustes)
 
 
 def test_los_ajustes_no_leen_ningun_fichero_de_entorno() -> None:

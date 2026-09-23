@@ -191,6 +191,37 @@ Los criterios marcados **D** en la spec: no los cubre `pytest` solo.
 
 ---
 
+### Fase 10 · Cerrar lo que quedó abierto
+
+El plan se dio por completado el 2026-09-22 y no lo estaba. Esta fase no añade
+alcance: son los requisitos que la spec **ya pedía** y que las fases 5 a 8
+dejaron sin cumplir, más la limpieza de lo que D-02 dejó muerto. Aprobada por
+maujimenez4 el 2026-09-22.
+
+| # | Test en rojo | Cambio mínimo | Dónde | Req. |
+| --- | --- | --- | --- | --- |
+| P-105 | `test_los_ajustes_declaran_exactamente_lo_que_pide_ri_21` | Fuera las tres credenciales y `dimension_embeddings` | `commons/config/` | RI-21 |
+| P-106 | `test_el_modelo_del_cliente_sale_de_los_ajustes` | `ClienteDeClaudeCode` deja de fijar `"haiku"` a fuego | `commons/llm/` | RI-21, RI-13 |
+| P-107 | `test_los_ajustes_no_declaran_ninguna_credencial` | Decisión (a): la credencial es la sesión del CLI y vive fuera | `commons/config/` | RI-15, RNF-SEG-03 |
+| P-108 | `test_los_almacenes_leen_cada_capa_de_su_repositorio` | La clase que implementa `Almacenes` contra los repositorios | `features/contexto/repository.py` | §4.8, RF-CTX-02 |
+| P-109 | `test_el_canon_de_la_escena_n_aparece_en_el_contexto_de_la_n_mas_1` | La prueba de que el bucle de memoria se cierra | `features/contexto/` | RF-CAN-01, §4.8 |
+| P-110 | `test_ninguna_capa_con_origen_llega_vacia_con_almacenes_reales` | RF-CTX-14 contra la base de datos, no contra dobles | `features/contexto/` | RF-CTX-14 |
+| P-111 | `test_el_ciclo_de_escena_vive_en_la_feature` | El bucle sale de `corrida.py` a `service.py` | `features/escritura/` | §3.9, RF-ORQ-02 |
+| P-112 | `test_escribir_una_escena_encola_el_ciclo_y_el_trabajo_avanza` | El router encola en `EjecutorDeTrabajos` | `features/escritura/router.py` | RI-05, RF-ORQ-03 |
+| P-113 | `test_al_arrancar_se_retoman_los_trabajos_no_terminales_de_verdad` | La reanudación, conectada al ejecutor real | `commons/jobs/` | RF-ORQ-05, CA-3 |
+| P-114 | `test_crear_una_obra_desde_un_brief_devuelve_201` | `POST /obras` | `features/obra/router.py` | RI-01 |
+| P-115 | `test_generar_la_biblia_devuelve_trabajo` | `POST /obras/{id}/biblia` | `features/obra/router.py` | RI-02 |
+| P-116 | `test_generar_el_outline_devuelve_trabajo` | `POST /obras/{id}/outline` | `features/outline/router.py` | RI-03 |
+| P-117 | `test_planificar_una_escena_devuelve_trabajo` | `POST /escenas/{id}/planificar` | `features/escena/router.py` | RI-04 |
+| P-118 | `test_el_contexto_de_una_escena_expone_el_desglose_por_capa` | `GET /escenas/{id}/contexto` | `features/contexto/router.py` | RI-06 |
+| P-119 | `test_las_versiones_salen_en_orden_con_la_vigente_marcada` | `GET /escenas/{id}/versiones` | `features/escena/router.py` | RI-07 |
+| P-120 | `test_el_canon_se_consulta_con_su_escena_de_origen` | `GET /obras/{id}/canon` | `features/canon/router.py` | RI-08 |
+| P-121 | `test_el_esquema_expone_los_nueve_endpoints_de_ri_01_a_ri_09` | Sustituye al `len(rutas) >= 3` | `tests/` | RI-23 |
+| P-122 | — | `CLAUDE.md` §13 con el comando que arranca, y `sqlalchemy[asyncio]` | raíz | erratas |
+| P-123 | — | Desviaciones, cobertura y Cierre al día | `specs/001-backend-v1/` | §3.1 |
+
+---
+
 ## Cobertura de `architecture.md`
 
 La razón de esta tabla: el plan se puede quedar corto respecto a la arquitectura **en silencio**, porque la spec cita la arquitectura pero no la agota. Cada sección con contenido implementable tiene aquí su paso.
@@ -340,5 +371,6 @@ Se anotan **antes** de seguir, no al final.
 | 2026-09-22 | P-99 | **Resultado de CA-1:** 10/10 escenas `INTEGRADA`, 10.236 palabras, 0,5233 USD con Haiku. Cero defectos, y eso **no** significa que el texto sea impecable: en esta corrida corren tres de los once validadores y el Continuista no está en el bucle. Cero defectos significa que nadie miró. |
 | 2026-09-22 | P-56 | **Se retira.** Era `prop_mismo_estado_y_misma_semilla_dan_el_mismo_paquete`, es decir RF-CTX-01, que D-02 retiró al sustituir el índice vectorial por una ordenación semántica con varianza. La fase 5 pasa de cuatro propiedades mínimas a tres: el desglose suma (P-48), recortar una capa no altera las vecinas (P-49) y las capas protegidas nunca encogen (P-51). La cuarta —o cabe o lanza (P-52)— sigue. El plan pasa de 104 pasos a 103. |
 | 2026-09-22 | P-43 a P-59 | `hypothesis` entra como dependencia de desarrollo para los tests de propiedades. `verification.md` §2 los exige por nombre y la spec marca cuatro requisitos como «**T**, propiedad»; escribirlos a mano daría menos cobertura y ningún contraejemplo mínimo. |
+| 2026-09-22 | P-105 a P-107 | **La configuración exigía tres credenciales que nadie leía.** `proveedor_generacion_clave`, `proveedor_generacion_url` y `proveedor_embeddings_clave` eran obligatorias para arrancar y no las consumía una sola línea de código; `dimension_embeddings` tampoco. Sobrevivieron a D-02 y costaron una sesión entera de confusión: hacían creer que el sistema necesitaba una clave de API cuando el proveedor es el CLI de Claude Code y autentica con la sesión de la cuenta. Se borran las cuatro, y RI-15, RI-21 y RNF-SEG-03 se enmiendan: la aplicación **no guarda ninguna credencial**, que es una propiedad más fuerte que guardarla bien. P-105 y P-107 salen en un commit porque son la misma edición. El tope de candidatos que RI-21 pide **no** se añade todavía: sin consumidor sería el mismo fósil que estamos quitando, y entra en P-108. |
 | 2026-09-22 | P-17 | **`agents.py` no existia en ninguna feature.** `CLAUDE.md` §5.1 lo declara como segmento y §9.3 dice que el codigo de cada agente narrativo vive ahi; el modelo se invocaba desde `service.py`, con el mismo bloque repetido cuatro veces. Se mueve a `agents.py` en las cuatro features que hablan con el modelo. De paso, los modelos de `canon` pasan de `service.py` a su `schemas.py`: estaban en el segmento equivocado y, ademas, dejarlos alli habria creado un ciclo con `agents.py`. **El test de P-17 omitia `agents.py` de su lista de segmentos**, es decir estaba escrito contra la implementacion y no contra §5.1. Se sustituye por una regla —ningun fichero que no sea `agents.py` invoca al modelo— que no obliga a crear cascarones vacios y que crece sola. |
 | 2026-09-22 | P-06 | **Se parte en tres commits, dentro de una sola revisión de Alembic.** Dieciséis tablas no caben en un cambio verificable de una pieza: si el test falla, el fallo no se atribuye. Se mantiene `0001_inicial` como única revisión —lo que el plan exige— y lo que se parte es la entrega: (a) obra y manuscrito, (b) biblia y mundo, (c) canon, (d) orquestación y trazas. Cada commit añade sus tablas a la misma revisión con su test. **Ajustado el mismo día de tres a cuatro entregas:** al releer RD-01 aparecen `Personaje`, `PerfilDeVoz`, `Relacion`, `Lugar`, `Objeto` y `ReglaDeMundo`, que el corte de tres metía todas en (b). Son 21 tablas, no 16. |
