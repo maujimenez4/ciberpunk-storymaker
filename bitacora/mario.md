@@ -136,3 +136,14 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno
 - **Estado:** terminado
 - **Ojo:** mi error venía de una lectura de las 16:05 que no volví a comprobar antes de repetirla. Es el mismo fallo que llevo señalando todo el día: una medición vieja presentada como estado actual. **P-4 no es una pregunta virgen:** el código la contestó y lo que falta es confirmarla, con su límite a la vista —la regla de segmentos alternos es correcta con diálogo bien puntuado y falla si una escena usa la raya como guion o inciso suelto—.
+
+## 20:30 · Repaso completo de la 002 (lectura web): terminado
+
+- **Qué:** leída entera y verificadas las siete correcciones sobre el fichero. Los dos huecos de cobertura eran reales y están cerrados:
+  - **C-1** — `RD-01` y `RD-03` tenían flecha desde `CA-15` pero su texto solo comprobaba `RNF-REN-01`. Pasan a `CA-17`, el criterio de análisis estático. `CA-15` se queda con lo que de verdad medía.
+  - **C-2** — `RF-UI-04` es accesibilidad y su único criterio, `CA-10`, medía **renderizado**. Un contraste 2:1 renderiza perfectamente. Ahora hay `CA-22` (foco, etiquetas, contraste AA, `Inspección`) y `RF-UI-06` con `CA-10` para el renderizado en navegador real.
+  - **R-1** — `CU-04` conserva la petición y `CA-5(c)` decía «sin rastro»: cláusula añadida para que nadie borre lo que el otro pide guardar.
+  - Menores: `RF-PET-05` y `RF-PET-08` suben de `S` a `M`, y el orden de `CA-21` y `RD-04` arreglado.
+- **Ficheros:** ninguno tocado; solo lectura y medición
+- **Estado:** terminado
+- **Ojo:** queda **un** defecto cosmético nuevo: `CA-22` está intercalado entre `CA-10` y `CA-11`, así que la serie va `1..10, 22, 11..21`. Es el mismo desorden que se acababa de arreglar con `CA-21`. Por lo demás, por mi parte la spec está en condiciones de pasar a `en-revision`: cero preguntas abiertas, cobertura completa y cada criterio midiendo lo que dice medir. **La firma es del usuario**, y el harness ya denegó un intento de autofirma con motivo `[Self-Approval]`, que es lo que §14 pide.

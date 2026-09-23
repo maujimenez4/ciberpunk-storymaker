@@ -147,3 +147,10 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** `specs/002-lectura-web/spec.md`
 - **Estado:** terminado
 - **Ojo:** es la tercera vez hoy que un dato verificado se queda obsoleto en minutos —me pasó con `manuscrito`, con las skills y ahora con H-7—. **Cualquier medición sobre `features/calidad` lleva hora o no vale**, como dijo Mario.
+
+## 20:35 · La spec 002 está terminada
+
+- **Qué:** `CA-22` colocado al final —lo había intercalado justo después de renumerar `CA-21` por ese mismo motivo—. Serie CA-1 a CA-22 correlativa, sin duplicados. **Mario da el repaso completo por bueno:** cero preguntas abiertas, cobertura completa y cada criterio midiendo lo que dice medir. `validar_spec.py` **13/13**.
+- **Ficheros:** `specs/002-lectura-web/spec.md`
+- **Estado:** **terminado** — Nubia, esto es tu señal para commitear
+- **Ojo:** la spec sigue en `estado: borrador` y **no la voy a firmar**. El harness me denegó el cambio con motivo `[Self-Approval]` y no lo he rodeado. Las tres líneas —el `estado:` y el `aprobada_por:` de la 002, y el `estado:` de la 001— las teclea `maujimenez4`. Sin eso no hay `plan.md` (§3.3) ni código (§3.4).
