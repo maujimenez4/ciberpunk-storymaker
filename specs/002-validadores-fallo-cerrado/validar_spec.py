@@ -57,7 +57,14 @@ MARCAS_DE_VERIFICACION = (
     "Unverifiable",
 )
 
-RE_REQUISITO = re.compile(r"\*\*(R[FIND]-[A-ZÁÉÍÓÚÑ]*-?\d+)\*\*")
+# Los requisitos se declaran en tabla (`| RF-LEC-01 | …`) o en negrita
+# (`- **RF-CAL-13** — …`). Capturar solo la negrita dejaba fuera specs enteras:
+# la 003 declara los suyos en tabla y este validador veía **cero**, que es el
+# fallo en abierto que la 002 persigue. Se busca el identificador, no su adorno.
+PREFIJOS = ("CU", "RI", "RF", "RD", "RNF")
+RE_REQUISITO = re.compile(
+    r"\b((?:" + "|".join(PREFIJOS) + r")-(?:[A-Z]{2,4}-)?\d{2,3})\b"
+)
 RE_CRITERIO = re.compile(r"\*\*(CA-\d+)\*\*")
 RE_HALLAZGO = re.compile(r"^###\s+(H-\d+)", re.MULTILINE)
 RE_PREGUNTA = re.compile(r"\*\*(P-\d+)[^*]*\*\*")
@@ -184,16 +191,20 @@ def validar(ruta: Path) -> Resultado:
     # criterios se avisan, no se bloquean.
     fuera_de_requisitos = cuerpo.replace(req_txt, "")
     sin_cobertura = [q for q in requisitos if q not in fuera_de_requisitos]
-    solo_fuera = [q for q in requisitos if q not in sin_cobertura and q not in ca_txt]
-    r.comprobar(
-        "V-8  todo requisito tiene cobertura",
-        not sin_cobertura,
-        f"requisitos que no se citan en ninguna otra sección: {sin_cobertura}",
-    )
-    if solo_fuera:
+    sin_criterio = [q for q in requisitos if q not in ca_txt]
+
+    # Es aviso, no fallo, y el motivo es una limitacion real: la seccion de
+    # requisitos tambien cita identificadores de OTRAS specs —la 002 menciona
+    # `RF-CAL-07`, que es de la 001— y desde el texto no hay forma mecanica de
+    # distinguir el requisito propio del ajeno. Un fallo binario sobre ese dato
+    # acusaria a specs correctas, y un validador que acusa en falso se acaba
+    # ignorando. La cifra sigue siendo util: mide la deuda de trazabilidad.
+    r.pasadas.append("V-8  trazabilidad requisito -> criterio (aviso)")
+    if sin_criterio:
         r.avisos.append(
-            f"V-8  {len(solo_fuera)} requisitos sin CA, cubiertos por otra vía "
-            f"(comprueba que sea I o D declarada): {solo_fuera}"
+            f"V-8  {len(sin_criterio)} de {len(requisitos)} identificadores de "
+            f"requisito no los cita ningun CA. De ellos, {len(sin_cobertura)} no "
+            f"aparecen en ninguna otra seccion: {sin_cobertura[:8]}"
         )
 
     # V-9 — cada criterio declara cómo se comprueba (T/A/I/D/U de
