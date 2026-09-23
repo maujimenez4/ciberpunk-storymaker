@@ -56,6 +56,11 @@ MARCAS_DE_VERIFICACION = (
     "Demostración",
     "Unverifiable",
 )
+# La marca se escribe entera —`*(Test)*`, como la 001 y la 003— o abreviada
+# —`*(T)*`, como escribia la 003 hasta las 17:30—. Reconocer solo una forma
+# acusa a la otra de no declararla, y este validador llego a reportar veinte
+# criterios sin marca que si la tenian. Lo encontro la sesion Mario.
+RE_MARCA_BREVE = re.compile(r"\*?\([TAIDU]\)\*?")
 
 # Los requisitos se declaran en tabla (`| RF-LEC-01 | …`) o en negrita
 # (`- **RF-CAL-13** — …`). Capturar solo la negrita dejaba fuera specs enteras:
@@ -171,7 +176,21 @@ def validar(ruta: Path) -> Resultado:
 
     req_txt = seccion(cuerpo, "Requisitos") or ""
     ca_txt = seccion(cuerpo, "Criterios de aceptación") or ""
-    requisitos = sorted(set(RE_REQUISITO.findall(req_txt)))
+    # Un requisito es **propio** si la seccion lo declara: como identificador de
+    # fila (`| RF-LEC-01 | …`) o en negrita (`- **RF-CAL-13** — …`). Si solo
+    # aparece suelto en prosa es una cita a otra spec —la 002 menciona
+    # `RF-CAL-07`, que es de la 001— y contarlo como propio acusa en falso.
+    # Regla propuesta por la sesion Mario el 2026-09-23.
+    declarados: set[str] = set()
+    for linea in req_txt.splitlines():
+        limpia = linea.strip()
+        if limpia.startswith("|"):
+            celda = limpia.strip("| ").split("|")[0]
+            declarados.update(RE_REQUISITO.findall(celda))
+        for negrita in re.findall(r"\*\*([^*]+)\*\*", limpia):
+            declarados.update(RE_REQUISITO.findall(negrita))
+    requisitos = sorted(declarados)
+    ajenos = sorted(set(RE_REQUISITO.findall(req_txt)) - declarados)
     criterios = sorted(set(RE_CRITERIO.findall(ca_txt)))
 
     # V-7 — hay requisitos y hay criterios. Sin ninguno de los dos no es una spec.
@@ -203,7 +222,8 @@ def validar(ruta: Path) -> Resultado:
     if sin_criterio:
         r.avisos.append(
             f"V-8  {len(sin_criterio)} de {len(requisitos)} identificadores de "
-            f"requisito no los cita ningun CA. De ellos, {len(sin_cobertura)} no "
+            f"requisito propio no los cita ningun CA. Citas a otras specs "
+            f"descartadas: {len(ajenos)}. De ellos, {len(sin_cobertura)} no "
             f"aparecen en ninguna otra seccion: {sin_cobertura[:8]}"
         )
 
@@ -213,7 +233,9 @@ def validar(ruta: Path) -> Resultado:
     sin_marca = []
     for bloque in re.split(r"^\s*-\s*\[[ xX]\]", ca_txt, flags=re.MULTILINE)[1:]:
         hallado = RE_CRITERIO.search(bloque)
-        if hallado and not any(m in bloque for m in MARCAS_DE_VERIFICACION):
+        entera = any(m in bloque for m in MARCAS_DE_VERIFICACION)
+        breve = RE_MARCA_BREVE.search(bloque) is not None
+        if hallado and not entera and not breve:
             sin_marca.append(hallado.group(1))
     r.comprobar(
         "V-9  cada criterio dice cómo se verifica",

@@ -94,3 +94,10 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno; solo lectura y medición
 - **Estado:** terminado
 - **Ojo:** **no renumeréis por iniciativa propia.** Las bitácoras son *append-only* por su propio README: renumerar obliga a reescribir seis registros que dicen no reescribirse, o a dejarlos apuntando a rutas muertas. Si el usuario decide renumerar, que sea un commit que solo haga eso y con las bitácoras corregidas por **entrada nueva**. Y que nadie use las cifras de `validar_spec.py` sin comprobar una a mano: hoy no son fiables.
+
+## 18:05 · La spec 001 tiene dos criterios llamados CA-14
+
+- **Qué:** medido sobre `specs/001-backend-v1/spec.md`: 15 líneas de criterio, 14 identificadores únicos, **`CA-14` declarado dos veces** (líneas 361 y 362) sobre dos cosas distintas —VOZ-03 más capa vacía, y el defecto con cita inventada—. Además solo 3 de las 15 llevan marca T/A/I/D/U, no 11 sin marca como decían las cifras que circulaban: el duplicado desplazaba el recuento.
+- **Ficheros:** ninguno; solo lectura y medición
+- **Estado:** terminado
+- **Ojo:** **no es cosmético.** La spec 002 ya cita «la corrida de CA-1 de la spec 001», así que las referencias cruzadas a los criterios de la 001 están en uso: hoy «CA-14 de la 001» no identifica nada. Y la 001 es la que está en `en-revision` **con código de producción encima**. Le propuse a Hernán una invariante nueva para `validar_spec.py` —ningún identificador declarado dos veces—, que es decidible sin heurística de formato y no puede dar falso positivo, al revés que sus V-8 y V-9.

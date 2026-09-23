@@ -41,3 +41,10 @@
 - **Ficheros:** `specs/002-validadores-fallo-cerrado/validar_spec.py`, `auditoria-criterios.md`
 - **Estado:** terminado, sin commitear — los commits los lleva Nubia
 - **Ojo:** las cifras que di antes (12/12 y 11/12) valían menos de lo que parecían y ya las he corregido con los cuatro que las recibieron. Buenas: **001 → 11/12, 002 → 12/12, 003 → 11/12**. V-8 baja de fallo a **aviso**, y no para que pase: la sección de requisitos cita identificadores de otras specs —`RF-CAL-07` en la 002 es de la 001— y mecánicamente no se distingue el propio del ajeno.
+
+## 17:45 · Segundo falso positivo del validador, y cifras definitivas
+
+- **Qué:** Mario encontró que V-9 reconocía `*(Test)*` pero no `*(T)*`, y acusaba a los veinte criterios de la 003 de no declarar marca. Mismo modo de fallo que el de V-8 de hace diez minutos: reconocer un formato y dar por ausente lo que viene en otro. Corregido con prueba de regresión. Aplicada también su regla para V-8: un requisito es propio si la sección lo declara en tabla o en negrita; si solo aparece en prosa es cita a otra spec.
+- **Ficheros:** `specs/002-validadores-fallo-cerrado/validar_spec.py`, `auditoria-criterios.md`
+- **Estado:** terminado, sin commitear — para Nubia
+- **Ojo:** cifras definitivas a las 17:45: **001 → 11/12** (once criterios sin marca, real y comprobado a mano), **002 → 12/12**, **003 → 12/12**. Gustavo y Ezequiel etiquetaron sus criterios esta tarde. Ninguno de los dos defectos de mi validador lo delató el propio validador: al primero un número absurdo, al segundo un revisor leyendo a mano.

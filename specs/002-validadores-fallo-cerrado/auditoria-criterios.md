@@ -117,11 +117,14 @@ G1a, aplicada al validador de la spec.
 
 ### Cifras, y una corrección que conviene leer
 
-| Spec | Invariantes | Requisitos que ningún CA cita | V-9 |
-| --- | --- | --- | --- |
-| 001-backend-v1 | 11/12 | 141 de 142 (74 no aparecen fuera de su tabla) | falla: 11 criterios sin marca |
-| 002-validadores | **12/12** | 4 de 7 | pasa |
-| 003-lectura-web | 11/12 | 18 de 51 | falla: 20 criterios sin marca |
+| Spec | Invariantes | Lo que falla |
+| --- | --- | --- |
+| 001-backend-v1 | 11/12 | V-9: once criterios no declaran su marca de verificación |
+| 002-validadores | **12/12** | — |
+| 003-lectura-web | **12/12** | — |
+
+*Medido a las 17:45. La 002 y la 003 llegaron a 12/12 esta tarde: Gustavo etiquetó sus
+nueve criterios con su requisito y Ezequiel añadió marca y flecha a los veinte suyos.*
 
 **Una versión anterior de este informe daba 12/12 y 11/12 sobre un validador que no veía
 los requisitos.** Su expresión regular solo reconocía los escritos en **negrita**, y las
@@ -137,9 +140,18 @@ distinguir el propio del ajeno. No se relajó la invariante para que pasara: com
 binario no era decidible con la información disponible, y un validador que acusa en falso
 se acaba ignorando. La cifra se conserva entera como medida de deuda.
 
-Que el validador encuentre más defectos en la 001 y la 003 que en la spec que audita
-importa tanto como el 12/12: uno que solo los encuentra donde su autor quería suele estar
-escrito para encontrarlos.
+**Y un segundo falso positivo, encontrado por Mario media hora después.** V-9 reconocía la
+marca escrita entera —`*(Test)*`— pero no la abreviada —`*(T)*`—, que es como la escribía
+entonces la 003: acusaba a sus veinte criterios de no declarar algo que sí declaraban. Dos
+invariantes contiguas, el mismo modo de fallo —reconocer un formato y dar por ausente lo
+que viene en otro— y las dos acusando de más. Corregido, con prueba de que las tres formas
+(entera, abreviada, ausente) se distinguen.
+
+La conclusión que dejan los dos episodios vale más que cualquiera de los hallazgos de esta
+auditoría: **un validador necesita a su vez ser verificado**, y ninguno de los dos defectos
+lo delató el propio validador. Al primero lo delató un número absurdo en una spec que no
+era la auditada; al segundo, un revisor humano leyendo la spec a mano. Es el argumento
+entero a favor de que estas herramientas fallen cerradas y de que alguien las contraste.
 
 Dos decisiones de diseño discutibles, por si alguien quiere cambiarlas:
 
