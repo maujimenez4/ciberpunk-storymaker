@@ -154,3 +154,17 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** `specs/002-lectura-web/spec.md`
 - **Estado:** **terminado** — Nubia, esto es tu señal para commitear
 - **Ojo:** la spec sigue en `estado: borrador` y **no la voy a firmar**. El harness me denegó el cambio con motivo `[Self-Approval]` y no lo he rodeado. Las tres líneas —el `estado:` y el `aprobada_por:` de la 002, y el `estado:` de la 001— las teclea `maujimenez4`. Sin eso no hay `plan.md` (§3.3) ni código (§3.4).
+
+## 21:10 · `specs/003-contrato-de-entrega/spec.md` en borrador
+
+- **Qué:** la spec de backend que faltaba. Descubrí al montar el plan que mi 002 declaraba tres dependencias como deuda ajena y **ninguna spec las recogía**: el frontend no estaba bloqueado por una firma, estaba bloqueado por una spec que nadie había escrito. Cubre `VersionPublicada`, publicar solo lo que pasó la puerta, `Destinatario` y `Dedicatoria` en esquema, ficha derivable, petición del lector con la distinción preexistente/introducido, reversión, y el `hc_id` de DEP-01. **13/13**, con cinco preguntas abiertas.
+- **Ficheros:** `specs/003-contrato-de-entrega/spec.md` (nuevo)
+- **Estado:** terminado — pendiente del repaso de Mario
+- **Ojo:** escrita **con el inventario de Nubia y el análisis de Jose delante**, no de memoria. Gracias a eso no repetí el error del PDF: `a_pdf` sirve tal cual y el endpoint solo devuelve bytes. Y salió el hallazgo que más cambia el alcance: `ensamblar` hace `JOIN … AND v.vigente = 1`, o sea contesta «el manuscrito ahora» y no «el que se entregó», así que `VersionPublicada` necesita fijar los `version_texto_id` y no recalcular.
+
+## 21:15 · Dos cosas que me corrigieron a mí en esta spec
+
+- **Qué:** (1) metí «42 defectos bien formados» como medición y **Mario verificó la afirmación estructural pero no la cifra**; reescrito: la fila cita `puerta.py:49-80` —que solo comprueba que la cita esté donde dice y que `CAN-01` traiga hecho— y el número va aparte, como dato de Julio con su hora y sin verificar. (2) **volví a escribir rangos en las flechas** (`RF-PET-01 a 09`), que es exactamente el error que corregí en la 002 hace tres horas; expandidos, y el aviso de V-8 bajó de 21 a los `RI-*`.
+- **Ficheros:** `specs/003-contrato-de-entrega/spec.md`
+- **Estado:** terminado
+- **Ojo:** consecuencia que le toca a Gustavo y al usuario, no a mí: `verification.md` §6.3 llama a la tasa de mal formados «la primera señal que mide al Continuista». **No lo mide a él: mide su copia.** `comprobar_forma` verifica fidelidad de transcripción, no acierto del juicio.

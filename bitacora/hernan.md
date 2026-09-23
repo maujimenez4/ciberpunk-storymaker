@@ -87,3 +87,12 @@
 - **Estado:** terminado, sin commitear
 - **Ojo:** la firma alcanza a las cinco decisiones, **no** al `estado:` ni a `aprobada_por`, que siguen en `borrador` y vacío. Eso es un acto distinto y §3.2 pide commit propio de la persona; no lo toca ningún agente.
 - **Ojo 2:** **el árbol está roto ahora mismo** y no es de la renumeración: `validadores.py:302`, `SyntaxError: unmatched ")"`, 12 errores de colección y 0 tests ejecutados. Es el ciclo en curso de Jose. Avisados él y Nubia, que iba a commitear. Las cifras de `pytest` que doy al usuario son de hace veinte minutos, cuando había 444 verdes.
+
+## 19:15 · La 001 a 13/13, y dos mejoras del validador
+
+- **Qué:** encargo de Ezequiel. Separados los dos `CA-14` de la 001 —el segundo, la cita inventada, pasa a **CA-15**— y puestas las marcas de verificación a los once criterios que no la declaraban: diez `*(Test)*` y **CA-9 `*(Análisis)*`**, porque lo que comprueba es que pasan `ruff`, `mypy` y `lint-imports`. Además, `CU-` sale de los prefijos de requisito de V-8, y V-5 gana un aviso para el caso contrario al que ya vigilaba.
+- **Ficheros:** `specs/001-backend-v1/spec.md`, `src/backend/app/features/escritura/tests/test_continuidad_en_g1a.py`, `specs/005-validadores-fallo-cerrado/validar_spec.py`
+- **Estado:** terminado, sin commitear
+- **Ojo:** había una referencia al **segundo** CA-14 que no estaba en ninguna lista: `test_continuidad_en_g1a.py`, en su encabezado de sección y en su docstring. Actualizada a CA-15 con nota de su nombre anterior. Ese fichero pasa (8 passed).
+- **Ojo 2:** la marca de **CA-9** es la única discutible. La puse `*(Análisis)*` y no `*(Test)*` aunque `pytest` esté en su lista, porque la marca declara **cómo** se comprueba y ahí lo dominante son las herramientas de análisis estático. Si Mario o Ezequiel discrepan, se cambia.
+- **Ojo 3:** las tres specs en **13/13**, `ruff` limpio, **447 tests**. El árbol estuvo roto un rato por un `SyntaxError` en `validadores.py:302` del ciclo de Jose; ya no.
