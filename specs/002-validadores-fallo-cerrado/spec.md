@@ -58,9 +58,18 @@ está en [`sonda_invariantes.py`](sonda_invariantes.py), junto a esta spec y **f
     -> pydantic_core.ValidationError: 2 validation errors for Defecto
 
 La escena entra y sale en el mismo valor, así que **debe** emitirse EST-01; lo que ocurre
-es una excepción de validación de esquema que sube sin tipar. La cita sale de
-`texto[:40].strip()`, que con texto vacío o solo espacios no puede anclar nada. Una prosa
-vacía es un modo de fallo corriente del modelo, y hoy rompe la puerta en vez de cerrarla.
+es una excepción de validación de esquema que sube sin tipar. Una prosa vacía es un modo
+de fallo corriente del modelo, y hoy rompe la puerta en vez de cerrarla.
+
+**Son dos casos distintos, y la primera redacción los confundía** (lo señaló la sesión
+**Mario** el 2026-09-23). La cita sale de `texto[:40].strip() or texto`:
+
+| Entrada | Qué hacía | Por qué está mal |
+| --- | --- | --- |
+| `""` | `ValidationError` de Pydantic | La cita queda vacía y `Defecto` la rechaza |
+| `"   "` | EST-01 con `cita="   "` | **No revienta**: emite un defecto bien formado según la regla 8 y del todo inútil para reparar, porque el pasaje citado son tres espacios |
+
+El segundo es el peor de los dos para quien lo sufre: no hay traza de que algo fuera mal.
 
 ### H-2 · `validar_nivel_de_calor` falla **en abierto** con un nivel fuera de escala — *SEG-01*
 
@@ -70,8 +79,8 @@ vacía es un modo de fallo corriente del modelo, y hoy rompe la puerta en vez de
 `_vetados` devuelve la tupla vacía para cualquier nivel que no esté en `_ESCALA`, y una
 tupla vacía significa «nada prohibido». Una errata en el `nivel_de_calor` de la obra
 **desactiva por completo** el único validador mecánico de la regla 5 de `CLAUDE.md` §8,
-sin ruido de ningún tipo. Es el hallazgo más grave de los cinco mecánicos: un guardarraíl
-de seguridad que se apaga en silencio.
+sin ruido de ningún tipo. Es el hallazgo más grave de los cinco que salieron de la sonda: un
+guardarraíl de seguridad que se apaga en silencio.
 
 ### H-3 · `validar_canon` no es determinista con empate en `orden_discurso` — *CAN-01*
 
@@ -142,8 +151,8 @@ vacía, que la puerta lee como «sin defectos».
 
 - **RF-CAL-13** — Ningún validador mecánico devuelve lista vacía ante una entrada que no
   pertenece a su dominio declarado. Si no puede evaluar, **lanza** un error de dominio
-  tipado de `commons/errors/`. *(Corrige H-2 y H-6; es la precondición explícita de §2.3
-  del catálogo.)*
+  tipado de `commons/errors/`. *(Corrige H-2; es la precondición explícita de §2.3 del
+  catálogo.)*
 - **RF-CAL-14** — Todo validador es una función **total** sobre `texto`: para cualquier
   cadena, incluida la vacía y la de solo espacios, devuelve defectos o lanza un error de
   dominio, nunca un `ValidationError` de Pydantic. *(Corrige H-1.)*
@@ -153,18 +162,43 @@ vacía, que la puerta lee como «sin defectos».
 - **RF-CAL-16** — CON-03 contrasta **información conocida** contra **información usada**, y
   no objetos físicos contra descripciones de evento. El campo que transporta cada concepto
   está separado en el esquema y en el prompt. *(Corrige H-5.)*
-- **RF-CAL-17** — Las seis propiedades viven en la suite como tests basados en
-  propiedades, no como ejemplos. *(Evita la reaparición: un ejemplo arreglado no protege
-  la función.)*
+
+  **Arrastra CON-02, y la primera versión de esta spec no lo decía.** `validar_objetos`
+  (CON-02, RF-CAL-07) lee el mismo `Afirmacion.objeto` que este requisito parte, y CON-02
+  **sí bloquea G1a**: está en `BLOQUEANTES_EN_G1A`. Partir el campo sin decidir cuál de
+  los dos alimenta a CON-02 lo rompe, y lo rompe en una feature distinta. Lo señaló la
+  sesión **Mario** el 2026-09-23, con `escritura/tests/test_continuidad_en_g1a.py` en rojo
+  como prueba.
+- **RF-CAL-17** — Las **cuatro** invariantes de totalidad y de orden —H-1 a H-4— viven en
+  la suite como tests basados en propiedades. H-5 y H-6 entran como ejemplos, y se dice
+  por qué: el criterio de CON-03 y el de diálogo no están enunciados como propiedad
+  todavía, y enunciarlos mal protege menos que un ejemplo honesto. *(Evita la
+  reaparición: un ejemplo arreglado no protege la función.)*
+- **RF-CAL-18** — `solo_narracion` conserva la narración que sigue al inciso del
+  narrador, y VOZ-03 la evalúa. *(Corrige H-6.)* **No se implementa hasta que P-4 esté
+  contestada:** el fallo no está en la entrada sino en el criterio de qué es diálogo en
+  español, y ese criterio es la pregunta abierta. RF-CAL-13 no sirve aquí —un párrafo con
+  diálogo y narración en la misma línea es entrada perfectamente **de dominio**, así que
+  no hay nada que lanzar—, y darlo por cubierto fue un error de esta spec que señaló la
+  sesión **Mario** el 2026-09-23.
 
 ## Criterios de aceptación
 
-- [ ] **CA-1** — La sonda de [`sonda_invariantes.py`](sonda_invariantes.py) pasa entera
-      sobre el código de producción, sin relajar ninguna invariante. *(Test)*
+- [ ] **CA-1** — La sonda de [`sonda_invariantes.py`](sonda_invariantes.py), **actualizada
+      con las respuestas firmadas a P-1 a P-5**, pasa entera sobre el código de
+      producción. *(Test)*
+
+      La redacción anterior —«pasa entera, sin relajar ninguna invariante»— era
+      incumplible, y lo señaló la sesión **Mario** el 2026-09-23: la sonda codificaba
+      **una** respuesta a P-2 (con texto vacío se **devuelve** un defecto) y el código
+      eligió la otra (**lanza**). Con aquella redacción, o se relajaba la invariante
+      —prohibido por el propio criterio— o P-2 no estaba abierta. Un criterio de
+      aceptación no puede prejuzgar una pregunta que la spec declara abierta.
 - [ ] **CA-2** — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza, y existe un
       test que lo comprueba con un nivel que no está en la escala. *(Test)*
-- [ ] **CA-3** — `validar_giro_de_valor` con `""` y con `"   "` devuelve EST-01 o lanza un
-      error de dominio; en ningún caso un `ValidationError`. *(Test)*
+- [ ] **CA-3** — `validar_giro_de_valor` trata los **dos** casos de H-1 y los trata igual:
+      ni `""` produce un `ValidationError` ni `"   "` produce un defecto cuya cita sean
+      espacios. Qué hace en su lugar lo decide P-2. *(Test)*
 - [ ] **CA-4** — Barajar `canon` y barajar `afirmaciones` no cambia la salida de
       `validar_canon` ni la de `validar_continuidad_fisica`, comprobado con `hypothesis`
       sobre alcance pequeño. *(Test)*
@@ -173,8 +207,25 @@ vacía, que la puerta lee como «sin defectos».
       redactada con otras palabras que la `descripcion` del Extractor. *(Test)*
 - [ ] **CA-6** — Un párrafo con diálogo y narración en la misma línea conserva la narración
       en `solo_narracion`, y VOZ-03 la evalúa. *(Test)*
-- [ ] **CA-7** — La tasa de defectos mal formados sobre la corrida de CA-1 de la spec 001
-      no empeora. *(Demostración)*
+- [ ] **CA-7** — Ninguna afirmación con objeto físico deja de producir CON-02 por el corte
+      de RF-CAL-16: `validar_objetos` sigue bloqueando G1a igual que antes, comprobado con
+      su propio test y con el de `escritura` que lo ejercita de punta a punta. *(Test)*
+- [ ] **CA-8** — Las cuatro invariantes de H-1 a H-4 viven en
+      `features/calidad/tests/`, dentro de `testpaths`, y `uv run pytest` las recoge sin
+      nombrar ningún fichero. Hoy la sonda está **fuera** a propósito, así que la suite no
+      las ejercita: mientras sigan solo ahí, RF-CAL-17 no está cumplido y el arreglo no
+      está protegido de volver a caer. *(Test)*
+
+      Lo señaló la sesión **Mario** el 2026-09-23, repasando la cobertura RF→CA: RF-CAL-17
+      era el único requisito sin criterio, y es justo el que evita que esto se repita.
+- [ ] **CA-9** — *(Pendiente de umbral, y por eso no se puede marcar.)* «La tasa de
+      defectos mal formados no empeora» no declara línea base, y `verification.md` §5 dice
+      que lo que no se puede incumplir no verifica. Es el mismo reproche que P-3 le hace al
+      comentario de `defectos.py`, y esta spec lo cometía a su vez: lo señaló la sesión
+      **Mario** el 2026-09-23. La línea base no existe todavía —la corrida de CA-1 de la
+      spec 001 no está registrada y la 001 sigue en `en-revision`—, así que este criterio
+      **no entra en la aprobación**: se fija con el primer número real o se retira. Va el
+      último a propósito: es el único que no se puede marcar. *(Demostración)*
 
 ## Reglas de dominio afectadas
 
@@ -193,6 +244,10 @@ vacía, que la puerta lee como «sin defectos».
 - **Esquema:** RF-CAL-16 probablemente sí. Separar objeto físico de información toca
   `Afirmacion` y el contrato con `canon`. Si la separación llega al ledger, hay migración
   de Alembic.
+- **CON-02 arrastrado por RF-CAL-16:** `validar_objetos` lee hoy el mismo campo que se
+  parte, y **bloquea G1a**. El corte tiene que decir explícitamente cuál de los dos campos
+  lo alimenta, y CA-7 lo protege de regresión. El coste de no haberlo declarado ya se vio:
+  un test de `escritura` en rojo por un cambio de esquema de `calidad`.
 - **Prompts:** RF-CAL-16 obliga a una **versión nueva** de `continuista.v1.md`, no a
   editarlo en sitio (`CLAUDE.md` §10).
 - **Fronteras (§5):** el acoplamiento de H-5 es entre `calidad` y `canon` a través del
@@ -241,6 +296,21 @@ Mientras quede una, esta spec no se aprueba (`CLAUDE.md` §3.2).
   Las dos cosas no sobran: la primera impide, la segunda detecta.
 
 ## Trazabilidad
+
+Cobertura requisito → criterio, para que no haya que repasarla a mano. La comprobó así la
+sesión **Mario** el 2026-09-23 y encontró que RF-CAL-17 se había quedado sin ninguno:
+
+| Requisito | Criterios | Hallazgo que cierra |
+| --- | --- | --- |
+| RF-CAL-13 | CA-2 | H-2 |
+| RF-CAL-14 | CA-3 | H-1 |
+| RF-CAL-15 | CA-4 | H-3, H-4 |
+| RF-CAL-16 | CA-5, CA-7 | H-5, y CON-02 que arrastra |
+| RF-CAL-17 | CA-8 | Ninguno: evita que los cinco anteriores vuelvan a caer |
+| RF-CAL-18 | CA-6 | H-6 |
+
+CA-1 es transversal —la sonda entera— y CA-9 queda fuera de la aprobación por no tener
+umbral.
 
 | Hallazgo | Técnica que lo encontró | Origen |
 | --- | --- | --- |

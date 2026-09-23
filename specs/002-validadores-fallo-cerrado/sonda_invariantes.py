@@ -22,6 +22,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from app.commons.errors import EntradaFueraDeDominio
 from app.features.calidad import (
     Afirmacion,
     HechoDeCanon,
@@ -53,8 +54,20 @@ def huella(defectos):
 @given(st.text(min_size=0, max_size=60))
 def test_h1_giro_de_valor_es_total(texto: str) -> None:
     """Una prosa vacía es un modo de fallo corriente del modelo. Debe producir
-    EST-01 o un error de dominio, nunca un ValidationError de Pydantic."""
-    defectos = validar_giro_de_valor("duda", "duda", texto, VT)
+    EST-01 o un error de dominio, nunca un ValidationError de Pydantic.
+
+    Resuelto el 2026-09-23 por la sesión Jose: con texto vacío o solo espacios
+    se lanza `EntradaFueraDeDominio`, porque el axioma 11 exige que la cita
+    ancle y sin texto no hay pasaje que citar. El cuerpo de este test se
+    completa aquí para que siga diciendo la verdad; RF-CAL-14 ya lo permitía
+    —«devuelve defectos o lanza un error de dominio»—, pero solo se comprobaba
+    la mitad.
+    """
+    try:
+        defectos = validar_giro_de_valor("duda", "duda", texto, VT)
+    except EntradaFueraDeDominio:
+        assert not texto.strip(), "solo la prosa vacia sale por aqui"
+        return
     for d in defectos:
         assert texto[d.desplazamiento_inicio : d.desplazamiento_fin] == d.cita
 
