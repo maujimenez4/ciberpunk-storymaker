@@ -1,0 +1,11 @@
+# Git para Windows convierte a CRLF al hacer checkout, y bash **no ejecuta** un
+# guion con finales CRLF: falla con `$'\r': command not found` antes de llegar a
+# comprobar nada. Los guiones de shell se quedan en LF siempre, en todas las
+# plataformas.
+*.sh text eol=lf
+
+# Los prompts son contrato: su hash se registra en `ejecucion` (RI-14) y P-100
+# depende de que se pueda reconstruir. Si el checkout cambiara los finales de
+# linea, el hash cambiaria con ellos y la auditoria dejaria de cuadrar entre una
+# maquina y otra.
+*.md text eol=lf
