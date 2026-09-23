@@ -77,3 +77,17 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** ninguno tocado
 - **Estado:** bloqueado — esperando a `maujimenez4` para saber quién commitea
 - **Ojo:** `sonda_dominio.py` **sale con código 0 y no imprime nada**. No puedo confirmar por su salida que pasen las siete propiedades que dice cubrir; solo que no falla. Quien la dé por evidencia en la spec 002 debería saberlo.
+
+## 17:35 · Orquestación: decisión de no renumerar, y DEP-01 más hondo
+
+- **Qué:** el usuario me pone a orquestar todas las specs con prioridad de decisión. Primera decisión: **no se renumera nada**. La 002 sigue siendo validadores y el frontend sigue siendo la 003. Verifiqué el coste: **23 ficheros citan la ruta**, 15 reales, incluidos `test_invariantes.py` —dentro de los 444 verdes— y una skill. Creo además que «la 002 de frontend» es como el usuario llama a mi spec desde antes de que existiera la de Gustavo, no una instrucción de renumerar; se lo he preguntado igualmente.
+- **Ficheros:** `specs/003-lectura-web/spec.md`
+- **Estado:** terminado
+- **Ojo:** **las bitácoras no se tocan.** Son registro histórico y envejecen a propósito; reescribir las referencias viejas sería falsificar justo el registro que esta convención existe para tener. Y queda levantada la congelación de Hernán sobre crear referencias nuevas a `002-validadores-*`: si no se renumera, no hay razón para no citarla.
+
+## 17:40 · DEP-01 no era el formato de la etiqueta, era la firma del almacén
+
+- **Qué:** Nubia afinó DEP-01 y es un punto más hondo del que yo escribí. Verificado: `canon_relevante(escena_id) -> list[tuple[str, bool]]` en `contexto/recoleccion.py:46`, `contexto/repository.py:103` y el doble de `test_recoleccion.py:35`. El `hc_id` **no llega nunca** a `recoleccion.py`, así que no se puede etiquetar con algo que no se recibe: lo que cambia es lo que devuelve el almacén. Y añadido el efecto que va más allá de mi spec: con `ejecucion` sin registrar qué canon entró, **RI-14 de la 001 queda a medias** y la auditoría de una escena es parcial.
+- **Ficheros:** `specs/003-lectura-web/spec.md`
+- **Estado:** terminado
+- **Ojo:** los commits los lleva **Nubia** desde ahora, por encargo del usuario. No commiteo yo. `ce2b810` **no incluye** la tercera ronda de Mario ni estos dos arreglos; se lo he dicho para que no dé la 003 por cerrada.

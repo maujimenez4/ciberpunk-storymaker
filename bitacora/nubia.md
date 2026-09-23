@@ -65,3 +65,16 @@
 - **Ficheros:** ninguno tocado. Solo lectura.
 - **Estado:** terminado — avisado el usuario
 - **Ojo:** es **un punto más hondo** de lo que dice la spec 003. No es que la etiqueta pierda el `hc_id`: es que `almacenes.canon_relevante(escena_id)` devuelve `(texto, presente)` y el `hc_id` **no llega nunca** a `recoleccion`. Arreglarlo no es cambiar el formato de la etiqueta, es cambiar lo que devuelve el almacén. Y toca RI-14: hoy `ejecucion` registra qué se recuperó de la memoria semántica, pero no qué hechos de canon entraron en el paquete, así que la auditoría de una escena es parcial. Es de `contexto`, no es mío.
+
+## 17:55 · Conflicto de autoridad sobre los commits: paro
+
+- **Qué:** mi usuario me encargó llevar los commits. El de Julio le encargó lo mismo a él, y a Ezequiel y Hernán les trasladaron que commitearan Ezequiel y Mario. Tres versiones.
+- **Ficheros:** ninguno. **He dejado de commitear.**
+- **Estado:** bloqueado — por decisión de `maujimenez4`
+- **Ojo:** llevo **7 commits locales y cero `push`**. Julio también ha parado y se lo ha preguntado a su usuario. Ninguno de los dos puede resolverlo: un par no revoca la instrucción del usuario de otro. Paro yo porque voy por delante, no porque me lo pidan. Queda vivo sin commitear: `validar_spec.py`, la tercera ronda de Mario sobre la spec 003, y varias bitácoras.
+
+## 18:00 · Lo que Julio me devuelve y me toca de cerca
+
+- **Qué:** es8 escaló por SEG-01 y sus 2.038 palabras están en el `.md` y el `.pdf` que genera mi `exportar`.
+- **Estado:** terminado — avisado el usuario
+- **Ojo:** **no es un fallo de la exportación y coincido con Julio.** `ensamblar` hace literalmente lo que pide RF-MAN-01 —«las versiones vigentes en orden de discurso»— y `exportar` solo da formato a lo que recibe. El requisito **nunca dijo «las aprobadas»**. No hay código que arreglar: hay un requisito que decidir, y lo decide `maujimenez4`. Si se decide que el manuscrito son las aprobadas, el cambio va en `ensamblar`, no en mi capa.
