@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 1.3 · **Fecha:** 2026-09-22 · **Dominio:** generación asistida de novela larga, género de referencia: romance
+**Versión:** 1.4 · **Fecha:** 2026-09-23 · **Dominio:** generación asistida de novela larga, género de referencia: romance
 
 ---
 
@@ -18,6 +18,7 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | 1.1 | Entra el `Auditor de manuscrito` en los roles (§9) y `VersionDeObra` en producción. `Prompt` pasa a ser fichero con `hash`. Se retira lo que era mecanismo y vivía duplicado con `architecture.md`: topes y reglas de ensamblado del paquete, contención de deriva, columna «Puerta», política de reintentos, entradas y salidas de los roles, lista de almacenes y gobernanza operativa |
 | 1.3 | Entra el código `VOZ-03` en la taxonomía (§8) y el axioma 13 (§11): la prosa debe usar la `persona` y el `tiempo_verbal` declarados en la `Obra`. Cubre un hueco detectado al cruzar las restricciones duras contra sus validadores —las dos se fijaban en la obra, se heredaban a la ficha y se repetían en el prompt, pero ningún validador las comprobaba en el texto |
 | 1.2 | `Defecto` deja de ser una tabla de códigos y pasa a clase con atributos (§8): la `cita` se ancla por desplazamiento a una `VersionDeTexto` y `hecho_canon_id` es obligatorio en `CAN-01`. Entran el término `Cita` (§8 y §13), los predicados `señala` y `choca_con` (§10) y los axiomas 11 y 12 (§11) |
+| 1.4 | Entra la **entrega** en la capa de producción (§9): `Destinatario`, `Dedicatoria`, `Comprador`, `VersionPublicada`, `PeticionDeCambio` y `FichaDeLectura`, con sus predicados (§10) y sus entradas de glosario (§13). Son **vocabulario, no estado**: los usa la spec `003-lectura-web` y a fecha de hoy no hay código que los implemente. `VersionPublicada` se llama así, y no `VersionDeNovela`, para no ser la tercera «versión de» junto a `VersionDeTexto` y `VersionDeObra` |
 
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
 
@@ -374,6 +375,12 @@ Condición que una unidad debe cumplir para avanzar de fase. Qué puertas existe
 | `Ejecucion` | Una llamada al modelo | `run_id`, escena, prompt con su `hash`, modelo, semilla, parámetros, coste, métricas, veredicto |
 | `VersionDeTexto` | Texto inmutable de una escena | `version`, `vigente`, `run_id` de origen |
 | `VersionDeObra` | Estado congelado de la biblia con el que se escribió un tramo del manuscrito | `version_obra_id`, `biblia`, `vigente_desde`; cada `Escena` apunta a la suya |
+| `Destinatario` | Persona real a quien se regala la `Obra`. Aporta al `Brief` los datos que se personalizan. **No es un `Personaje`** y no entra en el canon | `destinatario_id`, `nombre`, `edad`, `rasgos`, `recuerdos_aportados` |
+| `Comprador` | Quien encarga la `Obra` y responde la entrevista. Puede coincidir con el `Destinatario` o no; cuando no coincide, es quien aporta los datos de aquel | `comprador_id`, `nombre`, `contacto` |
+| `Dedicatoria` | Texto de portada dirigido al `Destinatario`. Vive **fuera del manuscrito y fuera del canon**: ni la ve el `Escritor` ni la extrae el `Extractor` | `texto`, `firma` |
+| `VersionPublicada` | Conjunto inmutable de `VersionDeTexto`, una por capítulo, entregado al lector como una sola cosa. Una regeneración crea una nueva y **conserva la anterior**; nunca se edita ni se borra | `version_publicada_id`, `numero`, `publicada_en`, `sucede_a`, `capitulos_cambiados` |
+| `PeticionDeCambio` | Solicitud del lector sobre un `HechoCanon` concreto de una `VersionPublicada`. **No edita el canon:** la corrección sigue siendo un hecho nuevo que sustituye al anterior (`architecture.md` §4.7) | `peticion_id`, `version_publicada_id`, `hecho_canon_id`, `texto_pedido`, `estado` |
+| `FichaDeLectura` | Vista congelada de los `Personaje` y `Lugar` de una `VersionPublicada`, con los capítulos donde aparece cada uno. Se deriva del canon **al publicar** y no se recalcula después, así que nunca contradice el texto al que acompaña | `version_publicada_id`, entradas de personaje y de lugar con sus capítulos |
 
 **Roles de agente.** Nueve, y estos son sus nombres, que es lo que fija este documento:
 
@@ -413,6 +420,12 @@ Los almacenes en los que vive todo esto están enumerados en `architecture.md` �
 | `Ejecucion` | produce | `VersionDeTexto` | 1 | Trazabilidad y reproducibilidad |
 | `Defecto` | señala | `VersionDeTexto` | 1 | Ancla la cita al texto que se juzga |
 | `Defecto` | choca_con | `HechoCanon` | 0..1 | Hace determinista el contraste de `CAN-01` |
+| `Obra` | se_dedica_a | `Destinatario` | 0..1 | Personalización: de quién es el regalo |
+| `VersionPublicada` | agrupa | `VersionDeTexto` | 1..\* | Qué texto exacto leyó el lector |
+| `VersionPublicada` | sucede_a | `VersionPublicada` | 0..1 | Conservar la versión anterior tras una regeneración |
+| `PeticionDeCambio` | afecta_a | `HechoCanon` | 1 | Qué hecho quiere cambiar el lector |
+| `PeticionDeCambio` | produce | `VersionPublicada` | 0..1 | Una petición atendida publica una versión nueva; una rechazada, ninguna |
+| `FichaDeLectura` | describe | `VersionPublicada` | 1 | La ficha va congelada con su versión |
 
 ---
 
@@ -470,6 +483,12 @@ El validador debe poder comprobar mecánicamente:
 | HEA / HFN | *Happily ever after* / *happy for now*: finales admisibles en romance |
 | Nivel de calor | Escala declarada de explicitud sexual |
 | Muestra ancla | Fragmento de prosa aprobada usado como referencia de voz |
+| Destinatario | Persona real que recibe la novela de regalo. No es un personaje |
+| Comprador | Quien encarga la novela. Puede no ser quien la recibe |
+| Dedicatoria | Texto de portada para el destinatario, fuera del manuscrito y del canon |
+| Versión publicada | Los capítulos que el lector recibe a la vez. Una regeneración crea otra y conserva la anterior |
+| Petición de cambio | Lo que el lector pide sobre un hecho concreto de lo que está leyendo |
+| Ficha de lectura | Personajes y lugares de una versión publicada, congelados con ella |
 
 ---
 
@@ -650,6 +669,7 @@ flowchart TD
   P --> P1["Artefactos"]
   P --> P2["Roles de agente"]
   P --> P3["Control"]
+  P --> P4["Entrega"]
 
   P1 --> P11["Brief"]
   P1 --> P12["Biblia"]
@@ -657,6 +677,12 @@ flowchart TD
   P1 --> P14["FichaDeEscena"]
   P1 --> P15["VersionDeTexto"]
   P1 --> P16["VersionDeObra"]
+
+  P4 --> P41["Destinatario"]
+  P4 --> P42["Dedicatoria"]
+  P4 --> P43["VersionPublicada"]
+  P4 --> P44["PeticionDeCambio"]
+  P4 --> P45["FichaDeLectura"]
 
   P2 --> P21["Arquitecto"]
   P2 --> P22["Planificador de escena"]
