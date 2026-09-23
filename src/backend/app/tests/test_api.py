@@ -164,14 +164,43 @@ def test_toda_ruta_declara_su_modelo_de_respuesta(app: FastAPI) -> None:
     assert not sin_modelo, f"rutas sin modelo de respuesta: {sin_modelo}"
 
 
-def test_el_esquema_expone_las_rutas_que_se_montaron(app: FastAPI) -> None:
-    """Guardia del test anterior: si las rutas desaparecieran del esquema, aquel
-    pasaria en vacio y nadie se enteraria."""
-    rutas = set(app.openapi()["paths"])
+# RI-01 a RI-09. RI-10, la auditoria de manuscrito, la retiro la spec sin
+# renumerar el resto, y por eso no esta.
+ENDPOINTS_DE_LA_SPEC = {
+    ("post", "/obras"): "RI-01",
+    ("post", "/obras/{obra_id}/biblia"): "RI-02",
+    ("post", "/obras/{obra_id}/outline"): "RI-03",
+    ("post", "/escenas/{escena_id}/planificar"): "RI-04",
+    ("post", "/escenas/{escena_id}/escribir"): "RI-05",
+    ("get", "/escenas/{escena_id}/contexto"): "RI-06",
+    ("get", "/escenas/{escena_id}/versiones"): "RI-07",
+    ("get", "/obras/{obra_id}/canon"): "RI-08",
+    ("get", "/trabajos/{trabajo_id}"): "RI-09",
+}
 
-    assert "/escenas/{escena_id}/escribir" in rutas
-    assert "/trabajos/{trabajo_id}" in rutas
-    assert len(rutas) >= 3
+
+def test_el_esquema_expone_los_nueve_endpoints_de_ri_01_a_ri_09(app: FastAPI) -> None:
+    """P-121, RI-23.
+
+    Sustituye a un `len(rutas) >= 3` que comprobaba lo que se habia montado en
+    vez de lo que la spec pide. Con aquel, siete endpoints podian faltar sin que
+    nada se pusiera rojo, y faltaron: la fase 8 se dio por cerrada con tres.
+
+    Un test de contrato tiene que mirar el contrato. Si manana se retira un
+    endpoint, que se retire de la spec primero y de esta lista despues.
+    """
+    esquema = app.openapi()["paths"]
+    faltan = [
+        f"{requisito}: {metodo.upper()} {ruta}"
+        for (metodo, ruta), requisito in sorted(
+            ENDPOINTS_DE_LA_SPEC.items(), key=lambda par: par[1]
+        )
+        if metodo not in esquema.get(ruta, {})
+    ]
+
+    assert not faltan, "endpoints de la spec que no publica la API: " + ", ".join(
+        faltan
+    )
 
 
 def test_el_esquema_openapi_se_publica(cliente: TestClient) -> None:

@@ -40,6 +40,7 @@ from app.features.escritura import (
 )
 from app.features.escritura import router as router_escritura
 from app.features.obra import router as router_obra
+from app.features.outline import router as router_outline
 
 TITULO = "StoryMaker · backend v1"
 
@@ -65,6 +66,7 @@ def crear_app(
     ejecutor = montar_ejecutor_de_trabajos(app)
     _retomar_trabajos_vivos(app, ejecutor)
     app.include_router(router_obra)
+    app.include_router(router_outline)
     app.include_router(router_escena)
     app.include_router(router_contexto)
     app.include_router(router_canon)

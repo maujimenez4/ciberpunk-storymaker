@@ -229,3 +229,44 @@ def test_el_esquema_impide_mas_de_dos_reparaciones(
             (trabajo.trabajo_id,),
         )
     conexion.close()
+
+
+# --- P-115 a P-117: no todo trabajo es el ciclo de una escena ----------------
+
+
+def test_un_trabajo_simple_nace_hace_su_paso_y_termina() -> None:
+    """La biblia, el outline y la ficha no pasan por el ciclo de una escena.
+
+    Los diez estados de §3.3 describen **ese** ciclo: `INTEGRADA` solo se
+    alcanza desde `EXTRAYENDO`, porque es ahi donde el Extractor deja rastro en
+    la memoria de largo plazo. Un trabajo de biblia no pasa por ahi, asi que con
+    una sola tabla no tenia ningun camino a un terminal de exito: nacia y solo
+    podia acabar cancelado.
+    """
+    assert puede_ir(Estado.PLANIFICANDO, Estado.INTEGRADA, tipo="generar_biblia")
+    assert puede_ir(Estado.PLANIFICANDO, Estado.FALLIDA, tipo="generar_biblia")
+    assert puede_ir(Estado.PLANIFICANDO, Estado.CANCELADA, tipo="generar_biblia")
+
+
+def test_el_ciclo_de_escena_conserva_su_maquina_intacta() -> None:
+    """Lo que esta tabla protege sigue en pie donde importa.
+
+    Si un trabajo de escena pudiera saltar a `INTEGRADA`, habria una escena en
+    el manuscrito de la que el canon no sabe nada, y el sintoma apareceria
+    capitulos despues.
+    """
+    assert not puede_ir(Estado.PLANIFICANDO, Estado.INTEGRADA, tipo="escribir_escena")
+    assert not puede_ir(Estado.VALIDANDO, Estado.INTEGRADA, tipo="escribir_escena")
+    assert puede_ir(Estado.EXTRAYENDO, Estado.INTEGRADA, tipo="escribir_escena")
+
+
+def test_un_trabajo_simple_no_puede_entrar_en_el_ciclo_de_escena() -> None:
+    """Al reves tambien: un trabajo de biblia que pasara por `ESCRIBIENDO`
+    estaria usando el turno y el presupuesto de una escena que no existe."""
+    for estado in (Estado.ENSAMBLANDO, Estado.ESCRIBIENDO, Estado.EXTRAYENDO):
+        assert not puede_ir(Estado.PLANIFICANDO, estado, tipo="generar_biblia")
+
+
+def test_por_defecto_manda_la_maquina_de_la_escena() -> None:
+    """Quien no declara tipo se lleva la tabla estricta, no la permisiva."""
+    assert not puede_ir(Estado.PLANIFICANDO, Estado.INTEGRADA)

@@ -45,6 +45,7 @@ from app.features.escena import RepositorioDeEscenas  # noqa: E402
 from app.features.escritura import Dependencias, ciclo_de_escena  # noqa: E402
 from app.features.manuscrito import RepositorioDeManuscrito  # noqa: E402
 from app.features.obra import RepositorioDeObras  # noqa: E402
+from app.features.outline import RepositorioDeOutline  # noqa: E402
 
 RAIZ = Path(__file__).parent
 PROMPTS = RAIZ / "src" / "backend" / "app" / "features"
@@ -228,6 +229,10 @@ def correr(real: bool, destino: Path | None = None) -> int:
         turno=TurnoDeModelo(simultaneas=1),
         cerrojo=CerrojoPorObra(),
         ordenador=ordenador,
+        # El Arquitecto no interviene en el ciclo de una escena: la biblia y el
+        # outline ya estan cuando esto arranca. Se pasa el mismo doble para no
+        # dejar el campo a medias.
+        arquitecto=planificador,
         planificador=planificador,
         escritor=escritor,
         extractor=extractor,
@@ -236,6 +241,7 @@ def correr(real: bool, destino: Path | None = None) -> int:
         canon=RepositorioDeCanon(base),
         ejecuciones=RepositorioDeEjecuciones(base),
         obras=RepositorioDeObras(base),
+        outline=RepositorioDeOutline(base),
         almacenes=AlmacenesDeLaObra(base),
     )
 

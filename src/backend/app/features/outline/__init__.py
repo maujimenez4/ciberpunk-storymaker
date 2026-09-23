@@ -4,6 +4,7 @@ Lo unico importable desde fuera (§5.2 regla 1).
 """
 
 from app.features.outline.repository import RepositorioDeOutline
+from app.features.outline.router import router
 from app.features.outline.schemas import (
     BEATS_OBLIGATORIOS,
     BeatDeGenero,
@@ -25,6 +26,7 @@ __all__ = [
     "OutlineInvalido",
     "ParteDeOutline",
     "RepositorioDeOutline",
+    "router",
     "Ubicacion",
     "generar_outline",
 ]

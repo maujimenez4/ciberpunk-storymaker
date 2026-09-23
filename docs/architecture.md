@@ -118,6 +118,8 @@ Cada llamada al modelo dentro del trabajo genera además una fila en `ejecucion`
 
 ### 3.3 Estados y transiciones
 
+La máquina que sigue es **la del ciclo de una escena**. No todo trabajo lo es: generar la biblia, generar el outline y planificar una escena también devuelven un `trabajo` consultable (RI-02 a RI-04), y no pasan por `EXTRAYENDO` porque no dejan rastro en la memoria de largo plazo. Su tabla es la de abajo, [«Trabajos que no son el ciclo de una escena»](#trabajos-que-no-son-el-ciclo-de-una-escena).
+
 ```mermaid
 stateDiagram-v2
   [*] --> PLANIFICANDO
@@ -154,6 +156,18 @@ stateDiagram-v2
 | `CANCELADA` | El autor abortó | — | Terminal |
 
 Ningún estado se salta: `VALIDANDO` no puede llegar a `INTEGRADA` sin pasar por `EXTRAYENDO`, porque es el Extractor quien deja rastro en la memoria de largo plazo (§4.4).
+
+#### Trabajos que no son el ciclo de una escena
+
+Generar la biblia, generar el outline y planificar una escena nacen, hacen su paso y terminan:
+
+```
+PLANIFICANDO --> INTEGRADA | FALLIDA | CANCELADA
+```
+
+**Y no pueden entrar en el ciclo.** Un trabajo de biblia que pasara por `ESCRIBIENDO` estaría usando el turno y el presupuesto de una escena que no existe.
+
+El reparto lo decide el `tipo` del trabajo, y **quien no declara tipo se lleva la tabla estricta**: si un tipo nuevo se olvidara de declararse, como mucho no podrá avanzar y saltará, en vez de poder marcar éxito sin haber hecho nada. La invariante de arriba no se relaja: sigue rigiendo entera donde importa, que es la escena.
 
 ### 3.4 Contrato entre pasos
 

@@ -111,7 +111,7 @@ Identificadores opacos para el cliente. Toda operación larga devuelve un `traba
 | ID | Método y ruta | Entrada esencial | Salida | Pr. |
 | --- | --- | --- | --- | --- |
 | RI-01 | `POST /obras` | `Brief`: género, subgénero, tropo, tono, extensión, parámetros de discurso | 201 + `obra` | M |
-| RI-02 | `POST /obras/{id}/biblia` | — | 202 + `trabajo` | M |
+| RI-02 | `POST /obras/{id}/biblia` | — | 202 + `trabajo` (máquina simple de `architecture.md` §3.3, no el ciclo de escena) | M |
 | RI-03 | `POST /obras/{id}/outline` | — | 202 + `trabajo` | M |
 | RI-04 | `POST /escenas/{id}/planificar` | — | 202 + `trabajo` | M |
 | RI-05 | `POST /escenas/{id}/escribir` | — | 202 + `trabajo` | M |

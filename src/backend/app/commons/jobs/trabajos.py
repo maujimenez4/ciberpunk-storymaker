@@ -17,6 +17,7 @@ la llamada; se acepta a cambio de no razonar sobre respuestas parciales.
 
 import sqlite3
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
@@ -114,7 +115,9 @@ class RepositorioDeTrabajos:
         declarado es un error del orquestador, no un estado nuevo.
         """
         actual = self.leer(trabajo_id)
-        exigir(actual.estado, hasta)
+        # La tabla depende del tipo: el ciclo de una escena y un paso simple
+        # no tienen la misma maquina (§3.3).
+        exigir(actual.estado, hasta, actual.tipo)
         intento = actual.intento + 1 if incrementa_intento else actual.intento
         with self._conexion() as conexion:
             conexion.execute(
@@ -167,3 +170,27 @@ class RepositorioDeTrabajos:
                 )
             ]
         return [self.leer(i) for i in ids]
+
+
+def ejecutar_paso_simple(
+    trabajo_id: str,
+    trabajos: RepositorioDeTrabajos,
+    reloj: Reloj,
+    accion: Callable[[], object],
+) -> None:
+    """Un trabajo que no es el ciclo de una escena: nace, hace su paso, termina.
+
+    El envoltorio existe por lo mismo que el del ciclo: sin el, un fallo deja el
+    trabajo en `PLANIFICANDO` para siempre y el cliente lo lee como lentitud, no
+    como error. `FALLIDA` y no `ESCALADA`: escalada es para un defecto de
+    calidad que una persona puede resolver leyendo (RF-CAL-10); esto es que algo
+    se rompio.
+    """
+    try:
+        accion()
+    except Exception as error:  # noqa: BLE001 - aqui se atrapa todo a proposito
+        trabajos.transitar(
+            trabajo_id, Estado.FALLIDA, reloj, causa_fallo=type(error).__name__
+        )
+    else:
+        trabajos.transitar(trabajo_id, Estado.INTEGRADA, reloj)

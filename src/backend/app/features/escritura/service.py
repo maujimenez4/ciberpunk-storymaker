@@ -58,6 +58,7 @@ from app.features.escena import (
 )
 from app.features.escritura.agents import invocar_escritor
 from app.features.obra import RepositorioDeObras
+from app.features.outline import RepositorioDeOutline
 
 ESPERA_DE_TURNO_S = 300
 ESPERA_DE_CERROJO_S = 5
@@ -80,6 +81,10 @@ class Dependencias:
     turno: TurnoDeModelo
     cerrojo: CerrojoPorObra
     ordenador: OrdenadorSemantico
+    # El Arquitecto es un agente distinto (§9.3) aunque hoy los cuatro apunten
+    # al mismo cliente: separarlos es lo que permite darle otro modelo sin tocar
+    # el ciclo, y lo que hace que un doble pueda contestar solo por uno.
+    arquitecto: ClienteDeModelo
     planificador: ClienteDeModelo
     escritor: ClienteDeModelo
     extractor: ClienteDeModelo
@@ -88,6 +93,7 @@ class Dependencias:
     canon: RepositorioDeCanon
     ejecuciones: RepositorioDeEjecuciones
     obras: RepositorioDeObras
+    outline: RepositorioDeOutline
     almacenes: Almacenes
     snapshot_cada_n: int = 5
 

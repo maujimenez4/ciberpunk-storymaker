@@ -8,16 +8,59 @@ obra no llama al modelo y termina en milisegundos; un 202 aqui obligaria al
 cliente a preguntar por un identificador que ya tiene.
 """
 
-from typing import Annotated
+import functools
+from typing import Annotated, Protocol
 
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict
 
 from app.commons.domain import Reloj, RelojDelSistema
+from app.commons.jobs import (
+    EjecutorDeTrabajos,
+    RepositorioDeTrabajos,
+    ejecutar_paso_simple,
+)
+from app.commons.llm import CargadorDePrompts, ClienteDeModelo
 from app.features.obra.repository import RepositorioDeObras
 from app.features.obra.schemas import Brief, ObraCreada
-from app.features.obra.service import crear_obra
+from app.features.obra.service import crear_obra, generar_biblia
 
 router = APIRouter(tags=["obra"])
+
+TIPO_BIBLIA = "generar_biblia"
+
+
+class TrabajoAceptado(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    trabajo_id: str
+    estado: str
+
+
+class FuentesDeTrabajo(Protocol):
+    """Lo que este router necesita de la fabrica, y nada mas.
+
+    Se declara como `Protocol` y no se importa `Dependencias`: esta feature es
+    anterior a `escritura` en el grafo de dependencias, y traerla de alli daria
+    un ciclo entre features (§5.2 regla 5). `Dependencias` lo cumple por forma
+    sin que ninguno de los dos lo sepa.
+    """
+
+    reloj: Reloj
+    cargador: CargadorDePrompts
+    arquitecto: ClienteDeModelo
+    obras: RepositorioDeObras
+    trabajos: RepositorioDeTrabajos
+
+
+def obtener_fuentes(peticion: Request) -> FuentesDeTrabajo:
+    fuentes: FuentesDeTrabajo = peticion.app.state.fabrica_dependencias()
+    return fuentes
+
+
+def obtener_ejecutor(peticion: Request) -> EjecutorDeTrabajos:
+    ejecutor: EjecutorDeTrabajos = peticion.app.state.ejecutor
+    return ejecutor
 
 
 def obtener_repositorio(peticion: Request) -> RepositorioDeObras:
@@ -47,3 +90,41 @@ def leer(
 ) -> ObraCreada:
     """Lanza `RecursoNoEncontrado`, **nunca** `HTTPException` (RI-11)."""
     return repositorio.leer(obra_id)
+
+
+@router.post("/obras/{obra_id}/biblia", status_code=202, response_model=TrabajoAceptado)
+def generar_la_biblia(
+    obra_id: str,
+    fuentes: Annotated[FuentesDeTrabajo, Depends(obtener_fuentes)],
+    ejecutor: Annotated[EjecutorDeTrabajos, Depends(obtener_ejecutor)],
+) -> TrabajoAceptado:
+    """RI-02. El Arquitecto produce la biblia y se guarda como **version nueva**
+    (RD-12): editar la vigente dejaria las escenas anteriores apoyadas en hechos
+    que ya no existen y sin rastro del porque."""
+    obra = fuentes.obras.leer(obra_id)
+    prompt = fuentes.cargador.cargar("arquitecto")
+    material = (
+        f"{prompt.texto}\n\n## Obra\n\n"
+        f"{obra.titulo}. Persona {obra.persona}, tiempo verbal "
+        f"{obra.tiempo_verbal}, esquema de POV {obra.esquema_de_pov}, "
+        f"nivel de calor {obra.nivel_de_calor.value}.\n\n"
+        "Produce ahora la biblia."
+    )
+    trabajo = fuentes.trabajos.crear(obra_id, None, TIPO_BIBLIA, fuentes.reloj)
+    ejecutor.encolar(
+        functools.partial(
+            ejecutar_paso_simple,
+            trabajo.trabajo_id,
+            fuentes.trabajos,
+            fuentes.reloj,
+            functools.partial(
+                generar_biblia,
+                obra_id,
+                fuentes.arquitecto,
+                material,
+                fuentes.obras,
+                fuentes.reloj,
+            ),
+        )
+    )
+    return TrabajoAceptado(trabajo_id=trabajo.trabajo_id, estado=trabajo.estado.value)

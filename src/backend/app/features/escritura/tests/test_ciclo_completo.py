@@ -38,6 +38,7 @@ from app.features.obra import (
     PersonajeDeBiblia,
     RepositorioDeObras,
 )
+from app.features.outline import RepositorioDeOutline
 
 RAIZ = Path(__file__).resolve().parents[4]
 PROMPTS = RAIZ / "app" / "features"
@@ -148,6 +149,7 @@ def dependencias(ruta: Path) -> Dependencias:
         turno=TurnoDeModelo(simultaneas=1),
         cerrojo=CerrojoPorObra(),
         ordenador=DobleDeOrdenador(),
+        arquitecto=DobleDeModelo([BIBLIA.model_dump_json()]),
         planificador=DobleDeModelo([FICHA]),
         escritor=DobleDeModelo([PROSA]),
         extractor=DobleDeModelo([EXTRACCION]),
@@ -156,6 +158,7 @@ def dependencias(ruta: Path) -> Dependencias:
         canon=RepositorioDeCanon(ruta),
         ejecuciones=RepositorioDeEjecuciones(ruta),
         obras=RepositorioDeObras(ruta),
+        outline=RepositorioDeOutline(ruta),
         almacenes=AlmacenesDeLaObra(ruta),
     )
 

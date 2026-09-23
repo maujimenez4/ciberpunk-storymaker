@@ -35,6 +35,7 @@ from app.features.contexto import AlmacenesDeLaObra
 from app.features.escena import RepositorioDeEscenas
 from app.features.escritura.service import Dependencias, ejecutar_en_segundo_plano
 from app.features.obra import RepositorioDeObras
+from app.features.outline import RepositorioDeOutline
 
 router = APIRouter(tags=["escritura"])
 
@@ -105,6 +106,7 @@ def construir_dependencias(
         turno=turno_del_proceso(ajustes.llamadas_simultaneas),
         cerrojo=CerrojoPorObra(),
         ordenador=OrdenadorPorModelo(cliente, cargador.cargar("ordenador").texto),
+        arquitecto=cliente,
         planificador=cliente,
         escritor=cliente,
         extractor=cliente,
@@ -113,6 +115,7 @@ def construir_dependencias(
         canon=RepositorioDeCanon(ruta),
         ejecuciones=RepositorioDeEjecuciones(ruta),
         obras=RepositorioDeObras(ruta),
+        outline=RepositorioDeOutline(ruta),
         almacenes=AlmacenesDeLaObra(ruta),
         snapshot_cada_n=ajustes.snapshot_cada_n_escenas,
     )
