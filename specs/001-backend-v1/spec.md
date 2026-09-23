@@ -346,20 +346,22 @@ Ninguna de las dos partes pendientes es **U**: son verificables, solo que por le
 Observables y comprobables: cada uno acabará siendo un test.
 
 - [ ] **CA-1** — Un **capítulo completo** se genera de principio a fin, con todas sus escenas en `INTEGRADA`. *(Demostración)*
-- [ ] **CA-2** — La suite pasa **sin red y sin credenciales**: el ordenador semántico se sustituye por un doble determinista (RI-13).
-- [ ] **CA-3** — Se puede matar el proceso en cualquier estado no terminal y el trabajo se reanuda **sin duplicar escrituras**.
-- [ ] **CA-4** — Toda regla de dominio marcada «Sí» tiene test, y el test **falla** si se quita la validación.
-- [ ] **CA-5** — El desglose por capa **suma lo que dice** y respeta los topes.
-- [ ] **CA-6** — Una escena con defecto bloqueante se repara dirigidamente y a la tercera acaba en `ESCALADA`, no en bucle.
-- [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice.
-- [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo.
-- [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio.
+- [ ] **CA-2** — La suite pasa **sin red y sin credenciales**: el ordenador semántico se sustituye por un doble determinista (RI-13). *(Test)*
+- [ ] **CA-3** — Se puede matar el proceso en cualquier estado no terminal y el trabajo se reanuda **sin duplicar escrituras**. *(Test)*
+- [ ] **CA-4** — Toda regla de dominio marcada «Sí» tiene test, y el test **falla** si se quita la validación. *(Test)*
+- [ ] **CA-5** — El desglose por capa **suma lo que dice** y respeta los topes. *(Test)*
+- [ ] **CA-6** — Una escena con defecto bloqueante se repara dirigidamente y a la tercera acaba en `ESCALADA`, no en bucle. *(Test)*
+- [ ] **CA-7** — Una escena rechazada **no ha dejado rastro** en canon, ledger ni índice. *(Test)*
+- [ ] **CA-8** — Con el turno ocupado, la llamada nueva **espera**; no se recorta el paquete ni se lanza en paralelo. *(Test)*
+- [ ] **CA-9** — `ruff`, `mypy`, `pytest`, `lint-imports` y las migraciones pasan en limpio. *(Análisis)*
 - [ ] **CA-10** — Desde una fila de `ejecucion`, **y con el estado de almacenes de esa escena**, se **reconstruye el mismo paquete**, con el mismo desglose por capa. *(Demostración)*
 - [ ] **CA-11** — El proceso arranca y escribe una escena completa **sin más credencial que la del proveedor de generación**. *(Demostración)*
-- [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente.
-- [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién.
-- [ ] **CA-14** — Una escena escrita en una persona o un tiempo verbal distintos de los de la `Obra` se **rechaza con `VOZ-03`**, y un paquete con una capa vacía **falla antes de llamar al modelo**.
-- [ ] **CA-14** — Un defecto con la **cita inventada** —que no es subcadena del texto— no bloquea la escena, no gasta intento y queda contado como mal formado.
+- [ ] **CA-12** — Una escena cuyo texto lleva **instrucciones incrustadas** se integra sin que esas instrucciones alteren el paquete de la escena siguiente. *(Test)*
+- [ ] **CA-13** — Un trabajo en `ESCALADA` editado por el autor **vuelve a validarse**, y si el autor acepta pese al defecto queda registrado cuál se anuló y quién. *(Test)*
+- [ ] **CA-14** — Una escena escrita en una persona o un tiempo verbal distintos de los de la `Obra` se **rechaza con `VOZ-03`**, y un paquete con una capa vacía **falla antes de llamar al modelo**. *(Test)*
+- [ ] **CA-15** — Un defecto con la **cita inventada** —que no es subcadena del texto— no bloquea la escena, no gasta intento y queda contado como mal formado. *(Test)*
+
+**Sobre CA-15.** Nació duplicado: hasta el 2026-09-23 este criterio y el anterior se llamaban los dos `CA-14`, y son cosas distintas —uno es persona y tiempo verbal, el otro la forma del defecto—. Lo encontró la sesión **Mario** y de ahí salió la invariante V-13 de `validar_spec.py`. Se renumeró el segundo porque el primero es el que citan `definitions.md` y la tabla de Trazabilidad; la única referencia al segundo estaba en `features/escritura/tests/test_continuidad_en_g1a.py` y se actualizó con él.
 
 **Sobre CA-4.** No basta con que el test pase. Si se desactiva la validación y el test sigue verde, el test no comprobaba nada. Es la salvaguarda más barata contra una suite que da confianza sin darla, y es el **sustituto manual** de los tests de mutación que `verification.md` §2 aplaza: los sustituye mientras no haya suite que mutar, no los reemplaza.
 
@@ -591,6 +593,62 @@ no perdonada: `RF-CTX-07` sigue siendo `M`, sigue sin cumplirse, y recogerlo es
 trabajo de la feature `contexto`.
 
 *Hallado por Julio, verificado de forma independiente por Mario y por Ezequiel.*
+
+### Segunda desviación declarada: se entrega prosa que no pasó la puerta
+
+`RepositorioDeManuscrito.ensamblar(obra_id)` hace
+`JOIN version_texto v ON v.escena_id = e.escena_id AND v.vigente = 1`
+(`features/manuscrito/repository.py:53-64`). **La vigencia no sabe nada de puertas de
+calidad.** Una escena que escaló sigue teniendo versión vigente, así que entra en el
+manuscrito, en el `.md` y en el `.pdf` como cualquier otra.
+
+No es hipotético: en la corrida real del 2026-09-23 la **escena 8 escaló por `SEG-01`** y
+sus **2.038 palabras están en el entregable**.
+
+Consecuencia que conviene no confundir con esta: `ensamblar` contesta «el manuscrito
+**ahora**», no «el que se entregó el día 3». Dos llamadas separadas por una regeneración
+devuelven textos distintos para la misma obra. Entregar una novela exige fijar qué textos
+se entregaron, y **de las 27 tablas de `0001_inicial` ninguna lo permite**: no hay versión
+publicada, ni destinatario, ni dedicatoria. Eso es alcance de la spec de lectura, no deuda
+de esta; se anota aquí porque el fallo de la puerta sí es de esta.
+
+### Correcciones posteriores al cierre: los validadores mecánicos
+
+Entre el cierre de la fase 10 y el 2026-09-23 se encontraron y corrigieron **siete defectos**
+de `features/calidad/validadores.py`. Se recogen aquí, y no en una spec aparte, porque son
+correcciones del código que esta spec entregó.
+
+| # | Defecto | Código |
+| --- | --- | --- |
+| H-1 | `validar_giro_de_valor` revienta con texto vacío; con solo espacios emite un defecto bien formado e inútil, cuya cita son tres espacios | `EST-01` |
+| H-2 | `validar_nivel_de_calor` **falla en abierto**: un nivel fuera de escala devuelve tupla vacía, o sea «nada prohibido». Una errata desactiva en silencio el único validador mecánico de la regla 5 de §8 | `SEG-01` |
+| H-3 | `validar_canon` no es determinista con empate en `orden_discurso`: el `hecho_canon_id` que sale depende del orden de la lista | `CAN-01` |
+| H-4 | `validar_continuidad_fisica` no es determinista con empate en `momento`: cambia el `detalle` que llega al prompt de reparación | `CON-01` |
+| H-5 | `validar_conocimiento` compara objetos físicos contra descripciones de evento, con igualdad exacta de cadenas | `CON-03` |
+| H-6 | El criterio de qué es diálogo fallaba con diálogo e inciso en la misma línea | `VOZ-03` |
+| H-7 | Los validadores pasaban a `citar()` la cita escrita por el modelo, y `citar` lanza si no la encuentra literal. **Cualquier paráfrasis mataba la corrida**: la defensa contra la cita inventada vivía aguas abajo, en `puerta.py`, y el caso reventaba antes de llegar a ella | — |
+
+El **H-2 es el más grave**: un guardarraíl de seguridad que se apaga sin ruido.
+
+**Decisiones de `maujimenez4`, 2026-09-23.** Se conservan con su porqué:
+
+| | Decisión |
+| --- | --- |
+| D-1 | Desempatar **en el validador**: `sorted(canon, key=(orden_discurso, hc_id, valor))`. Prohibir el empate en esquema es más fuerte y se deja para cuando haga falta: el desempate en código ya hace determinista el arbitraje sin coste de migración |
+| D-2 | Prosa vacía es **error de dominio**: `EntradaFueraDeDominio` con `not texto.strip()`, que cubre `""` y `"   "` igual |
+| D-3 | Partir el campo de CON-03, y **medir antes de volver a bloquear**. Corrida real autorizada |
+| D-4 | Criterio de diálogo: segmentos alternos separados por raya; los de índice par son narración |
+| D-5 | Nivel de calor: **las dos cosas**, enum en el esquema y el validador lanza |
+
+**`CAN-01` y `CON-03` siguen fuera de `BLOQUEANTES_EN_G1A`** desde el 2026-09-23, por decisión
+declarada en `features/calidad/defectos.py`. Se registran en `no_bloquean` y no bloquean. La
+medición que D-3 pide para devolverlos **no se ha hecho**: el primer intento murió en la
+escena 1 por H-7, y H-7 se arregló después. Devolverlos será una **decisión nueva**, no una
+restauración.
+
+**Desviación de proceso, anotada y no disimulada.** Las siete correcciones se implementaron y
+se commitearon con su spec en `borrador` y sin plan aprobado. Documentarlas aquí no vuelve
+retroactivo el orden de §3.4: una desviación anotada es recuperable, una disimulada no.
 
 ### Lo que se hizo en la fase 10
 

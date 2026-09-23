@@ -273,10 +273,21 @@ Continuista no extraiga no llega nunca al contraste determinista que la habría 
 
 - Los **tests de mutación** están aplazados (§2), así que lo único que mediría la suite
   está apagado.
-- Hay **una** señal, y es nueva: la **tasa de defectos mal formados** (arq. §8.3 y §9) mide
-  cuántas veces el Continuista afirma algo que no está en el texto, porque la comprobación
-  de forma lo detecta sin volver a llamar al modelo. Es una medida del validador, no del
-  código, y por eso vale: es la primera.
+- Hay **una** señal: la **tasa de defectos mal formados** (arq. §8.3 y §9) cuenta cuántas
+  veces el Continuista cita algo que no está en el texto, porque la comprobación de forma lo
+  detecta sin volver a llamar al modelo.
+- **Y mide menos de lo que su nombre sugiere.** `comprobar_forma`
+  (`features/calidad/puerta.py`) comprueba exactamente dos cosas: que
+  `texto[inicio:fin] == cita`, y que un `CAN-01` traiga un `hecho_canon_id` que exista.
+  **Ninguna de las dos pregunta si el defecto es cierto.** Mide **fidelidad de
+  transcripción**, no **acierto del juicio**: un Continuista que copie el pasaje con
+  precisión de notario y se invente entera la contradicción que alega saca el 100 % de bien
+  formados. Con el arreglo del 2026-09-23 —`citar_del_modelo` ancla en 0 lo que no
+  encuentra— la comprobación sí caza la **paráfrasis**, porque el desplazamiento no cuadra;
+  sigue sin cazar la **falsedad**. Así que la señal distingue «citó mal» de «citó bien», y
+  no dice nada sobre «tiene razón». Verificado sobre el código por las sesiones Mario y
+  Ezequiel el 2026-09-23, tras una corrida en la que una escena produjo decenas de defectos
+  todos bien formados con salida inservible.
 - Lo que esa señal **no** mide es la mitad que importa para la puerta: la **tasa de falsos
   negativos** del Continuista y del Extractor sigue sin medirse, porque no existe un
   conjunto de defectos conocidos contra el que puntuarlos. Un validador que calla no

@@ -406,7 +406,7 @@ def test_la_llamada_al_continuista_queda_registrada_con_su_veredicto(
     assert veredictos and all(v == "aprobada" for v in veredictos)
 
 
-# --- CA-14: la cita inventada, por el camino que la corrida recorrio --------
+# --- CA-15: la cita inventada, por el camino que la corrida recorrio --------
 
 
 def test_una_cita_que_el_continuista_se_invento_no_mata_el_ciclo(
@@ -421,8 +421,9 @@ def test_una_cita_que_el_continuista_se_invento_no_mata_el_ciclo(
     con entrada real. Este entra por donde entro la corrida: el Continuista
     devuelve una cita que no existe en la prosa.
 
-    Lo que CA-14 promete y aqui se comprueba entero: no bloquea, **no gasta
-    intento** y queda contada como mal formada.
+    Lo que CA-15 promete y aqui se comprueba entero: no bloquea, **no gasta
+    intento** y queda contada como mal formada. (Era CA-14 hasta el 2026-09-23:
+    la 001 tenia dos criterios distintos con ese numero y se renumero el segundo.)
     """
     inventada = json.dumps(
         [

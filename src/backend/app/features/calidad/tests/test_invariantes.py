@@ -6,8 +6,11 @@ leyendo el codigo, y ninguno lo habria cazado un test de ejemplo: cada funcion
 tenia su caso bueno y su caso malo en verde desde la fase 6. Un ejemplo
 arreglado protege ese ejemplo; una propiedad protege la funcion.
 
-La sonda original vive en `specs/005-validadores-fallo-cerrado/` como registro
-de los hallazgos. Esto es lo que queda vigilandolos.
+Los siete hallazgos y las cinco decisiones que los resolvieron estan en el
+Cierre de `specs/001-backend-v1/spec.md`, apartado «Correcciones posteriores
+al cierre». La spec aparte que los recogia se retiro el 2026-09-23: eran
+correcciones del codigo que la 001 entrego, no una funcionalidad nueva. Esto
+es lo que queda vigilandolos.
 """
 
 from random import Random
