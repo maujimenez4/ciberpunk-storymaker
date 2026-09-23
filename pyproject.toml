@@ -72,6 +72,11 @@ forbidden_modules = ["fastapi", "sqlalchemy", "httpx", "app.commons.db"]
 [[tool.importlinter.contracts]]
 name = "regla 1: a obra se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.outline",
     "app.features.escena",
@@ -92,6 +97,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a outline se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.escena",
@@ -112,6 +122,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a escena se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
@@ -132,6 +147,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a contexto se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
@@ -152,6 +172,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a escritura se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
@@ -172,6 +197,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a calidad se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
@@ -192,6 +222,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a canon se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
@@ -212,6 +247,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "regla 1: a manuscrito se entra por su __init__, no por sus ficheros"
 type = "forbidden"
+# `forbidden` cuenta tambien los imports indirectos, y el `__init__.py` de una
+# feature reexporta de sus ficheros por definicion. Sin esto, el contrato prohibe
+# exactamente lo que §5.2 regla 1 permite -entrar por el __init__- y ninguna
+# feature puede usar a otra. No se noto hasta P-108, la primera que lo necesito.
+allow_indirect_imports = true
 source_modules = [
     "app.features.obra",
     "app.features.outline",
