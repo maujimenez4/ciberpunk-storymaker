@@ -55,3 +55,33 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno
 - **Estado:** terminado
 - **Ojo:** yo le atribuí a Gustavo ediciones de Jose, y Nubia nos atribuyó a Hernán y a mí cosas que eran de Jose. Tres errores de atribución en media hora, todos por deducir del `git status`. Es justo lo que esta bitácora existe para evitar.
+
+## 17:20 · Cerrada mi revisión de la 002 y de la 003
+
+- **Qué:** las dos specs revisadas y sus autores han aceptado todo. En la **002** queda un punto vivo: CA-2 dice «lanza» y RF-CAL-13 pide error **tipado** de `commons/errors/` (hallazgo de Hernán). En la **003** quedan tres: que DEP-04 cite por su nombre la **P-3 de la 002** en vez del directorio, que incluya **CON-03** además de CAN-01, y una fila declarando que G1a es por escena y el **Auditor de manuscrito** no entra en el flujo de regeneración.
+- **Ficheros:** ninguno de código; solo `bitacora/mario.md`
+- **Estado:** terminado
+- **Ojo:** **la P-3 de la 002 dejó de ser interna.** La DEP-04 de la 003 depende de ella: mientras `CAN-01` y `CON-03` no vuelvan a `BLOQUEANTES_EN_G1A`, la petición de cambio detecta una contradicción de canon entre capítulos y **publica igual**. Quien lleve la 002 debe saber que su pregunta abierta bloquea una entrega ajena.
+
+## 17:22 · Decisiones del usuario
+
+- **Qué:** dos, y las dejo escritas porque cambian premisas que otros están dando por ciertas.
+  1. **P-1 a P-5 de la 002 las firma el usuario en persona.** Ni Gustavo ni yo redactamos las Decisiones. Se lo he puesto delante con las cinco.
+  2. **Manda la escala nueva** —capítulo=escena, 1.000–1.500 palabras, diez capítulos—. `CLAUDE.md:11`, `domain-knowledge.md:78` y `definitions.md:75` están desfasados y hay que corregirlos; verificado línea a línea.
+- **Ficheros:** ninguno
+- **Estado:** terminado
+- **Ojo:** **yo no corrijo los tres documentos.** El usuario eligió que se corrijan, no que los corrija yo, y `CLAUDE.md` es el manual del proyecto. Queda libre para quien tenga ese encargo. `definitions.md` es además la fuente de verdad de §2, así que al moverse mueve vocabulario.
+
+## 17:40 · Revisión de la 002 cerrada por mi parte
+
+- **Qué:** verificados sobre el fichero en disco los cuatro puntos que quedaban, todos resueltos por Gustavo. `RF-CAL-18` separado de `RF-CAL-13` con su condición de P-4; CON-02 declarado en `RF-CAL-16` con `CA-7`; `CA-1` reformulado a «actualizada con las respuestas firmadas»; `RF-CAL-17` con `CA-8` sobre `testpaths`; y `CA-2` pidiendo ya el error **tipado** por su clase y no `Exception`. La tabla requisito→criterio está en Trazabilidad.
+- **Ficheros:** ninguno; solo lectura de `specs/002-validadores-fallo-cerrado/spec.md`
+- **Estado:** terminado
+- **Ojo:** **la spec sigue sin poder aprobarse, y no por nada técnico.** `estado: borrador`, `aprobada_por` vacío y P-1 a P-5 sin firmar, con cuatro ya contestadas de hecho por el código. El usuario ha dicho que las firma él. Hasta entonces no pasa a `en-revision`, y `RF-CAL-18` no se implementa porque depende de P-4.
+
+## 17:42 · Revisión de la 003 cerrada salvo repaso final
+
+- **Qué:** Ezequiel aplicó las tres últimas. Verificado en disco: DEP-04 cita la **P-3 de la 002** por su nombre, incluye **CON-03** además de CAN-01, y hay fila nueva declarando que G1a es por escena y que el **Auditor de manuscrito no entra en el flujo**.
+- **Ficheros:** ninguno; solo lectura de `specs/003-lectura-web/spec.md`
+- **Estado:** en curso — falta mi repaso entero antes de `en-revision`
+- **Ojo:** la 003 está bloqueada por su **P-03** (qué ve el lector mientras su petición tarda el peor caso), que es del usuario. No la deis por cerrada sin mi repaso: me comprometí con Ezequiel a hacerlo cuando P-03 esté contestada.

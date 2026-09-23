@@ -50,3 +50,14 @@ compruebo lo que otros terminan y lo subo si está en verde.
 - **Estado:** bloqueado, a la espera de que Mario dé la 002 por buena.
 - **Ojo:** dos motivos vivos para no subirla. RF-CAL-17 se ha quedado sin criterio de aceptación, y P-1 a P-5 siguen sin firmar con `aprobada_por` vacío mientras el código ya ha contestado cuatro de las cinco. Acordado con Mario que aviso antes de cada push; hoy soy el único que commitea.
 - **Ojo 2:** ha aparecido `specs/003-lectura-web/` de otra sesión. Si la reparación del presupuesto de contexto acaba en spec propia, ya no puede ser la 003.
+
+## 16:40 · El Escritor copia frases enteras de la escena anterior
+
+- **Qué:** medí el solape de frases largas (≥8 palabras) entre escenas consecutivas de la corrida real. No es paráfrasis: son frases idénticas.
+- **Ficheros:** ninguno. Solo lectura sobre `evidencia-corridas\corrida-real-2026-09-23\obra.db`.
+- **Estado:** terminado el hallazgo; sin reparación y sin spec.
+- **Ojo:** esto afecta a quien esté juzgando la calidad de la corrida de hoy.
+  - es4→es5 9 frases · es5→es6 15 · es8→es9 14 · **es9→es10 34 frases, el 41% de es10**.
+  - Nada lo caza. La taxonomía de `definitions.md` §8 no tiene código de repetición, y `ngrama_vetado` (313 filas) se escribe y no la lee nadie — pero eso está **declarado** en RD-13, que dice que su único consumidor es el Editor de línea, fuera de alcance. Es hueco conocido, no avería oculta.
+  - Hipótesis, no hallazgo: el Escritor recibe la escena anterior entera en `continuidad_local` y escenas enteras sin filtrar en `memoria_recuperada`. Si se confirma, conecta con lo de los tokens.
+- **Corrijo un dato ajeno:** la inconsistencia de las horas de sueño que reportó Jose (77 frente a 56) **no está en la prosa**. El texto dice «cuarenta y dos horas» en es8, es9 y es10, consistente. El desajuste está en el canon extraído, así que es del Extractor, no del Escritor.

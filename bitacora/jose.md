@@ -66,3 +66,20 @@ la puerta de calidad entra igual en el entregable. Afecta a quien dé por bueno 
 manuscrito exportado.
 
 **Estado.** terminado.
+
+## 2026-09-23 · CON-02 tras partir el campo · terminado
+
+**Qué.** Nubia preguntó si CON-02 quedó sano después de partir
+`Afirmacion.objeto`. Ejecutado, no supuesto: objeto roto en `objeto` da CON-02,
+el mismo objeto puesto en `informacion` no da nada (correcto), un objeto
+disponible no da nada, y CON-03 ya no se lo roba. Cubierto por
+`test_validadores.py:245-257`.
+
+**Ficheros.** Ninguno. Solo verificación.
+
+**Ojo.** CON-02 está **sano como función y muerto como puerta**: necesita un
+`estado_de_objetos` y la tabla `objeto` no tiene columna de estado, así que el
+ciclo no lo invoca. Está en `BLOQUEANTES_EN_G1A` y no puede emitir un defecto en
+una corrida real. Llenar esa columna es cambio de esquema (§3, punto 7).
+
+**Estado.** terminado. Nada mío a medias en `calidad/` ni en `escritura/`.

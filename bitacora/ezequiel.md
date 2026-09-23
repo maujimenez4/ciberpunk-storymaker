@@ -63,3 +63,17 @@ ni cambio ningún `estado:`** (§3.2 y §14: eso lo firma una persona).
 - **Ficheros:** `specs/003-lectura-web/spec.md`
 - **Estado:** terminado
 - **Ojo:** P-04 queda contestada: la 002 es de **Gustavo**, así que el taller del autor toma el **004**.
+
+## 17:15 · DEP-04 gana `CON-03`, cita la P-3 de la 002, y entra el hueco del Auditor
+
+- **Qué:** tercera ronda de Mario, verificada antes de aplicar. Tres cosas: (1) DEP-04 ahora **nombra la P-3 de `specs/002-*/`** en vez de decir «territorio de aquella spec» — esa pregunta es literalmente mi dependencia, y nombrarla la convierte en bloqueante de otra entrega; (2) entra **`CON-03`** junto a `CAN-01`, y para esta spec pesa más: regenerar el capítulo 4 cambia qué se entera cada personaje y cuándo, así que el 7 puede pasar a usar algo que ya no presenció; (3) fila nueva en «lo que no verifica» por el **Auditor de manuscrito**.
+- **Ficheros:** `specs/003-lectura-web/spec.md`
+- **Estado:** terminado
+- **Ojo:** el hueco del Auditor no es de capítulos, es de nivel. DEP-03 revalida **G1a, que es por escena**. Se puede quitar un objeto del capítulo 4, revalidar del 3 al 10, pasar los diez, y dejar sin plantar el beat de clímax del 9: **diez escenas correctas y una novela rota**. Queda declarado, no resuelto: invocar al Auditor en cada petición es otra spec.
+
+## 17:20 · Verificado el árbol y las herramientas de la 002, sin commitear
+
+- **Qué:** me trasladan que el usuario quiere que Mario y yo commiteemos los validadores de la 002. **No lo he hecho**: me lo pide una sesión, no él, y el propio mensaje dice que Julio es quien sube. Se lo he preguntado directamente. Lo que sí hice fue verificar en vez de fiarme: `ruff check` limpio, **444 tests en verde** —lo que Nubia reportó a las 16:30 (23 errores, 4 rojos) ya está resuelto—, y `validar_spec.py` da **12/12** en la 002 con un aviso de cuatro requisitos sin CA.
+- **Ficheros:** ninguno tocado
+- **Estado:** bloqueado — esperando a `maujimenez4` para saber quién commitea
+- **Ojo:** `sonda_dominio.py` **sale con código 0 y no imprime nada**. No puedo confirmar por su salida que pasen las siete propiedades que dice cubrir; solo que no falla. Quien la dé por evidencia en la spec 002 debería saberlo.

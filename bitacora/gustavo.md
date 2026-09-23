@@ -51,3 +51,24 @@
 
 - **Qué:** en la entrada de las 17:00 escribí que CON-02 lo protegía «CA-8». Al añadir el criterio de RF-CAL-17 se renumeró y **ese criterio es ahora CA-7**; CA-8 es el de las invariantes en la suite. No reescribo la entrada anterior, que es el formato de esta bitácora: queda corregido aquí.
 - **Estado:** terminado
+
+## 17:50 · CA-2 exige el error tipado — y con esto cierro mi parte
+
+- **Qué:** último punto vivo de la 002, de Hernán vía Mario. CA-2 decía que `validar_nivel_de_calor` «lanza», a secas, y RF-CAL-13 pide un error de dominio **tipado de `commons/errors/`**: un `ValueError` pelado habría pasado el criterio sin cumplir el requisito. CA-2 exige ahora que el test nombre el tipo en vez de `pytest.raises(Exception)`. La clase concreta la sigue fijando P-5; hoy es `EntradaFueraDeDominio`, subclase de `ErrorDeDominio`.
+- **Ficheros:** `specs/002-validadores-fallo-cerrado/spec.md`
+- **Estado:** terminado
+- **Ojo:** el `noqa: B017` de `sonda_invariantes.py` está ahí porque el tipo estaba sin decidir; desaparece cuando se firme P-5. Verificado antes de escribir esto: 444 tests y `ruff` limpio, y `EntradaFueraDeDominio` se lanza en los cuatro puntos de dominio.
+
+## 17:55 · Cierre de mi encargo
+
+- **Qué:** terminadas las dos cosas que me pidió mi usuario: la evaluación de los quince lenguajes formales con veredicto (`1c7dbe1`) y la spec 002 con los seis hallazgos y sus correcciones (`82a1a49` más el CA-2 de arriba). No tengo nada más abierto.
+- **Ficheros:** ninguno en curso. El único cambio mío sin commitear es el CA-2 de `spec.md`.
+- **Estado:** terminado
+- **Ojo:** queda **bloqueado por firma, no por trabajo**. La spec sigue en `borrador` con `aprobada_por` vacío y las cinco preguntas abiertas sin contestar, mientras el código de `accb8e9` ya responde de hecho a P-1, P-2, P-3 y P-5. **P-4 —qué cuenta como diálogo en español— sigue virgen y bloquea RF-CAL-18 (H-6)**, que es el único de los seis hallazgos sin arreglar. Y P-3 ya no es interna: el DEP-04 de la spec 003 depende de ella.
+
+## 18:05 · La 002 se renumera, y dos de los catorce ficheros son míos
+
+- **Qué:** el usuario ha decidido que la 002 es el frontend, así que la spec de validadores cambia de número. Me lo comunica Hernán. **No renumero por mi cuenta:** lo decide Ezequiel y se hace de una vez, porque con cinco sesiones sobre esa carpeta dos renombrando a la vez es peor que el número mal puesto.
+- **Ficheros:** ninguno ahora. Cuando toque, me quedo `.claude/skills/verification-methods/references/lenguajes-formales.md` (§2.4 y §6 citan la ruta) y `.claude/skills/SOURCES.md`.
+- **Estado:** bloqueado — por la decisión de Ezequiel sobre el número
+- **Ojo:** esos dos son una **skill**, no una spec. Se cargan solos cuando alguien toca verificación, así que una ruta muerta ahí no es un enlace roto en un documento: es un agente siguiendo un camino que no existe. Que no se queden fuera del renombrado.
