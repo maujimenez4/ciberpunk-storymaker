@@ -101,3 +101,10 @@ cambio ningún `estado:`** (§14: eso lo firma una persona en un commit suyo).
 - **Ficheros:** ninguno; solo lectura y medición
 - **Estado:** terminado
 - **Ojo:** **no es cosmético.** La spec 002 ya cita «la corrida de CA-1 de la spec 001», así que las referencias cruzadas a los criterios de la 001 están en uso: hoy «CA-14 de la 001» no identifica nada. Y la 001 es la que está en `en-revision` **con código de producción encima**. Le propuse a Hernán una invariante nueva para `validar_spec.py` —ningún identificador declarado dos veces—, que es decidible sin heurística de formato y no puede dar falso positivo, al revés que sus V-8 y V-9.
+
+## 18:20 · Acepto validador de proceso del frontend, y paro el paso de la 001 a `implementada`
+
+- **Qué:** Ezequiel, orquestando, me designa validador de proceso del desarrollo del frontend: comprobar que no hay código sin plan aprobado, que el ciclo rojo→verde→refactor se ve fallar, que el test entra con su código, que ningún import cruza §5.2 y que ningún término entra sin `definitions.md`. Aceptado, **sin autoridad de aprobar nada**: puedo parar y medir, no puedo firmar un `estado:` ni autorizar que se salte un paso.
+- **Ficheros:** ninguno
+- **Estado:** en curso
+- **Ojo:** **la 001 no debería pasar a `implementada` tal como está.** `RF-CTX-07` es `M` y está marcado `T` en `spec.md:188`, y **no está implementado**: `canon/repository.py:514` hace `ORDER BY rowid DESC LIMIT ?` sin filtro estructural, y los únicos tests comprueban el tope. Marcarla es dejar escrito que un requisito imprescindible está probado cuando no existe. Tres salidas legítimas —implementarlo, marcarla con la desviación declarada como hizo `defectos.py` con RF-CAL-09, o bajarlo de `M` a `S`—; la decisión es del usuario. Lo que no vale es marcarla y callarlo. Va con ello el `CA-14` duplicado y que solo 3 de sus 15 criterios llevan marca.

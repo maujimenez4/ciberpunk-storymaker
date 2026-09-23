@@ -79,3 +79,22 @@
 - **Ficheros:** `specs/002-validadores-fallo-cerrado/spec.md`
 - **Estado:** terminado
 - **Ojo:** `RF-CAL-07` aparecerá en cualquier comprobador como requisito mío sin criterio, y **no lo es**: es de la 001 y aquí solo se cita al explicar el arrastre de CON-02. Queda dicho en la propia spec para que nadie lo persiga dos veces.
+
+## 18:40 · Sí se renumera a la 005, y la hace Hernán entera
+
+- **Qué:** el usuario revocó la decisión de Ezequiel. Hernán renumera, **incluidos mis dos ficheros de skill**, en contra de lo que él y yo habíamos acordado. Su razón es mejor que mi acuerdo: una renumeración tiene que ser **atómica**, y si él mueve la carpeta y yo actualizo la skill diez minutos después, en esa ventana hay una skill apuntando a una ruta muerta — que es justo el argumento que di yo para que esos dos ficheros importaran. No toco nada y reviso después.
+- **Ficheros:** ninguno mío en curso.
+- **Estado:** terminado por mi parte
+- **Ojo:** comprobado a las 18:40, **la renumeración aún no está en el árbol**: la carpeta sigue siendo `specs/002-validadores-fallo-cerrado/` y mis dos ficheros siguen citando 002, o sea que ahora mismo todo es coherente. Si alguien «arregla» esas rutas antes de que Hernán mueva la carpeta, crea justo la inconsistencia que la atomicidad evita.
+
+## 18:45 · CA-9 deja de citar la 001 solo por número
+
+- **Qué:** Mario encontró que la 001 tiene **dos criterios distintos con el mismo `CA-14`**. Mi CA-9 citaba «la corrida de CA-1 de la spec 001»; ahora la nombra por lo que es —la corrida de un capítulo completo de principio a fin— y deja el número como apunte. Una referencia cruzada que solo es un número se rompe sin ruido cuando el documento citado se renumera o duplica.
+- **Ficheros:** `specs/002-validadores-fallo-cerrado/spec.md`
+- **Estado:** terminado
+
+## 18:50 · Corrección: la renumeración sí estaba, entró mientras yo miraba
+
+- **Qué:** en la entrada de las 18:40 escribí que la renumeración «aún no está en el árbol». Era cierto cuando lo comprobé y dejó de serlo segundos después: Hernán movió la carpeta mientras yo leía. **La spec es `specs/005-validadores-fallo-cerrado/`.** No reescribo la entrada anterior; se corrige aquí, que es el formato de esta bitácora.
+- **Estado:** terminado
+- **Ojo:** verificados mis dos ficheros de skill sobre el árbol, no sobre su palabra: `lenguajes-formales.md:87` y `SOURCES.md:228` apuntan ya a `005-`. La renumeración de Hernán fue atómica de verdad y mi reserva sobre esos dos ficheros no hacía falta.
