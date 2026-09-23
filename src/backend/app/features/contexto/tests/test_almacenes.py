@@ -196,15 +196,71 @@ def test_la_continuidad_local_trae_el_texto_anterior_y_el_resumen_previo(
     )
 
 
-def test_la_primera_escena_no_tiene_continuidad_y_lo_dice_con_none(
+def test_la_primera_escena_declara_que_no_hay_nada_detras(
     obra_con_dos_escenas_escritas: Path,
 ) -> None:
-    """Que la capa quede vacia es asunto de RF-CTX-14. Inventarse un texto para
-    que no lo este seria mucho peor: el Escritor creeria que hubo una escena."""
+    """RF-CTX-14 existe para detectar un **almacen roto**, no para prohibir un
+    estado legitimo. La primera escena de una obra no tiene canon ni escena
+    anterior, y eso no es un fallo: es el principio.
+
+    Devolver `None` a secas dejaba dos capas vacias y `ensamblar` lanzaba
+    `CapaVacia`, es decir **ninguna obra podia empezar**. Se dice en voz alta,
+    que ademas es mejor para el Escritor que el silencio: sabe que no hay
+    escena anterior en vez de tener que suponerlo.
+
+    La distincion importa: solo se declara cuando la ausencia es **estructural**
+    -no hay ninguna escena antes-. Si la hay y viene vacia, el almacen esta roto
+    y RF-CTX-14 sigue disparando.
+    """
     almacenes = AlmacenesDeLaObra(obra_con_dos_escenas_escritas)
 
-    assert almacenes.escena_anterior_integra("es1") is None
+    anterior = almacenes.escena_anterior_integra("es1")
+    assert anterior is not None
+    assert "primera escena" in anterior.lower()
     assert almacenes.resumen_de_la_penultima("es1") is None
+
+    canon = almacenes.canon_relevante("es1")
+    assert canon and "sin canon" in canon[0][0].lower()
+
+
+def test_una_escena_posterior_sin_canon_sigue_siendo_un_fallo(
+    obra_con_dos_escenas_escritas: Path,
+) -> None:
+    """La salvaguarda de arriba no puede tapar un extractor que no escribe."""
+    conexion = sqlite3.connect(obra_con_dos_escenas_escritas)
+    conexion.execute("DELETE FROM hecho_canon")
+    conexion.commit()
+    conexion.close()
+
+    assert AlmacenesDeLaObra(obra_con_dos_escenas_escritas).canon_relevante("es3") == []
+
+
+def test_la_continuidad_no_se_corta_al_cambiar_de_capitulo(
+    obra_con_dos_escenas_escritas: Path,
+) -> None:
+    """`orden_discurso` es de la obra, no del capitulo: por el se ensambla el
+    manuscrito. Buscar la escena anterior solo dentro del capitulo dejaria sin
+    continuidad a la primera de cada uno, que es justo donde mas se nota."""
+    conexion = sqlite3.connect(obra_con_dos_escenas_escritas)
+    conexion.execute(
+        "INSERT INTO capitulo (capitulo_id, parte_id, numero, titulo)"
+        " VALUES ('ca2','pa1',2,'El muelle')"
+    )
+    conexion.execute(
+        "INSERT INTO escena (escena_id, capitulo_id, version_obra_id, orden_discurso,"
+        " pov, lugar) VALUES ('es4','ca2','vo1',4,'pj-ada','el muelle')"
+    )
+    conexion.commit()
+    conexion.close()
+
+    escenas = RepositorioDeEscenas(obra_con_dos_escenas_escritas)
+    escenas.guardar_version("es3", "Ada llego al muelle de noche.", "run-3", RELOJ)
+
+    anterior = AlmacenesDeLaObra(obra_con_dos_escenas_escritas).escena_anterior_integra(
+        "es4"
+    )
+
+    assert anterior == "Ada llego al muelle de noche."
 
 
 def test_cada_capa_restante_sale_de_su_almacen(

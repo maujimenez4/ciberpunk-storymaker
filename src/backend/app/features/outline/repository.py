@@ -105,3 +105,22 @@ class RepositorioDeOutline:
             funcion_estructural=fila[6],
             orden_discurso=fila[7],
         )
+
+    def escenas_de_obra(self, obra_id: str) -> list[tuple[str, int]]:
+        """`(escena_id, orden_discurso)` de toda la obra, en orden.
+
+        `orden_discurso` es de la **obra**, no del capitulo: por el ensambla el
+        manuscrito. Recorrer solo el capitulo dejaria sin continuidad a la
+        primera escena de cada uno, que es justo donde mas se nota el salto.
+        """
+        with self._conexion() as conexion:
+            return [
+                (f[0], int(f[1]))
+                for f in conexion.execute(
+                    "SELECT e.escena_id, e.orden_discurso FROM escena e"
+                    " JOIN capitulo c ON c.capitulo_id = e.capitulo_id"
+                    " JOIN parte p ON p.parte_id = c.parte_id"
+                    " WHERE p.obra_id = ? ORDER BY e.orden_discurso",
+                    (obra_id,),
+                )
+            ]

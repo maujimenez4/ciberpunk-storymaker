@@ -28,6 +28,14 @@ from app.features.outline import RepositorioDeOutline
 # primero dentro de la capa de estado.
 VENTANA_RECIENTE = 2
 
+# Lo que se dice cuando una capa esta vacia **por estructura** y no por avería.
+# RF-CTX-14 existe para detectar un almacen roto, no para prohibir el principio
+# de una obra: sin esto, ninguna obra podria empezar, porque la primera escena
+# no tiene canon ni escena anterior. Y decirlo en voz alta es mejor para el
+# Escritor que el silencio: sabe que no hay nada detras en vez de suponerlo.
+SIN_CANON_TODAVIA = "Sin canon establecido: esta es la primera escena de la obra."
+SIN_ESCENA_ANTERIOR = "Primera escena de la obra: no hay escena anterior."
+
 
 class AlmacenesDeLaObra:
     """Implementa `Almacenes` contra las tablas reales de una obra."""
@@ -94,7 +102,7 @@ class AlmacenesDeLaObra:
         """`(texto, esta_presente)`. §2.1 cede primero a los mencionados."""
         ficha = self.escenas.ficha_de(escena_id)
         presentes = set(ficha.presentes)
-        return [
+        hechos = [
             (
                 f"{hecho.entidad}: {hecho.atributo} = {hecho.valor} "
                 f"(establecido en {hecho.escena_de_origen})",
@@ -102,6 +110,11 @@ class AlmacenesDeLaObra:
             )
             for hecho in self.canon.hechos_hasta(ficha.orden_discurso)
         ]
+        if hechos or self._vecina(escena_id, atras=1) is not None:
+            # Si hay escena anterior y aun asi no hay canon, el Extractor no
+            # esta escribiendo: se devuelve vacio y RF-CTX-14 lo detiene.
+            return hechos
+        return [(SIN_CANON_TODAVIA, True)]
 
     # --- capa de estado en T -------------------------------------------------
 
@@ -131,7 +144,7 @@ class AlmacenesDeLaObra:
     def escena_anterior_integra(self, escena_id: str) -> str | None:
         anterior = self._vecina(escena_id, atras=1)
         if anterior is None:
-            return None
+            return SIN_ESCENA_ANTERIOR
         try:
             return self.escenas.vigente_de(anterior.escena_id).texto
         except RecursoNoEncontrado:
@@ -193,10 +206,15 @@ class AlmacenesDeLaObra:
     # --- interno -------------------------------------------------------------
 
     def _vecina(self, escena_id: str, atras: int) -> EscenaPersistida | None:
-        """La escena `atras` posiciones antes, dentro del mismo capítulo."""
-        ficha = self.escenas.ficha_de(escena_id)
-        objetivo = ficha.orden_discurso - atras
-        for escena in self.escenas.escenas_por_orden_discurso(ficha.capitulo_id):
-            if escena.orden_discurso == objetivo:
-                return escena
+        """La escena `atras` posiciones antes **en la obra**, no en el capítulo.
+
+        Recorrer solo el capítulo dejaría sin continuidad a la primera escena de
+        cada uno, y es donde más se nota el salto: el Escritor encadena con la
+        anterior palabra por palabra (§4.2).
+        """
+        ubicacion = self.outline.ubicacion_de(escena_id)
+        objetivo = ubicacion.orden_discurso - atras
+        for otra_id, orden in self.outline.escenas_de_obra(ubicacion.obra_id):
+            if orden == objetivo:
+                return self.escenas.leer_escena(otra_id)
         return None
