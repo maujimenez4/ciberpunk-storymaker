@@ -551,6 +551,47 @@ recoge lo que quedaba.
 fase 10 está hecho y verificado, pero el cambio a `implementada` va en un commit
 firmado por quien lo apruebe.
 
+### Desviación declarada: RF-CTX-07 no está implementado
+
+**`RF-CTX-07` está marcado `M` (imprescindible) y `T` (establecido por prueba), y
+no se cumple.** Se declara aquí, y no se corrige la marca en silencio, porque
+cerrar la spec sin decirlo dejaría por escrito que un requisito imprescindible
+está probado cuando no existe — y dentro de dos meses nadie releerá los
+docstrings: leerá `implementada` y construirá encima.
+
+El requisito pide recuperación híbrida **en este orden**: filtro estructural →
+ordenación semántica sobre lo ya filtrado → fusión con recencia. **El primer paso
+no existe.** Medido el 2026-09-23:
+
+- `features/canon/repository.py:511` — `candidatos_para_ordenar(self, tope: int)`
+  **no recibe `escena_id`**. No es que no filtre: no tiene con qué. El cuerpo es
+  `SELECT … FROM fragmento ORDER BY rowid DESC LIMIT ?`, las últimas N filas, sin
+  filtrar por presentes, lugar, hilos abiertos ni rango de capítulos.
+- `features/contexto/repository.py:168` — el docstring dice «ya filtrados por el
+  filtro estructural» y acto seguido llama a `candidatos_para_ordenar(tope)`. El
+  `escena_id` sí se usa, pero solo para `_es_el_principio`: nunca para filtrar.
+- `features/contexto/recoleccion.py:153` — «1. Filtro estructural. Lo hace el
+  almacén».
+
+Tres docstrings prometen el filtro y cada uno apunta a otra capa. Los tests
+existentes comprueban el tope y que no vuelva vacío; ninguno comprueba que filtre,
+que es justo por qué la letra `T` no se sostiene.
+
+**Lo que esto rompe.** `CLAUDE.md` §4.2 declara ese orden **no negociable**, con
+su motivo al lado: ordenar por parecido sin filtrar antes trae escenas parecidas,
+no escenas pertinentes. Con obras pequeñas no se nota, porque las últimas N filas
+y las pertinentes casi coinciden; se notará cuando el índice crezca, y entonces
+el fallo será de relevancia silenciosa, no un error.
+
+**Por qué se cierra igual.** La alternativa era retrasar el cierre de toda la
+fase 1 —y las seis dependencias de `specs/002-lectura-web/` que cuelgan de ella—
+por un requisito cuyo efecto hoy no es observable. Decisión de `maujimenez4` el
+2026-09-23, sobre la medición de arriba. **La deuda queda abierta y con nombre**,
+no perdonada: `RF-CTX-07` sigue siendo `M`, sigue sin cumplirse, y recogerlo es
+trabajo de la feature `contexto`.
+
+*Hallado por Julio, verificado de forma independiente por Mario y por Ezequiel.*
+
 ### Lo que se hizo en la fase 10
 
 Los pasos P-105 a P-123, sobre la misma rama. Las cuatro puertas en verde en cada
