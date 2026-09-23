@@ -163,9 +163,9 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 
 ### Casos de uso
 
-**CU-01 · Abrir el regalo.** *Precondición:* existe una `VersionPublicada`. *Flujo:* el destinatario abre la URL → ve la portada con su dedicatoria → entra por el índice al capítulo 1. *Postcondición:* ha leído sin haber tenido que elegir versión ni entender el sistema. → RI-01, RI-02, RF-LEC-01 a 04.
+**CU-01 · Abrir el regalo.** *Precondición:* existe una `VersionPublicada`. *Flujo:* el destinatario abre la URL → ve la portada con su dedicatoria → entra por el índice al capítulo 1. *Postcondición:* ha leído sin haber tenido que elegir versión ni entender el sistema. → RI-01, RI-02, RF-LEC-01, RF-LEC-02, RF-LEC-03, RF-LEC-04.
 
-**CU-02 · Consultar quién es quién.** *Precondición:* la versión tiene `FichaDeLectura`. *Flujo:* el lector abre la ficha → ve personajes y lugares → pincha uno y llega al capítulo donde aparece. *Postcondición:* la ficha mostrada es la **congelada con esa versión**, no el canon de hoy. → RI-03, RF-FIC-01 a 04.
+**CU-02 · Consultar quién es quién.** *Precondición:* la versión tiene `FichaDeLectura`. *Flujo:* el lector abre la ficha → ve personajes y lugares → pincha uno y llega al capítulo donde aparece. *Postcondición:* la ficha mostrada es la **congelada con esa versión**, no el canon de hoy. → RI-03, RF-FIC-01, RF-FIC-02, RF-FIC-03, RF-FIC-04.
 
 **CU-03 · Llevarse la novela.** *Precondición:* la versión tiene PDF. *Flujo:* el lector pulsa descargar. *Postcondición:* obtiene el PDF **de la versión que está leyendo**, no de la última. → RI-04, RF-LEC-09.
 
@@ -175,7 +175,7 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 - La regeneración abre defectos bloqueantes, o la revalidación de DEP-03 los abre en capítulos posteriores → **no se publica**; el lector ve que su petición no se atendió y por qué, y sigue leyendo la versión anterior intacta.
 - El trabajo falla o se agota el límite de reintentos → igual que el anterior: la petición queda registrada y la versión vigente no cambia. **El límite lo fija el backend** (`architecture.md` §8.3: reintento dirigido, máximo 2, después humano); esta spec no lo define, solo muestra su resultado (RF-PET-06).
 
-*Postcondición de éxito:* existe una `VersionPublicada` nueva que `sucede_a` la anterior. *Postcondición de fracaso:* **la versión vigente es exactamente la de antes.** → RI-05, RI-06, RF-PET-01 a 08.
+*Postcondición de éxito:* existe una `VersionPublicada` nueva que `sucede_a` la anterior. *Postcondición de fracaso:* **la versión vigente es exactamente la de antes.** → RI-05, RI-06, RF-PET-01, RF-PET-02, RF-PET-03, RF-PET-04, RF-PET-05, RF-PET-06, RF-PET-07, RF-PET-08.
 
 **CU-05 · Ver qué cambió.** *Precondición:* existen dos `VersionPublicada`. *Flujo:* el lector ve marcados los capítulos que difieren de la versión anterior. *Postcondición:* la marca corresponde a diferencia **real** de texto, no a la relación sobreaproximada de DEP-01. → RF-LEC-07, RF-LEC-08.
 
@@ -267,27 +267,27 @@ Convenciones, las de `specs/001-backend-v1/spec.md`:
 
 ## Criterios de aceptación
 
-- [ ] **CA-1** — Cuando se abre la URL de una `VersionPublicada`, entonces se ve la portada con la dedicatoria de su destinatario, y el índice lleva a los diez capítulos. *(T)* → RF-LEC-01 a 04.
-- [ ] **CA-2** — Cuando se abre la ficha de una versión y se pincha un personaje, entonces se llega a un capítulo donde ese personaje aparece. *(T)* → RF-FIC-01, RF-FIC-02.
-- [ ] **CA-3** — Cuando se abre una versión anterior, entonces su ficha es la de aquella versión y no la del canon de hoy. *(T)* → RF-FIC-03, RF-FIC-04.
-- [ ] **CA-4** — Cuando se pide un cambio y el trabajo termina publicando, entonces existe una `VersionPublicada` nueva que `sucede_a` la anterior, y la anterior sigue siendo legible entera. *(T)* → RF-PET-02 a 05, RF-LEC-06.
-- [ ] **CA-5** — Cuando la regeneración o la revalidación de DEP-03 abren un defecto bloqueante, entonces las tres cosas: **(a)** no existe ninguna `VersionPublicada` nueva, ni siquiera creada sin marcar vigente; **(b)** el puntero de versión vigente no se ha movido; y **(c)** la regeneración rechazada **no ha dejado rastro** en canon, ledger ni índice. *(T)* → RF-PET-06.
-- [ ] **CA-6** — Cuando dos versiones difieren en tres capítulos, entonces se marcan exactamente esos tres, ni uno más. *(T)* → RF-LEC-07, RF-LEC-08.
-- [ ] **CA-7** — Cuando el lector revierte, entonces la versión anterior vuelve a ser la vigente y la revertida sigue siendo navegable. *(T)* → RF-PET-09, RF-PET-10.
-- [ ] **CA-8** — Cuando se descarga el PDF desde una versión concreta, entonces el PDF es el de esa versión. *(T)* → RF-LEC-09.
-- [ ] **CA-9** — `pnpm typecheck` y `pnpm lint` pasan en limpio, y `lint` **falla** si se añade a propósito un import de `shared/` hacia `features/`, uno entre dos features, o uno a un fichero interno de otra feature. *(T)* → RF-UI-01, RF-UI-03.
-- [ ] **CA-10** — El agente abre la lectura con el browser MCP, recorre portada, índice, un capítulo y la ficha, y **registra un fallo** cuando cualquiera de los cuatro no renderiza. *(D)* → RF-UI-04.
-- [ ] **CA-11** — Cuando el texto de una petición contiene `<script>` o una instrucción dirigida al modelo, entonces se muestra como texto plano y llega al backend como dato, sin alterar ningún prompt. *(T)* → RF-PET-07, RNF-SEG-01.
-- [ ] **CA-12** — La suite del frontend pasa **sin backend levantado**: las respuestas se sirven con dobles construidos desde el esquema OpenAPI. *(T)* → RI-08.
-- [ ] **CA-13** — Cuando falla la red al abrir un capítulo, entonces se ve el error y un reintento, no una página en blanco. *(T)* → RF-UI-05.
-- [ ] **CA-14** — Cuando hay una petición en curso, entonces la lectura sigue siendo navegable y la interfaz indica cuántas peticiones hay vivas. *(T)* → RF-PET-03, RF-PET-08.
-- [ ] **CA-15** — Abrir un capítulo no espera a los otros nueve: se comprueba que la vista pinta con una sola respuesta de capítulo. *(T)* → RNF-REN-01, RD-01, RD-02, RD-03.
+- [ ] **CA-1** — Cuando se abre la URL de una `VersionPublicada`, entonces se ve la portada con la dedicatoria de su destinatario, y el índice lleva a los diez capítulos. *(Test)* → RF-LEC-01, RF-LEC-02, RF-LEC-03, RF-LEC-04.
+- [ ] **CA-2** — Cuando se abre la ficha de una versión y se pincha un personaje, entonces se llega a un capítulo donde ese personaje aparece. *(Test)* → RF-FIC-01, RF-FIC-02.
+- [ ] **CA-3** — Cuando se abre una versión anterior, entonces su ficha es la de aquella versión y no la del canon de hoy. *(Test)* → RF-FIC-03, RF-FIC-04.
+- [ ] **CA-4** — Cuando se pide un cambio y el trabajo termina publicando, entonces existe una `VersionPublicada` nueva que `sucede_a` la anterior, y la anterior sigue siendo legible entera. *(Test)* → RF-PET-02, RF-PET-03, RF-PET-04, RF-PET-05, RF-LEC-06.
+- [ ] **CA-5** — Cuando la regeneración o la revalidación de DEP-03 abren un defecto bloqueante, entonces las tres cosas: **(a)** no existe ninguna `VersionPublicada` nueva, ni siquiera creada sin marcar vigente; **(b)** el puntero de versión vigente no se ha movido; y **(c)** la regeneración rechazada **no ha dejado rastro** en canon, ledger ni índice. *(Test)* → RF-PET-06.
+- [ ] **CA-6** — Cuando dos versiones difieren en tres capítulos, entonces se marcan exactamente esos tres, ni uno más. *(Test)* → RF-LEC-07, RF-LEC-08.
+- [ ] **CA-7** — Cuando el lector revierte, entonces la versión anterior vuelve a ser la vigente y la revertida sigue siendo navegable. *(Test)* → RF-PET-09, RF-PET-10.
+- [ ] **CA-8** — Cuando se descarga el PDF desde una versión concreta, entonces el PDF es el de esa versión. *(Test)* → RF-LEC-09.
+- [ ] **CA-9** — `pnpm typecheck` y `pnpm lint` pasan en limpio, y `lint` **falla** si se añade a propósito un import de `shared/` hacia `features/`, uno entre dos features, o uno a un fichero interno de otra feature. *(Test)* → RF-UI-01, RF-UI-03.
+- [ ] **CA-10** — El agente abre la lectura con el browser MCP, recorre portada, índice, un capítulo y la ficha, y **registra un fallo** cuando cualquiera de los cuatro no renderiza. *(Demostración)* → RF-UI-04.
+- [ ] **CA-11** — Cuando el texto de una petición contiene `<script>` o una instrucción dirigida al modelo, entonces se muestra como texto plano y llega al backend como dato, sin alterar ningún prompt. *(Test)* → RF-PET-07, RNF-SEG-01.
+- [ ] **CA-12** — La suite del frontend pasa **sin backend levantado**: las respuestas se sirven con dobles construidos desde el esquema OpenAPI. *(Test)* → RI-08.
+- [ ] **CA-13** — Cuando falla la red al abrir un capítulo, entonces se ve el error y un reintento, no una página en blanco. *(Test)* → RF-UI-05.
+- [ ] **CA-14** — Cuando hay una petición en curso, entonces la lectura sigue siendo navegable y la interfaz indica cuántas peticiones hay vivas. *(Test)* → RF-PET-03, RF-PET-08.
+- [ ] **CA-15** — Abrir un capítulo no espera a los otros nueve: se comprueba que la vista pinta con una sola respuesta de capítulo. *(Test)* → RNF-REN-01, RD-01, RD-02, RD-03.
 
-- [ ] **CA-16** — Cuando se recarga la página de un capítulo, o se abre el mismo enlace en otra pestaña, entonces se ve exactamente el mismo texto. *(T)* → RF-LEC-05, RD-02.
-- [ ] **CA-17** — Ningún componente contiene un `fetch` ni un cliente HTTP, no hay store global que mezcle estado de servidor con estado de interfaz, y cada test vive junto a su componente. *(A)* → RF-LEC-10, RF-UI-02, RNF-MAN-01.
-- [ ] **CA-18** — Cuando el lector selecciona un fragmento del capítulo o una entrada de la ficha, entonces la petición se abre con el hecho afectado ya identificado. *(T)* → RF-PET-01.
-- [ ] **CA-19** — Cuando un trabajo tarda el peor caso de DEP-03, entonces la interfaz lo sigue dando por vivo: no lo declara perdido ni terminado. Se comprueba con un doble que retrasa la respuesta. *(T)* → RNF-REN-02.
-- [ ] **CA-20** — El *bundle* construido no contiene ninguna clave de proveedor, y la única URL de red que usa es la del backend propio. *(A)* → RNF-SEG-02.
+- [ ] **CA-16** — Cuando se recarga la página de un capítulo, o se abre el mismo enlace en otra pestaña, entonces se ve exactamente el mismo texto. *(Test)* → RF-LEC-05, RD-02.
+- [ ] **CA-17** — Ningún componente contiene un `fetch` ni un cliente HTTP, no hay store global que mezcle estado de servidor con estado de interfaz, y cada test vive junto a su componente. *(Análisis)* → RF-LEC-10, RF-UI-02, RNF-MAN-01.
+- [ ] **CA-18** — Cuando el lector selecciona un fragmento del capítulo o una entrada de la ficha, entonces la petición se abre con el hecho afectado ya identificado. *(Test)* → RF-PET-01.
+- [ ] **CA-19** — Cuando un trabajo tarda el peor caso de DEP-03, entonces la interfaz lo sigue dando por vivo: no lo declara perdido ni terminado. Se comprueba con un doble que retrasa la respuesta. *(Test)* → RNF-REN-02.
+- [ ] **CA-20** — El *bundle* construido no contiene ninguna clave de proveedor, y la única URL de red que usa es la del backend propio. *(Análisis)* → RNF-SEG-02.
 
 **Sobre CA-5.** Su primera redacción decía «la vigente es byte a byte la de antes», y eso no era un criterio: `CLAUDE.md` §14 prohíbe editar en sitio, así que los bytes de una versión anterior **no pueden** cambiar y la comprobación pasaba siempre, hubiera funcionado el mecanismo o no. Un criterio que no puede fallar no verifica nada. Los tres riesgos reales son los de arriba, y el tercero es el que muerde: hechos extraídos de una prosa que se descartó. La letra (c) es **CA-7 de la 001** —«una escena rechazada no ha dejado rastro en canon, ledger ni índice»— aplicada a una regeneración rechazada.
 

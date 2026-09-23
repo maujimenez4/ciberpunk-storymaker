@@ -115,9 +115,31 @@ Falla cerrado: si no puede evaluar —falta una sección, el frontmatter no pars
 fallo, no un «no aplica». Es la misma regla que esta spec le exige a los validadores de
 G1a, aplicada al validador de la spec.
 
-Hoy: **12/12 en la 002** y **11/12 en la 001**. Esa segunda cifra importa tanto como la
-primera: un validador que solo encuentra defectos en la spec que se está auditando suele
-estar escrito para encontrarlos.
+### Cifras, y una corrección que conviene leer
+
+| Spec | Invariantes | Requisitos que ningún CA cita | V-9 |
+| --- | --- | --- | --- |
+| 001-backend-v1 | 11/12 | 141 de 142 (74 no aparecen fuera de su tabla) | falla: 11 criterios sin marca |
+| 002-validadores | **12/12** | 4 de 7 | pasa |
+| 003-lectura-web | 11/12 | 18 de 51 | falla: 20 criterios sin marca |
+
+**Una versión anterior de este informe daba 12/12 y 11/12 sobre un validador que no veía
+los requisitos.** Su expresión regular solo reconocía los escritos en **negrita**, y las
+specs los declaran en **tablas**: en la 001 veía 14 identificadores de 142. Estaba dando
+por buena una cobertura que no había mirado, que es el fallo en abierto que esta misma
+spec persigue en los validadores de G1a. Lo delató la 003 al devolver «0 requisitos, 20
+criterios» — un resultado demasiado absurdo para no mirarlo. Corregido el 2026-09-23.
+
+De ahí salió también la degradación de V-8 a aviso: al ver los requisitos de verdad
+apareció que la sección de requisitos **cita identificadores de otras specs** —la 002
+menciona `RF-CAL-07`, que es de la 001— y desde el texto no hay forma mecánica de
+distinguir el propio del ajeno. No se relajó la invariante para que pasara: como fallo
+binario no era decidible con la información disponible, y un validador que acusa en falso
+se acaba ignorando. La cifra se conserva entera como medida de deuda.
+
+Que el validador encuentre más defectos en la 001 y la 003 que en la spec que audita
+importa tanto como el 12/12: uno que solo los encuentra donde su autor quería suele estar
+escrito para encontrarlos.
 
 Dos decisiones de diseño discutibles, por si alguien quiere cambiarlas:
 

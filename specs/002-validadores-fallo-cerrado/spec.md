@@ -184,7 +184,7 @@ vacía, que la puerta lee como «sin defectos».
 
 ## Criterios de aceptación
 
-- [ ] **CA-1** — La sonda de [`sonda_invariantes.py`](sonda_invariantes.py), **actualizada
+- [ ] **CA-1** *(transversal)* — La sonda de [`sonda_invariantes.py`](sonda_invariantes.py), **actualizada
       con las respuestas firmadas a P-1 a P-5**, pasa entera sobre el código de
       producción. *(Test)*
 
@@ -194,7 +194,7 @@ vacía, que la puerta lee como «sin defectos».
       eligió la otra (**lanza**). Con aquella redacción, o se relajaba la invariante
       —prohibido por el propio criterio— o P-2 no estaba abierta. Un criterio de
       aceptación no puede prejuzgar una pregunta que la spec declara abierta.
-- [ ] **CA-2** — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza un error de
+- [ ] **CA-2** *(RF-CAL-13)* — `validar_nivel_de_calor(texto, nivel_no_valido, vt)` lanza un error de
       dominio **de `commons/errors/`**, y el test nombra el tipo: `pytest.raises` sobre esa
       clase, no sobre `Exception`. *(Test)*
 
@@ -208,21 +208,21 @@ vacía, que la puerta lee como «sin defectos».
       Alcanza a los cuatro puntos donde hoy se lanza, no solo al nivel de calor: la sonda
       usa `pytest.raises(Exception)` con un `noqa: B017` precisamente porque el tipo estaba
       sin decidir, y ese `noqa` desaparece cuando P-5 se firme.
-- [ ] **CA-3** — `validar_giro_de_valor` trata los **dos** casos de H-1 y los trata igual:
+- [ ] **CA-3** *(RF-CAL-14)* — `validar_giro_de_valor` trata los **dos** casos de H-1 y los trata igual:
       ni `""` produce un `ValidationError` ni `"   "` produce un defecto cuya cita sean
       espacios. Qué hace en su lugar lo decide P-2. *(Test)*
-- [ ] **CA-4** — Barajar `canon` y barajar `afirmaciones` no cambia la salida de
+- [ ] **CA-4** *(RF-CAL-15)* — Barajar `canon` y barajar `afirmaciones` no cambia la salida de
       `validar_canon` ni la de `validar_continuidad_fisica`, comprobado con `hypothesis`
       sobre alcance pequeño. *(Test)*
-- [ ] **CA-5** — Una afirmación cuyo `objeto` es un objeto físico corriente **no** produce
+- [ ] **CA-5** *(RF-CAL-16)* — Una afirmación cuyo `objeto` es un objeto físico corriente **no** produce
       CON-03; una que usa información sin `sabe_desde` anterior **sí**, aunque esté
       redactada con otras palabras que la `descripcion` del Extractor. *(Test)*
-- [ ] **CA-6** — Un párrafo con diálogo y narración en la misma línea conserva la narración
+- [ ] **CA-6** *(RF-CAL-18)* — Un párrafo con diálogo y narración en la misma línea conserva la narración
       en `solo_narracion`, y VOZ-03 la evalúa. *(Test)*
-- [ ] **CA-7** — Ninguna afirmación con objeto físico deja de producir CON-02 por el corte
+- [ ] **CA-7** *(RF-CAL-16)* — Ninguna afirmación con objeto físico deja de producir CON-02 por el corte
       de RF-CAL-16: `validar_objetos` sigue bloqueando G1a igual que antes, comprobado con
       su propio test y con el de `escritura` que lo ejercita de punta a punta. *(Test)*
-- [ ] **CA-8** — Las cuatro invariantes de H-1 a H-4 viven en
+- [ ] **CA-8** *(RF-CAL-17)* — Las cuatro invariantes de H-1 a H-4 viven en
       `features/calidad/tests/`, dentro de `testpaths`, y `uv run pytest` las recoge sin
       nombrar ningún fichero. Hoy la sonda está **fuera** a propósito, así que la suite no
       las ejercita: mientras sigan solo ahí, RF-CAL-17 no está cumplido y el arreglo no
@@ -230,7 +230,7 @@ vacía, que la puerta lee como «sin defectos».
 
       Lo señaló la sesión **Mario** el 2026-09-23, repasando la cobertura RF→CA: RF-CAL-17
       era el único requisito sin criterio, y es justo el que evita que esto se repita.
-- [ ] **CA-9** — *(Pendiente de umbral, y por eso no se puede marcar.)* «La tasa de
+- [ ] **CA-9** *(transversal, y fuera de la aprobación)* — *(Pendiente de umbral, y por eso no se puede marcar.)* «La tasa de
       defectos mal formados no empeora» no declara línea base, y `verification.md` §5 dice
       que lo que no se puede incumplir no verifica. Es el mismo reproche que P-3 le hace al
       comentario de `defectos.py`, y esta spec lo cometía a su vez: lo señaló la sesión
@@ -323,6 +323,17 @@ sesión **Mario** el 2026-09-23 y encontró que RF-CAL-17 se había quedado sin 
 
 CA-1 es transversal —la sonda entera— y CA-9 queda fuera de la aprobación por no tener
 umbral.
+
+Cada criterio **nombra además su requisito en la propia línea**, no solo en esta tabla. Es
+por lo mismo que existe RF-CAL-17: una cobertura que depende de que alguien cruce dos listas
+a mano se rompe en silencio la primera vez que nadie las cruza. Así la comprueba una máquina.
+*(Lo señaló la sesión **Hernán** el 2026-09-23, al corregir un validador de specs que hasta
+entonces solo reconocía requisitos en negrita y daba por buena una cobertura que no había
+leído.)*
+
+**`RF-CAL-07` no es un requisito de esta spec.** Es de la 001, y aquí se cita solo al explicar
+el arrastre de CON-02. Un comprobador que lo cuente como propio y sin criterio está dando un
+falso positivo, no señalando un hueco.
 
 | Hallazgo | Técnica que lo encontró | Origen |
 | --- | --- | --- |
