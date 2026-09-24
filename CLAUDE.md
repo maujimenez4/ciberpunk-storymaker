@@ -29,6 +29,7 @@ Un sistema que escribe **novelas personalizadas para regalar**: a un hijo, a la 
 | Cómo funciona una novela: estructura, género, arcos, personalización | `docs/domain-knowledge.md` |
 | Cómo se construye el sistema: agentes, proceso, diagramas, esquema | `docs/architecture.md` |
 | Cómo se gana confianza: métodos, validadores, puntos ciegos y riesgos | `docs/verification.md` |
+| **Cómo se llegó hasta aquí**: spec inicial, *trade-offs*, *explainers*, diagramas, registro de iteraciones y *red-team log* | `docs/proceso/` — la documentación de proceso que pide el encargo |
 | **Qué pide el encargo, sin interpretar** | `docs/entregable/examen-final.md` |
 | Cómo se trabaja: `docs/`, spec, plan, código | §3 de este fichero |
 | Stack, límites técnicos, convenciones, agentes, checklist | este fichero |
@@ -91,6 +92,7 @@ Tres sitios, tres cosas distintas. Confundirlos es justo el error que este proce
 | Dónde | Qué contiene | Vida |
 | --- | --- | --- |
 | `docs/` | lo que **es verdad hoy**: vocabulario, dominio, arquitectura, verificación | permanente |
+| `docs/proceso/` | **cómo se llegó hasta aquí**: decisiones con su alternativa, qué lo destapó y qué cambió. Es historia, no norma: si discrepa de un documento de contexto, **gana el de contexto** | permanente |
 | `docs/entregable/` | lo que **pide el encargo**: requisito externo, no decisión nuestra | hasta la entrega |
 | `specs/<id>/spec.md` | lo que **queremos que sea verdad**: una funcionalidad con criterios de aceptación | nace, se aprueba, se implementa, se archiva |
 | `specs/<id>/plan-N-<slug>.md` | **cómo** se llega hasta ahí, paso a paso y test a test | muere con la implementación |
