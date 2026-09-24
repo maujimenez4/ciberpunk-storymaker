@@ -11,7 +11,59 @@ fecha: 2026-09-24
 
 Sale de las tablas de **Desviaciones** de los tres planes, que suman más de ciento cincuenta filas. Ahí está el detalle y el porqué; aquí está **lo que sigue vivo**, que es lo que nadie iba a leer de corrido.
 
-**Las cinco primeras bloquean algo. El resto son deudas con su factura calculada.**
+**Las cinco primeras bloquean algo. El resto son deudas con su factura calculada.** P-17 y P-18 se abrieron el 2026-09-24, y **P-17 es el mas grave del fichero**: por eso esta arriba del todo.
+
+---
+
+## P-17 · El Continuista esta construido, probado y **no lo llama nadie**
+
+**Severidad: un validador que `verification.md` declara en la puerta G1a no corre en produccion, y tres documentos lo dan por hecho.**
+
+Medido el 2026-09-24:
+
+```
+ciclo.Agentes ................................ planificador, escritor, extractor
+Continuista instanciado fuera de sus tests ... ninguno
+defectos que llegan a cruzar_g1a ............. solo el del veto
+```
+
+`features/calidad/agents.py` define el Continuista entero, con su prompt versionado y 361 lineas de tests. **`features/escritura/ciclo.py` no lo tiene entre sus tres roles**, asi que el unico `defectos_recibidos` que llega a la puerta es el del guardarrail de palabras prohibidas.
+
+**Es el mismo modo de fallo que este repositorio ya documento una vez** —`cobertura.py`, «escrita, probada y sin que nadie la ejecutara»— y de la misma familia que P-1: **codigo correcto que nadie ejercita, con tests verdes que no lo notan porque prueban la unidad y no su uso.**
+
+**Lo que agrava:** `estado-del-entregable.md` lo daba por «Hecho (Fase 3)» —ya corregido— y es el que da el **segundo validador semantico** que el encargo §5b exige como minimo. Y **empeora P-4**: no es que `RF-VAL-06` cubra un tercio, es que **ese tercio tampoco se ejecuta**.
+
+**Quien lo cierra:** cablearlo es de la **Fase 6**, con el juez, porque los dos entran por el mismo punto del ciclo.
+
+---
+
+## P-18 · El coste imputado cae a casi cero cuando el cache acierta
+
+**Severidad: la cifra con la que la Fase 6 va a comparar plantillas mide suerte de cache.**
+
+Medido contra el proveedor real el 2026-09-24, con un prompt de 5.012 tokens:
+
+```
+input_tokens ............... 10
+cache_read_input_tokens .... 6835
+output_tokens .............. 842   (480 de razonamiento)
+```
+
+`coste_derivado` lee **solo** `input_tokens` y `output_tokens`, asi que imputo el coste de **10** tokens de entrada cuando el modelo leyo **6.845**: corto por un factor de ~680 en esa llamada.
+
+**Y el propio fichero lo habia previsto y se equivocaba.** El comentario de `TARIFAS` dice «no cubre lectura ni escritura de cache… **hoy no se usa cache de prompt**, y cuando se use hay que ampliar esto». Esa frase es falsa, y probablemente lo era ya cuando se escribio. Nadie la comprobo porque **la suite corre con dobles y los dobles no tienen cache**.
+
+**Por que importa mas de lo que parece:** `RF-OBS-03` imputa el coste para **comparar plantillas y documentar el *tuning***, que es exactamente lo que la Fase 6 entrega. Una cifra que cae dos ordenes de magnitud segun si la llamada anterior calento el cache no compara plantillas: compara cache.
+
+**El arreglo tiene dos mitades y la primera no espera a la segunda:** que `Consumo` **guarde** los tokens de cache —hoy se pierden, asi que ninguna corrida pasada se puede recalcular— y que `coste_derivado` los impute con su tarifa. Lo segundo exige decidir **a que precio**, que es una tarifa declarada y no una decision de implementacion.
+
+---
+
+## Y un dato que toca `CLAUDE.md` §4.1
+
+La sobrecarga que el CLI anade por su cuenta —su *system prompt*— es de **~1.800 tokens por llamada** y **es constante**: medida con prompts de 16, 512 y 5.012 tokens, se queda entre 1.612 y 1.833 mientras el nuestro crece ×313.
+
+§4.1 dice «nunca se llama al modelo sin haber contado los tokens **del paquete**», y el techo se comprueba sobre el paquete — pero la entrada real es el paquete **mas** esa constante. Hoy es ruido sobre 100.000; con el paralelismo que P-06 autorizo, la suma en vuelo lleva ~1.800 extra **por llamada viva**. Se puede sumar como constante y quedarse corto de forma segura.
 
 ---
 

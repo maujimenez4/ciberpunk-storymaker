@@ -117,7 +117,7 @@ Cinco validadores con **nombre y punto de ejecución declarado**, en dos catálo
 | --- | --- |
 | LLM-as-judge **con rúbrica**, puntuación por criterio y justificación | **Falta.** Decisión **P-B**: el juez no entra hasta poder calibrarse |
 | **Revisión humana** de una novela completa con la misma rúbrica | **Falta** |
-| Continuista que contrasta **contra el grafo** | **Hecho** (Fase 3), y es el que da el segundo validador semántico |
+| Continuista que contrasta **contra el grafo** | **A medias, y es grave.** Está construido, exportado y con 361 líneas de tests — **pero no lo llama nadie**: `ciclo.Agentes` tiene tres roles y él no está. Ver **P-17** |
 
 ### c) Lean 4 — **Falta entera**
 
