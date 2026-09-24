@@ -21,13 +21,20 @@ import re
 import tomllib
 from pathlib import Path
 
-from app.features.escritura.maquina import _TRANSICIONES
+from app.features.escritura.maquina import (
+    Estado,
+    Senal,
+    TransicionInexistente,
+    transitar,
+)
 from app.features.escritura.modelos import INTENTOS_MAXIMOS
 
 RAIZ = Path(__file__).resolve().parents[6]
 TLA = RAIZ / "formal" / "tla" / "Harness.tla"
 CFG = RAIZ / "formal" / "tla" / "harness.cfg"
 TABLA = tomllib.loads((RAIZ / "formal" / "tla" / "correspondencia.toml").read_text("utf-8"))
+
+TERMINALES = {"INTEGRADA", "ESCALADA", "FALLIDA", "CANCELADA"}
 
 ESTADOS_DE_LA_NOVELA = {
     "CONFIGURANDO",
@@ -60,10 +67,55 @@ def test_cada_accion_de_la_especificacion_esta_emparejada():
     assert acciones_del_next() == {a["nombre"] for a in TABLA["accion"]}
 
 
+def transiciones_reales() -> set[tuple[str, str, str]]:
+    """La relacion de transicion **por ejecucion**, no leyendo `_TRANSICIONES`.
+
+    Y la diferencia no es de estilo: `transitar` tiene **dos caminos que
+    esquivan la tabla**. Las averias de §3.6 se resuelven antes —`if senal in
+    _AVERIAS: return FALLIDA`— y el destino de `REPARANDO` lo decide el
+    contador. Un test que compare contra la tabla no ve ninguno de los dos, y
+    **se ve verde**: eso fue lo que paso cuando la Fase 6 anadio
+    `PROCESO_INTERRUMPIDO` y nada se puso rojo.
+
+    Se prueban los dos lados del contador porque es lo unico que `intento`
+    cambia: `>= INTENTOS_MAXIMOS` o por debajo.
+    """
+    salidas: set[tuple[str, str, str]] = set()
+    for estado in Estado:
+        for senal in Senal:
+            for intento in (0, INTENTOS_MAXIMOS):
+                try:
+                    destino = transitar(estado, senal, intento=intento)
+                except TransicionInexistente:
+                    continue
+                salidas.add((estado.value, senal.value, destino.value))
+    return salidas
+
+
+def declaradas_sin_accion() -> set[tuple[str, str, str]]:
+    """Las sueltas mas las que se declaran **por regla**.
+
+    Las averias no son dieciocho hechos independientes: son una regla —tres
+    senales que llevan a `FALLIDA` desde cualquier estado vivo—. Declararlas una
+    a una obligaria a anadir filas cada vez que naciera un estado, y el dia que
+    alguien se olvidara el test diria que el codigo cambio cuando solo creci— la
+    tabla. Se declara la regla y el test la expande.
+    """
+    sueltas = {tuple(s["transicion"]) for s in TABLA.get("sin_accion", [])}
+    vivos = [e.value for e in Estado if e.value not in TERMINALES]
+    por_regla = {
+        (estado, senal, r["destino"])
+        for r in TABLA.get("sin_accion_regla", [])
+        for senal in r["senales"]
+        for estado in vivos
+    }
+    return sueltas | por_regla
+
+
 def test_cada_transicion_del_codigo_esta_reclamada_o_declarada():
-    del_codigo = {(e.value, s.value, d.value) for (e, s), d in _TRANSICIONES.items()}
+    del_codigo = transiciones_reales()
     reclamadas = {tuple(t) for a in TABLA["accion"] for t in a.get("transiciones", [])}
-    declaradas = {tuple(s["transicion"]) for s in TABLA["sin_accion"]}
+    declaradas = declaradas_sin_accion()
     assert not reclamadas & declaradas, "Una transicion no puede estar en los dos sitios"
     assert del_codigo == reclamadas | declaradas
 

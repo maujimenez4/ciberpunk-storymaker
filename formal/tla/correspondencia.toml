@@ -64,8 +64,11 @@ nota = "El modelo abstrae EXTRAYENDO: §3.9 no lo tiene, y no se inventan estado
 [[accion]]
 nombre = "Reparar"
 codigo = ["app.features.escritura.service.escribir_capitulo"]
-transiciones = [["VALIDANDO", "defecto_bloqueante", "REPARANDO"]]
-nota = "REPARANDO -> ESCRIBIENDO con intento < 2 NO esta en `_TRANSICIONES`: la decide el contador dentro de `maquina.transitar`. Es la decision previa 1 del plan."
+transiciones = [
+  ["VALIDANDO", "defecto_bloqueante", "REPARANDO"],
+  ["REPARANDO", "paso_completado", "ESCRIBIENDO"],
+]
+nota = "La segunda NO esta en `_TRANSICIONES`: la decide el contador dentro de `maquina.transitar` con intento < 2. Es la decision previa 1 del plan, y desde el 2026-09-24 esta **reclamada** y no solo contada en prosa: el test mide `transitar` por ejecucion."
 
 [[accion]]
 nombre = "Escalar"
@@ -73,7 +76,7 @@ codigo = [
   "app.features.escritura.maquina.transitar",
   "app.features.escritura.maquina.exigir_que_la_novela_siga",
 ]
-transiciones = []
+transiciones = [["REPARANDO", "paso_completado", "ESCALADA"]]
 nota = "REPARANDO -> ESCALADA con intento >= 2, y `DETIENEN_LA_NOVELA` la convierte en la DETENIDA de §3.9."
 
 [[accion]]
@@ -140,6 +143,20 @@ nota = "Los terminales de §3.3 y los `[*]` de §3.9."
 # Transiciones del codigo que NINGUNA accion del modelo reclama, con su motivo.
 # Si aparece una nueva sin declarar, el test se pone en rojo.
 # --------------------------------------------------------------------------
+
+# Las averias de §3.6 NO pasan por `_TRANSICIONES`: `transitar` las resuelve
+# antes, con `if senal in _AVERIAS: return FALLIDA`. Son una **regla**, no
+# dieciocho hechos: tres senales que llevan a FALLIDA desde cualquier estado
+# vivo. Declararlas una a una obligaria a anadir filas cada vez que naciera un
+# estado. El test expande la regla sobre los estados no terminales.
+#
+# Estuvieron invisibles hasta el 2026-09-24: el test comparaba contra la tabla
+# y no contra el comportamiento, asi que la Fase 6 anadio `proceso_interrumpido`
+# y nada se puso rojo.
+[[sin_accion_regla]]
+senales = ["fallo_de_proveedor", "tiempo_agotado", "proceso_interrumpido"]
+destino = "FALLIDA"
+motivo = "§3.9 no tiene averia tecnica: la maquina de la novela no dibuja FALLIDA. Un capitulo FALLIDA la detiene por la via de `escribir_novela`, que exige INTEGRADA. Declarado, no modelado."
 
 [[sin_accion]]
 transicion = ["ENSAMBLANDO", "contexto_excedido", "FALLIDA"]
