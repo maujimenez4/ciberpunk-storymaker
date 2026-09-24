@@ -42,7 +42,7 @@ ESTADOS_DE_LA_NOVELA = {
 
 
 def acciones_del_next() -> set[str]:
-    bloque = re.search(r"^Next ==\n((?:\s*\\/ \w+\n)+)", TLA.read_text("utf-8"), re.M)
+    bloque = re.search(r"^Next ==\n((?:\s*\\/ \w+\n)+)", TLA.read_text("utf-8"), re.MULTILINE)
     assert bloque is not None, "El modulo no tiene un `Next` con un disyunto por linea"
     return set(re.findall(r"\\/ (\w+)", bloque.group(1)))
 
@@ -100,6 +100,6 @@ def test_el_modelo_pequeno_usa_el_limite_del_codigo():
 
 
 def test_los_estados_del_modelo_son_los_de_architecture_39():
-    bloque = re.search(r"^Estados ==\s*\{(.*?)\}", TLA.read_text("utf-8"), re.M | re.S)
+    bloque = re.search(r"^Estados ==\s*\{(.*?)\}", TLA.read_text("utf-8"), re.MULTILINE | re.DOTALL)
     assert bloque is not None
     assert set(re.findall(r'"(\w+)"', bloque.group(1))) == ESTADOS_DE_LA_NOVELA

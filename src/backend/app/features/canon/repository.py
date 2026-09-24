@@ -29,7 +29,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.calidad import NombreDeCanon
+from app.features.calidad import HechoDeCanon, NombreDeCanon, OrigenDeHecho
 from app.features.canon.modelos import (
     Embedding,
     Evento,
@@ -291,6 +291,56 @@ async def declarar_variantes(
             for variante in dict.fromkeys(variantes)
             if variante not in ya_estan
         ],
+    )
+
+
+async def leer_hechos_del_canon(sesion: AsyncSession, *, obra_id: int) -> tuple[HechoDeCanon, ...]:
+    """El grafo que el Continuista contrasta, como **proyeccion** y no como filas.
+
+    Devuelve `HechoDeCanon` -- el modelo que `calidad` exporta -- por el mismo
+    motivo que `leer_nombres_del_canon` devuelve `NombreDeCanon`: inventar aqui
+    una tercera representacion del mismo concepto es la deriva que `CLAUDE.md`
+    §2 existe para evitar. Y porque una fila de SQLAlchemy arrastra su sesion
+    detras, mientras `calidad` se prueba **sin base de datos**.
+
+    **Los hechos sustituidos no entran, y ese es el trabajo de esta funcion.**
+    Corregir no edita (§4.2): un hecho equivocado no se modifica, se registra
+    otro que lo sustituye y cita al anterior. Devolver los dos haria que el
+    Continuista viera «ojos verdes» y «ojos marrones» sobre la misma entidad y
+    emitiera un `CAN-01` **por una correccion que el sistema hizo bien**.
+
+    Se filtra por «alguien me cita en `sustituye_a`» y no por la fecha ni por el
+    id mas alto: la cadena es explicita desde RF-MEM-08 justamente porque dos
+    correcciones seguidas sobre el mismo atributo rompen cualquier heuristica.
+
+    El orden es por entidad y atributo, **no el que devuelva la base**: sin eso
+    el paquete de contexto cambia entre ejecuciones y el determinismo de §3.6 se
+    pierde sin que falle nada.
+    """
+    sustituidos = select(HechoCanon.sustituye_a).where(
+        HechoCanon.obra_id == obra_id, HechoCanon.sustituye_a.is_not(None)
+    )
+    filas = (
+        (
+            await sesion.execute(
+                select(HechoCanon)
+                .where(HechoCanon.obra_id == obra_id, HechoCanon.id.not_in(sustituidos))
+                .order_by(HechoCanon.entidad, HechoCanon.atributo, HechoCanon.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return tuple(
+        HechoDeCanon(
+            hecho_canon_id=str(fila.id),
+            entidad=fila.entidad,
+            atributo=fila.atributo,
+            valor=fila.valor,
+            origen=OrigenDeHecho(fila.origen),
+            escena_de_origen=fila.escena_de_origen,
+        )
+        for fila in filas
     )
 
 

@@ -38,7 +38,11 @@ fichero interno de otra feature, que es lo que §5.1 prohibe de verdad.
 
 from app.features.canon.agents import Extractor, SalidaMalFormada
 from app.features.canon.modelos import Embedding
-from app.features.canon.repository import declarar_variantes, leer_nombres_del_canon
+from app.features.canon.repository import (
+    declarar_variantes,
+    leer_hechos_del_canon,
+    leer_nombres_del_canon,
+)
 from app.features.canon.resumenes import (
     ResumenDeCapitulo,
     contar_capitulos_con_texto_aprobado,
@@ -65,6 +69,7 @@ __all__ = [
     "contar_capitulos_con_texto_aprobado",
     "corregir_hecho",
     "declarar_variantes",
+    "leer_hechos_del_canon",
     "leer_nombres_del_canon",
     "leer_resumenes_anteriores",
     "registrar_uso_de_hechos",
