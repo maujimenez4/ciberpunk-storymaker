@@ -65,7 +65,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
@@ -87,14 +87,16 @@ from app.features.escritura.checkpoint import (
     ultimo_capitulo_completado,
 )
 from app.features.escritura.ciclo import (
+    TIPO_DE_TRABAJO,
     Agentes,
     ResultadoDelCiclo,
     TrabajoDesconocido,
     ejecutar_ciclo,
 )
-from app.features.escritura.maquina import Estado
+from app.features.escritura.maquina import ESTADOS_TERMINALES, Estado, estado_de
 from app.features.escritura.modelos import Trabajo
-from app.features.escritura.reanudacion import reanudar
+from app.features.escritura.reanudacion import planificar_reanudacion, reanudar
+from app.features.outline import ObraDesconocida
 
 Ejecutar = Callable[[Trabajo], Awaitable[Any]]
 """Lo que el bucle hace con cada trabajo. Es el tipo que `reanudar` ya pide, y
@@ -242,6 +244,116 @@ async def escribir_novela(sesion: AsyncSession, *, obra_id: int, ejecutar: Ejecu
 
         checkpoint = await registrar_checkpoint(sesion, trabajo)
         integrados.append(capitulo)
+
+
+@dataclass(frozen=True, slots=True)
+class AvanceDeLaNovela:
+    """Por donde va la novela, **leido de la base y sin escribir nada**.
+
+    Es lo que `GET /obras/{id}/novela` devuelve. Existe porque el arranque
+    responde 202 sin identificadores de trabajo —todavia no existen— y
+    `GET /trabajos/{id}` es por capitulo: sin esta lectura, quien lanza la
+    novela no sabe cuando puede publicar.
+    """
+
+    obra_id: int
+    total: int
+    integrados: int
+    en_curso: int | None
+    estado: str
+    motivo: str | None = None
+
+
+SIN_OUTLINE = "sin_outline"
+ESCRIBIENDO = "escribiendo"
+TERMINADA = "terminada"
+DETENIDA = "detenida"
+
+
+async def avance_de_la_novela(sesion: AsyncSession, *, obra_id: int) -> AvanceDeLaNovela:
+    """Cuantos capitulos hay, cuantos estan integrados y si la novela sigue.
+
+    **El capitulo pendiente lo decide `planificar_reanudacion`**, que es quien
+    lo decide para el bucle: una segunda cuenta aqui seria un segundo sitio que
+    sabe cual es el capitulo siguiente, y los dos acabarian discrepando.
+
+    **Detenida es lo mismo que hace parar a `escribir_novela`**: el ultimo
+    trabajo del capitulo pendiente termino sin quedar `INTEGRADA` —`ESCALADA`,
+    `FALLIDA` o `CANCELADA`—. Manda el **ultimo**, no cualquiera: un `FALLIDA`
+    se relanza como trabajo nuevo (§3.6), y mientras el relanzado este vivo la
+    novela se esta escribiendo.
+
+    Lo que esta lectura **no** puede ver: un trabajo que quedo en un estado vivo
+    porque el proceso murio. Sigue diciendo «escribiendo» hasta que la
+    reanudacion lo descarte; distinguirlo exigiria un latido que hoy no existe.
+    """
+    existe = (
+        await sesion.execute(text("SELECT 1 FROM obra WHERE id = :id"), {"id": obra_id})
+    ).scalar_one_or_none()
+    if existe is None:
+        raise ObraDesconocida(obra_id)
+
+    cuenta = (
+        (
+            await sesion.execute(
+                text(
+                    "SELECT COUNT(*) AS total, COALESCE(SUM(EXISTS ("
+                    "  SELECT 1 FROM trabajo AS t "
+                    "  WHERE t.capitulo_id = c.id AND t.estado = :integrada"
+                    ")), 0) AS integrados "
+                    "FROM capitulo AS c WHERE c.obra_id = :obra_id"
+                ),
+                {"obra_id": obra_id, "integrada": Estado.INTEGRADA.value},
+            )
+        )
+        .mappings()
+        .one()
+    )
+    total, integrados = int(cuenta["total"]), int(cuenta["integrados"])
+
+    def avance(
+        estado: str, en_curso: int | None = None, motivo: str | None = None
+    ) -> AvanceDeLaNovela:
+        return AvanceDeLaNovela(
+            obra_id=obra_id,
+            total=total,
+            integrados=integrados,
+            en_curso=en_curso,
+            estado=estado,
+            motivo=motivo,
+        )
+
+    if total == 0:
+        return avance(SIN_OUTLINE)
+
+    plan = await planificar_reanudacion(sesion, obra_id=obra_id)
+    if plan.pendiente is None:
+        return avance(TERMINADA)
+
+    ultimo = (
+        await sesion.execute(
+            select(Trabajo)
+            .where(
+                Trabajo.capitulo_id == plan.pendiente.capitulo_id,
+                Trabajo.tipo == TIPO_DE_TRABAJO,
+            )
+            .order_by(Trabajo.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if ultimo is None:
+        return avance(ESCRIBIENDO)
+
+    estado = estado_de(ultimo.estado)
+    if estado in ESTADOS_TERMINALES:
+        # `INTEGRADA` no puede llegar aqui: el pendiente es el primero **sin**
+        # trabajo integrado, asi que su ultimo trabajo terminal es un fallo.
+        causa = f": {ultimo.causa_fallo}" if ultimo.causa_fallo else ""
+        return avance(
+            DETENIDA,
+            motivo=f"El capitulo {plan.pendiente.numero} quedo en {estado.value}{causa}",
+        )
+    return avance(ESCRIBIENDO, en_curso=plan.pendiente.numero)
 
 
 async def numero_de_capitulo(sesion: AsyncSession, *, capitulo_id: int | None) -> int | None:

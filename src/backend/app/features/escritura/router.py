@@ -25,7 +25,7 @@ respuesta, asi que la sesion de la peticion ya no existe cuando la tarea corre.
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import lru_cache
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Annotated, Literal, Protocol, runtime_checkable
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel
@@ -41,6 +41,7 @@ from app.features.escena import Planificador
 from app.features.escritura.agents import Escritor
 from app.features.escritura.ciclo import Agentes, abrir_trabajo, ejecutar_ciclo, leer_trabajo
 from app.features.escritura.novela import (
+    avance_de_la_novela,
     ciclo_de_la_novela,
     escribir_novela,
     numero_de_capitulo,
@@ -251,7 +252,8 @@ class NovelaLanzada(BaseModel):
     bucle, uno por capitulo— y prometerlos obligaria a abrirlos por adelantado,
     que es justo lo que la secuencia prohibe. Lo que se devuelve es lo unico
     cierto en ese instante: de que obra se trata y cual es el capitulo pendiente.
-    El progreso se consulta despues por `GET /trabajos/{id}` (RI-06).
+    El progreso de la novela se consulta despues por `GET /obras/{id}/novela`,
+    y el de cada capitulo por `GET /trabajos/{id}` (RI-06).
     """
 
     obra_id: int
@@ -301,6 +303,29 @@ async def escribir_la_novela(
         desde_el_capitulo=None if plan.pendiente is None else plan.pendiente.numero,
         terminada=plan.terminada,
     )
+
+
+class EstadoDeLaNovela(BaseModel):
+    """Por donde va la novela: lo que el navegador consulta mientras espera.
+
+    `en_curso` es el **numero de outline** del capitulo que se esta escribiendo,
+    no su id, por lo mismo que `EstadoDelTrabajo` lleva `numero_de_capitulo`.
+    `motivo` solo va relleno cuando `estado` es `detenida`.
+    """
+
+    obra_id: int
+    total: int
+    integrados: int
+    en_curso: int | None
+    estado: Literal["sin_outline", "escribiendo", "terminada", "detenida"]
+    motivo: str | None
+
+
+@router.get("/obras/{obra_id}/novela")
+async def consultar_la_novela(obra_id: int, sesion: Sesion) -> EstadoDeLaNovela:
+    """Cuantos capitulos hay, cuantos estan integrados, y si la novela sigue."""
+    avance = await avance_de_la_novela(sesion, obra_id=obra_id)
+    return EstadoDeLaNovela.model_validate(avance, from_attributes=True)
 
 
 async def _correr_el_ciclo(

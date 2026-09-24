@@ -612,6 +612,7 @@ La ruta de evolución está prevista: si el número de features crece, se agrupa
 | `POST` | `/obras/{id}/outline` | Genera outline y asigna beats de género |
 | `POST` | `/escenas/{id}/planificar` | Produce la ficha de escena |
 | `POST` | `/obras/{id}/novela` | Escribe la novela entera: un trabajo por capítulo (RI-15) |
+| `GET` | `/obras/{id}/novela` | Por dónde va la novela: capítulos totales, integrados, el que se escribe y si está detenida y por qué |
 | `POST` | `/capitulos/{id}/escribir` | Lanza el ciclo escribir → validar → reparar (RI-05) |
 | `GET` | `/capitulos/{id}/contexto` | Devuelve el paquete y su desglose de tokens (depuración) (RI-07) |
 | `GET` | `/escenas/{id}/versiones` | Historial inmutable de versiones |
