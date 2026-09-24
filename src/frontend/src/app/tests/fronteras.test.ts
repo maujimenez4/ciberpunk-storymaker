@@ -49,7 +49,14 @@ function lintDeUnFichero(
   }
 }
 
-describe("las tres fronteras las falla ESLint, no una revision a mano", () => {
+/**
+ * Cada caso arranca ESLint entero sobre el proyecto: son segundos, no
+ * milisegundos, y el limite por defecto de vitest son 5.000 ms. Se sube aqui
+ * porque la lentitud es **inherente** a lo que este test hace —ejecutar la
+ * herramienta en vez de leer su configuracion—, y bajar el limite significaria
+ * dejar de ejecutarla.
+ */
+describe("las tres fronteras las falla ESLint, no una revision a mano", { timeout: 30_000 }, () => {
   it("shared no puede importar de features", () => {
     const salida = lintDeUnFichero(
       "src/shared/lib/_prueba.ts",
