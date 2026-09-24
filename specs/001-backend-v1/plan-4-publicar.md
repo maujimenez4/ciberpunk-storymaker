@@ -45,7 +45,7 @@ El encargo §5c sugiere cuatro invariantes. **Dos son comprobables hoy y dos no:
 | --- | --- | --- |
 | Un personaje **no está en dos lugares en el mismo momento** | **Sí** | `cronologia` tiene `participantes`, `lugar` y `tiempo_historia` |
 | Un personaje **no aparece después de un evento que lo excluye** | **Sí** | `evento.excluye[]` existe desde la Fase 2 |
-| Los eventos respetan el **orden temporal** declarado | **Sí**, con matiz | `tiempo_historia` es `String(120)`, no una fecha: el orden se declara, no se calcula |
+| Los eventos respetan el **orden temporal** declarado | **No** | Medido al escribir T4: `tiempo_historia` es `String(120)` —«día 1, mañana»— y **no hay en todo el esquema ninguna magnitud ordenable de tiempo de historia**. Lo único ordenable es `orden_discurso`, que es orden de **discurso**: en un salto atrás el discurso avanza mientras la historia retrocede. Un `ordenTemporal` sobre ese campo comprobaría que el discurso avanza, **que es cierto por construcción** |
 | La **edad** concuerda con la **fecha de nacimiento** | **Casi vacío** | Solo el destinatario tiene fecha, y no es un `Personaje` |
 
 **Se eligen los dos primeros**, y el primero no es una elección cómoda: es **literalmente el que `CA-21` exige probar** — «una cronología imposible a propósito —alguien en dos sitios a la vez— **falla y la versión no se publica**».
@@ -374,7 +374,9 @@ Cierra **`RF-FOR-01`** y **R-4**.
 async def test_el_fichero_lean_lleva_los_eventos_con_momento_lugar_y_presentes(sesion, obra):
     lean = await generar_lean(sesion, obra.id)
     assert "def eventos : List Evento := [" in lean
-    assert '⟨"e1", "la manana del 3 de julio", "la cocina", ["Marta", "Luna"]⟩' in lean
+    # Indices, no cadenas: lo decide el parrafo de arriba y lo mide `decide`.
+    assert "def momentos : List String := [" in lean
+    assert "⟨0, 0, 0⟩" in lean          # evento 0, momento 0, lugar 0
 
 
 @pytest.mark.parametrize("cuantos", [1, 20])
