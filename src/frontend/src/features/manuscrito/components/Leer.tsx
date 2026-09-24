@@ -2,6 +2,7 @@ import { Aviso, Enlace, Texto } from "@/shared/ui/primitives";
 
 import { API, useCapitulo, useVersion } from "../api/lectura";
 import { usePosicion } from "../hooks/usePosicion";
+import { AjustesDeLectura } from "./AjustesDeLectura";
 
 /**
  * La novela entera, continua. Dedicatoria, sumario y los capítulos encadenados.
@@ -26,7 +27,7 @@ export function Leer({ token }: { token: string }) {
   const capitulos = version.data.capitulos ?? [];
 
   return (
-    <article>
+    <article className="lectura">
       {version.data.dedicatoria ? (
         <p className="dedicatoria">{version.data.dedicatoria}</p>
       ) : null}
@@ -40,6 +41,14 @@ export function Leer({ token }: { token: string }) {
       <p className="nota">
         <Enlace href={`/api${API.pdf(token)}`}>Descargar la novela en PDF</Enlace>
       </p>
+
+      {/* Los mandos van abajo y fijos, no arriba: a mitad del capítulo siete,
+          cambiar la letra no puede exigir volver al principio. */}
+      <div className="lectura__pie">
+        <div className="lectura__pie-medida">
+          <AjustesDeLectura />
+        </div>
+      </div>
     </article>
   );
 }

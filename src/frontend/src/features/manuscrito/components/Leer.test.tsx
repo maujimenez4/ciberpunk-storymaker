@@ -124,6 +124,13 @@ describe("la lectura continua", () => {
     );
   });
 
+  it("al leer se pueden abrir los ajustes de lectura", async () => {
+    // Plan 4 · T5: el botón «Aa» solo existe mientras se lee.
+    render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+
+    expect(await screen.findByRole("button", { name: "Ajustes de lectura" })).toBeInTheDocument();
+  });
+
   it("el PDF se puede descargar", async () => {
     // RF-POR-03 conserva esta mitad aunque el indice deje de ser destino.
     render(<Leer token="T" />, { wrapper: conDoble(novela()) });
