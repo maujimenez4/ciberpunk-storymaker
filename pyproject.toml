@@ -15,6 +15,12 @@ dependencies = [
   # usa ni un test** (CA-4). `tiktoken` es el contador previo de P-A: un BPE
   # local, que es lo que RF-CTX-02 pide y no una estimacion por caracteres.
   "claude-agent-sdk>=0.2", "tiktoken>=0.8",
+  # La de la Tarea 7. Es **opcional de hecho aunque se declare aqui**: lo que
+  # aporta son las funciones escalares `vec_*` sobre la columna BLOB que ya
+  # existe, y si la extension no carga el sistema arranca igual con el almacen
+  # de fuerza bruta (RNF-FIA-02, CA-28). Declararla y no exigirla es lo que
+  # impide que sea una segunda base de datos por la puerta de atras.
+  "sqlite-vec>=0.1.6",
 ]
 
 [dependency-groups]
@@ -52,6 +58,12 @@ follow_imports = "silent"
 # una asercion, no una interfaz. `files` no expande comodines, asi que la
 # frontera se traza con `exclude`, que si es una expresion regular.
 exclude = ["/tests/", "conftest\\.py$"]
+
+[[tool.mypy.overrides]]
+# `sqlite-vec` no trae `py.typed`, y no hay stubs publicados. El alcance del
+# silencio es **ese** modulo y nada mas: el resto sigue en estricto.
+module = ["sqlite_vec.*"]
+ignore_missing_imports = true
 
 [tool.importlinter]
 root_packages = ["app"]
