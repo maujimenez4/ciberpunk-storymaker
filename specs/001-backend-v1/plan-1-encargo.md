@@ -1369,7 +1369,7 @@ git commit -m "Los hechos del brief entran al canon sin escena de origen"
 
 ## Tarea 9 · Los tres endpoints, y cerrar dos veces no crea dos obras
 
-Cierra **RI-01**, **RI-02**, **RI-03**, **CU-01** entero y la otra mitad de **CA-34**.
+Cierra **RI-01**, **RI-02**, **RI-03** y la otra mitad de **CA-34**. De **CU-01** cierra el flujo y sus dos excepciones **sobre la suite**, no sobre la aplicación levantada: ver «Lo que esta fase NO hace».
 
 **Ficheros:**
 - Crear: `features/obra/router.py`, `commons/errors/manejador.py`
@@ -1580,6 +1580,7 @@ git commit -m "Registro de auditoria append-only: que se permitio, que se bloque
 - **No hay Langfuse.** La observabilidad entra con el ciclo de capítulo, que es lo primero que produce trazas que valga la pena mirar.
 - **No hay Lean ni TLA+.** Necesitan cronología y máquina de estados, que aún no existen.
 - **La tabla `hecho_canon` nace aquí pero incompleta:** el `usado_en` por capítulos (RF-MEM-02) entra cuando haya capítulos que lo usen.
+- **No hay proveedor de modelo, así que `CU-01` no se puede ejecutar fuera de la suite.** La única implementación de `ClienteModelo` al terminar la fase es `DobleDeterminista`: la Tarea 3 entrega el **protocolo** y el doble, y el cliente real no lo tenía asignado ninguna tarea. Contra la aplicación levantada, `POST /entrevistas` responde 201 y `/respuestas` y `/cerrar` responden **500** con un `NotImplementedError` explícito. Es deliberado y está probado con doble; **RI-13 sí se cumple** —el OpenAPI publica los tres caminos con sus modelos, que es lo que la spec 002 consume—. Se descartó devolver un 501 amable: un hueco de fase se cierra en la fase siguiente, y una respuesta ordenada lo haría más fácil de no ver. **Es lo primero que tiene que resolver la Fase 2.**
 - **No se extraen hechos del `TextoAportado`, y eso deja `RF-ENT-06` a medias.** El requisito son dos cosas: «de ese texto **se extraen hechos**» y «que **entran al canon** con `origen: brief` y sin escena». La segunda la cierra T8 y está probada; la primera no la tiene asignada ninguna tarea de esta fase, y se descubrió implementándola. Producir enunciados a partir de prosa es trabajo del **Extractor**, que `CLAUDE.md` §9.3 asigna a la feature `canon` —Fase 2—, así que **no se mete aquí a última hora**: inventar un décimo rol en la última tarea es peor que declarar el hueco. Mientras tanto, los hechos del brief entran por donde los ponga quien llame al servicio.
 
 ---
