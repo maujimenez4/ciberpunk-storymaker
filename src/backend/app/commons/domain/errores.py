@@ -24,3 +24,18 @@ class ErrorDeDominio(Exception):
     negocio que se haya incumplido, y no se traduce a una respuesta: se
     propaga.
     """
+
+
+class OperacionNoPermitida(ErrorDeDominio):
+    """La operacion existe, se entiende, y el dominio la prohibe.
+
+    No es un fallo de permisos ni de validacion de entrada: es una regla de
+    negocio que dice que **eso no se hace**, con los datos correctos y quien
+    sea que lo pida. Hoy la lanza `borrar_auditoria` (`commons/db/auditoria.py`),
+    porque el registro de auditoria es *append-only* (RF-GUA-05): borrar una
+    fila es exactamente lo que ese registro existe para impedir.
+
+    Vive aqui, y no junto a la tabla, porque `commons/domain/` se prueba sin
+    base de datos: quien captura la excepcion no tiene por que importar
+    SQLAlchemy para nombrarla.
+    """

@@ -1,13 +1,14 @@
 import asyncio
 from logging.config import fileConfig
 
-# `app.features.obra.modelos` se importa por su efecto, no por lo que expone:
+# Estos dos modulos se importan por su efecto, no por lo que exponen:
 # `--autogenerate` solo ve lo que este registrado en `Base.metadata` en el
 # momento de correr, y una tabla que nadie importo no produce migracion, sin
 # avisar. Y lo que no avisa no es solo la migracion que falta: con las tablas
 # en la base y ausentes de `Base.metadata`, el siguiente `--autogenerate` las
 # ve como sobrantes y genera su `drop_table`. La linea entra con la tabla, no
 # despues. Los modulos de tablas que vengan se anaden aqui.
+import app.commons.db.auditoria
 import app.features.obra.modelos  # noqa: F401
 from alembic import context
 from app.commons.config.ajustes import Ajustes
