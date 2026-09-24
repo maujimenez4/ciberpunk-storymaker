@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — de la entrevista a la novela publicada
-estado: en-revision       # borrador | en-revision | aprobada | implementada
-aprobada_por:             # v3.1 la firmo maujimenez4 el 2026-09-24; v3.2 cambia RD-01 y necesita firma nueva
+estado: aprobada          # borrador | en-revision | aprobada | implementada
+aprobada_por: maujimenez4 # v3.2 firmada el 2026-09-24: RD-01 sin "un fichero por obra", y P-07
 fecha: 2026-09-23
 ---
 
