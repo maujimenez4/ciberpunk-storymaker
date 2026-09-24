@@ -54,6 +54,10 @@ TypeOK ==
 Pendientes == Numeros \ integrados
 Primero(S) == CHOOSE c \in S : \A d \in S : c =< d
 
+(* Solo se evalua con `Len(versiones) > 0` delante: TLC corta la conjuncion *)
+(* por la izquierda.                                                        *)
+Vigente == versiones[Len(versiones)]
+
 Init ==
   /\ estado = "CONFIGURANDO"
   /\ rondas = 0
@@ -184,6 +188,47 @@ LeanFalla ==
   /\ UNCHANGED <<rondas, actual, integrados, validado, intento,
                  versiones, peticiones, porRehacer>>
 
+(* PUBLICADA --> REGENERANDO. Los capitulos que la peticion toca salen de   *)
+(* `integrados` y pierden su validacion: hay que volver a ganarlas. La      *)
+(* version publicada NO se toca, y por eso `versiones` no aparece aqui.     *)
+PeticionDelLector ==
+  /\ estado = "PUBLICADA"
+  /\ peticiones < MaxPeticiones
+  /\ \E S \in (SUBSET Numeros) \ {{}} :
+       /\ porRehacer' = S
+       /\ integrados' = integrados \ S
+       /\ validado' = [c \in Numeros |-> IF c \in S THEN FALSE ELSE validado[c]]
+  /\ peticiones' = peticiones + 1
+  /\ estado' = "REGENERANDO"
+  /\ UNCHANGED <<rondas, actual, intento, versiones>>
+
+(* Un capitulo rehecho y aprobado. El ciclo de escritura de arriba NO se    *)
+(* reutiliza a proposito: §3.9 dibuja `REGENERANDO` como un estado, no como *)
+(* una vuelta por ESCRIBIENDO_CAPITULO, y lo que este modelo tiene que      *)
+(* decidir es que pasa con la version vigente, no como se reescribe un      *)
+(* capitulo — eso ya esta modelado.                                         *)
+RehacerCapitulo ==
+  /\ estado = "REGENERANDO"
+  /\ porRehacer # {}
+  /\ LET c == Primero(porRehacer) IN
+       /\ actual' = c
+       /\ validado' = [validado EXCEPT ![c] = TRUE]
+       /\ integrados' = integrados \cup {c}
+       /\ porRehacer' = porRehacer \ {c}
+  /\ UNCHANGED <<estado, rondas, intento, versiones, peticiones>>
+
+(* R-2. «No es una publicacion: es un regreso» (§3.9). No crea version y no *)
+(* toca la vigente: DEVUELVE la lectura al estado de la vigente. Puede      *)
+(* ocurrir con capitulos ya rehechos, y ese es justo el caso que S3 vigila. *)
+DescartarPeticion ==
+  /\ estado = "REGENERANDO"
+  /\ Len(versiones) > 0
+  /\ estado' = "PUBLICADA"
+  /\ integrados' = Vigente.capitulos
+  /\ validado' = [c \in Numeros |-> c \in Vigente.validados]
+  /\ porRehacer' = {}
+  /\ UNCHANGED <<rondas, actual, intento, versiones, peticiones>>
+
 (* Sin esto, TLC informa de `deadlock` en los estados terminales de §3.9,   *)
 (* que son finales y no averias.                                            *)
 Fin ==
@@ -204,7 +249,67 @@ Next ==
   \/ Verificar
   \/ Publicar
   \/ LeanFalla
+  \/ PeticionDelLector
+  \/ RehacerCapitulo
+  \/ DescartarPeticion
   \/ Fin
 
-Spec == Init /\ [][Next]_vars
+(* ---------------------------------------------------------------------- *)
+(* S1. Ninguna version publicada contiene un capitulo que no paso su       *)
+(* puerta. Enunciada sobre la CREACION de la version y no sobre el estado  *)
+(* de destino: `DescartarPeticion` llega a PUBLICADA sin crear nada, y una *)
+(* invariante escrita sobre el estado seria falsa en el primer paso        *)
+(* (§3.9, invariante 1). `CLAUDE.md` §8, regla 14.                         *)
+PublicadaSoloConPuertas ==
+  \A i \in 1..Len(versiones) :
+    /\ versiones[i].capitulos = Numeros
+    /\ versiones[i].capitulos \subseteq versiones[i].validados
+
+(* S2. La reanudacion no duplica ni pierde capitulos.                      *)
+(*   - no duplica: no se escribe un capitulo que ya esta integrado         *)
+(*                 (`checkpoint.CapituloYaIntegrado`)                      *)
+(*   - no pierde:  no se verifica con un hueco detras                      *)
+(*                 (`checkpoint.CapituloAnteriorSinIntegrar`)              *)
+ReanudacionIntegra ==
+  /\ (estado = "ESCRIBIENDO_CAPITULO") => (actual \notin integrados)
+  /\ (estado = "VERIFICANDO") => (integrados = Numeros)
+
+(* S3. En PUBLICADA, lo que se sirve es exactamente la ultima version       *)
+(* publicada. Es «la version anterior se conserva siempre» dicho por el     *)
+(* lado que se puede romper: una peticion descartada a medias.             *)
+LecturaIgualALaVigente ==
+  (estado = "PUBLICADA") =>
+    /\ Len(versiones) > 0
+    /\ integrados = Vigente.capitulos
+    /\ \A c \in integrados : validado[c]
+
+(* Companera de S3, y es una propiedad de accion y no de estado: ninguna    *)
+(* version ya publicada cambia ni desaparece.                              *)
+VersionesAppendOnly ==
+  [][ \A i \in 1..Len(versiones) :
+        /\ i =< Len(versiones')
+        /\ versiones'[i] = versiones[i] ]_vars
+
+(* Liveness. NO es `<>[]`: `PUBLICADA --> REGENERANDO` existe, asi que      *)
+(* «acaba y se queda» es falso en esta maquina. Lo que el encargo pide es   *)
+(* que toda generacion termine, y eso es un leads-to.                       *)
+TodaGeneracionTermina ==
+  (estado = "CONFIGURANDO") ~> (estado \in {"PUBLICADA", "DETENIDA"})
+
+(* Equidad FUERTE sobre `Aprobar`, y el motivo es el que decide:            *)
+(* entre dos habilitaciones de `Aprobar` hay una vuelta por                 *)
+(* ESCRIBIENDO_CAPITULO, asi que no esta CONTINUAMENTE habilitada y la      *)
+(* equidad debil no la forzaria. Es lo que cierra los dos bucles que        *)
+(* pueden no terminar: el de reparacion y el de caida.                      *)
+Equidad ==
+  /\ WF_vars(Planificar)
+  /\ WF_vars(SiguienteCapitulo)
+  /\ WF_vars(Escribir)
+  /\ SF_vars(Aprobar)
+  /\ WF_vars(Escalar)
+  /\ WF_vars(Verificar)
+  /\ WF_vars(Publicar)
+  /\ WF_vars(RehacerCapitulo)
+
+Spec == Init /\ [][Next]_vars /\ Equidad
 =============================================================================
