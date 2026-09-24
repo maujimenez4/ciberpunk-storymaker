@@ -8,8 +8,12 @@ paquete recibido».
 
 - `Escritor`, `Reparacion` y `ProsaVacia`: el agente, el defecto concreto que
   vuelve en un reintento, y lo que se lanza cuando lo devuelto no es una escena.
-- `escribir_capitulo`, `Escritura` e `IntentoDeEscritura`: el ciclo de un
-  capitulo con su resultado, para quien lo orqueste (T11).
+- `escribir_capitulo`, `Escritura` e `IntentoDeEscritura`: la escritura de un
+  capitulo con su resultado, para quien lo orqueste.
+- `Agentes`, `abrir_trabajo`, `ejecutar_ciclo`, `leer_trabajo` y
+  `ResultadoDelCiclo`: **el ciclo de punta a punta** (T11), que es lo que monta
+  `main.py` con `router` y lo que un test sustituye por
+  `obtener_sesion_de_fondo`.
 - `localizar_veto`: la palabra prohibida **con su desplazamiento**, que es lo
   que la hace citable.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
@@ -28,6 +32,15 @@ from app.features.escritura.agents import (
     ProsaVacia,
     Reparacion,
 )
+from app.features.escritura.ciclo import (
+    Agentes,
+    ResultadoDelCiclo,
+    TrabajoDesconocido,
+    abrir_trabajo,
+    ejecutar_ciclo,
+    leer_trabajo,
+)
+from app.features.escritura.router import obtener_sesion_de_fondo, router
 from app.features.escritura.service import (
     CODIGO_DE_PALABRA_PROHIBIDA,
     Escritura,
@@ -41,11 +54,19 @@ __all__ = [
     "HASH_DE_PLANTILLA_V1",
     "PROMPT_ID",
     "PROMPT_VERSION",
+    "Agentes",
     "Escritor",
     "Escritura",
     "IntentoDeEscritura",
     "ProsaVacia",
     "Reparacion",
+    "ResultadoDelCiclo",
+    "TrabajoDesconocido",
+    "abrir_trabajo",
+    "ejecutar_ciclo",
     "escribir_capitulo",
+    "leer_trabajo",
     "localizar_veto",
+    "obtener_sesion_de_fondo",
+    "router",
 ]

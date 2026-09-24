@@ -33,7 +33,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.auditoria import registrar
+from app.commons.domain.errores import ContextBudgetExceeded
 from app.commons.domain.normalizacion import contiene_veto, normalizar
+from app.commons.llm.contador import ContadorDeTokens
 from app.features.calidad import (
     CapituloAValidar,
     Defecto,
@@ -45,14 +47,16 @@ from app.features.calidad import (
     TiempoVerbal,
     cruzar_g1a,
 )
-from app.features.contexto import ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
+from app.features.contexto import Capa, ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
 from app.features.escena import RestriccionesDeDiscurso
 from app.features.escritura.agents import (
     HASH_DE_PLANTILLA_V1,
+    PLANTILLA_V1,
     PROMPT_ID,
     PROMPT_VERSION,
     Escritor,
     Reparacion,
+    render_escritor,
 )
 from app.features.escritura.modelos import INTENTOS_MAXIMOS, Ejecucion, VersionTexto
 
@@ -259,11 +263,56 @@ async def _completar_ejecucion(
     await sesion.execute(update(Ejecucion).where(Ejecucion.id == ejecucion_id).values(**valores))
 
 
+def _coste_de_la_reparacion(
+    contexto: ContextoDelCapitulo,
+    restricciones: RestriccionesDeDiscurso,
+    texto_anterior: str | None,
+    reparaciones: Sequence[Reparacion],
+    contador: ContadorDeTokens,
+) -> int:
+    """Cuanto crece el prompt al anadirle el defecto con su cita. Cero la primera vez.
+
+    **Es la juntura T5-T6-T8, y ninguna de las tres la tenia asignada.** El
+    Ensamblador cuenta el **paquete**; lo que se manda es el **prompt**, que
+    ademas del paquete lleva la plantilla y, en las vueltas de reparacion, el
+    capitulo anterior integro mas una linea por defecto. `CLAUDE.md` §4.1 dice
+    que la reserva de 10.000 existe «para que el reintento con el defecto
+    anadido siga cabiendo», y hasta hoy nadie lo comprobaba.
+
+    Se mide el **incremento** y no el prompt entero a proposito: lo que la
+    reserva cubre es lo que se anade. Contar aqui la plantilla haria que el
+    primer intento consumiera reserva sin haber reparado nada.
+
+    Si no cabe, `ContextBudgetExceeded` sobre la capa `reserva` **sin llamar al
+    modelo** (RF-CTX-02, RF-CTX-03): nunca se recorta el paquete para hacerlo
+    caber, y nunca se manda a ver si suena la flauta.
+    """
+    if not reparaciones:
+        return 0
+
+    base = contador.contar(render_escritor(PLANTILLA_V1, contexto.paquete.texto, restricciones))
+    entero = contador.contar(
+        render_escritor(
+            PLANTILLA_V1,
+            contexto.paquete.texto,
+            restricciones,
+            texto_anterior=texto_anterior,
+            reparaciones=reparaciones,
+        )
+    )
+    extra = entero - base
+    libre = contexto.paquete.desglose.reserva_libre
+    if extra > libre:
+        raise ContextBudgetExceeded(Capa.RESERVA, extra, libre)
+    return extra
+
+
 async def escribir_capitulo(
     sesion: AsyncSession,
     escritor: Escritor,
     *,
     contexto: ContextoDelCapitulo,
+    contador: ContadorDeTokens,
     run_id: str,
     modelo: str,
     restricciones: RestriccionesDeDiscurso,
@@ -297,6 +346,13 @@ async def escribir_capitulo(
     texto_anterior: str | None = None
 
     while True:
+        # **El prompt del reintento se vuelve a presupuestar**, y es lo que hace
+        # de la reserva un mecanismo y no una fila de una tabla. Va ANTES de
+        # crear la fila y antes de llamar: lo que no cabe no llega a gastarse.
+        extra = _coste_de_la_reparacion(
+            contexto, restricciones, texto_anterior, reparaciones, contador
+        )
+
         ejecucion_id = await registrar_ejecucion(
             sesion,
             contexto,
@@ -309,6 +365,15 @@ async def escribir_capitulo(
                 semilla=semilla,
             ),
         )
+        if extra:
+            # La fila nace con el recuento del paquete (decision de T6); esta
+            # vuelta manda mas, y `tokens_previstos` tiene que decirlo o P-A no
+            # puede medir la deriva del contador contra `tokens_reales`.
+            await sesion.execute(
+                update(Ejecucion)
+                .where(Ejecucion.id == ejecucion_id)
+                .values(tokens_previstos=contexto.paquete.tokens_previstos + extra)
+            )
 
         texto = await escritor.escribir(
             contexto.paquete,

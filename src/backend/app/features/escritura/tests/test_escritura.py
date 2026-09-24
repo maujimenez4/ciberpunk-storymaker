@@ -113,6 +113,9 @@ def _escritor(respuestas: dict[str, str], cliente=None) -> Escritor:
 async def _escribir(sesion, obra_con_outline, escritor, **cambios):
     contexto = cambios.pop("contexto", None) or await _contexto(sesion, obra_con_outline)
     parametros = {
+        # El contador entra con T11: el prompt del reintento se vuelve a
+        # presupuestar contra la reserva, y sin contador no habria con que.
+        "contador": ContadorDePalabras(),
         "run_id": "run-1",
         "modelo": "doble",
         "restricciones": RestriccionesDeDiscurso(

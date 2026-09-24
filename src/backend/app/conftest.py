@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from app.commons.llm.doble import DobleDeterminista
 from app.features.canon.modelos import Evento  # noqa: F401  (registra las tablas de `canon`)
 from app.features.contexto import Paquete, ensamblar_capitulo
 from app.features.escena.modelos import Escena
-from app.features.escritura import Escritor
+from app.features.escritura import Escritor, obtener_sesion_de_fondo
 from app.features.escritura.modelos import VersionTexto  # noqa: F401  (registra `escritura`)
 from app.features.obra.modelos import HechoCanon, Obra
 from app.features.outline.modelos import Capitulo, VersionObra
@@ -237,8 +238,21 @@ def cliente(sesion: AsyncSession, respuestas_del_modelo: dict[str, str]) -> Iter
     `obtener_cliente_modelo` levanta `NotImplementedError` — en esta fase no hay
     proveedor real, y eso es deliberado (ver Desviaciones).
     """
+
+    @asynccontextmanager
+    async def la_del_test() -> AsyncIterator[AsyncSession]:
+        """La sesion del test tambien para la tarea de fondo, y sin cerrarla.
+
+        El trabajo de `POST /capitulos/{id}/escribir` corre despues de la
+        respuesta, cuando la sesion de la peticion ya se cerro, asi que abre la
+        suya. Si abriera la de produccion, el test contaria filas sobre otra
+        base -- y dejaria un `.db` en el repositorio.
+        """
+        yield sesion
+
     app = crear_app()
     app.dependency_overrides[obtener_sesion] = lambda: sesion
+    app.dependency_overrides[obtener_sesion_de_fondo] = lambda: la_del_test
     app.dependency_overrides[obtener_cliente_modelo] = lambda: DobleDeterminista(
         respuestas_del_modelo
     )
