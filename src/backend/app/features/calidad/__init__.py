@@ -1,5 +1,20 @@
-"""La UNICA puerta de entrada a la feature `calidad` (`CLAUDE.md` §5.1)."""
+"""La UNICA puerta de entrada a la feature `calidad` (`CLAUDE.md` §5.1).
 
+Detras de ella viven la puerta mecanica G1a y, desde la Fase 3, el
+**Continuista**: el rol que contrasta un capitulo contra el grafo de canon. Lo
+que se exporta de el es lo que un orquestador necesita —el agente, su entrada,
+su salida y su fallo— y nada mas: el esquema con el que se valida lo que el
+modelo devuelve es interno, porque nadie fuera lo construye.
+"""
+
+from app.features.calidad.agents import (
+    CapituloAContrastar,
+    Continuista,
+    HechoDeCanon,
+    OrigenDeHecho,
+    RevisionDeContinuidad,
+    SalidaMalFormada,
+)
 from app.features.calidad.defectos import (
     CODIGOS_DE_LA_TAXONOMIA,
     DefectoMalFormado,
@@ -30,17 +45,23 @@ from app.features.calidad.validadores import (
 __all__ = [
     "CATALOGO",
     "CODIGOS_DE_LA_TAXONOMIA",
+    "CapituloAContrastar",
     "CapituloAValidar",
+    "Continuista",
     "Defecto",
     "DefectoMalFormado",
     "DefectosClasificados",
+    "HechoDeCanon",
     "MotivoMalFormado",
     "NombreDeCanon",
+    "OrigenDeHecho",
     "ParametrosDeDiscurso",
     "Persona",
     "PuntoDeEjecucion",
     "RangoDeExtension",
     "ResultadoDePuerta",
+    "RevisionDeContinuidad",
+    "SalidaMalFormada",
     "TiempoVerbal",
     "Validador",
     "clasificar",
