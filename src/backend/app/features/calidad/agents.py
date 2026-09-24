@@ -1,4 +1,16 @@
-"""El Continuista: contrasta el capitulo **contra el grafo y contra el ledger**.
+"""Los dos roles que juzgan un capitulo: el **Continuista** y el **Critico**.
+
+Viven juntos porque `CLAUDE.md` §9.3 los pone en la misma feature, y **no
+comparten nada mas que el fichero**: contextos distintos, prompts distintos y
+criterios de exito distintos. El Continuista contrasta hechos y devuelve
+codigos con cita; el Critico puntua contra una rubrica y devuelve numeros con
+justificacion. Ninguno de los dos repara, y ninguno decide si el capitulo
+pasa.
+
+---
+
+**El Continuista** contrasta el capitulo **contra el grafo y contra el
+ledger**.
 
 Es el primer `agents.py` de esta feature, y la Fase 2 la construyo entera sin
 ninguno **a proposito**. La decision **P-B** de aquel plan lo dejo fuera con este
@@ -39,11 +51,24 @@ Escritor con el defecto concreto, y eso ya existe desde la Fase 2
 **atribuible** un defecto: si el que juzga arreglase, nadie sabria si el fallo
 vino de quien escribio o de quien juzgo.
 
-**Lo que este fichero NO hace, y conviene no ampliarlo al leerlo:** no puntua
-—eso es del Critico, que no bloquea hasta que su correlacion con la revision
-humana este medida (RF-JUZ-06)—, no persiste, no cuenta reintentos y no decide
-si el capitulo pasa. Devuelve una revision; quien cruza la puerta es
-`cruzar_g1a`, y quien cuenta los intentos es el orquestador.
+**Lo que el Continuista NO hace, y conviene no ampliarlo al leerlo:** no
+puntua, no persiste, no cuenta reintentos y no decide si el capitulo pasa.
+Devuelve una revision; quien cruza la puerta es `cruzar_g1a`, y quien cuenta los
+intentos es el orquestador.
+
+---
+
+**El Critico** puntua contra la rubrica compartida y **no bloquea**. Que no
+bloquee no es una fase a medias: `RF-JUZ-06` lo deja fuera de la puerta hasta que
+su correlacion con la revision humana este medida y firmada con ese numero
+delante. Construir hoy un componente que por regla no puede parar nada y
+cablearlo a una puerta seria telemetria llamada defensa.
+
+Y desde la revision de P-02 **corre en el mismo modelo que escribio el
+capitulo**, lo que le empuja a aprobar su propio estilo: la distancia de
+`RF-JUZ-05` saldra mejor de lo que el sistema merece. No lo arregla este fichero
+—queda declarado—, pero si lo empuja en la direccion contraria: los anclajes de
+la rubrica van al prompt y describen lo observable, no lo deseable.
 """
 
 import json
@@ -62,13 +87,26 @@ from pydantic import (
     model_validator,
 )
 
+from app.commons.llm.claude_code import MODELO_JUEZ
 from app.commons.llm.cliente import ClienteModelo
+from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.calidad.defectos import (
     ContrasteDeConocimiento,
     DefectoMalFormado,
     clasificar,
 )
+from app.features.calidad.rubrica import Rubrica
 from app.features.calidad.schemas import ConocimientoEnT, Defecto, TextoNoVacio
+
+__all__ = ["ConocimientoEnT", "ContrasteDeConocimiento"]
+"""**No es la superficie publica de este modulo**: los nombres que aqui se
+definen se exportan igual. Marca solo los dos que este modulo **no define** y
+que el `__init__.py` de la feature necesita sacar por el.
+
+Con `mypy` en modo estricto un import normal no cuenta como reexportacion, y la
+forma `X as X` --que seria la idiomatica-- la rechaza `ruff` con `PLC0414`. De
+las tres salidas esta es la unica que no obliga a elegir entre los dos
+linters."""
 
 _PROMPTS = Path(__file__).parent / "prompts"
 
@@ -463,6 +501,235 @@ def _validar(crudo: str) -> InformeDeContinuidad:
     decision.
     """
     try:
-        return InformeDeContinuidad.model_validate(json.loads(crudo))
+        return InformeDeContinuidad.model_validate(json_de_modelo(crudo))
     except (json.JSONDecodeError, ValidationError) as error:
         raise SalidaMalFormada(crudo[:200]) from error
+
+
+# ---------------------------------------------------------------------------
+# El Critico: puntua contra la rubrica, justifica y **no repara**
+# ---------------------------------------------------------------------------
+
+PROMPT_ID_CRITICO = "critico"
+PROMPT_VERSION_CRITICO = "v1"
+
+HUECO_DE_LA_RUBRICA = "{{RUBRICA}}"
+HUECO_ESCALA_MINIMO = "{{ESCALA_MINIMO}}"
+HUECO_ESCALA_MAXIMO = "{{ESCALA_MAXIMO}}"
+
+
+def plantilla_critico_v1() -> str:
+    """La plantilla del juez, leida al usarla por lo mismo que las del
+    Continuista: un fichero de datos que falta da un fallo local y legible, no
+    un import que tumba medio backend."""
+    return _leer("critico.v1.md")
+
+
+def hash_de_critico_v1() -> str:
+    """Es funcion y no constante por lo mismo: una constante obligaria a leer el
+    fichero al importar el modulo. Ata la fila de `ejecucion` a la plantilla
+    exacta con la que se juzgo (regla de dominio 7)."""
+    return hash_de_plantilla(plantilla_critico_v1())
+
+
+class PuntuacionDelCritico(BaseModel):
+    """Un numero, su criterio y **por que**.
+
+    `justificacion` es `TextoNoVacio` y no `str`: un numero pelado no se puede
+    comparar con el del Autor, y comparar los dos es lo unico para lo que el juez
+    existe (`RF-JUZ-05`). La segunda barrera esta en la base —el `CheckConstraint`
+    de T2 sobre `trim(justificacion)`—, y las dos hacen falta: esta protege lo
+    que devuelve el modelo, aquella lo que entre por cualquier otra via.
+
+    **El rango va clavado a la escala de `RUBRICA_V1`**, que es `(1, 5)`. Una
+    rubrica con otra escala exigiria tocar aqui, y hay un test que cae el dia que
+    alguien la cambie: si el esquema y la rubrica se separasen, el juez podria
+    devolver un numero que la rubrica no define y nadie lo notaria.
+
+    Y **no hay ningun campo donde quepa una reescritura**, exactamente como en
+    `DefectoDelContinuista`: con `extra="forbid"`, un modelo que devuelva
+    `texto_corregido` no ve su sugerencia ignorada, ve su salida rechazada
+    entera. `CLAUDE.md` §9.1, en el esquema y no en el prompt.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    criterio: str
+    valor: int = Field(ge=1, le=5)
+    justificacion: TextoNoVacio
+
+
+class Juicio(BaseModel):
+    """La salida entera del agente: una clave y ninguna mas.
+
+    No hay veredicto, ni nota global, ni nada que se parezca a una decision. El
+    juez **no bloquea** (`RF-JUZ-06`) hasta que su correlacion con la revision
+    humana este medida y firmada con ese numero delante, y que no tenga donde
+    decirlo es mas fuerte que pedirle que no lo diga.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    puntuaciones: list[PuntuacionDelCritico]
+
+
+@dataclass(frozen=True, slots=True)
+class CapituloAJuzgar:
+    """El capitulo y aquello contra lo que se juzga, juntos.
+
+    `rubrica` va dentro y no es parametro suelto por el mismo motivo que el
+    `grafo` del Continuista: sin ella lo que sale es una impresion, y no debe
+    poder llamarse al Critico «solo con la prosa» por descuido.
+    """
+
+    version_texto_id: str
+    texto: str
+    rubrica: Rubrica
+
+
+class RubricaDiscordante(Exception):
+    """El capitulo llega con una rubrica distinta de la del juez.
+
+    Es un fallo de quien llama, no del modelo, y tiene excepcion propia porque lo
+    que estaria pasando es justo lo que `CA-20` prohibe: medir con una regla y
+    declarar otra. Dos rubricas parecidas producen numeros que se comparan sin
+    protestar y que no significan lo mismo.
+    """
+
+
+def render_rubrica(rubrica: Rubrica) -> str:
+    """La rubrica entera, criterio a criterio y **con sus dos anclajes**.
+
+    Sin anclajes en el prompt el modelo puntua contra su propia idea de que es un
+    3, y la rubrica deja de ser el instrumento compartido que `CA-20` pide: el
+    Autor mediria con las descripciones delante y el juez sin ellas.
+    """
+    minimo, maximo = rubrica.escala
+    bloques = []
+    for criterio in rubrica.criterios:
+        bloques.append(
+            "### "
+            + _en_una_linea(criterio.nombre)
+            + "\n\n"
+            + _en_una_linea(criterio.definicion)
+            + "\n\n"
+            + f"- Vale **{minimo}** cuando: "
+            + _en_una_linea(criterio.ancla_minimo)
+            + "\n"
+            + f"- Vale **{maximo}** cuando: "
+            + _en_una_linea(criterio.ancla_maximo)
+        )
+    return "\n\n".join(bloques)
+
+
+def render_critico(plantilla: str, texto: str, rubrica: Rubrica) -> str:
+    """El capitulo entra SIEMPRE marcado como dato (`CLAUDE.md` §11).
+
+    Las mismas dos propiedades que en `render_continuista`, y la segunda es la
+    que importa: que el capitulo no pueda cerrar su etiqueta, y que **lo que
+    rodea a la etiqueta no dependa del capitulo**. Un capitulo no puede
+    desactivar al que lo juzga.
+    """
+    minimo, maximo = rubrica.escala
+    con_rubrica = (
+        plantilla.replace(HUECO_DE_LA_RUBRICA, render_rubrica(rubrica))
+        .replace(HUECO_ESCALA_MINIMO, str(minimo))
+        .replace(HUECO_ESCALA_MAXIMO, str(maximo))
+    )
+    if not texto.strip():
+        return con_rubrica.replace(HUECO_DEL_CAPITULO, "")
+    bloque = f"<{MARCA_CAPITULO}>\n{sin_etiquetas(texto, MARCA_CAPITULO)}\n</{MARCA_CAPITULO}>"
+    return con_rubrica.replace(HUECO_DEL_CAPITULO, bloque)
+
+
+class Critico:
+    """El juez, con su cliente y su rubrica inyectados (`CLAUDE.md` §6).
+
+    **No repara y no decide.** Devuelve un juicio; quien lo compare con la
+    revision humana es T9, y quien decida algun dia si bloquea sera una persona
+    con la distancia medida delante (`RF-JUZ-06`).
+
+    No toca la base de datos y no recibe sesion, igual que el Continuista: es lo
+    que permite probar el juicio sin levantar SQLite.
+    """
+
+    def __init__(self, cliente: ClienteModelo, rubrica: Rubrica, semilla: int = 0) -> None:
+        self._cliente = cliente
+        self._rubrica = rubrica
+        self._semilla = semilla
+
+    @property
+    def rubrica(self) -> Rubrica:
+        """La rubrica con la que juzga, **para que se pueda pedir**.
+
+        `CA-20` exige que la del juez y la que se le presenta al Autor sean la
+        misma. Una propiedad que la devuelve es lo que hace comprobable esa
+        frase; sin ella solo se podria prometer.
+        """
+        return self._rubrica
+
+    async def juzgar(self, capitulo: CapituloAJuzgar) -> Juicio:
+        """Puntua el capitulo contra la rubrica y devuelve numeros justificados.
+
+        `modelo=MODELO_JUEZ` va en la llamada y no en el constructor del cliente:
+        es P-02 hecho **pedible**, y mientras el modelo lo fijara solo quien
+        construye el cliente, la separacion no se podia pedir y ningun test podia
+        caer por incumplirla. Hoy `MODELO_JUEZ` y `MODELO_ESCRITOR` valen lo
+        mismo —Haiku 4.5 en todos los roles—, y la linea sigue aqui para que
+        revertirlo sea cambiar una constante.
+        """
+        if capitulo.rubrica != self._rubrica:
+            raise RubricaDiscordante(
+                f"el capitulo trae la rubrica {capitulo.rubrica.version} y el juez "
+                f"usa la {self._rubrica.version}"
+            )
+
+        crudo = await self._cliente.completar(
+            render_critico(plantilla_critico_v1(), capitulo.texto, self._rubrica),
+            semilla=self._semilla,
+            modelo=MODELO_JUEZ,
+        )
+        juicio = _validar_juicio(crudo)
+        _comprobar_cobertura(juicio, self._rubrica)
+        return juicio
+
+
+def _validar_juicio(crudo: str) -> Juicio:
+    """JSON mal formado y esquema incumplido se cuentan igual: fallo del agente.
+
+    El mismo criterio que `_validar` del Continuista, y por el mismo motivo: los
+    dos significan lo mismo para quien llama —no hay juicio utilizable— y
+    distinguirlos obligaria a manejar dos excepciones para tomar la misma
+    decision.
+
+    Y por `json_de_modelo` y no por `json.loads`, que es la leccion del mismo
+    dia: la primera corrida real murio porque el modelo devolvio JSON impecable
+    **dentro de una valla de markdown**. El Critico habria sido el sexto agente
+    en tropezar con ella, y no se habria visto hasta conectar con el proveedor,
+    porque el doble devuelve lo que el test le pone.
+    """
+    try:
+        return Juicio.model_validate(json_de_modelo(crudo))
+    except (json.JSONDecodeError, ValidationError) as error:
+        raise SalidaMalFormada(crudo[:200]) from error
+
+
+def _comprobar_cobertura(juicio: Juicio, rubrica: Rubrica) -> None:
+    """R-5: el juicio cubre **exactamente** la rubrica, una vez cada criterio.
+
+    Esto no lo compra `extra="forbid"`, y ahi esta el motivo de que sea codigo y
+    no esquema: un modelo puede devolver una lista corta con las claves
+    correctas, y esa salida es valida como esquema y no lo es como juicio. Sin la
+    comprobacion, la distancia de `RF-JUZ-05` compararia seis numeros del Autor
+    con dos del juez y llamaria a eso una medida.
+
+    Se comparan **multiconjuntos** y no tamanos: un juicio que repite un criterio
+    y se deja otro tiene la longitud correcta, y es el fallo que contar cuantas
+    vienen no ve.
+    """
+    esperados = sorted(criterio.nombre for criterio in rubrica.criterios)
+    recibidos = sorted(puntuacion.criterio for puntuacion in juicio.puntuaciones)
+    if recibidos != esperados:
+        raise SalidaMalFormada(
+            f"el juicio no cubre la rubrica: esperados {esperados}, recibidos {recibidos}"
+        )
