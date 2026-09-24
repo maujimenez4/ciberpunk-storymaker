@@ -63,6 +63,7 @@ from app.features.canon import (
     Extractor,
     Vector,
     consolidar_escena,
+    leer_hechos_del_canon,
     leer_nombres_del_canon,
     registrar_uso_de_hechos,
 )
@@ -278,7 +279,7 @@ async def ejecutar_ciclo(
         escritura = await _escribir(
             sesion,
             trabajo,
-            agentes.escritor,
+            agentes,
             contexto=contexto,
             contador=contador,
             presupuesto=presupuesto,
@@ -396,7 +397,7 @@ async def _planificar(
 async def _escribir(
     sesion: AsyncSession,
     trabajo: Trabajo,
-    escritor: Escritor,
+    agentes: Agentes,
     *,
     contexto: ContextoDelCapitulo,
     contador: ContadorDeTokens,
@@ -420,7 +421,7 @@ async def _escribir(
     ):
         escritura = await escribir_capitulo(
             sesion,
-            escritor,
+            agentes.escritor,
             contexto=contexto,
             contador=contador,
             run_id=trabajo.run_id,
@@ -431,6 +432,10 @@ async def _escribir(
             hechos_de_canon=[str(i) for i in _ids_de_canon(contexto)],
             vetos=await _vetos(sesion, trabajo.obra_id),
             semilla=semilla,
+            continuista=agentes.continuista,
+            grafo=await leer_hechos_del_canon(sesion, obra_id=trabajo.obra_id),
+            conocimiento=await _conocimiento(sesion, trabajo.obra_id),
+            orden_discurso=await _orden_discurso(sesion, contexto.escena_id),
         )
 
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
@@ -485,6 +490,41 @@ async def _retirar_lo_descartado(sesion: AsyncSession, escena_id: int, run_id: s
             text("UPDATE version_texto SET vigente = 1 WHERE id = :id"), {"id": superviviente}
         )
     await sesion.flush()
+
+
+async def _conocimiento(sesion: AsyncSession, obra_id: int) -> tuple[ConocimientoEnT, ...]:
+    """Lee la vista `estado_en_t`, que es donde el ledger dice **quien sabe que**.
+
+    Se consulta la **vista** y no las tablas de `features/canon`: una vista es
+    del esquema y no un import, asi que la frontera de §5.1 sigue entera. Es la
+    misma via por la que esta funcion no necesita que `canon` exporte nada.
+    """
+    filas = await sesion.execute(
+        text(
+            "SELECT personaje, evento_id, tiempo_historia, sabe_desde "
+            "FROM estado_en_t WHERE obra_id = :obra_id "
+            # Orden estable: sin el, el paquete cambia entre ejecuciones y el
+            # determinismo de §3.6 se pierde sin que falle ningun test.
+            "ORDER BY personaje, evento_id"
+        ),
+        {"obra_id": obra_id},
+    )
+    return conocimiento_desde_filas(
+        (str(personaje), str(evento_id), str(tiempo_historia), sabe_desde)
+        for personaje, evento_id, tiempo_historia, sabe_desde in filas.all()
+    )
+
+
+async def _orden_discurso(sesion: AsyncSession, escena_id: int) -> int:
+    """Desde donde mira el Continuista. Es el punto del discurso contra el que se
+    decide si un conocimiento es **anterior**, y sin el la regla de dominio 2 no
+    se puede evaluar."""
+    orden = (
+        await sesion.execute(
+            text("SELECT orden_discurso FROM escena WHERE id = :id"), {"id": escena_id}
+        )
+    ).scalar_one()
+    return int(orden)
 
 
 def _ids_de_canon(contexto: ContextoDelCapitulo) -> list[int]:

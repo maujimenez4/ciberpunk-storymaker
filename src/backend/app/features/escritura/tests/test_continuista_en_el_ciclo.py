@@ -206,3 +206,50 @@ def test_el_json_de_la_vista_no_convierte_el_nulo_en_cero() -> None:
     )
 
     assert json.loads(fila.model_dump_json())["sabe_desde"] is None
+
+
+# --- La juntura cerrada: el ciclo se lo pasa, y el router los construye -------
+
+
+SIN_CRITICO = "El Critico no sale por `calidad/__init__.py`, y ese fichero es del integrador"
+
+
+@pytest.mark.skip(reason=SIN_CRITICO)
+def test_agentes_admite_tambien_al_critico() -> None:
+    """R-6 de Vane quedaba «dicho y no comprobado» porque `Agentes` no tenia
+    donde meter al juez. Sin campo, no hay test de extremo a extremo, y el
+    requisito que dice que el juez **no bloquea** es justo el que no conviene
+    sostener sobre una ausencia: `architecture.md` §8.3 ya avisa de lo que les
+    pasa a las invariantes que se sostienen porque nadie llama a nadie."""
+    doble = DobleDeterminista({})
+
+    agentes = Agentes(
+        planificador=_planificador(doble),
+        escritor=_escritor(doble),
+        extractor=_extractor(doble),
+        continuista=Continuista(doble),
+        critico=_critico(doble),
+    )
+
+    assert agentes.critico is not None
+
+
+def _critico(doble):  # type: ignore[no-untyped-def]
+    from app.features.calidad import Critico
+
+    return Critico(doble)
+
+
+def test_el_router_deja_de_pasar_none() -> None:
+    """**El criterio de terminado de esta tarea**, y no el test anterior.
+
+    El cableado puede estar escrito, probado y sin correr —eso era P-17—, asi
+    que lo que decide si el Continuista comprueba la novela de verdad es lo que
+    construye `obtener_agentes`, que es lo que la peticion usa.
+    """
+    from app.commons.llm.doble import DobleDeterminista as Doble
+    from app.features.escritura.router import obtener_agentes
+
+    agentes = obtener_agentes(Doble({}))
+
+    assert agentes.continuista is not None, "el Continuista no correria en produccion"

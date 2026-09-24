@@ -35,6 +35,7 @@ from app.commons.db.sesion import obtener_motor, obtener_sesion
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.cliente import ClienteModelo, obtener_cliente_modelo
 from app.commons.llm.contador import ContadorDeTokens, ContadorTiktoken
+from app.features.calidad import Continuista
 from app.features.canon import Extractor, Vector, vectorizador_de
 from app.features.escena import Planificador
 from app.features.escritura.agents import Escritor
@@ -111,11 +112,19 @@ def _nombre_del_modelo(cliente: ClienteModelo) -> str:
 def obtener_agentes(
     cliente: Annotated[ClienteModelo, Depends(obtener_cliente_modelo)],
 ) -> Agentes:
-    """Los tres roles del ciclo, compuestos aqui y no dentro del servicio (RI-14)."""
+    """Los roles del ciclo, compuestos aqui y no dentro del servicio (RI-14).
+
+    **El Continuista se construye aqui, y esa linea es P-17.** Mientras no
+    estuviera, el cableado del ciclo podia estar escrito y probado y la novela
+    salia igual sin una sola comprobacion de continuidad: lo que decide si un rol
+    corre no es que exista el campo, es que alguien lo rellene en el camino que
+    usa la peticion.
+    """
     return Agentes(
         planificador=Planificador(cliente),
         escritor=Escritor(cliente),
         extractor=Extractor(cliente),
+        continuista=Continuista(cliente),
     )
 
 
