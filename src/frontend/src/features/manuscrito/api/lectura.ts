@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import type { Peticionario } from "@/shared/api/cliente";
 import type { Capitulo, Ficha, Version } from "@/shared/api/tipos";
@@ -21,11 +21,27 @@ export function useVersion(token: string) {
   });
 }
 
-export function useCapitulo(token: string, numero: number) {
-  const peticionario = usePeticionario();
-  return useQuery({
+function opcionesDeCapitulo(peticionario: Peticionario, token: string, numero: number) {
+  return {
     queryKey: ["capitulo", token, numero],
     queryFn: () => peticionario.pedir<Capitulo & { texto: string }>(API.capitulo(token, numero)),
+  };
+}
+
+export function useCapitulo(token: string, numero: number) {
+  const peticionario = usePeticionario();
+  return useQuery(opcionesDeCapitulo(peticionario, token, numero));
+}
+
+/**
+ * Varios capítulos a la vez, **con la misma clave que `useCapitulo`**: la
+ * caché es una, así que pedirlos aquí no repite ninguna petición que la
+ * lectura ya haya hecho.
+ */
+export function useCapitulos(token: string, numeros: readonly number[]) {
+  const peticionario = usePeticionario();
+  return useQueries({
+    queries: numeros.map((numero) => opcionesDeCapitulo(peticionario, token, numero)),
   });
 }
 

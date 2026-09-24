@@ -1,8 +1,9 @@
 import { Aviso, Enlace, Texto } from "@/shared/ui/primitives";
 
 import { API, useCapitulo, useVersion } from "../api/lectura";
-import { usePosicion } from "../hooks/usePosicion";
+import { idDeCapitulo, usePosicion } from "../hooks/usePosicion";
 import { AjustesDeLectura } from "./AjustesDeLectura";
+import { PieDeLectura } from "./PieDeLectura";
 
 /**
  * La novela entera, continua. Dedicatoria, sumario y los capítulos encadenados.
@@ -46,6 +47,7 @@ export function Leer({ token }: { token: string }) {
           cambiar la letra no puede exigir volver al principio. */}
       <div className="lectura__pie">
         <div className="lectura__pie-medida">
+          <PieDeLectura token={token} numeros={capitulos.map((c) => c.numero)} />
           <AjustesDeLectura />
         </div>
       </div>
@@ -72,7 +74,7 @@ function Sumario({
           <li key={capitulo.numero}>
             <a
               className="enlace"
-              href={`#capitulo-${capitulo.numero}`}
+              href={`#${idDeCapitulo(capitulo.numero)}`}
               data-testid={`sumario-${capitulo.numero}`}
               data-cambiado={String(Boolean(capitulo.cambiado))}
               onClick={() => recordar(capitulo.numero)}
@@ -111,7 +113,7 @@ function CapituloLeido({
   const capitulo = useCapitulo(token, numero);
 
   return (
-    <section id={`capitulo-${numero}`} className="capitulo">
+    <section id={idDeCapitulo(numero)} className="capitulo">
       <h2 className="capitulo__titulo">
         <span className="capitulo__numero">Capítulo {numero}</span>
         {titulo ?? ""}

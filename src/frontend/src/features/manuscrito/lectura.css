@@ -42,6 +42,50 @@
   padding: 0.5rem 1.25rem;
 }
 
+/* --- el progreso ---------------------------------------------------------- */
+
+.progreso {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+
+.progreso__minutos {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progreso__porcentaje {
+  flex: none;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * **La cinta ciruela.** Ocupa el borde superior del pie de lado a lado y se
+ * cose de izquierda a derecha según se lee: es el mismo hilo de la barra de
+ * la creación, ahora contando la lectura. `scaleX` y no `width`, para que
+ * seguir el desplazamiento no recalcule la maquetación.
+ */
+.progreso__hilo {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: -1px;
+  block-size: 2px;
+  overflow: hidden;
+}
+
+.progreso__cosido {
+  display: block;
+  block-size: 100%;
+  background: var(--acento);
+  transform-origin: left center;
+}
+
 /* El texto del pie no puede tapar el final de la novela. */
 .lectura {
   padding-block-end: 5rem;

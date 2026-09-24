@@ -3,6 +3,15 @@ import { useCallback, useMemo } from "react";
 const PREFIJO = "posicion:";
 
 /**
+ * El `id` de la sección de un capítulo, que es también su fragmento. Un solo
+ * sitio: el sumario enlaza a él, el pie de lectura lo mide y este módulo lo
+ * lee de la URL.
+ */
+export function idDeCapitulo(numero: number): string {
+  return `capitulo-${numero}`;
+}
+
+/**
  * Dónde estabas y dónde te mandaron, que **no son lo mismo**.
  *
  * - El **fragmento** (`#capitulo-7`) es para *compartir un punto a propósito*:
@@ -37,7 +46,7 @@ export function usePosicion(token: string, capitulos: number[]) {
       // `replaceState` y **nunca `pushState`**: con `pushState`, el botón atrás
       // del móvil retrocede capítulo a capítulo y deja de servir para salir de
       // la novela, que es lo único para lo que se usa.
-      window.history.replaceState({}, "", `#capitulo-${numero}`);
+      window.history.replaceState({}, "", `#${idDeCapitulo(numero)}`);
       escribir(`${PREFIJO}${token}`, String(numero));
     },
     [token],

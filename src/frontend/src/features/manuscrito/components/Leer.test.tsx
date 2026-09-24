@@ -5,9 +5,9 @@
  * fragmento de esta misma página.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DobleDeApi } from "@/shared/api/doble";
 
@@ -139,5 +139,97 @@ describe("la lectura continua", () => {
       "href",
       "/api/lectura/T/pdf",
     );
+  });
+});
+
+/**
+ * Plan 4 · T6 · El pie de lectura.
+ *
+ * jsdom no pinta, así que las medidas de cada capítulo se fingen: es lo que
+ * el navegador diría con la página desplazada hasta ese punto. El texto es
+ * **inventado** (RD-04): la misma palabra repetida.
+ */
+describe("el pie de lectura", () => {
+  const ALTO_PANTALLA = window.innerHeight;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Dos capítulos de 1.150 palabras inventadas. */
+  function novelaDe1150() {
+    const doble = novela({ capitulos: 2 });
+    for (const n of [1, 2]) {
+      doble.respuestas[`/lectura/T/capitulos/${n}`] = {
+        numero: n,
+        titulo: `T${n}`,
+        texto: Array.from({ length: 1150 }, () => "ola").join(" "),
+      };
+    }
+    return doble;
+  }
+
+  /** Finge dónde está cada capítulo respecto a la pantalla. */
+  function medidas(porCapitulo: Record<string, { arriba: number; alto: number }>) {
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      const m = porCapitulo[this.id] ?? { arriba: 0, alto: 0 };
+      const rect = { x: 0, y: m.arriba, width: 500, height: m.alto };
+      return {
+        ...rect,
+        top: m.arriba,
+        bottom: m.arriba + m.alto,
+        left: 0,
+        right: 500,
+        toJSON: () => rect,
+      } as DOMRect;
+    });
+  }
+
+  it("a mitad de un capítulo de 1.150 palabras, quedan 3 min", async () => {
+    render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
+    await screen.findAllByText(/^ola ola/);
+
+    // El borde inferior de la pantalla, justo en la mitad del capítulo 1.
+    medidas({
+      "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 },
+      "capitulo-2": { arriba: ALTO_PANTALLA + 1000, alto: 2000 },
+    });
+    fireEvent.scroll(window);
+
+    expect(await screen.findByText("Quedan 3 min en este capítulo")).toBeInTheDocument();
+    expect(screen.getByText("25 %")).toBeInTheDocument();
+  });
+
+  it("al final de la novela, 100 % y el capítulo terminado", async () => {
+    render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
+    await screen.findAllByText(/^ola ola/);
+
+    medidas({
+      "capitulo-1": { arriba: -5000, alto: 2000 },
+      "capitulo-2": { arriba: -2500, alto: 2000 },
+    });
+    fireEvent.scroll(window);
+
+    expect(await screen.findByText("100 %")).toBeInTheDocument();
+    expect(screen.getByText("Terminaste este capítulo")).toBeInTheDocument();
+  });
+
+  it("al abrir, sin desplazar, el primer capítulo entero por leer", async () => {
+    render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
+
+    expect(await screen.findByText("Quedan 5 min en este capítulo")).toBeInTheDocument();
+    expect(screen.getByText("0 %")).toBeInTheDocument();
+  });
+
+  it("no se anuncia en cada desplazamiento: no es una región viva", async () => {
+    // Un número que cambia al bajar cada línea, leído en voz alta, taparía la
+    // novela que el lector de pantalla está leyendo.
+    render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
+
+    const minutos = await screen.findByText(/^Quedan \d+ min/);
+    expect(minutos.closest("[aria-live]")).toBeNull();
+    expect(minutos.closest('[role="status"], [role="alert"], [role="progressbar"]')).toBeNull();
   });
 });
