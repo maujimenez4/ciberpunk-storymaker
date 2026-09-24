@@ -128,8 +128,11 @@ def _sembrar(con: sqlite3.Connection) -> None:
         INSERT INTO version_obra (id, obra_id, numero, biblia, vigente_desde)
           VALUES (1, 1, 1, '{}', '2026-09-24 00:00:00+00:00');
         INSERT INTO capitulo (id, obra_id, numero, titulo, pov_dominante,
-                              gancho_de_apertura, tipo_de_corte_final, extension_objetivo)
-          VALUES (1, 1, 1, 'Uno', 'Nadia', 'La puerta', 'pregunta', 1200);
+                              gancho_de_apertura, tipo_de_corte_final, extension_objetivo,
+                              lugar, objetivo, obstaculo, giro_de_valor_previsto)
+          VALUES (1, 1, 1, 'Uno', 'Nadia', 'La puerta', 'pregunta', 1200,
+                  'El invernadero', 'Que Teo confiese', 'Teo calla',
+                  'confianza -> sospecha');
         INSERT INTO escena (id, capitulo_id, version_obra_id, orden_discurso, tiempo_historia,
                             pov, lugar, presentes, mencionados, objetivo_del_pov, obstaculo,
                             resultado, valor_entrada, valor_salida, extension_objetivo,

@@ -33,7 +33,7 @@ from app.features.escena.service import planificar_escena
 
 BIBLIA = {
     "protagonista": "Nadia",
-    "persona": "3a limitada",
+    "persona": "3ª limitada",
     "tiempo_verbal": "pasado",
 }
 
@@ -139,7 +139,7 @@ async def test_la_ficha_hereda_de_la_obra_persona_tiempo_verbal_y_nivel_de_calor
     """
     ficha = await _planificar(sesion, obra_con_outline, _salida())
 
-    assert ficha.restricciones.persona == "3a limitada"
+    assert ficha.restricciones.persona == "3ª limitada"
     assert ficha.restricciones.tiempo_verbal == "pasado"
     assert ficha.restricciones.nivel_de_calor == obra_con_outline.obra.nivel_de_calor
 
@@ -207,13 +207,13 @@ async def test_se_llama_al_modelo_una_vez_y_con_semilla(sesion, obra_con_outline
 def test_las_restricciones_duras_se_repiten_al_principio_y_al_final():
     """`CLAUDE.md` §10: el centro del prompt es donde mas informacion se pierde."""
     restricciones = RestriccionesDeDiscurso(
-        persona="3a limitada", tiempo_verbal="pasado", nivel_de_calor=2
+        persona="3ª limitada", tiempo_verbal="pasado", nivel_de_calor=2
     )
     prompt = render_planificador(PLANTILLA_V1, CAPITULO, ESTADO_EN_T, restricciones)
 
     mitad = len(prompt) // 2
-    assert "3a limitada" in prompt[:mitad]
-    assert "3a limitada" in prompt[mitad:]
+    assert "3ª limitada" in prompt[:mitad]
+    assert "3ª limitada" in prompt[mitad:]
     assert "{{" not in prompt
 
 

@@ -27,7 +27,12 @@ TextoNoVacio = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 
 # `definitions.md` §5, capa de Discurso. Los dos conjuntos son cerrados y se
 # declaran **a nivel de obra**; la escena no elige, hereda.
-PERSONAS = ("1a", "3a limitada", "3a omnisciente")
+# Los literales los fija `docs/definitions.md` §5 («Capa de Discurso»), y gana
+# el documento (`CLAUDE.md` §2). T4 los escribio sin la indicacion ordinal y
+# T3 con ella: los necesitan tres tareas en tres olas -- T3 para escribir la
+# biblia, T4 para validar la ficha y T8 para comprobar la regla 10 en el
+# texto -- y nadie era dueno del contrato. Se alinean al cerrar la ola 2.
+PERSONAS = ("1ª", "3ª limitada", "3ª omnisciente")
 TIEMPOS_VERBALES = ("pasado", "presente")
 
 # Un POV es **un** personaje (`definitions.md` §4.1). La columna es escalar, asi

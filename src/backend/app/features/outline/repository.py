@@ -109,10 +109,10 @@ async def guardar_outline(
     restricciones de `capitulo` —el numero unico por obra, el rango de
     extension— en vez de dejarlas para el `commit` de quien llame.
 
-    **Lo que se guarda de cada capitulo son las columnas que `capitulo` tiene.**
-    El lugar, el objetivo, el obstaculo, el giro previsto y el beat no tienen
-    columna: viven en `escena` (`definitions.md` §4.1), que es de otra feature y
-    de otra tarea. Queda anotado en Desviaciones.
+    **El plan dramatico se persiste desde el cierre de la ola 2.** Lugar,
+    objetivo, obstaculo y giro previsto son columnas de `capitulo` (RF-PLA-04);
+    antes no lo eran y el outline se perdia al guardar. El `beat_de_genero`
+    sigue viviendo en `escena`, que es de otra feature.
     """
     version = VersionObra(obra_id=obra_id, numero=numero, biblia=biblia)
     sesion.add(version)
@@ -127,6 +127,11 @@ async def guardar_outline(
             gancho_de_apertura=capitulo.gancho_de_apertura,
             tipo_de_corte_final=capitulo.tipo_de_corte_final,
             extension_objetivo=capitulo.extension_objetivo,
+            lugar=capitulo.lugar,
+            objetivo=capitulo.objetivo,
+            obstaculo=capitulo.obstaculo,
+            # El giro previsto es el par entrada -> salida del Arquitecto.
+            giro_de_valor_previsto=f"{capitulo.valor_entrada} -> {capitulo.valor_salida}",
         )
         for capitulo in capitulos
     ]

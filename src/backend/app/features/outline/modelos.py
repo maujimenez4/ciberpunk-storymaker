@@ -65,6 +65,13 @@ class Capitulo(Base):
 
     __tablename__ = "capitulo"
     __table_args__ = (
+        CheckConstraint("length(trim(lugar)) > 0", name="ck_capitulo_lugar_no_vacio"),
+        CheckConstraint("length(trim(objetivo)) > 0", name="ck_capitulo_objetivo_no_vacio"),
+        CheckConstraint("length(trim(obstaculo)) > 0", name="ck_capitulo_obstaculo_no_vacio"),
+        CheckConstraint(
+            "length(trim(giro_de_valor_previsto)) > 0",
+            name="ck_capitulo_giro_de_valor_previsto_no_vacio",
+        ),
         UniqueConstraint("obra_id", "numero", name="uq_capitulo_obra_numero"),
         CheckConstraint(
             f"extension_objetivo BETWEEN {EXTENSION_MINIMA} AND {EXTENSION_MAXIMA}",
@@ -80,3 +87,12 @@ class Capitulo(Base):
     gancho_de_apertura: Mapped[str] = mapped_column(String(500))
     tipo_de_corte_final: Mapped[str] = mapped_column(String(60))
     extension_objetivo: Mapped[int]
+
+    # RF-PLA-04: los cuatro que faltaban. El requisito pide POV, lugar,
+    # objetivo, obstaculo y giro previsto; la tabla tenia solo el primero, asi
+    # que el outline se producia, se validaba, la API lo devolvia entero y se
+    # perdia al guardar. Lo destapo T3 al cerrar la ola 2 de la Fase 2.
+    lugar: Mapped[str] = mapped_column(String(200))
+    objetivo: Mapped[str] = mapped_column(String(500))
+    obstaculo: Mapped[str] = mapped_column(String(500))
+    giro_de_valor_previsto: Mapped[str] = mapped_column(String(200))

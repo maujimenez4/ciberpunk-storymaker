@@ -18,6 +18,16 @@ from app.features.obra.modelos import HechoCanon, Obra
 from app.features.outline.modelos import Capitulo, VersionObra
 from app.main import crear_app
 
+# RF-PLA-04: cada capitulo lleva lugar, objetivo, obstaculo y giro previsto, y
+# las cuatro columnas son obligatorias desde el cierre de la ola 2. Un plan
+# generico basta para las fixtures; quien pruebe el plan lo pone a mano.
+_PLAN_POR_DEFECTO = {
+    "lugar": "Cadiz, el muelle",
+    "objetivo": "Encontrar a quien escribio la carta",
+    "obstaculo": "Nadie recuerda el nombre",
+    "giro": "esperanza -> sospecha",
+}
+
 
 @pytest.fixture
 async def motor(tmp_path: Path) -> AsyncIterator[AsyncEngine]:
@@ -87,6 +97,10 @@ async def obra_con_outline(sesion: AsyncSession, obra: Obra) -> ObraConOutline:
 
     capitulos = [
         Capitulo(
+            lugar=_PLAN_POR_DEFECTO["lugar"],
+            objetivo=_PLAN_POR_DEFECTO["objetivo"],
+            obstaculo=_PLAN_POR_DEFECTO["obstaculo"],
+            giro_de_valor_previsto=_PLAN_POR_DEFECTO["giro"],
             obra_id=obra.id,
             numero=n,
             titulo=f"Capitulo {n}",

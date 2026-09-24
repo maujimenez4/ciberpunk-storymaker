@@ -51,6 +51,10 @@ async def test_un_capitulo_fuera_del_rango_de_extension_no_entra(sesion, obra):
 
 def _capitulo(obra_id: int, numero: int, extension_objetivo: int = 1200) -> Capitulo:
     return Capitulo(
+        lugar="Cadiz",
+        objetivo="Encontrarla",
+        obstaculo="Nadie recuerda",
+        giro_de_valor_previsto="a -> b",
         obra_id=obra_id,
         numero=numero,
         titulo=f"Capitulo {numero}",
