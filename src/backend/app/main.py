@@ -7,7 +7,7 @@ importa el paquete y no `features.obra.router`.
 from fastapi import FastAPI
 
 from app.commons.errors.manejador import registrar_manejadores
-from app.features import obra, outline
+from app.features import contexto, obra, outline
 
 
 def crear_app() -> FastAPI:
@@ -15,4 +15,5 @@ def crear_app() -> FastAPI:
     registrar_manejadores(app)
     app.include_router(obra.router)
     app.include_router(outline.router)
+    app.include_router(contexto.router)
     return app

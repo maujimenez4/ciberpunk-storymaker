@@ -12,6 +12,7 @@ from app.commons.db.sesion import obtener_sesion
 from app.commons.llm.cliente import obtener_cliente_modelo
 from app.commons.llm.doble import DobleDeterminista
 from app.features.canon.modelos import Evento  # noqa: F401  (registra las tablas de `canon`)
+from app.features.contexto import Paquete, ensamblar_capitulo
 from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import VersionTexto  # noqa: F401  (registra `escritura`)
 from app.features.obra.modelos import HechoCanon, Obra
@@ -148,6 +149,50 @@ async def obra_con_outline(sesion: AsyncSession, obra: Obra) -> ObraConOutline:
         escena=escena,
         hecho_canon=hecho_canon,
     )
+
+
+class ContadorDePalabras:
+    """El contador de las fixtures: exacto, reproducible y **sin red**.
+
+    `ContadorTiktoken` descarga `cl100k_base` la primera vez que cuenta, y la
+    suite corre sin red (RNF-FIA-01, CA-4). No es el contador de produccion
+    —`CLAUDE.md` §4.1 prohibe estimar por caracteres, y esto no estima: cuenta
+    palabras— pero es exacto, que es lo que un test del reparto necesita.
+    """
+
+    def contar(self, texto: str) -> int:
+        return len(texto.split())
+
+
+@pytest.fixture
+async def paquete(sesion: AsyncSession, obra_con_outline: ObraConOutline) -> Paquete:
+    """Un paquete de contexto ya ensamblado, para quien lo recibe y no lo hace.
+
+    Es la fixture de **T8**: el Escritor solo ve lo que hay en el paquete y
+    nunca accede a la base de datos (`CLAUDE.md` §9.1), asi que lo que necesita
+    para probarse es un `Paquete`, no una sesion.
+
+    **Trae un hecho de canon sobre Nadia, y no es adorno.** La fixture
+    `obra_con_outline` solo tiene el hecho del perro, que la ficha no nombra: la
+    capa de canon saldria vacia con el grafo lleno y el ensamblado fallaria con
+    `CapaVacia` (RF-CTX-06, R-3). Que haga falta anadirlo es la senal de que la
+    regla esta viva.
+    """
+    sesion.add(
+        HechoCanon(
+            obra_id=obra_con_outline.obra.id,
+            entidad="Nadia",
+            atributo="oficio",
+            valor="botanica",
+            origen="escena",
+            escena_de_origen=str(obra_con_outline.escena.id),
+        )
+    )
+    await sesion.flush()
+    contexto = await ensamblar_capitulo(
+        sesion, obra_con_outline.capitulos[0].id, ContadorDePalabras()
+    )
+    return contexto.paquete
 
 
 @pytest.fixture
