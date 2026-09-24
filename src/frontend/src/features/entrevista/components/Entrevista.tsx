@@ -394,22 +394,42 @@ function Recorrido({
     </>
   );
 
-  if (reanudada) {
+  /**
+   * **Con la entrevista cerrada, el formulario ya no sirve**: responder a una
+   * entrevista cerrada no llega a ningun sitio. Desde ahi la pantalla sigue a
+   * la obra, y cada fallo ofrece reintentar **su** paso y no la cadena entera:
+   * cerrar otra vez crearia una segunda obra, y rehacer la historia tiraria
+   * minutos del Arquitecto que ya estaban hechos.
+   */
+  if (obra !== null) {
+    const reintentar = (desde: "outline" | "novela") => {
+      setParada(null);
+      lanzar.mutate(desde);
+    };
+    const fallaLaHistoria =
+      parada?.tipo === "sin_outline" || (lanzar.isError && paso === "outline");
+    const fallaLaNovela =
+      parada?.tipo === "detenida" || (lanzar.isError && paso === "novela");
+
     return (
-      <Pagina titulo="Seguimos con tu novela">
+      <Pagina titulo={reanudada ? "Seguimos con tu novela" : "Tu novela está en marcha"}>
         <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
         {cadena}
 
-        {parada?.tipo === "sin_outline" ? (
-          <Boton
-            onClick={() => {
-              setParada(null);
-              lanzar.mutate("outline");
-            }}
-            disabled={ocupado}
-          >
-            Preparar la historia otra vez
+        {fallaLaHistoria && !ocupado ? (
+          <Boton onClick={() => reintentar("outline")}>Preparar la historia otra vez</Boton>
+        ) : null}
+
+        {fallaLaNovela && !ocupado ? (
+          // `POST /novela` sigue por el primer capitulo sin integrar: lo
+          // escrito no se pierde, y el nombre del boton lo dice.
+          <Boton onClick={() => reintentar("novela")}>
+            Escribir la novela desde donde se quedó
           </Boton>
+        ) : null}
+
+        {publicar.isError && !ocupado ? (
+          <Boton onClick={() => publicar.mutate(obra.obraId)}>Publicar la novela</Boton>
         ) : null}
 
         <div className="otra">
