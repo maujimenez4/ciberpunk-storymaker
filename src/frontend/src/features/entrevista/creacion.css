@@ -1,8 +1,73 @@
 /*
- * La entrevista en tres bloques (plan 4, T4). Un bloque no es una tarjeta: sin
- * borde ni sombra, separado del siguiente por aire y por su título, que es la
- * única marca que hace falta para saber de qué va cada grupo de preguntas.
+ * «Creación» en la dirección «Cuaderno de viaje» (plan 4, enmienda 1; maquetas
+ * D-Entrevista y D-Progreso). La hoja rayada (`.hoja`), el sello (`.sello`) y
+ * el mapa de ruta (`BarraDeProgreso`) son de la casa, en `estilos.css`; aquí
+ * solo va cómo se colocan en estas dos pantallas.
  */
+
+/* --- el marco común ------------------------------------------------------- */
+
+/**
+ * La hoja pide más anchura que la medida de lectura (34rem), que es la del
+ * marco de la página: se sale de él, centrada, sin pasar del ancho de la
+ * pantalla menos el margen de 1rem por lado.
+ */
+.creacion {
+  --ancho-creacion: min(48rem, 100vw - 2rem);
+
+  inline-size: var(--ancho-creacion);
+  margin-inline: calc((100% - var(--ancho-creacion)) / 2);
+  box-sizing: border-box;
+}
+
+/* Goudy y tinta de estilográfica los pone la casa a todo `h2`; aquí, tamaño. */
+.creacion__titulo {
+  margin: 0;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.creacion__nota {
+  margin: 0;
+  font-style: italic;
+  font-size: var(--nota, 0.9375rem);
+  color: var(--tinta-suave);
+}
+
+/* --- la entrevista, en la hoja del cuaderno ------------------------------- */
+
+/* Los nodos huecos de `Pasos`, del color de la hoja y no del papel. */
+.creacion--entrevista {
+  --fondo-paso: var(--guarda);
+}
+
+/* Título a la izquierda y el sello del paso arriba a la derecha, inclinado. */
+.creacion__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.creacion--entrevista .creacion__titulo {
+  font-size: clamp(1.875rem, 4.5vw, 2.375rem);
+  max-inline-size: 13ch;
+}
+
+/* El sello es de la casa; aquí solo su tamaño, algo menor en un móvil. */
+.creacion__sello {
+  --tam-sello: clamp(4.5rem, 14vw, 5.75rem);
+}
+
+.creacion__entradilla--hoja {
+  margin: 0.75rem 0 0;
+  max-inline-size: 34rem;
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+/* Los tres bloques: separados por aire y por su leyenda, no por una raya. La
+   leyenda en cursiva y en rojo de sello la pone la casa. */
 .bloque {
   margin: 0;
   padding: 0;
@@ -11,27 +76,108 @@
 }
 
 .bloque + .bloque {
-  margin-block-start: 2.5rem;
-  padding-block-start: 2rem;
-  border-block-start: 1px solid var(--guarda);
-}
-
-.bloque__titulo {
-  padding: 0;
-  font-family: var(--fuente-libro, inherit);
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--tinta);
+  margin-block-start: 2rem;
 }
 
 .bloque__ayuda {
-  margin: 0.25rem 0 0;
-  font-family: var(--fuente-interfaz, inherit);
-  font-size: 0.875rem;
+  margin: 0.125rem 0 0;
+  font-size: var(--nota, 0.9375rem);
   color: var(--tinta-suave);
 }
 
-.bloque__ayuda + .campo {
-  margin-block-start: 1rem;
+/* Parejas de preguntas cortas en dos columnas; las listas, a lo ancho. */
+.bloque__campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.125rem;
+}
+
+.bloque__campos > .campo {
+  margin-block: 0.875rem 0;
+}
+
+.campo--ancho {
+  grid-column: 1 / -1;
+}
+
+@media (width < 36rem) {
+  .bloque__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.creacion__accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.125rem;
+  margin-block-start: 2rem;
+}
+
+/* --- el progreso, como un mapa de ruta ------------------------------------ */
+
+/* Centrado y sin hoja: es un mapa que se mira, no un impreso que se rellena. */
+.creacion--viaje {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding-block: 1rem 2rem;
+  text-align: center;
+}
+
+.creacion--viaje .creacion__entradilla {
+  margin: 0;
+  font-style: italic;
+  font-size: 1.125rem;
+  color: var(--tinta-suave);
+}
+
+.creacion--viaje .creacion__titulo {
+  font-size: clamp(2.125rem, 6vw, 3.125rem);
+}
+
+/* Los avisos y los reintentos, alineados como el resto de la columna. */
+.creacion--viaje > :is(.aviso, .comprobacion) {
+  align-self: stretch;
+  text-align: start;
+}
+
+.viaje {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  inline-size: 100%;
+}
+
+.viaje__estado {
+  margin: 0;
+  font-size: 1.375rem;
+}
+
+/* El mapa ocupa todo el ancho: diez paradas no caben en la medida de lectura. */
+.viaje > .barra {
+  align-self: stretch;
+  margin-block: 1.5rem 0;
+}
+
+.viaje__tiempo {
+  margin: 1.25rem 0 0;
+  max-inline-size: 39rem;
+  font-size: 1.1875rem;
+  line-height: 1.6;
+}
+
+.viaje > .aviso {
+  align-self: stretch;
+  text-align: start;
+}
+
+.creacion__otra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
 }

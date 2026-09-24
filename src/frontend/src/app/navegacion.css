@@ -3,13 +3,17 @@
  * vive en `estilos.css`) y, debajo, **por qué** las pestañas apagadas lo están.
  * El motivo es texto a la vista y no un `title`: un `title` no lo ve quien usa
  * teclado ni quien toca la pantalla.
+ *
+ * Enmienda 1 («Cuaderno de viaje»): la cabecera va centrada, como en las
+ * maquetas D, y el motivo es una anotación a lápiz: cursiva, en tinta suave.
  */
 .navegacion {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   margin-block-end: var(--aire, 1.5rem);
+  text-align: center;
 }
 
 .navegacion > .pestanas {
@@ -20,7 +24,23 @@
   margin: 0;
   max-inline-size: 34rem;
   font-family: var(--fuente-interfaz, inherit);
-  font-size: 0.875rem;
+  font-style: italic;
+  font-size: 0.9375rem;
   line-height: 1.45;
   color: var(--tinta-suave);
+}
+
+/*
+ * «Tu novela» sigue siendo el `h1` de la página —es lo que un lector de
+ * pantalla usa para saber dónde está—, pero no se pinta: en las maquetas la
+ * cabecera son las pestañas, y cada pantalla trae su propio título a la vista.
+ */
+.pagina:has(> .navegacion) > .pagina__titulo {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

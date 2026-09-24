@@ -235,7 +235,8 @@ describe("el puente", () => {
 
     // Hay dos regiones `status` a la vez y las dos son legítimas: la
     // comprobación de la entrevista y este aviso. Se busca por su texto.
-    expect(await screen.findByText(/se está escribiendo tu novela/i)).toBeInTheDocument();
+    // Enmienda 1 («Cuaderno de viaje»): el título pasa a ser «Tu novela va de camino».
+    expect(await screen.findByText(/tu novela va de camino/i)).toBeInTheDocument();
   });
 
   it("si lanzar la novela falla, lo dice y se puede reintentar", async () => {

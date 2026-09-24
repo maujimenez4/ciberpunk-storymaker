@@ -267,6 +267,60 @@ describe("la entrevista en tres bloques", () => {
 });
 
 /**
+ * Plan 4 · Enmienda 1 · **«Cuaderno de viaje».** La maqueta aprobada (D-Entrevista
+ * y D-Progreso) cambia la piel y parte del texto; lo que se comprueba aquí es lo
+ * que no es solo piel: que el sello del paso **se oiga** entero y no como «1» y
+ * «de 4» sueltos, que la ayuda del botón quede asociada a él, y que el tiempo se
+ * diga en una frase con cifras reales y no con las de la maqueta.
+ */
+describe("el cuaderno de viaje", () => {
+  it("la entrevista va en una hoja, con su título y el sello del paso", async () => {
+    const { container } = render(<Entrevista />, { wrapper: conDoble(dobleDeEntrevista()) });
+
+    expect(
+      await screen.findByRole("heading", { name: /cuéntanos a quién va dirigida/i }),
+    ).toBeInTheDocument();
+    const sello = screen.getByRole("img", { name: /^paso 1 de 4: entrevista$/i });
+    expect(sello).toHaveClass("sello");
+    expect(container.querySelector(".hoja form")).not.toBeNull();
+  });
+
+  it("el botón de guardar dice qué pasa después, asociado a él", async () => {
+    render(<Entrevista />, { wrapper: conDoble(dobleDeEntrevista()) });
+
+    expect(await screen.findByRole("button", { name: /guardar y comprobar/i })).toHaveAccessibleDescription(
+      /te diremos si falta algo antes de salir/i,
+    );
+  });
+
+  it("el progreso: la etapa en una línea, el título del viaje y el capítulo en la región viva", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(dobleDeLaCadena(ESCRIBIENDO_3)) });
+
+    expect(await screen.findByRole("heading", { name: /tu novela va de camino/i })).toBeInTheDocument();
+    expect(screen.getByText(/entrevista y historia, hechas\. ahora, los capítulos\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/va por el capítulo 3 de 10/i)).toBeInTheDocument();
+  });
+
+  it("cuánto lleva y cuánto le queda van en una frase, con las cifras de verdad", async () => {
+    let ahora = 1_000_000;
+    apuntar({ obraId: 7, fase: "novela", desde: ahora });
+    render(<Entrevista intervaloDeConsulta={10} ahora={() => ahora} />, {
+      wrapper: conDoble(dobleDeLaCadena({ ...ESCRIBIENDO_3, integrados: 3, en_curso: 4 })),
+    });
+    await screen.findByRole("progressbar");
+    ahora += 24 * 60_000;
+
+    // Faltan siete capítulos, a ocho minutos: 56.
+    expect(
+      await screen.findByText(
+        "Salió hace 24 minutos y le quedan unos 56. Es una estimación: cada capítulo tarda unos ocho. Puedes cerrar la página; al volver, seguirá aquí.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
  * La cadena de escribir: cerrar → outline → novela → consultar → publicar.
  *
  * La primera corrida real destapó dos cosas que ningún test veía: **no se
@@ -394,8 +448,8 @@ describe("la cadena de escribir la novela", () => {
 
     await pulsarEscribir(persona);
 
-    expect(await screen.findByText(/escribiendo el capítulo 3 de 10/i)).toBeInTheDocument();
-    expect(screen.getByText(/escribiendo el capítulo 3 de 10/i).closest("[role=status]")).not.toBeNull();
+    expect(await screen.findByText(/va por el capítulo 3 de 10/i)).toBeInTheDocument();
+    expect(screen.getByText(/va por el capítulo 3 de 10/i).closest("[role=status]")).not.toBeNull();
   });
 
   it("una barra con un tramo por capítulo dice cuántos van, también sin mirarla", async () => {
@@ -429,9 +483,10 @@ describe("la cadena de escribir la novela", () => {
     await screen.findByRole("progressbar");
     ahora += 12 * 60_000;
 
-    expect(await screen.findByText(/empezó hace 12 min/i)).toBeInTheDocument();
+    // Enmienda 1: una sola frase, «salió hace…», en vez de dos notas sueltas.
+    expect(await screen.findByText(/salió hace 12 minutos/i)).toBeInTheDocument();
     // Faltan ocho capítulos: el 3, que va en curso, y los siete pendientes.
-    expect(screen.getByText(/1 h 4 min/)).toHaveTextContent(/estimación/i);
+    expect(screen.getByText(/cerca de 1 hora y 4 minutos/)).toHaveTextContent(/estimación/i);
   });
 
   it("los pasos dicen dónde está el proceso: entrevista, historia, capítulos, publicación", async () => {
@@ -641,10 +696,10 @@ describe("una novela que no avanza", () => {
     );
 
     await pulsarEscribir(persona);
-    await screen.findByText(/escribiendo el capítulo 3 de 10/i);
+    await screen.findByText(/va por el capítulo 3 de 10/i);
     ahora += 600;
     doble.respuestas["GET /obras/7/novela"] = CAPITULO_4;
-    await screen.findByText(/escribiendo el capítulo 4 de 10/i);
+    await screen.findByText(/va por el capítulo 4 de 10/i);
 
     ahora += 600;
     await esperarTics();
@@ -725,7 +780,7 @@ describe("reintentar desde el paso que falló", () => {
       await screen.findByRole("button", { name: /escribir la novela desde donde se quedó/i }),
     );
 
-    expect(await screen.findByText(/escribiendo el capítulo 3 de 10/i)).toBeInTheDocument();
+    expect(await screen.findByText(/va por el capítulo 3 de 10/i)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(contar(doble, "POST /entrevistas/1/cerrar")).toBe(1);
     expect(contar(doble, "POST /obras/7/outline")).toBe(1);

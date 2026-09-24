@@ -2,7 +2,6 @@ import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useState } from "react";
 
 import { usePeticionario } from "@/shared/api/contexto";
-import { Pagina } from "@/shared/ui/patterns/Pagina";
 import { Aviso, Boton, Pasos, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type EstadoDeLaNovela, type Evaluacion } from "../api/entrevista";
@@ -32,6 +31,15 @@ type Parada = { tipo: "detenida"; motivo: string | null } | { tipo: "sin_outline
 /** Lo que ve quien encarga la novela: cuatro pasos y no los cinco de la
  * cadena, porque cerrar la entrevista es parte de la entrevista. */
 const ETAPAS = ["Entrevista", "Historia", "Capítulos", "Publicación"] as const;
+
+/** Lo mismo que dicen los pasos, en la voz del cuaderno (maqueta D-Progreso):
+ * lo hecho y lo que toca ahora, por etapa. */
+const ENTRADILLA: readonly string[] = [
+  "Primero, la entrevista.",
+  "Entrevista, hecha. Ahora, la historia.",
+  "Entrevista y historia, hechas. Ahora, los capítulos.",
+  "Entrevista, historia y capítulos, hechos. Ahora, la publicación.",
+];
 
 const QUE_FALLO: Record<Paso, string> = {
   cerrar: "cerrar la entrevista",
@@ -542,8 +550,18 @@ function Recorrido({
       parada?.tipo === "detenida" || (lanzar.isError && paso === "novela");
 
     return (
-      <Pagina titulo={reanudada ? "Seguimos con tu novela" : "Tu novela está en marcha"}>
-        <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
+      <section className="creacion creacion--viaje" aria-labelledby="creacion-titulo">
+        {/* La etapa se ve en una frase y se oye como lista: la lista es la
+            que sabe decir «hecho» y cuál es la actual. */}
+        <p className="creacion__entradilla" aria-hidden="true">
+          {ENTRADILLA[etapa]}
+        </p>
+        <h2 id="creacion-titulo" className="creacion__titulo">
+          Tu novela va de camino
+        </h2>
+        <div className="solo-lector">
+          <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
+        </div>
         {cadena}
 
         {fallaLaHistoria && !ocupado ? (
@@ -566,26 +584,45 @@ function Recorrido({
           </Boton>
         ) : null}
 
-        <div className="otra">
-          <p className="nota">
-            Si prefieres encargar otra, esta seguirá escribiéndose, pero la página dejará de
-            seguirla.
-          </p>
-          <Boton variante="discreto" onClick={onEmpezarOtra}>
+        <div className="creacion__otra">
+          <Boton
+            variante="discreto"
+            onClick={onEmpezarOtra}
+            aria-describedby="creacion-otra-nota"
+          >
             Empezar otra novela
           </Boton>
+          <p id="creacion-otra-nota" className="creacion__nota">
+            Esta seguirá escribiéndose, pero la página dejará de seguirla.
+          </p>
         </div>
-      </Pagina>
+      </section>
     );
   }
 
+  const selloDelPaso = `Paso ${etapa + 1} de ${ETAPAS.length}: ${ETAPAS[etapa]?.toLowerCase() ?? ""}`;
+
   return (
-    <Pagina titulo="Cuéntanos sobre quien va a leerla">
-      <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
-      <Texto>
-        Con lo que escribas aquí se escribe la novela. No hace falta que sea
-        largo: un par de recuerdos concretos valen más que una lista.
-      </Texto>
+    <section className="creacion creacion--entrevista hoja" aria-labelledby="creacion-titulo">
+      <div className="creacion__cabecera">
+        <h2 id="creacion-titulo" className="creacion__titulo">
+          Cuéntanos a quién va dirigida
+        </h2>
+        {/* Un sello de correos con el paso. `role="img"` y su nombre entero:
+            sin él, un lector de pantalla diría «paso», «1», «de 4» sueltos. */}
+        <div className="sello sello--derecha creacion__sello" role="img" aria-label={selloDelPaso}>
+          <span>paso</span>
+          <span className="sello__cifra">{etapa + 1}</span>
+          <span>de {ETAPAS.length}</span>
+        </div>
+      </div>
+      <div className="solo-lector">
+        <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
+      </div>
+      <p className="creacion__entradilla creacion__entradilla--hoja">
+        Con lo que escribas aquí se escribe la novela. No hace falta que sea largo: un par de
+        recuerdos concretos valen más que una lista.
+      </p>
 
       <form
         className="formulario"
@@ -607,45 +644,57 @@ function Recorrido({
               {ayuda}
             </p>
 
-            {CAMPOS.filter((campo) => campo.bloque === bloque).map((campo) => (
-              <Campo
-                key={campo.clave}
-                clave={campo.clave}
-                etiqueta={campo.etiqueta}
-                forma={campo.forma}
-                valor={valores[campo.clave] ?? ""}
-                alCambiar={(valor) =>
-                  setValores((previos) => ({ ...previos, [campo.clave]: valor }))
-                }
-              />
-            ))}
-
-            {/* El texto pegado va con quien es: una carta suya o una anécdota
-                dice de esa persona más que cualquier rasgo. Viaja en su propio
-                campo, nunca dentro de `respuestas` (§11). */}
-            {bloque === "quien" ? (
-              <p className="campo">
-                <label className="campo__etiqueta" htmlFor="campo-pegado">
-                  Si tienes una carta, una anécdota o un mensaje suyo, pega aquí el texto
-                </label>
-                <textarea
-                  id="campo-pegado"
-                  className="campo__control"
-                  rows={6}
-                  value={pegado}
-                  onChange={(e) => setPegado(e.target.value)}
+            <div className="bloque__campos">
+              {CAMPOS.filter((campo) => campo.bloque === bloque).map((campo) => (
+                <Campo
+                  key={campo.clave}
+                  clave={campo.clave}
+                  etiqueta={campo.etiqueta}
+                  forma={campo.forma}
+                  valor={valores[campo.clave] ?? ""}
+                  alCambiar={(valor) =>
+                    setValores((previos) => ({ ...previos, [campo.clave]: valor }))
+                  }
                 />
-              </p>
-            ) : null}
+              ))}
+
+              {/* El texto pegado va con quien es: una carta suya o una anécdota
+                  dice de esa persona más que cualquier rasgo. Viaja en su propio
+                  campo, nunca dentro de `respuestas` (§11). */}
+              {bloque === "quien" ? (
+                <p className="campo campo--ancho">
+                  <label className="campo__etiqueta" htmlFor="campo-pegado">
+                    Si tienes una carta, una anécdota o un mensaje suyo, pega aquí el texto
+                  </label>
+                  <textarea
+                    id="campo-pegado"
+                    className="campo__control"
+                    rows={6}
+                    value={pegado}
+                    onChange={(e) => setPegado(e.target.value)}
+                  />
+                </p>
+              ) : null}
+            </div>
           </fieldset>
         ))}
 
         {/* Desactivado mientras espera: el Entrevistador tarda segundos, y un
             segundo clic lanzaba otro `POST /respuestas` que moría con
             `database is locked` (596faba). */}
-        <Boton type="submit" variante="principal" disabled={guardar.isPending}>
-          Guardar y comprobar
-        </Boton>
+        <div className="creacion__accion">
+          <Boton
+            type="submit"
+            variante="principal"
+            disabled={guardar.isPending}
+            aria-describedby="creacion-guardar-ayuda"
+          >
+            Guardar y comprobar
+          </Boton>
+          <p id="creacion-guardar-ayuda" className="creacion__nota">
+            Te diremos si falta algo antes de salir.
+          </p>
+        </div>
       </form>
 
       {guardar.isPending ? (
@@ -686,7 +735,7 @@ function Recorrido({
           Escribir la novela
         </Boton>
       ) : null}
-    </Pagina>
+    </section>
   );
 }
 
@@ -703,8 +752,10 @@ function Campo({
   valor: string;
   alCambiar: (valor: string) => void;
 }) {
+  // Las listas piden sitio para escribir varias cosas; el resto va a media
+  // hoja, en pareja con la pregunta de al lado (maqueta D-Entrevista).
   return (
-    <p className="campo">
+    <p className={forma === "lista" ? "campo campo--ancho" : "campo"}>
       {/* Etiqueta de verdad y no un `placeholder`: un `placeholder`
           desaparece al escribir y deja al lector de pantalla sin nombre
           que anunciar (`RF-ACC-03`). */}

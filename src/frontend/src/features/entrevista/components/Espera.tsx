@@ -1,18 +1,20 @@
-import { Aviso, BarraDeProgreso, Texto } from "@/shared/ui/primitives";
+import { Aviso, BarraDeProgreso } from "@/shared/ui/primitives";
 
 import type { EstadoDeLaNovela } from "../api/entrevista";
-import { duracion, estimacionRestante } from "../lib/tiempo";
+import { estimacionRestante, frasesDelViaje } from "../lib/tiempo";
 
+/** La frase del capítulo. La metáfora del viaje decora; lo que se dice es
+ * «capítulo», que es lo que la persona está esperando. */
 function avance(datos: EstadoDeLaNovela): string {
   if (datos.en_curso !== null) {
-    return `Escribiendo el capítulo ${datos.en_curso} de ${datos.total}.`;
+    return `Va por el capítulo ${datos.en_curso} de ${datos.total}.`;
   }
   return `Van ${datos.integrados} de ${datos.total} capítulos.`;
 }
 
 /**
  * La pantalla de la hora y media: la novela se escribe en segundo plano y quien
- * la encargó mira esto.
+ * la encargó mira el mapa de ruta (maqueta D-Progreso).
  *
  * **Solo la frase del capítulo va en la región viva.** El tiempo cambia cada
  * pocos segundos, y dentro de `role="status"` un lector de pantalla lo
@@ -35,11 +37,10 @@ export function Espera({
   atascada?: boolean;
 }) {
   return (
-    <section className="espera" aria-label="Tu novela se está escribiendo">
-      <div role="status">
-        <Texto>Se está escribiendo tu novela. Son diez capítulos, así que tarda un rato.</Texto>
-        {datos !== undefined ? <p className="nota">{avance(datos)}</p> : null}
-      </div>
+    <section className="viaje" aria-label="Por dónde va tu novela">
+      <p className="viaje__estado" role="status">
+        {datos !== undefined ? avance(datos) : "Arrancando el primer capítulo…"}
+      </p>
 
       {datos !== undefined && datos.total > 0 ? (
         <>
@@ -50,12 +51,10 @@ export function Espera({
             enCurso={datos.en_curso}
             textoDelValor={`${datos.integrados} de ${datos.total} capítulos terminados`}
           />
-          <p className="nota espera__tiempo">
-            Empezó hace {duracion(instante - desde)}.
-          </p>
-          <p className="nota espera__tiempo">
-            Faltan unos {duracion(estimacionRestante(datos.total, datos.integrados))}. Es una
-            estimación: cada capítulo tarda unos ocho minutos.
+          <p className="viaje__tiempo">
+            {frasesDelViaje(instante - desde, estimacionRestante(datos.total, datos.integrados))}{" "}
+            Es una estimación: cada capítulo tarda unos ocho. Puedes cerrar la página; al volver,
+            seguirá aquí.
           </p>
         </>
       ) : null}
