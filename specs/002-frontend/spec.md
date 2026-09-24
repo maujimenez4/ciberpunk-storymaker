@@ -1,8 +1,8 @@
 ---
 id: 002-frontend
 titulo: Frontend, versión 1 — la lectura del regalo
-estado: en-revision       # borrador | en-revision | aprobada | implementada
-aprobada_por:             # lo rellena una persona, nunca un agente
+estado: aprobada          # borrador | en-revision | aprobada | implementada
+aprobada_por: maujimenez4 # firmada el 2026-09-24
 fecha: 2026-09-23
 depende_de: specs/001-backend-v1/spec.md
 ---

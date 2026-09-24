@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — de la entrevista a la novela publicada
-estado: en-revision       # borrador | en-revision | aprobada | implementada
-aprobada_por:             # necesita firma nueva: ver Cierre
+estado: aprobada          # borrador | en-revision | aprobada | implementada
+aprobada_por: maujimenez4 # firmada el 2026-09-24 (v3.1: la ficha lleva sus capitulos)
 fecha: 2026-09-23
 ---
 
