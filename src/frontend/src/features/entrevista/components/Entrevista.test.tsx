@@ -7,7 +7,7 @@
  * último metro de la defensa de `CLAUDE.md` §11**.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -357,6 +357,34 @@ describe("la cadena de escribir la novela", () => {
     expect(await screen.findByText(/empezó hace 12 min/i)).toBeInTheDocument();
     // Faltan ocho capítulos: el 3, que va en curso, y los siete pendientes.
     expect(screen.getByText(/1 h 4 min/)).toHaveTextContent(/estimación/i);
+  });
+
+  it("los pasos dicen dónde está el proceso: entrevista, historia, capítulos, publicación", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3, { retraso: 50 });
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    const actual = () =>
+      within(screen.getByRole("list", { name: /cómo va tu novela/i }))
+        .getAllByRole("listitem")
+        .find((item) => item.getAttribute("aria-current") === "step");
+
+    expect(await screen.findByRole("list", { name: /cómo va tu novela/i })).toBeInTheDocument();
+    expect(actual()).toHaveTextContent(/entrevista/i);
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() => expect(actual()).toHaveTextContent(/historia/i));
+    await waitFor(() => expect(actual()).toHaveTextContent(/capítulos/i));
+    const items = within(screen.getByRole("list", { name: /cómo va tu novela/i })).getAllByRole(
+      "listitem",
+    );
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringMatching(/entrevista.*hecho/i),
+      expect.stringMatching(/historia.*hecho/i),
+      expect.not.stringMatching(/hecho/i),
+      expect.stringMatching(/publicación/i),
+    ]);
   });
 
   it("mientras el Arquitecto trabaja, dice que se prepara la historia", async () => {

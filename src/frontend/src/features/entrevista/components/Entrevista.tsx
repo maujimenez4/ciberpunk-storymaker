@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { usePeticionario } from "@/shared/api/contexto";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
-import { Aviso, Boton, Texto } from "@/shared/ui/primitives";
+import { Aviso, Boton, Pasos, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type EstadoDeLaNovela, type Evaluacion } from "../api/entrevista";
 import { Espera } from "./Espera";
@@ -14,6 +14,10 @@ const INTERVALO_DE_CONSULTA = 5000;
 
 /** El paso de la cadena en curso, para decir **cual** fallo. */
 type Paso = "cerrar" | "outline" | "novela";
+
+/** Lo que ve quien encarga la novela: cuatro pasos y no los cinco de la
+ * cadena, porque cerrar la entrevista es parte de la entrevista. */
+const ETAPAS = ["Entrevista", "Historia", "Capítulos", "Publicación"] as const;
 
 const QUE_FALLO: Record<Paso, string> = {
   cerrar: "cerrar la entrevista",
@@ -258,6 +262,17 @@ export function Entrevista({
 
   const ocupado = lanzar.isPending || enMarcha !== null || publicar.isPending;
 
+  // El paso de la cabecera sale del paso de la cadena: el ultimo que se
+  // intento. Tras un fallo se queda en ese, que es donde hay que volver.
+  const etapa =
+    publicar.isPending || publicar.isError
+      ? 3
+      : enMarcha !== null || paso === "novela"
+        ? 2
+        : paso === "outline"
+          ? 1
+          : 0;
+
   const listo =
     evaluacion !== null &&
     evaluacion.faltantes.length === 0 &&
@@ -265,6 +280,7 @@ export function Entrevista({
 
   return (
     <Pagina titulo="Cuéntanos sobre quien va a leerla">
+      <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
       <Texto>
         Con lo que escribas aquí se escribe la novela. No hace falta que sea
         largo: un par de recuerdos concretos valen más que una lista.

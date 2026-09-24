@@ -7,11 +7,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
 
-import { Aviso, BarraDeProgreso, Boton, Enlace, Texto } from "@/shared/ui/primitives";
+import { Aviso, BarraDeProgreso, Boton, Enlace, Pasos, Texto } from "@/shared/ui/primitives";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
 
 describe("los primitivos", () => {
@@ -76,6 +76,23 @@ describe("los primitivos", () => {
       "en-curso",
       ...Array<string>(7).fill("pendiente"),
     ]);
+  });
+
+  it("los pasos marcan el actual con aria-current y dicen con texto cuáles están hechos", async () => {
+    const { container } = render(
+      <Pasos etiqueta="Cómo va tu novela" pasos={["Entrevista", "Historia", "Capítulos"]} actual={1} />,
+    );
+
+    const items = within(screen.getByRole("list", { name: "Cómo va tu novela" })).getAllByRole(
+      "listitem",
+    );
+    expect(items[1]).toHaveAttribute("aria-current", "step");
+    expect(items[0]).not.toHaveAttribute("aria-current");
+    expect(items[2]).not.toHaveAttribute("aria-current");
+    // «Hecho» se dice con texto, no solo con un color o una marca.
+    expect(items[0]).toHaveTextContent(/hecho/i);
+    expect(items[2]).not.toHaveTextContent(/hecho/i);
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it("una pagina entera con los tokens aplicados no tiene violaciones", async () => {

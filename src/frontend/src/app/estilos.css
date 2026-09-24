@@ -334,6 +334,57 @@ body {
   margin-block: var(--aire);
 }
 
+/* Texto que solo oye un lector de pantalla: lo que la vista ya lee en una marca. */
+.solo-lector {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- los pasos ------------------------------------------------------------ */
+
+/**
+ * Cuatro pasos en una línea, en la tinta aguada; el actual en tinta plena y
+ * con el hilo ciruela debajo, **igual que la pestaña activa**: es la misma
+ * gramática de «dónde estás» en toda la página.
+ */
+.pasos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  list-style: none;
+  margin: 0 0 var(--aire);
+  padding: 0;
+  font-size: var(--nota);
+  color: var(--tinta-suave);
+}
+
+.pasos__paso {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  padding-block-end: 0.25rem;
+  border-block-end: 2px solid transparent;
+}
+
+.pasos__paso--hecho {
+  color: var(--tinta);
+}
+
+.pasos__paso--actual {
+  color: var(--tinta);
+  font-weight: 600;
+  border-block-end-color: var(--acento);
+}
+
+.pasos__marca {
+  color: var(--acento);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- la espera ------------------------------------------------------------ */
 
 /**
