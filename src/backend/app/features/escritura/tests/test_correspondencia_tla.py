@@ -63,6 +63,15 @@ def resuelve(ruta: str) -> bool:
     return hasattr(cargado, simbolo)
 
 
+def modulo_existe(ruta: str) -> bool:
+    modulo, _, _simbolo = ruta.rpartition(".")
+    try:
+        importlib.import_module(modulo)
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
 def test_cada_accion_de_la_especificacion_esta_emparejada():
     assert acciones_del_next() == {a["nombre"] for a in TABLA["accion"]}
 
@@ -135,6 +144,30 @@ def test_lo_previsto_sigue_sin_existir():
                 f"{ruta} ya existe: la fila '{accion['nombre']}' dejo de estar pendiente. "
                 "Pasala a `codigo` y comprueba que la accion dice lo que hace ese codigo."
             )
+
+
+def test_lo_previsto_no_aterrizo_con_otro_nombre():
+    """El agujero de `codigo_previsto`, y se abrio solo.
+
+    `test_lo_previsto_sigue_sin_existir` solo avisa si la funcion futura nace
+    **con el nombre que alguien adivino**. El 2026-09-24 la puerta de Lean
+    aterrizo como `manuscrito.lean.correr_lean`, y esta tabla la esperaba en
+    `manuscrito.service.verificar_con_lean`: un nombre inventado al declararla.
+    El test siguio en verde y la correspondencia quedo mintiendo.
+
+    Esto cierra el hueco por el lado que si se puede comprobar: **si el modulo
+    donde se espera la funcion ya existe pero la funcion no**, la zona aterrizo
+    y el nombre es sospechoso. No prueba que haya aterrizado —puede estar en
+    otro modulo— pero convierte el caso mas probable en rojo.
+    """
+    for accion in TABLA["accion"]:
+        for ruta in accion.get("codigo_previsto", []):
+            if modulo_existe(ruta) and not resuelve(ruta):
+                raise AssertionError(
+                    f"'{accion['nombre']}' espera {ruta}, y su modulo YA existe pero el "
+                    "simbolo no. O aterrizo con otro nombre, o el nombre previsto estaba "
+                    "mal elegido. Ve a mirar el codigo antes de dejarlo pendiente."
+                )
 
 
 def test_lo_pendiente_dice_de_que_fase_es():

@@ -63,8 +63,9 @@ así que cubre más de lo que la salida de emergencia habría cubierto.
 
 La fuente es [`correspondencia.toml`](correspondencia.toml); esta tabla es su lectura. Un
 test —[`test_correspondencia_tla.py`](../../src/backend/app/features/escritura/tests/test_correspondencia_tla.py)—
-falla si las dos listas de transiciones dejan de coincidir, si una acción no aparece en la
-tabla, si un símbolo emparejado no existe, o si uno declarado *previsto* empieza a existir.
+falla si una transición del código no está reclamada ni declarada, si una acción no aparece
+en la tabla, si un símbolo emparejado no existe, si uno declarado *previsto* empieza a
+existir, o si el módulo de un *previsto* existe mientras su función no.
 
 **Lo que ese test comprueba es que las listas coincidan y que los símbolos existan. Que la
 acción haga lo que su nombre dice sigue siendo inspección**, y así está clasificado en
@@ -84,9 +85,9 @@ reanudación (`checkpoint.py`, `reanudacion.py`) y las versiones publicadas
 | `Reparar` | `escritura.service.escribir_capitulo` | Implementado |
 | `Escalar` | `escritura.maquina.transitar` · `.exigir_que_la_novela_siga` | Implementado |
 | `Reanudar` | `escritura.reanudacion.reanudar` · `.descartar` | Implementado |
-| `Verificar` | `manuscrito.lean.generador.generar_cronologia` | **Previsto** — Fase 4 |
-| `Publicar` | `manuscrito.service.publicar` | **Previsto** — Fase 4 |
-| `LeanFalla` | `manuscrito.service.publicar` | **Previsto** — Fase 4 |
+| `Verificar` | `manuscrito.lean.generar_lean` · `manuscrito.lean.correr_lean` | Implementado *(4c6ff5c)* |
+| `Publicar` | `manuscrito.service.publicar` | Implementado |
+| `LeanFalla` | `manuscrito.service.CronologiaIncoherente` | Implementado *(4c6ff5c)* |
 | `PeticionDelLector` | `manuscrito.peticiones.registrar_peticion` | **Previsto** — Fase 5 |
 | `RehacerCapitulo` | `manuscrito.peticiones.atender_peticion` | **Previsto** — Fase 5 |
 | `DescartarPeticion` | `manuscrito.reversion.revertir` | **Previsto** — Fase 5 |
@@ -96,10 +97,24 @@ reanudación (`checkpoint.py`, `reanudacion.py`) y las versiones publicadas
 en cuatro sitios; son quince desde que T3 añadió las tres de la regeneración. La cuenta que
 manda es la del `.toml`, porque es la que el test compara.
 
-**Cinco transiciones del código que ninguna acción reclama** están declaradas en el `.toml`
-con su motivo: la avería técnica (`ENSAMBLANDO → FALLIDA` por contexto excedido) y las
-cuatro cancelaciones del Autor. No es que se hayan olvidado: §3.9 no las tiene, y el modelo
-no inventa estados que su documento no dibuja.
+**Lo que ninguna acción reclama** está declarado en el `.toml` con su motivo: las cuatro
+cancelaciones del Autor, y las averías de §3.6 —tres señales que llevan a `FALLIDA` desde
+cualquier estado vivo—, estas últimas **por regla y no una a una**, porque son una regla y
+no dieciocho hechos. No es que se hayan olvidado: §3.9 no las dibuja, y el modelo no
+inventa estados que su documento no tiene.
+
+**El test mide `transitar` por ejecución, y no siempre fue así.** Mientras comparaba contra
+la tabla `_TRANSICIONES` había **20 transiciones invisibles de 31**: las averías se
+resuelven antes de consultarla y el destino de una reparación lo decide el contador. Añadir
+una señal de avería no ponía nada en rojo. El episodio está contado como método en
+`verification.md` §5.1.
+
+**Y un segundo agujero, cerrado el mismo día.** Las filas *previstas* solo avisaban si la
+función futura nacía **con el nombre que alguien adivinó**. La puerta de Lean aterrizó como
+`correr_lean` y esta tabla la esperaba en `service.verificar_con_lean`: el test siguió verde
+y la correspondencia quedó diciendo que estaba pendiente. Ahora, si el **módulo** donde se
+espera una función prevista ya existe pero la función no, el test se pone rojo y manda a
+mirar el código.
 
 ---
 

@@ -90,11 +90,12 @@ nota = "Hereda `arranque.intento`: es la linea que impide que una caida regale r
 
 [[accion]]
 nombre = "Verificar"
-codigo = ["app.features.manuscrito.lean.generador.generar_lean"]
-codigo_previsto = ["app.features.manuscrito.service.verificar_con_lean"]
-pendiente = "Fase 4 - falta la puerta, no el generador"
+codigo = [
+  "app.features.manuscrito.lean.generar_lean",
+  "app.features.manuscrito.lean.correr_lean",
+]
 transiciones = []
-nota = "Partida en dos, y hoy solo esta la primera mitad: `generar_lean` produce el fichero desde la cronologia, pero `publicar` NO lo invoca ni corre `lake build`. La accion del modelo es la puerta entera (RF-FOR-01 a 03), asi que queda emparejada a medias y declarada."
+nota = "La puerta entera (RF-FOR-01 a 03): `generar_lean` produce el fichero desde la cronologia y `correr_lean` lo compila. `publicar` la invoca **antes de escribir nada**. Aterrizo el 2026-09-24 en `4c6ff5c`."
 
 [[accion]]
 nombre = "Publicar"
@@ -104,11 +105,9 @@ nota = "Crea la `VersionPublicada` inmutable (RF-PUB-01 a 08). Aterrizo con la F
 
 [[accion]]
 nombre = "LeanFalla"
-codigo = []
-codigo_previsto = ["app.features.manuscrito.service.verificar_con_lean"]
-pendiente = "Fase 4 - la puerta que aun no existe"
+codigo = ["app.features.manuscrito.service.CronologiaIncoherente"]
 transiciones = []
-nota = "Si Lean falla, no se publica y el fallo vuelve al editor (CA-21). Apunta a la puerta y no a `publicar`: `publicar` ya existe, pero hoy publica **sin** consultar a Lean, asi que esta rama no tiene codigo todavia."
+nota = "Si Lean falla, no se publica y el fallo vuelve al editor (CA-21): `publicar` lanza `CronologiaIncoherente` y no llega a crear la version. Y si Lean **no esta instalado**, `correr_lean` lanza `HerramientaNoDisponible` y tampoco se publica: la verificacion formal es eliminatoria, no degradable."
 
 [[accion]]
 nombre = "PeticionDelLector"

@@ -253,6 +253,66 @@ hacemos sin pruebas.
   del §7 cambia de estado. Un método nuevo que no mueve ninguna casilla de la matriz no
   está aportando cobertura: está aportando trabajo.
 
+### 5.1 Cómo se destapa un verde falso
+
+**El fallo más caro de este repositorio no ha sido un test en rojo: ha sido un test en
+verde que no comprobaba nada.** Apareció tantas veces el 2026-09-24, en sesiones y
+ficheros sin relación, que conviene escribir el método y no los casos — los casos los
+rehace cualquiera; el método es lo que se reutiliza.
+
+La forma es siempre la misma: **un resultado con la pinta correcta, producido por algo que
+no llegó a ejecutarse, o que se ejecutó sobre otra cosa.** Y lo peligroso es que un verde
+no invita a mirar.
+
+Cuatro comprobaciones, cada una con el caso que la justificó.
+
+**1 · Que el control cuente, no que mire.** Cuatro ablaciones de la especificación TLA+ se
+aplicaron con `sed` sobre operadores que llevan barras invertidas. Ninguna de las cuatro
+sustituciones casó, y las cuatro corridas dijeron `Model checking completed. No error has
+been found.` — el resultado que se esperaba de un invariante sólido. Lo destapó un
+`grep -c` de control que devolvió `0`: **la mutación no estaba en el fichero**. Desde
+entonces cada ablación lleva un aserto que convierte el no-match en un fallo ruidoso.
+Una modificación que puede no aplicarse necesita que alguien cuente si se aplicó.
+
+**2 · Medir sobre el artefacto, no a través de una capa.** El error simétrico del anterior:
+una comprobación de una expresión regular dio «no casa» y estuvo a punto de reportarse como
+un defecto del plan. El defecto estaba en los escapes del *heredoc* de `bash` que
+transportaba el patrón, no en el patrón. Se resolvió poniendo la comprobación en un fichero
+y quitando el intérprete de en medio. **El shell entre quien mide y lo medido es una fuente
+de error en los dos sentidos:** puede fabricar un verde y puede fabricar un rojo.
+
+**3 · Ejecutar, no leer una representación.** Un test afirmaba que «cada transición del
+código está reclamada o declarada», y lo comprobaba contra la tabla `_TRANSICIONES`. Pero
+la función que decide el siguiente estado tiene dos caminos que **no consultan esa tabla**:
+las averías se resuelven antes, y el destino de una reparación lo decide un contador.
+Medido: **31 transiciones reales, 11 en la tabla, 20 invisibles.** Añadir una señal de
+avería no ponía nada en rojo. El arreglo fue dejar de leer la estructura y **llamar a la
+función** sobre todo el alfabeto. Una prueba sobre una representación del código solo vale
+lo que valga la representación, y nada avisa cuando deja de ser fiel.
+
+**4 · Quitar la pieza y mirar qué cae.** Un invariante que nunca se ha visto fallar no
+distingue un sistema correcto de una comprobación vacía, y en especificación formal el
+riesgo es mayor que en un test, porque es fácil escribir algo verdadero por vacuidad. Cada
+invariante de `formal/tla/` tiene su ablación registrada con el resultado; el hook de
+policy se desconectó para comprobar que **su ausencia tumba tres tests**; y al invariante
+que **no** cayó al ablarlo se le buscó el porqué en vez de darlo por sólido — resultó ser
+redundante y no vacuo, que son cosas distintas y solo una es un problema.
+
+**Y un quinto que salió de aplicar los otros cuatro.** El mismo test de correspondencia
+declara funciones aún no escritas en un campo `codigo_previsto`, y falla si alguna empieza
+a existir. El mecanismo tenía un agujero: **solo avisa si la función nace con el nombre que
+alguien adivinó.** La puerta de Lean aterrizó con otro nombre, el test siguió en verde y la
+correspondencia quedó afirmando que estaba pendiente. Se cerró por el lado comprobable: si
+el **módulo** donde se espera la función ya existe pero la función no, la zona aterrizó y
+el nombre es sospechoso. No prueba que haya aterrizado, pero convierte el caso más probable
+en rojo. **Un marcador de futuro que nadie puede incumplir no vigila nada**, que es la
+advertencia de los umbrales de §5 aplicada a un test.
+
+**Lo que las cinco tienen en común** es que ninguna comprueba el sistema: comprueban **la
+comprobación**. Salen gratis cuando se piensan al escribir el test y son carísimas cuando
+se descubren por un tropiezo, porque hasta entonces todo lo que ese test afirmaba estaba
+sin sostener — y se había citado como evidencia.
+
 ## 6. El conjunto de validadores
 
 Las tablas de §2 y §3 están ordenadas por método, y leídas así inducen a contar: ocho
@@ -369,7 +429,7 @@ de los puntos ciegos de §2.1 y §3.1. Tres estados:
 | **Una palabra vetada por el Comprador llega al texto** | Guardarraíl léxico en código sobre cada capítulo, con normalización de mayúsculas, acentos y variantes, y tope de reintentos | **Parcial** — es comparación léxica: caza la palabra, no la alusión. Quien pidió no ver a su expareja no la nombra, y el tema puede entrar sin que ningún término de la lista aparezca |
 | **El destinatario no se reconoce en la novela** | Cobertura de la personalización, contra la tabla de hechos (determinista) más el juez con rúbrica y la revisión humana | **Parcial** — la cobertura comprueba que el dato **está**, no que haga nada; que esté **integrado y no incrustado** solo lo juzga un juicio, y el juez comparte modelo con quien escribió |
 | **El manuscrito del Destinatario sale a un servicio externo** | La decisión de `maujimenez4` del 2026-09-23, declarada en `CLAUDE.md` §4.3: sube el prompt renderizado, y con él la prosa, porque **cinco de los diez roles reciben el texto como entrada** —Continuista, Crítico, Editor de línea, Extractor y Auditor de manuscrito (arq. §7)—. Fuera de Langfuse no sale nada | **Aceptado, no cubierto** — es el único riesgo de esta tabla que no espera un validador: **está decidido a sabiendas**. Se registra porque una decisión sobre datos de un tercero que no está escrita se convierte en un descuido en cuanto cambia quien la tomó. Lo que sí queda sin método es comprobar que la última línea se cumple: nada vigila que un fragmento no acabe en otro log |
-| **La especificación TLA+ deja de corresponder al código** | `formal/tla/correspondencia.toml` y el test que ejercita `maquina.transitar` junto a la máquina | **Parcial** *(2026-09-24)* — Un test recorre `transitar` **por ejecución** sobre todo el alfabeto y los dos lados del contador, y falla si una transición no está reclamada ni declarada, si una acción del modelo no aparece en la tabla, si un símbolo emparejado no existe, o si uno declarado *previsto* empieza a existir. **Mide el comportamiento y no la tabla, y esa diferencia no es teórica:** mientras comparaba contra `_TRANSICIONES` había **20 transiciones invisibles** de 31 —las tres averías de §3.6, que `transitar` resuelve antes de consultar la tabla, y las dos ramas del contador de `REPARANDO`—, y añadir una señal de avería no ponía nada en rojo. **Lo que sigue siendo I es que la acción haga lo que su nombre dice**: nada comprueba que `Publicar` publique. Tampoco cubre lo que el modelo no reclama —la cancelación del Autor y la avería técnica—, **declarado** con su motivo y no verificado, ni las siete acciones cuyo código aún no existe |
+| **La especificación TLA+ deja de corresponder al código** | `formal/tla/correspondencia.toml` y el test que ejercita `maquina.transitar` junto a la máquina | **Parcial** *(2026-09-24)* — Un test recorre `transitar` **por ejecución** sobre todo el alfabeto y los dos lados del contador, y falla si una transición no está reclamada ni declarada, si una acción del modelo no aparece en la tabla, si un símbolo emparejado no existe, o si uno declarado *previsto* empieza a existir. **Mide el comportamiento y no la tabla, y esa diferencia no es teórica:** mientras comparaba contra `_TRANSICIONES` había **20 transiciones invisibles** de 31 —las tres averías de §3.6, que `transitar` resuelve antes de consultar la tabla, y las dos ramas del contador de `REPARANDO`—, y añadir una señal de avería no ponía nada en rojo. **Lo que sigue siendo I es que la acción haga lo que su nombre dice**: nada comprueba que `Publicar` publique. Tampoco cubre lo que el modelo no reclama —la cancelación del Autor y la avería técnica—, **declarado** con su motivo y no verificado, ni las tres acciones cuyo código aún no existe —la petición del lector y sus dos ramas, de la Fase 5— |
 | Este documento deja de describir el repositorio | Revisión manual al aterrizar el código | **Descubierto** |
 
 **Seis riesgos siguen descubiertos, y ninguno tiene ya la excusa de esperar a una fase
