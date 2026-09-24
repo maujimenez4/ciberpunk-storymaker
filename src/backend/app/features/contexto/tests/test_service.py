@@ -451,7 +451,7 @@ async def test_la_ejecucion_guarda_el_desglose_los_ids_y_el_recuento_previo(
         await sesion.execute(
             text(
                 "SELECT tokens_por_capa, tokens_previstos, tokens_reales, "
-                "ids_canon, ids_recuperados, parametros "
+                "ids_canon, ids_recuperados, ids_por_capa, parametros "
                 "FROM ejecucion WHERE id = :id"
             ),
             {"id": ejecucion_id},
@@ -464,11 +464,12 @@ async def test_la_ejecucion_guarda_el_desglose_los_ids_y_el_recuento_previo(
     assert fila.tokens_reales is None, "el real lo pone el proveedor, despues"
     assert json.loads(fila.ids_canon) == [hecho.id]
     assert json.loads(fila.ids_recuperados) == []
-    # RF-CTX-09 pide **todas** las capas que tienen ids, con su capa, y el
-    # esquema de T2 solo trae dos columnas de ids (ver Desviaciones).
-    por_capa = json.loads(fila.parametros)["ids_por_capa"]
+    # RF-CTX-09 pide **todas** las capas que tienen ids, con su capa, y desde
+    # la Fase 3 estan en su columna y no escondidas dentro de `parametros`.
+    por_capa = json.loads(fila.ids_por_capa)
     assert set(por_capa) == {capa.value for capa in CAPAS_CON_ORIGEN}
     assert por_capa[Capa.CANON.value] == [f"hc:{hecho.id}"]
+    assert json.loads(fila.parametros) == {}, "los ids ya no viven en `parametros`"
 
 
 async def test_ca_12_desde_la_ejecucion_y_los_almacenes_sale_el_mismo_paquete(

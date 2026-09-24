@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.features.outline.modelos import Capitulo, VersionObra
+from app.features.outline.schemas import BeatDeGenero
 
 
 async def test_una_version_de_obra_congela_la_biblia(sesion, obra):
@@ -49,7 +50,43 @@ async def test_un_capitulo_fuera_del_rango_de_extension_no_entra(sesion, obra):
         await sesion.flush()
 
 
-def _capitulo(obra_id: int, numero: int, extension_objetivo: int = 1200) -> Capitulo:
+async def test_un_capitulo_guarda_su_beat_de_genero(sesion, obra):
+    """`CA-32` dejaba de estar cerrado justo aqui: el Arquitecto asignaba el
+    beat, `_comprobar_beats` lo validaba **sobre su salida**, y la columna no
+    existia, asi que se tiraba al guardar. El Planificador lo volvia a decidir:
+    dos verdades para el mismo hecho."""
+    sesion.add(_capitulo(obra.id, 1, beat_de_genero=BeatDeGenero.ENCUENTRO.value))
+    await sesion.flush()
+
+    guardado = (await sesion.execute(select(Capitulo))).scalars().one()
+    assert guardado.beat_de_genero == "encuentro"
+
+
+async def test_un_capitulo_sin_beat_de_genero_sigue_siendo_valido(sesion, obra):
+    """`definitions.md` §4.1 da cardinalidad 0..1: hay capitulos que no cargan
+    ningun hito, y la columna no puede exigirlo."""
+    sesion.add(_capitulo(obra.id, 1))
+    await sesion.flush()
+
+    assert (await sesion.execute(select(Capitulo))).scalars().one().beat_de_genero is None
+
+
+async def test_un_beat_de_genero_inventado_no_entra(sesion, obra):
+    """El conjunto de los diez es cerrado (`definitions.md` §6). Lo para el
+    esquema del Arquitecto, y lo para tambien la base: un beat escrito por otra
+    ruta -- el Planificador, una migracion de datos -- no tendria quien lo
+    parase, y es el mismo motivo que el `ambito` de `palabra_prohibida`."""
+    sesion.add(_capitulo(obra.id, 1, beat_de_genero="escena_de_persecucion"))
+    with pytest.raises(IntegrityError):
+        await sesion.flush()
+
+
+def _capitulo(
+    obra_id: int,
+    numero: int,
+    extension_objetivo: int = 1200,
+    beat_de_genero: str | None = None,
+) -> Capitulo:
     return Capitulo(
         lugar="Cadiz",
         objetivo="Encontrarla",
@@ -62,4 +99,5 @@ def _capitulo(obra_id: int, numero: int, extension_objetivo: int = 1200) -> Capi
         gancho_de_apertura="La puerta estaba abierta",
         tipo_de_corte_final="pregunta",
         extension_objetivo=extension_objetivo,
+        beat_de_genero=beat_de_genero,
     )

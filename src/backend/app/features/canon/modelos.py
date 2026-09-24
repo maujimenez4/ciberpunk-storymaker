@@ -182,6 +182,39 @@ class HechoUsadoEn(Base):
     )
 
 
+class VarianteDeNombre(Base):
+    """Como se le puede llamar a alguien ademas de por su forma canonica (RF-VAL-03).
+
+    **Es lo que `CA-16` pedia y no existia.** El validador `nombres_literales`
+    sabe distinguir la forma canonica de una variante declarada desde la Fase 2
+    -- `NombreDeCanon` tiene el campo --, pero no habia donde declararlas, asi
+    que llegaban siempre vacias: «Mari» por «María» no se rechazaba por
+    incompatible, se rechazaba porque nadie la habia dado. La diferencia entre
+    un error de grafia y un apodo tiene que estar **en el canon**, no en la
+    astucia del validador.
+
+    `forma_canonica` es texto y no una clave ajena: el canon no tiene tabla de
+    entidades -- los nombres salen de `hecho_canon.entidad` --, y una clave
+    ajena a una tabla que no existe no se puede escribir. Queda anotado.
+
+    El `CheckConstraint` es R-2 de la Fase 1 otra vez: una variante en blanco
+    es subcadena de cualquier cosa, y daria por declarado cualquier nombre.
+    """
+
+    __tablename__ = "variante_de_nombre"
+    __table_args__ = (
+        UniqueConstraint("obra_id", "forma_canonica", "variante", name="uq_variante_de_nombre"),
+        CheckConstraint("length(trim(variante)) > 0", name="ck_variante_de_nombre_no_vacia"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    obra_id: Mapped[int] = mapped_column(
+        ForeignKey("obra.id", name="fk_variante_de_nombre_obra_id")
+    )
+    forma_canonica: Mapped[str] = mapped_column(String(120))
+    variante: Mapped[str] = mapped_column(String(120))
+
+
 class Embedding(Base):
     """Un fragmento con su vector, detras de la interfaz `VectorStore`.
 

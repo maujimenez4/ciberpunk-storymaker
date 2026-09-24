@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.vectores import extension_disponible
+from app.features.contexto import almacenes
 from app.features.contexto.almacenes import (
     AlmacenFuerzaBruta,
     AlmacenSqliteVec,
@@ -128,3 +129,32 @@ async def test_el_almacen_elegido_es_sqlite_vec_cuando_la_extension_carga(
 
     assert isinstance(almacen, AlmacenSqliteVec)
     assert almacen.modo == "sqlite-vec"
+
+
+async def test_la_fuerza_bruta_compara_todos_los_candidatos_de_una_vez(
+    sesion: AsyncSession, corpus: Corpus, monkeypatch
+):
+    """`architecture.md` §5.5: «BLOB + **NumPy**», y NumPy no es un adorno aqui.
+
+    Lo que cambia respecto al bucle en Python no es el resultado -- el test de
+    los dos modos lo sujeta -- sino que el conjunto **ya filtrado** se compara
+    en **una** operacion. Se mira contandola: tres candidatos, una llamada.
+    """
+    llamadas: list[int] = []
+    original = almacenes.distancias_coseno
+
+    def contando(consulta, matriz):
+        llamadas.append(len(matriz))
+        return original(consulta, matriz)
+
+    monkeypatch.setattr(almacenes, "distancias_coseno", contando)
+
+    candidatos = [
+        corpus.pertinente.id,
+        corpus.pertinente_por_presentes.id,
+        corpus.pertinente_por_hilo.id,
+    ]
+    vecinos = await AlmacenFuerzaBruta(sesion).vecinos(CONSULTA, candidatos, limite=10)
+
+    assert len(vecinos) == 3
+    assert llamadas == [3]

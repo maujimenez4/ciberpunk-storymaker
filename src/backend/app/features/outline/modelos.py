@@ -19,11 +19,17 @@ from sqlalchemy.types import DateTime
 
 from app.commons.db.base import Base
 from app.commons.domain.reloj import RelojDelSistema
+from app.features.outline.schemas import BeatDeGenero
 
 # `definitions.md` §4.1: un capitulo mide de 1.000 a 1.500 palabras. No es un
 # valor por defecto sino el rango declarado, y por eso lo sostiene la base.
 EXTENSION_MINIMA = 1000
 EXTENSION_MAXIMA = 1500
+
+# Los diez de `definitions.md` §6, leidos del enumerado y no copiados: dos
+# listas del mismo conjunto cerrado divergen, y la que se quedara atras seria
+# justo la que sostiene la restriccion.
+_BEATS_EN_LISTA = ", ".join(f"'{beat.value}'" for beat in BeatDeGenero)
 
 
 class VersionObra(Base):
@@ -77,6 +83,10 @@ class Capitulo(Base):
             f"extension_objetivo BETWEEN {EXTENSION_MINIMA} AND {EXTENSION_MAXIMA}",
             name="ck_capitulo_extension_objetivo",
         ),
+        CheckConstraint(
+            f"beat_de_genero IS NULL OR beat_de_genero IN ({_BEATS_EN_LISTA})",
+            name="ck_capitulo_beat_de_genero",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -96,3 +106,9 @@ class Capitulo(Base):
     objetivo: Mapped[str] = mapped_column(String(500))
     obstaculo: Mapped[str] = mapped_column(String(500))
     giro_de_valor_previsto: Mapped[str] = mapped_column(String(200))
+
+    # `CA-32`, la mitad que faltaba. El Arquitecto lo asignaba, el servicio
+    # comprobaba el reparto **sobre su salida** y aqui se tiraba, asi que el
+    # Planificador de escena no podia heredarlo y lo volvia a decidir: dos
+    # verdades para el mismo hecho. Cardinalidad 0..1 (`definitions.md` §4.1).
+    beat_de_genero: Mapped[str | None] = mapped_column(String(120))

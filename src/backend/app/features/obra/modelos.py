@@ -113,6 +113,14 @@ class HechoCanon(Base):
 
     Nace incompleta a proposito: el `usado_en` por capitulos (RF-MEM-02) entra
     cuando haya capitulos que lo usen.
+
+    **`sustituye_a` cierra RF-MEM-08, que hasta la Fase 3 estaba a medias.**
+    Corregir un hecho no lo edita: escribe otro. Lo que faltaba era la **cita**
+    al corregido, y sin ella el vinculo se deducia por entidad y atributo --
+    una heuristica que dos correcciones seguidas sobre el mismo atributo dejan
+    de sostener --. Es lo que se usa cuando el capitulo 7 contradice al 4: sin
+    la cadena no se puede llegar desde el valor de hoy hasta la escena que se
+    apoyo en el de ayer.
     """
 
     __tablename__ = "hecho_canon"
@@ -126,6 +134,13 @@ class HechoCanon(Base):
             "origen IN ('escena', 'brief', 'edicion_humana')",
             name="ck_hecho_origen_valido",
         ),
+        # Un ciclo de un solo paso rompe la cadena: quien la recorra para
+        # encontrar el valor original no llegaria nunca. Los ciclos mas largos
+        # no los para el esquema, y eso queda dicho en Desviaciones.
+        CheckConstraint(
+            "sustituye_a IS NULL OR sustituye_a <> id",
+            name="ck_hecho_no_se_sustituye_a_si_mismo",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -136,6 +151,9 @@ class HechoCanon(Base):
     confianza: Mapped[float] = mapped_column(default=1.0)
     origen: Mapped[str] = mapped_column(String(20))
     escena_de_origen: Mapped[str | None] = mapped_column(String(60))
+    sustituye_a: Mapped[int | None] = mapped_column(
+        ForeignKey("hecho_canon.id", name="fk_hecho_canon_sustituye_a")
+    )
 
 
 class Entrevista(Base):

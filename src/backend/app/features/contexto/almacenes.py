@@ -35,10 +35,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.commons.db.vectores import (
     AvisoDeDegradacion,
     cargar_extension,
-    desempaquetar_vector,
-    distancia_coseno,
+    distancias_coseno,
     empaquetar_vector,
     extension_disponible,
+    matriz_de_vectores,
 )
 from app.features.canon import Embedding
 
@@ -88,14 +88,22 @@ def _seleccion(candidatos: Sequence[int]) -> Select[tuple[int, int | None, str, 
 
 
 class AlmacenFuerzaBruta:
-    """BLOB mas Python: lee los vectores de los candidatos y ordena en memoria.
+    """BLOB mas **NumPy**: lee los vectores de los candidatos y ordena en memoria.
 
-    Es el que hace que el sistema arranque en una maquina sin la extension, y
-    por eso **no depende de nada que no traiga el interprete**. Se resistio la
-    tentacion de meter NumPy: una dependencia binaria mas en el unico camino
-    que existe para no depender de una dependencia binaria es cambiar de amo,
-    no soltarlo. Sobre el conjunto **ya filtrado** —decenas de escenas, no la
-    obra entera— la diferencia no se nota (ver Desviaciones).
+    Es el que hace que el sistema arranque en una maquina sin la extension.
+
+    **Y usa NumPy, invirtiendo lo que decia aqui hasta la Fase 3.** El
+    argumento anterior era que «una dependencia binaria mas en el unico camino
+    que existe para no depender de una dependencia binaria es cambiar de amo»,
+    y confundia dos cosas: `sqlite-vec` es una **extension de SQLite** que puede
+    no cargar en la maquina de destino, y NumPy es una dependencia de Python
+    como las otras trece que P-01 aprobo en bloque. Depender de NumPy no
+    reintroduce el problema del que esta clase escapa.
+
+    Lo que decide, sin embargo, no es eso: `architecture.md` §5.5 y §2 dicen
+    «BLOB + NumPy» desde antes de que esta clase existiera, y `CLAUDE.md` §3.3
+    dice que **el codigo nunca gana a un documento**. Decidido en el plan 3, no
+    aqui dentro.
     """
 
     modo = "fuerza bruta"
@@ -109,24 +117,36 @@ class AlmacenFuerzaBruta:
         if not candidatos:
             return []
 
-        filas = (
-            await self._sesion.execute(_seleccion(candidatos).add_columns(Embedding.vector))
-        ).all()
+        filas = [
+            fila
+            for fila in (
+                await self._sesion.execute(_seleccion(candidatos).add_columns(Embedding.vector))
+            ).all()
+            if fila[1] is not None
+        ]
+        if not filas:
+            return []
 
-        vecinos: list[Vecino] = []
-        for id_, escena_id, fragmento, dimension, blob in filas:
+        for _id, _escena_id, _fragmento, dimension, _blob in filas:
             if dimension != len(consulta):
                 raise _dimension_incompatible(len(consulta), dimension)
-            if escena_id is None:
-                continue
-            vecinos.append(
-                Vecino(
-                    escena_id=escena_id,
-                    embedding_id=id_,
-                    fragmento=fragmento,
-                    distancia=distancia_coseno(consulta, desempaquetar_vector(blob)),
-                )
+
+        # Una operacion y no un bucle: el conjunto ya filtrado entra entero.
+        distancias = distancias_coseno(
+            consulta, matriz_de_vectores([fila[4] for fila in filas], len(consulta))
+        )
+
+        vecinos = [
+            Vecino(
+                escena_id=escena_id,
+                embedding_id=id_,
+                fragmento=fragmento,
+                distancia=float(distancia),
             )
+            for (id_, escena_id, fragmento, _dimension, _blob), distancia in zip(
+                filas, distancias, strict=True
+            )
+        ]
 
         # El desempate por `embedding_id` no es cosmetico: sin el, dos
         # fragmentos a la misma distancia saldrian en el orden que diera la

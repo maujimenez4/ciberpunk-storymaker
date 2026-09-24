@@ -144,6 +144,15 @@ class Ejecucion(Base):
 
     ids_recuperados: Mapped[list[int]] = mapped_column(JSON, default=list)
     ids_canon: Mapped[list[int]] = mapped_column(JSON, default=list)
+
+    # RF-CTX-09 entero, y **en columna propia desde la Fase 3**. El requisito
+    # pide los identificadores de *todas* las capas que los tienen, con su capa;
+    # las dos de arriba guardan solo canon y memoria, y el mapa completo vivia
+    # dentro de `parametros`, que es donde van los parametros de la llamada.
+    # Las dos columnas se conservan: son las que las consultas de CU-07 ya
+    # saben mirar, y quitarlas seria una migracion de datos por comodidad.
+    ids_por_capa: Mapped[dict[str, list[str]]] = mapped_column(JSON, default=dict)
+
     veredicto: Mapped[str | None] = mapped_column(String(30))
 
     creado_en: Mapped[datetime] = mapped_column(
@@ -162,6 +171,13 @@ class Trabajo(Base):
     `escena_id` es nulo en los trabajos de manuscrito, que no son de ninguna
     escena. `run_id` correlaciona todas las ejecuciones del trabajo y es su
     clave de idempotencia.
+
+    **`capitulo_id` entra en la Fase 3 y no duplica a `escena_id`.** Un trabajo
+    recien abierto **no tiene escena todavia** -- la crea el Planificador -- y
+    sin embargo ya sabe de que capitulo es: sin esta columna, el estado que
+    RI-06 pide leer **por capitulo** no se podia leer hasta despues de
+    planificar. Es nulo por lo mismo que `escena_id`: auditar el manuscrito no
+    es trabajo de ningun capitulo.
     """
 
     __tablename__ = "trabajo"
@@ -175,6 +191,9 @@ class Trabajo(Base):
     obra_id: Mapped[int] = mapped_column(ForeignKey("obra.id", name="fk_trabajo_obra_id"))
     escena_id: Mapped[int | None] = mapped_column(
         ForeignKey("escena.id", name="fk_trabajo_escena_id")
+    )
+    capitulo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("capitulo.id", name="fk_trabajo_capitulo_id")
     )
     tipo: Mapped[str] = mapped_column(String(30))
     estado: Mapped[str] = mapped_column(String(20))

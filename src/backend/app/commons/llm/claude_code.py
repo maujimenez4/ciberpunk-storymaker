@@ -34,7 +34,7 @@ from claude_agent_sdk import (
     query,
 )
 
-from app.commons.llm.cliente import ClienteModelo
+from app.commons.llm.cliente import ClienteModelo, Vectorizacion, vectorizar_texto
 
 MODELO_ESCRITOR = "claude-haiku-4-5"
 """Escribe y edita, que es el volumen (P-02)."""
@@ -142,7 +142,7 @@ class ClienteClaudeCode(ClienteModelo):
         """Tokens y coste de la ultima llamada, para que `ejecucion` los guarde."""
         return self._ultimo_consumo
 
-    def _opciones(self) -> ClaudeAgentOptions:
+    def _opciones(self, modelo: str) -> ClaudeAgentOptions:
         """Un capitulo se escribe con el modelo y con nada mas.
 
         - `tools` y `allowed_tools` vacios: el Escritor **solo ve el paquete**
@@ -158,7 +158,7 @@ class ClienteClaudeCode(ClienteModelo):
           gasta cuota fuera de todo presupuesto contado.
         """
         return ClaudeAgentOptions(
-            model=self._modelo,
+            model=modelo,
             tools=[],
             allowed_tools=[],
             setting_sources=None,
@@ -166,11 +166,21 @@ class ClienteClaudeCode(ClienteModelo):
             max_turns=1,
         )
 
-    async def completar(self, prompt: str, semilla: int) -> str:
+    async def completar(self, prompt: str, semilla: int, modelo: str | None = None) -> str:
+        """`modelo` decide **esta** llamada; sin el, el que declaro el cliente.
+
+        Es P-02 hecho pedible: el Continuista y el Critico piden `MODELO_JUEZ`
+        y el Escritor se queda con `MODELO_ESCRITOR`. Y lo que se guarda en
+        `Consumo` -- tarifa incluida -- es el modelo que de verdad se uso: Opus
+        cuesta cinco veces mas que Haiku, asi que imputar el coste al del
+        constructor mientras se llama a otro produce una cifra falsa que
+        RF-OBS-03 usa despues para comparar plantillas.
+        """
+        elegido = modelo if modelo is not None else self._modelo
         partes: list[str] = []
         uso: dict[str, Any] = {}
 
-        async for mensaje in self._consulta(prompt=prompt, options=self._opciones()):
+        async for mensaje in self._consulta(prompt=prompt, options=self._opciones(elegido)):
             if isinstance(mensaje, AssistantMessage):
                 if mensaje.error is not None:
                     raise LlamadaRechazada(str(mensaje.error))
@@ -183,13 +193,28 @@ class ClienteClaudeCode(ClienteModelo):
         tokens_entrada = int(uso.get("input_tokens", 0))
         tokens_salida = int(uso.get("output_tokens", 0))
         self._ultimo_consumo = Consumo(
-            modelo=self._modelo,
+            modelo=elegido,
             semilla=semilla,
             tokens_entrada=tokens_entrada,
             tokens_salida=tokens_salida,
-            coste_usd=coste_derivado(self._modelo, tokens_entrada, tokens_salida),
+            coste_usd=coste_derivado(elegido, tokens_entrada, tokens_salida),
         )
 
         if not partes:
-            raise RespuestaVacia(f"El modelo {self._modelo} no devolvio ningun bloque de texto")
+            raise RespuestaVacia(f"El modelo {elegido} no devolvio ningun bloque de texto")
         return "".join(partes)
+
+    def vectorizar(self, texto: str) -> Vectorizacion:
+        """El vector del indice, **calculado aqui y no pedido al proveedor**.
+
+        Anthropic no publica un extremo de *embeddings*, y P-02 fija el modelo
+        por consumo de cuenta **sin clave de API**: un segundo proveedor seria
+        una credencial mas y una dependencia que nadie ha aprobado. Pedirselo
+        al modelo en prosa seria peor —cuota por fragmento, y una cifra
+        distinta en cada llamada para algo que se guarda y se compara—.
+
+        Asi que esto **no gasta cuota y no abre el SDK**, y esa es la razon de
+        que no sea `async`. Lo que da es una senal lexica: ver
+        `vectorizar_texto` para lo que eso alcanza y lo que no.
+        """
+        return vectorizar_texto(texto)

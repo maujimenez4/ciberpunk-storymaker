@@ -18,14 +18,14 @@ es ruido y el ruido se acaba silenciando entero.
 """
 
 import logging
-import math
 import os
 import sqlite3
-import struct
 import warnings
 from collections.abc import Sequence
 from functools import lru_cache
 
+import numpy as np
+import numpy.typing as npt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _log = logging.getLogger(__name__)
@@ -49,6 +49,18 @@ absurdas, no como un error.
 
 BYTES_POR_COMPONENTE = 4
 
+TIPO_COMPONENTE = np.dtype("<f4")
+"""El mismo float32 *little-endian* de `FORMATO_COMPONENTE`, en la forma que
+NumPy entiende. Los dos tienen que decir lo mismo y hay un test que lo mira:
+son la unica frontera entre lo que guarda la tabla y lo que lee la extension.
+
+**NumPy y no `struct` + `math`**, porque `architecture.md` §5.5 y §2 dicen «BLOB
++ NumPy» desde antes de que este fichero existiera, y `CLAUDE.md` §3.3 dice que
+el codigo nunca gana a un documento. Se decidio en el plan 3 y no aqui dentro.
+Lo que se gana ademas no es retorico: el almacen de fuerza bruta compara **todos
+los candidatos de una vez** en vez de recorrerlos en Python.
+"""
+
 
 class AvisoDeDegradacion(RuntimeWarning):
     """El indice vectorial funciona, pero no como estaba previsto.
@@ -61,15 +73,61 @@ class AvisoDeDegradacion(RuntimeWarning):
 
 def empaquetar_vector(vector: Sequence[float]) -> bytes:
     """El vector, en el BLOB que guarda `embedding.vector`."""
-    return struct.pack(f"<{len(vector)}{FORMATO_COMPONENTE}", *vector)
+    return np.asarray(vector, dtype=TIPO_COMPONENTE).tobytes()
 
 
 def desempaquetar_vector(blob: bytes) -> list[float]:
     """Lo contrario. La longitud sale del blob: la dimension no se adivina."""
     if len(blob) % BYTES_POR_COMPONENTE:
         raise ValueError(f"El blob mide {len(blob)} bytes, que no son float32 enteros")
-    componentes = len(blob) // BYTES_POR_COMPONENTE
-    return list(struct.unpack(f"<{componentes}{FORMATO_COMPONENTE}", blob))
+    return [float(c) for c in np.frombuffer(blob, dtype=TIPO_COMPONENTE)]
+
+
+def matriz_de_vectores(blobs: Sequence[bytes], dimension: int) -> npt.NDArray[np.float64]:
+    """Los vectores de varios candidatos, como una matriz `(n, dimension)`.
+
+    Es lo que permite comparar el conjunto **ya filtrado** de una vez en vez de
+    recorrerlo. Dos cosas que no son detalle:
+
+    - **Una dimension distinta es un error**, y se dice cual: un vector que no
+      se puede comparar no es uno lejano, y colarlo al final de la lista lo
+      esconderia en vez de destaparlo.
+    - **Sin filas sigue habiendo columnas.** Una matriz `(0,)` no se puede
+      multiplicar por el vector de consulta, y el caso sin candidatos es el
+      normal, no el raro.
+    """
+    if not blobs:
+        return np.zeros((0, dimension), dtype=np.float64)
+
+    filas: list[npt.NDArray[np.float32]] = []
+    for blob in blobs:
+        fila = np.frombuffer(blob, dtype=TIPO_COMPONENTE)
+        if fila.size != dimension:
+            raise ValueError(f"Dimensiones distintas: {dimension} y {fila.size}")
+        filas.append(fila)
+    return np.asarray(filas, dtype=np.float64)
+
+
+def distancias_coseno(
+    consulta: Sequence[float], matriz: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
+    """`distancia_coseno` sobre todas las filas a la vez, con la misma metrica.
+
+    Devuelve lo mismo que llamarla una a una -- hay un test que las compara --,
+    y trata el vector nulo igual: distancia 1, nunca `nan`. Un `nan` no ordena,
+    asi que envenenaria la lista entera **sin fallar**.
+    """
+    vector = np.asarray(consulta, dtype=np.float64)
+    if matriz.shape[1] != vector.size:
+        raise ValueError(f"Dimensiones distintas: {vector.size} y {matriz.shape[1]}")
+
+    normas = np.linalg.norm(matriz, axis=1) * np.linalg.norm(vector)
+    productos = matriz @ vector
+    # `where` evita la division por cero **y** el aviso que la acompana. Donde
+    # la norma es 0 el coseno se queda en 0, o sea distancia 1: «no se parece a
+    # nada», que es lo mismo que decide `distancia_coseno`.
+    cosenos = np.divide(productos, normas, out=np.zeros_like(productos), where=normas != 0)
+    return np.asarray(1.0 - cosenos, dtype=np.float64)
 
 
 def distancia_coseno(uno: Sequence[float], otro: Sequence[float]) -> float:
@@ -87,11 +145,7 @@ def distancia_coseno(uno: Sequence[float], otro: Sequence[float]) -> float:
     if len(uno) != len(otro):
         raise ValueError(f"Dimensiones distintas: {len(uno)} y {len(otro)}")
 
-    producto = math.fsum(a * b for a, b in zip(uno, otro, strict=True))
-    norma = math.sqrt(math.fsum(a * a for a in uno)) * math.sqrt(math.fsum(b * b for b in otro))
-    if norma == 0.0:
-        return 1.0
-    return 1.0 - producto / norma
+    return float(distancias_coseno(uno, np.asarray([otro], dtype=np.float64))[0])
 
 
 @lru_cache(maxsize=1)

@@ -16,6 +16,10 @@ RF-MEM-06).
 - `Embedding`: la fila del indice, para quien **lee** recuperando. Leer se
   exporta; escribir no: no hay aqui ninguna funcion de escritura, y por esa
   ausencia pasa RF-MEM-06.
+- `declarar_variantes` y `leer_nombres_del_canon`: RF-VAL-03. El canon dice
+  como se puede llamar a alguien ademas de por su forma canonica, y el
+  validador de `calidad` lo **lee**; no lo adivina y no se reescribe. La
+  escritura la hace el Extractor, que es esta feature.
 `Embedding` cruza la frontera a proposito, y va dicho por que: el indice
 vectorial lo **escribe** el Extractor (`architecture.md` §4.3) y por eso la
 tabla vive aqui, pero quien lo **lee** es la recuperacion de `contexto` (T7).
@@ -26,6 +30,7 @@ fichero interno de otra feature, que es lo que §5.1 prohibe de verdad.
 
 from app.features.canon.agents import Extractor, SalidaMalFormada
 from app.features.canon.modelos import Embedding
+from app.features.canon.repository import declarar_variantes, leer_nombres_del_canon
 from app.features.canon.schemas import Extraccion, Vector
 from app.features.canon.service import (
     Consolidacion,
@@ -43,5 +48,7 @@ __all__ = [
     "Vector",
     "consolidar_escena",
     "corregir_hecho",
+    "declarar_variantes",
+    "leer_nombres_del_canon",
     "registrar_uso_de_hechos",
 ]

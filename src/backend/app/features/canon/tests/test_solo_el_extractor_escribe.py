@@ -34,6 +34,10 @@ MODELOS_DE_LARGO_PLAZO = frozenset(
         "HiloNarrativo",
         "Plantado",
         "ResumenCapitulo",
+        # Las variantes de un nombre son canon: dicen como se puede llamar a
+        # alguien, y el validador de `calidad` decide con ellas. Si otra ruta
+        # las escribiera, `CA-16` aceptaria grafias que el canon no declara.
+        "VarianteDeNombre",
     }
 )
 

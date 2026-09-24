@@ -111,6 +111,68 @@ def test_sobre_la_base_migrada_un_capitulo_fuera_de_rango_no_entra(base_migrada)
         base_migrada.execute("UPDATE capitulo SET extension_objetivo = 9000 WHERE id = 1")
 
 
+def test_sobre_la_base_migrada_un_beat_de_genero_inventado_no_entra(base_migrada):
+    """`--autogenerate` **no** compara `CheckConstraint` sobre una tabla que ya
+    existe -- `capitulo` existia --, asi que esta restriccion se escribio a mano
+    en la migracion. Sin este test, la base de `create_all` la tendria y la que
+    tendra la instalacion no, y nada lo diria."""
+    _sembrar(base_migrada)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        base_migrada.execute("UPDATE capitulo SET beat_de_genero = 'persecucion' WHERE id = 1")
+
+    base_migrada.execute("UPDATE capitulo SET beat_de_genero = 'encuentro' WHERE id = 1")
+
+
+def test_sobre_la_base_migrada_un_hecho_no_se_sustituye_a_si_mismo(base_migrada):
+    """La otra restriccion escrita a mano, por el mismo motivo: `hecho_canon`
+    tambien existia."""
+    _sembrar(base_migrada)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        base_migrada.execute("UPDATE hecho_canon SET sustituye_a = id WHERE id = 1")
+
+
+def test_sobre_la_base_migrada_una_variante_en_blanco_no_entra(base_migrada):
+    """`variante_de_nombre` es tabla **nueva**, asi que aqui el
+    `CheckConstraint` si lo emitio `--autogenerate`. Se mira igual: lo que
+    importa es que muerda, no quien escribio la linea."""
+    _sembrar(base_migrada)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        base_migrada.execute(
+            "INSERT INTO variante_de_nombre (obra_id, forma_canonica, variante) "
+            "VALUES (1, 'Nadia', '  ')"
+        )
+
+    base_migrada.execute(
+        "INSERT INTO variante_de_nombre (obra_id, forma_canonica, variante) "
+        "VALUES (1, 'Nadia', 'Nadi')"
+    )
+
+
+def test_sobre_la_base_migrada_una_variante_no_se_repite(base_migrada):
+    _sembrar(base_migrada)
+    sentencia = (
+        "INSERT INTO variante_de_nombre (obra_id, forma_canonica, variante) "
+        "VALUES (1, 'Nadia', 'Nadi')"
+    )
+    base_migrada.execute(sentencia)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        base_migrada.execute(sentencia)
+
+
+def test_sobre_la_base_migrada_una_ejecucion_anterior_no_tiene_ids_por_capa_nulos(base_migrada):
+    """`ids_por_capa` es `NOT NULL` y se anadio a una tabla que puede tener
+    filas. Sin `server_default`, el modo batch recrea la tabla y las viejas
+    entran con `NULL` -- que es lo que este test destaparia."""
+    _sembrar(base_migrada)
+
+    fila = base_migrada.execute("SELECT ids_por_capa FROM ejecucion WHERE id = 1").fetchone()
+    assert fila == ("{}",)
+
+
 def test_sobre_la_base_migrada_estado_en_t_se_deriva_del_ledger(base_migrada):
     """La vista existe y responde sobre datos reales, no solo en `sqlite_master`."""
     _sembrar(base_migrada)
@@ -120,7 +182,8 @@ def test_sobre_la_base_migrada_estado_en_t_se_deriva_del_ledger(base_migrada):
 
 
 def _sembrar(con: sqlite3.Connection) -> None:
-    """Una obra, una biblia, un capitulo, su escena, su texto y un evento."""
+    """Una obra, una biblia, un capitulo, su escena, su texto, un evento,
+    un hecho de canon y una ejecucion **sin** `ids_por_capa`."""
     con.executescript(
         """
         INSERT INTO obra (id, titulo, genero, tono, nivel_de_calor)
@@ -146,5 +209,16 @@ def _sembrar(con: sqlite3.Connection) -> None:
                             participantes, testigos, causa, consecuencia, excluye)
           VALUES (1, 1, 1, 'Nadia encuentra la carta', 'dia 2', 'El invernadero',
                   '["Nadia"]', '["Nadia","Teo"]', '[]', '[]', '[]');
+        INSERT INTO hecho_canon (id, obra_id, entidad, atributo, valor, confianza,
+                                 origen, escena_de_origen, sustituye_a)
+          VALUES (1, 1, 'Nadia', 'ojos', 'verdes', 1.0, 'brief', NULL, NULL);
+        -- Sin `ids_por_capa` a proposito: es lo que ejerce el `server_default`
+        -- de la migracion, que es lo que salva a las filas anteriores.
+        INSERT INTO ejecucion (id, run_id, obra_id, escena_id, version_obra_id,
+                               prompt_id, prompt_version, prompt_hash, modelo, semilla,
+                               parametros, tokens_por_capa, tokens_previstos,
+                               ids_recuperados, ids_canon, creado_en)
+          VALUES (1, 'run-1', 1, 1, 1, 'escritor', 'v1', 'a', 'doble', 0,
+                  '{}', '{}', 10, '[]', '[]', '2026-09-24 00:00:00+00:00');
         """
     )

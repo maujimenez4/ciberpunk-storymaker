@@ -135,6 +135,104 @@ async def test_un_trabajo_recorre_sus_estados_y_conserva_el_run_id(sesion, obra_
     assert (guardado.estado, guardado.run_id) == ("ESCRIBIENDO", "run-1")
 
 
+async def test_la_ejecucion_guarda_los_ids_por_capa_en_columna_propia(sesion, obra_con_outline):
+    """RF-CTX-09 sale de `parametros`, que era el sitio equivocado.
+
+    El requisito pide los identificadores de **todas** las capas que los tienen,
+    **con su capa**. `ids_recuperados` e `ids_canon` guardan dos de las siete, y
+    el mapa entero vivia escondido dentro de `parametros`, que es donde van los
+    parametros de la llamada -- temperatura y poco mas --, no los datos que
+    CU-07 consulta.
+    """
+    sesion.add(
+        _ejecucion(
+            obra_con_outline,
+            ids_por_capa={"canon": ["hc:3"], "memoria": ["emb:11", "emb:12"]},
+        )
+    )
+    await sesion.flush()
+
+    guardada = (await sesion.execute(select(Ejecucion))).scalars().one()
+    assert guardada.ids_por_capa == {"canon": ["hc:3"], "memoria": ["emb:11", "emb:12"]}
+
+
+async def test_una_ejecucion_sin_ids_por_capa_no_guarda_nulo(sesion, obra_con_outline):
+    """Un `None` aqui obligaria a cada lector a distinguirlo del mapa vacio, y
+    los dos significan lo mismo: no entro nada con identificador."""
+    sesion.add(_ejecucion(obra_con_outline))
+    await sesion.flush()
+
+    assert (await sesion.execute(select(Ejecucion))).scalars().one().ids_por_capa == {}
+
+
+async def test_un_trabajo_sabe_de_que_capitulo_es(sesion, obra_con_outline):
+    """RI-06 lee el estado **por capitulo**, y hasta hoy el trabajo no lo sabia:
+    tenia `escena_id`, que no existe todavia cuando el trabajo se abre."""
+    trabajo = Trabajo(
+        obra_id=obra_con_outline.obra.id,
+        capitulo_id=obra_con_outline.capitulos[0].id,
+        tipo="escribir_escena",
+        estado="PLANIFICANDO",
+        run_id="run-1",
+    )
+    sesion.add(trabajo)
+    await sesion.flush()
+
+    guardado = (await sesion.execute(select(Trabajo))).scalars().one()
+    assert guardado.capitulo_id == obra_con_outline.capitulos[0].id
+    assert guardado.escena_id is None
+
+
+async def test_un_trabajo_de_manuscrito_no_es_de_ningun_capitulo(sesion, obra_con_outline):
+    """`capitulo_id` es nulo por el mismo motivo que `escena_id`: auditar el
+    manuscrito no es trabajo de un capitulo."""
+    sesion.add(
+        Trabajo(
+            obra_id=obra_con_outline.obra.id,
+            tipo="auditar_manuscrito",
+            estado="PLANIFICANDO",
+            run_id="run-2",
+        )
+    )
+    await sesion.flush()
+
+    assert (await sesion.execute(select(Trabajo))).scalars().one().capitulo_id is None
+
+
+async def test_un_trabajo_de_un_capitulo_que_no_existe_no_entra(sesion, obra_con_outline):
+    """`foreign_keys=ON`: un trabajo que apunta a un capitulo inventado no es un
+    trabajo del que se pueda leer el estado."""
+    sesion.add(
+        Trabajo(
+            obra_id=obra_con_outline.obra.id,
+            capitulo_id=9999,
+            tipo="escribir_escena",
+            estado="PLANIFICANDO",
+            run_id="run-3",
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await sesion.flush()
+
+
+def _ejecucion(obra_con_outline, **campos) -> Ejecucion:
+    """Una ejecucion valida con lo minimo, para no repetir catorce columnas."""
+    valores: dict[str, object] = {
+        "run_id": "run-1",
+        "obra_id": obra_con_outline.obra.id,
+        "escena_id": obra_con_outline.escena.id,
+        "version_obra_id": obra_con_outline.version_obra.id,
+        "prompt_id": "escritor",
+        "prompt_version": "v3",
+        "prompt_hash": "a" * 64,
+        "modelo": "haiku",
+        "semilla": 7,
+        "tokens_previstos": 1300,
+    }
+    valores.update(campos)
+    return Ejecucion(**valores)
+
+
 def _version(
     obra_con_outline, numero: int, vigente: bool, texto: str = "La primera."
 ) -> VersionTexto:

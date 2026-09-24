@@ -21,6 +21,14 @@ dependencies = [
   # de fuerza bruta (RNF-FIA-02, CA-28). Declararla y no exigirla es lo que
   # impide que sea una segunda base de datos por la puerta de atras.
   "sqlite-vec>=0.1.6",
+  # La de la Fase 3, y tambien de las catorce que P-01 aprobo en bloque (spec,
+  # Impacto tecnico). `architecture.md` §2 y §5.5 dicen «BLOB + NumPy» desde
+  # antes de que el codigo existiera, y el plan 3 resolvio la divergencia a
+  # favor del documento. No reintroduce el problema del que huye
+  # `AlmacenFuerzaBruta`: `sqlite-vec` es una **extension de SQLite** que puede
+  # no cargar en la maquina de destino; NumPy es una dependencia de Python como
+  # las otras trece.
+  "numpy>=2.0",
 ]
 
 [dependency-groups]

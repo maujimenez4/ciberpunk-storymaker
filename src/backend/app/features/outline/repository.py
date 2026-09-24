@@ -111,8 +111,12 @@ async def guardar_outline(
 
     **El plan dramatico se persiste desde el cierre de la ola 2.** Lugar,
     objetivo, obstaculo y giro previsto son columnas de `capitulo` (RF-PLA-04);
-    antes no lo eran y el outline se perdia al guardar. El `beat_de_genero`
-    sigue viviendo en `escena`, que es de otra feature.
+    antes no lo eran y el outline se perdia al guardar.
+
+    **Y el `beat_de_genero`, desde la Fase 3.** Tambien se tiraba, con el
+    resultado de que `CA-32` se cumplia sobre la salida del agente y no sobre lo
+    guardado. `escena.beat_de_genero` sigue existiendo y ahora puede **heredar**
+    el del capitulo en vez de decidirlo otra vez.
     """
     version = VersionObra(obra_id=obra_id, numero=numero, biblia=biblia)
     sesion.add(version)
@@ -132,6 +136,11 @@ async def guardar_outline(
             obstaculo=capitulo.obstaculo,
             # El giro previsto es el par entrada -> salida del Arquitecto.
             giro_de_valor_previsto=f"{capitulo.valor_entrada} -> {capitulo.valor_salida}",
+            # `BeatDeGenero` es un `StrEnum`: lo que se guarda es su valor, que
+            # es contra lo que compara el `CheckConstraint` de la tabla.
+            beat_de_genero=None
+            if capitulo.beat_de_genero is None
+            else capitulo.beat_de_genero.value,
         )
         for capitulo in capitulos
     ]

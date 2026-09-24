@@ -129,6 +129,21 @@ async def test_el_nivel_de_calor_lo_pone_la_obra_y_no_el_arquitecto(sesion, obra
     assert biblia["nivel_de_calor"] == obra.nivel_de_calor == 2
 
 
+async def test_el_beat_de_genero_del_arquitecto_sobrevive_a_guardar(sesion, obra):
+    """`CA-32`, **de punta a punta y no solo sobre la salida del agente**.
+
+    Hasta la Fase 3 `_comprobar_beats` validaba el reparto y `guardar_outline`
+    lo tiraba, porque `capitulo` no tenia columna. La consecuencia no era
+    academica: el Planificador de escena **no podia heredar el beat del
+    outline** y lo volvia a decidir por su cuenta, que son dos verdades sobre
+    el mismo hecho.
+    """
+    await planificar_obra(sesion, _arquitecto(_outline(_diez_capitulos())), obra.id)
+
+    guardados = (await sesion.execute(select(Capitulo).order_by(Capitulo.numero))).scalars().all()
+    assert [c.beat_de_genero for c in guardados] == [beat.value for beat in BeatDeGenero]
+
+
 async def test_el_outline_tiene_diez_capitulos_con_su_plan(sesion, obra):
     """RF-PLA-02 y RF-PLA-04: los diez, y cada uno con POV, lugar, objetivo,
     obstaculo y giro de valor previsto."""

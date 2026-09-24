@@ -115,3 +115,77 @@ async def test_un_origen_que_no_existe_no_se_puede_guardar(sesion, obra):
     )
     with pytest.raises(IntegrityError):
         await sesion.flush()
+
+
+async def test_un_hecho_cita_al_que_sustituye(sesion, obra):
+    """RF-MEM-08 entera: corregir **no edita**, y el hecho nuevo **cita** al viejo.
+
+    Sin la cita, el vinculo se deducia por entidad y atributo, que es una
+    heuristica: dos correcciones sobre el mismo atributo dejaban de saber cual
+    sustituyo a cual. Y es lo que la Fase 3 usa cuando el capitulo 7 contradice
+    al 4.
+    """
+    viejo = HechoCanon(
+        obra_id=obra.id, entidad="perro", atributo="nombre", valor="Luna", origen="brief"
+    )
+    sesion.add(viejo)
+    await sesion.flush()
+
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Nala",
+            origen="edicion_humana",
+            sustituye_a=viejo.id,
+        )
+    )
+    await sesion.flush()
+
+    nuevo = (
+        (await sesion.execute(select(HechoCanon).where(HechoCanon.valor == "Nala"))).scalars().one()
+    )
+    assert nuevo.sustituye_a == viejo.id
+
+
+async def test_un_hecho_de_partida_no_sustituye_a_nadie(sesion, obra):
+    """La inmensa mayoria de los hechos no corrigen nada: la cita es 0..1."""
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id, entidad="perro", atributo="nombre", valor="Luna", origen="brief"
+        )
+    )
+    await sesion.flush()
+
+    assert (await sesion.execute(select(HechoCanon))).scalars().one().sustituye_a is None
+
+
+async def test_un_hecho_no_se_sustituye_a_si_mismo(sesion, obra):
+    """Un ciclo de un solo paso rompe la cadena que hace auditable la correccion:
+    quien la recorra para encontrar el valor original no llegaria nunca."""
+    hecho = HechoCanon(
+        obra_id=obra.id, entidad="perro", atributo="nombre", valor="Luna", origen="brief"
+    )
+    sesion.add(hecho)
+    await sesion.flush()
+
+    hecho.sustituye_a = hecho.id
+    with pytest.raises(IntegrityError):
+        await sesion.flush()
+
+
+async def test_un_hecho_no_puede_sustituir_a_uno_que_no_existe(sesion, obra):
+    """`foreign_keys=ON`: una cita que no lleva a ningun sitio no es una cita."""
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Nala",
+            origen="edicion_humana",
+            sustituye_a=9999,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await sesion.flush()

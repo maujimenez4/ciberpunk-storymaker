@@ -327,7 +327,8 @@ async def test_la_ejecucion_queda_escrita_con_todo_lo_que_la_hace_auditable(sesi
     assert fila.tokens_por_capa
     assert fila.tokens_previstos > 0
     assert fila.veredicto == "aprobada"
-    assert "ids_por_capa" in fila.parametros
+    # RF-CTX-09 en su columna, desde la Fase 3. Vivia dentro de `parametros`.
+    assert fila.ids_por_capa
 
 
 # ---------------------------------------------------------------------------

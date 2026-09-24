@@ -29,12 +29,14 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.calidad import NombreDeCanon
 from app.features.canon.modelos import (
     Embedding,
     Evento,
     HechoUsadoEn,
     HiloNarrativo,
     ResumenCapitulo,
+    VarianteDeNombre,
 )
 from app.features.canon.schemas import EventoExtraido, HechoExtraido, HiloExtraido, Vector
 from app.features.obra import HechoCanon
@@ -239,6 +241,11 @@ async def escribir_hecho_que_sustituye(
     El hecho que sustituye **no puede declarar escena de origen**: no sale de
     una escena, y el `CheckConstraint` de la tabla lo exige para todo origen que
     no sea `escena`.
+
+    **Y desde la Fase 3 cita al que sustituye**, que es la otra mitad de
+    RF-MEM-08. Antes el vinculo se deducia por entidad y atributo: con dos
+    correcciones seguidas sobre el mismo atributo, esa deduccion deja de decir
+    cual sustituyo a cual.
     """
     nuevo = HechoCanon(
         obra_id=hecho.obra_id,
@@ -248,10 +255,87 @@ async def escribir_hecho_que_sustituye(
         confianza=hecho.confianza,
         origen=origen,
         escena_de_origen=None,
+        sustituye_a=hecho.id,
     )
     sesion.add(nuevo)
     await sesion.flush()
     return nuevo
+
+
+async def declarar_variantes(
+    sesion: AsyncSession, *, obra_id: int, forma_canonica: str, variantes: Sequence[str]
+) -> list[VarianteDeNombre]:
+    """El canon declara como se le puede llamar ademas de por su forma canonica.
+
+    Es **idempotente**: volver a declarar una variante ya declarada no escribe
+    nada. Sin esto la unicidad de la tabla convertiria una segunda entrevista
+    -- o una reanudacion -- en un `IntegrityError`, y lo que se esta declarando
+    es el mismo hecho.
+    """
+    ya_estan = set(
+        (
+            await sesion.execute(
+                select(VarianteDeNombre.variante).where(
+                    VarianteDeNombre.obra_id == obra_id,
+                    VarianteDeNombre.forma_canonica == forma_canonica,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return await _anadir(
+        sesion,
+        [
+            VarianteDeNombre(obra_id=obra_id, forma_canonica=forma_canonica, variante=variante)
+            for variante in dict.fromkeys(variantes)
+            if variante not in ya_estan
+        ],
+    )
+
+
+async def leer_nombres_del_canon(
+    sesion: AsyncSession, *, obra_id: int
+) -> tuple[NombreDeCanon, ...]:
+    """Los nombres que el canon declara, **con sus variantes** (RF-VAL-03).
+
+    Los nombres salen de `hecho_canon.entidad`, que es de donde salian ya; lo
+    que se anade es el tramo que faltaba. Se devuelve `NombreDeCanon` -- el
+    modelo que `calidad` exporta -- y no una forma propia: inventar aqui una
+    tercera representacion del mismo concepto es la deriva que `CLAUDE.md` §2
+    existe para evitar, y el validador no se toca.
+
+    El orden es **por nombre y por variante**, no el que devuelva la base: dos
+    lecturas del mismo canon tienen que dar la misma tupla.
+    """
+    entidades = (
+        (
+            await sesion.execute(
+                select(HechoCanon.entidad)
+                .where(HechoCanon.obra_id == obra_id)
+                .distinct()
+                .order_by(HechoCanon.entidad)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    filas = (
+        await sesion.execute(
+            select(VarianteDeNombre.forma_canonica, VarianteDeNombre.variante)
+            .where(VarianteDeNombre.obra_id == obra_id)
+            .order_by(VarianteDeNombre.forma_canonica, VarianteDeNombre.variante)
+        )
+    ).all()
+
+    variantes: dict[str, list[str]] = {}
+    for forma_canonica, variante in filas:
+        variantes.setdefault(forma_canonica, []).append(variante)
+
+    return tuple(
+        NombreDeCanon(forma_canonica=entidad, variantes=tuple(variantes.get(entidad, ())))
+        for entidad in entidades
+    )
 
 
 async def _anadir[T](sesion: AsyncSession, filas: list[T]) -> list[T]:

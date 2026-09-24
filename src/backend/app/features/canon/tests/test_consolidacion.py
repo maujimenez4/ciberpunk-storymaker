@@ -232,6 +232,27 @@ async def test_corregir_un_hecho_no_lo_edita(sesion, obra_con_outline):
     assert (nuevo.entidad, nuevo.atributo, nuevo.valor) == (viejo.entidad, viejo.atributo, "Nala")
     assert nuevo.origen == "edicion_humana"
     assert nuevo.escena_de_origen is None
+    # RF-MEM-08 entera, desde la Fase 3: **y cita al anterior**. Sin esta
+    # linea el vinculo se deducia por entidad y atributo, que con dos
+    # correcciones seguidas deja de decir cual sustituyo a cual.
+    assert nuevo.sustituye_a == viejo.id
 
     await sesion.refresh(viejo)
     assert viejo.valor == "Luna"
+
+
+async def test_dos_correcciones_seguidas_forman_una_cadena(sesion, obra_con_outline):
+    """Es lo que la deduccion por entidad y atributo no podia dar.
+
+    Con tres hechos sobre `perro.nombre` y sin la cita, «cual sustituyo a cual»
+    solo se podia adivinar por el `id`, que es orden de escritura y no orden de
+    correccion. Y es justo el caso de la Fase 3: el capitulo 7 contradice al 4,
+    y luego alguien corrige otra vez.
+    """
+    primero = obra_con_outline.hecho_canon
+    segundo = await corregir_hecho(sesion, hecho=primero, nuevo_valor="Nala")
+    tercero = await corregir_hecho(sesion, hecho=segundo, nuevo_valor="Nube")
+
+    assert tercero.sustituye_a == segundo.id
+    assert segundo.sustituye_a == primero.id
+    assert primero.sustituye_a is None

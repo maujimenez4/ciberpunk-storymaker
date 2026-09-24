@@ -6,6 +6,7 @@ el coste y que no se toca nada al importar. La llamada de verdad se hace una
 vez, a mano, y esta declarada en el plan (Tarea 1) — no en la suite.
 """
 
+import inspect
 import os
 import subprocess
 import sys
@@ -165,6 +166,59 @@ async def test_un_fallo_de_credenciales_o_de_cuota_se_propaga_con_su_nombre():
 
     with pytest.raises(LlamadaRechazada, match="authentication_failed"):
         await ClienteClaudeCode(consulta=ConsultaRechazada(["a medias"])).completar("p", semilla=1)
+
+
+# --------------------------------------------------------------------------
+# P-02 · El juez no comparte modelo con quien escribio
+# --------------------------------------------------------------------------
+
+
+def test_el_protocolo_deja_pedir_el_modelo_en_cada_llamada():
+    """`CLAUDE.md` §4 y la decision **P-02**: Haiku 4.5 escribe, Opus 5 juzga,
+    «porque un juez que comparte modelo con quien escribio tiende a aprobar su
+    propio estilo».
+
+    Hasta la Fase 3 esa separacion **no se podia ni pedir**: `completar` tomaba
+    prompt y semilla, el modelo lo fijaba el constructor, y ningun test podia
+    caer por incumplirla. Es el patron que este proyecto lleva cazado seis
+    veces -- una restriccion sobre la que nada puede fallar --, y esta vez
+    estaba en una decision firmada.
+    """
+    assert "modelo" in inspect.signature(ClienteModelo.completar).parameters
+
+
+@pytest.mark.parametrize("modelo", [MODELO_ESCRITOR, MODELO_JUEZ])
+async def test_el_modelo_que_pide_quien_llama_es_el_que_viaja(modelo):
+    """Y este es el test que cae si alguien vuelve a fijarlo dentro del cliente."""
+    consulta = ConsultaFalsa(["x"])
+
+    await ClienteClaudeCode(consulta=consulta).completar("p", semilla=1, modelo=modelo)
+
+    assert consulta.opciones[0].model == modelo
+
+
+async def test_sin_modelo_se_usa_el_que_declaro_el_cliente():
+    """Quien ya llamaba no tiene que cambiar: el Escritor sigue por defecto."""
+    consulta = ConsultaFalsa(["x"])
+
+    await ClienteClaudeCode(consulta=consulta).completar("p", semilla=1)
+
+    assert consulta.opciones[0].model == MODELO_ESCRITOR
+
+
+async def test_el_coste_se_imputa_a_la_tarifa_del_modelo_que_de_verdad_se_uso():
+    """Opus cuesta cinco veces mas que Haiku. Derivar el coste del modelo del
+    constructor mientras se llama a otro imputa la cifra al modelo equivocado,
+    y RF-OBS-03 la usa para comparar plantillas."""
+    consulta = ConsultaFalsa(["x"], uso={"input_tokens": 1_000_000, "output_tokens": 1_000_000})
+    cliente = ClienteClaudeCode(consulta=consulta)
+
+    await cliente.completar("p", semilla=1, modelo=MODELO_JUEZ)
+
+    consumo = cliente.ultimo_consumo
+    assert consumo is not None
+    assert consumo.modelo == MODELO_JUEZ
+    assert consumo.coste_usd == Decimal("30.00")
 
 
 def test_obtener_cliente_modelo_ya_no_lanza_y_devuelve_el_cliente_real():

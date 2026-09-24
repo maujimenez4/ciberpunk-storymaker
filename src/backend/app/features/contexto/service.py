@@ -188,15 +188,14 @@ async def registrar_ejecucion(
     del proveedor, que llega despues. `tokens_reales`, `coste` y `veredicto`
     quedan nulos y los completa quien llame (T8).
 
-    **`ids_por_capa` va en `parametros`, y es una desviacion declarada.**
-    RF-CTX-09 pide los identificadores de *todas* las capas que los tienen, con
-    su capa; el esquema de T2 trae dos columnas de ids —`ids_canon` e
-    `ids_recuperados`— y anadir una tercera es esquema y migracion, que no son
-    de esta tarea. Las dos columnas se rellenan igual, porque son las que las
-    consultas de CU-07 conocen.
+    **`ids_por_capa` tiene columna propia desde la Fase 3.** RF-CTX-09 pide los
+    identificadores de *todas* las capas que los tienen, con su capa, y hasta
+    hoy el mapa viajaba dentro de `parametros`, que es donde van los parametros
+    de la llamada. `ids_canon` e `ids_recuperados` se siguen rellenando: son las
+    dos que las consultas de CU-07 ya saben mirar.
     """
     ids = contexto.paquete.ids_por_capa
-    parametros = {"ids_por_capa": {capa.value: list(ids[capa]) for capa in CAPAS_CON_ORIGEN}}
+    por_capa = {capa.value: list(ids[capa]) for capa in CAPAS_CON_ORIGEN}
 
     resultado = await sesion.execute(
         text(
@@ -206,13 +205,13 @@ async def registrar_ejecucion(
                 prompt_id, prompt_version, prompt_hash,
                 modelo, semilla, parametros,
                 tokens_por_capa, tokens_previstos, tokens_reales, coste,
-                ids_recuperados, ids_canon, veredicto, creado_en
+                ids_recuperados, ids_canon, ids_por_capa, veredicto, creado_en
             ) VALUES (
                 :run_id, :obra_id, :escena_id, :version_obra_id,
                 :prompt_id, :prompt_version, :prompt_hash,
                 :modelo, :semilla, :parametros,
                 :tokens_por_capa, :tokens_previstos, NULL, NULL,
-                :ids_recuperados, :ids_canon, NULL, CURRENT_TIMESTAMP
+                :ids_recuperados, :ids_canon, :ids_por_capa, NULL, CURRENT_TIMESTAMP
             )
             RETURNING id
             """
@@ -227,11 +226,12 @@ async def registrar_ejecucion(
             "prompt_hash": llamada.prompt_hash,
             "modelo": llamada.modelo,
             "semilla": llamada.semilla,
-            "parametros": json.dumps(parametros),
+            "parametros": json.dumps({}),
             "tokens_por_capa": json.dumps(contexto.paquete.tokens_por_capa),
             "tokens_previstos": contexto.paquete.tokens_previstos,
             "ids_recuperados": json.dumps(_numericos(ids[Capa.MEMORIA], "emb")),
             "ids_canon": json.dumps(_numericos(ids[Capa.CANON], "hc")),
+            "ids_por_capa": json.dumps(por_capa),
         },
     )
     return int(resultado.scalar_one())
