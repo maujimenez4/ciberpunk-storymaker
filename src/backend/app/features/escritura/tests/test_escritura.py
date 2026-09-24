@@ -79,6 +79,11 @@ class DobleQueDeclaraConsumo(DobleDeterminista):
         tokens_entrada = 900
         tokens_salida = 120
         coste_usd = Decimal("0.0015")
+        # P-18: el CLI usa cache de prompt y estos dos campos se perdian en el
+        # momento. El doble los declara **porque el cliente real los expone**:
+        # un doble sin ellos no podria distinguir que se guardan de que no.
+        cache_read_input_tokens = 6835
+        cache_creation_input_tokens = 0
 
     @property
     def ultimo_consumo(self) -> "DobleQueDeclaraConsumo.Consumo":
@@ -387,6 +392,30 @@ async def test_la_ejecucion_nace_con_el_recuento_previo_y_se_completa(sesion, ob
     assert fila.prompt_id == "escritor"
     assert fila.prompt_version == "v1"
     assert escritura.aprobado
+
+
+async def test_los_tokens_de_cache_quedan_en_la_ejecucion(sesion, obra_con_outline):
+    """P-18. Se guardan **aparte** de `tokens_reales`, y esa separacion es el punto.
+
+    `tokens_reales` es lo que hoy alimenta el coste imputado, y sumarle la cache
+    cambiaria la cifra sin que nadie hubiera decidido a que precio. En columna
+    propia, el dato queda para rehacer el calculo cuando esa tarifa se declare,
+    y mientras tanto **no mueve ningun numero publicado**.
+
+    Lo que esto compra: una corrida de hoy se podra recalcular manana. Sin la
+    columna, cada llamada que hacemos es una medicion que se pierde.
+    """
+    await _escribir(
+        sesion,
+        obra_con_outline,
+        Escritor(DobleQueDeclaraConsumo({MARCA_DE_PLANTILLA: BUENA})),
+    )
+
+    fila = (await sesion.execute(select(Ejecucion))).scalars().one()
+    assert fila.cache_read_input_tokens == 6835
+    assert fila.cache_creation_input_tokens == 0
+    assert fila.tokens_reales == 1020, "la cache no se suma a los tokens imputados"
+    assert fila.coste == pytest.approx(0.0015), "el coste no cambia: P-18 no lo imputa"
 
 
 async def test_un_cliente_que_no_declara_consumo_no_impide_el_veredicto(sesion, obra_con_outline):

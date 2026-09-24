@@ -142,6 +142,15 @@ class Ejecucion(Base):
     tokens_reales: Mapped[int | None] = mapped_column(default=None)
     coste: Mapped[float | None] = mapped_column(default=None)
 
+    # P-18. Van **aparte de `tokens_reales`** a proposito: aquel alimenta el
+    # coste imputado, y sumarle la cache moveria una cifra publicada sin que
+    # nadie hubiera decidido a que precio se cobra. Aqui el dato queda para
+    # rehacer el calculo cuando esa tarifa se declare. `None` es «no se sabe»
+    # -corridas anteriores a esta columna- y cero es una medicion: no hubo
+    # cache. La diferencia importa el dia que alguien sume la columna.
+    cache_read_input_tokens: Mapped[int | None] = mapped_column(default=None)
+    cache_creation_input_tokens: Mapped[int | None] = mapped_column(default=None)
+
     ids_recuperados: Mapped[list[int]] = mapped_column(JSON, default=list)
     ids_canon: Mapped[list[int]] = mapped_column(JSON, default=list)
 

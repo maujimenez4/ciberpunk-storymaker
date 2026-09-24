@@ -107,6 +107,8 @@ class _Consumo(Protocol):
     tokens_entrada: int
     tokens_salida: int
     coste_usd: Decimal
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
 
 
 @runtime_checkable
@@ -259,6 +261,10 @@ async def _completar_ejecucion(
         if consumo is not None:
             valores["tokens_reales"] = consumo.tokens_entrada + consumo.tokens_salida
             valores["coste"] = float(consumo.coste_usd)
+            # P-18: se guardan y **no se suman** a `tokens_reales`. El coste de
+            # arriba sigue saliendo de los mismos dos numeros que antes.
+            valores["cache_read_input_tokens"] = consumo.cache_read_input_tokens
+            valores["cache_creation_input_tokens"] = consumo.cache_creation_input_tokens
 
     await sesion.execute(update(Ejecucion).where(Ejecucion.id == ejecucion_id).values(**valores))
 
