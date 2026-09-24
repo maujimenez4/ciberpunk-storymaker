@@ -20,26 +20,12 @@ export const API_ENTREVISTA = {
 } as const;
 
 /**
- * Lo que devuelve `GET /obras/{obra_id}/novela`.
- *
- * **Escrito a mano, y a proposito provisional**: el modelo del backend es
- * `EstadoDeLaNovela` (`src/backend/app/features/escritura/`) y se estaba
- * construyendo a la vez que esta pantalla, contra este mismo contrato. Cuando
- * se regenere `openapi.json`, esto pasa a ser
- * `components["schemas"]["EstadoDeLaNovela"]` (`CLAUDE.md` §7).
+ * Lo que devuelve `GET /obras/{obra_id}/novela`: `total` capitulos del outline,
+ * `integrados` ya cerrados, `en_curso` el que se escribe ahora y `motivo` cuando
+ * `estado` es `"detenida"`. **Generado** del OpenAPI (`CLAUDE.md` §7): la copia
+ * escrita a mano que habia aqui era provisional hasta regenerarlo.
  */
-export interface EstadoDeLaNovela {
-  obra_id: number;
-  /** Capitulos del outline. */
-  total: number;
-  /** Capitulos ya integrados. */
-  integrados: number;
-  /** El capitulo que se esta escribiendo ahora, si hay uno. */
-  en_curso: number | null;
-  estado: "sin_outline" | "escribiendo" | "terminada" | "detenida";
-  /** Por que se detuvo, cuando `estado` es `"detenida"`. */
-  motivo: string | null;
-}
+export type EstadoDeLaNovela = components["schemas"]["EstadoDeLaNovela"];
 
 /** Lo que la pantalla manda al responder. **Dos campos, y esa separacion es la
  * defensa**: `texto_aportado` es contenido no confiable y el servidor lo
