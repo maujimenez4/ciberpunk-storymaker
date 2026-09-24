@@ -156,6 +156,9 @@ async def crear_obra_desde_brief(sesion: AsyncSession, brief: BriefEntrada) -> O
         tono=brief.tono,
         nivel_de_calor=brief.nivel_de_calor,
         destinatario_id=destinatario.id,
+        # P-2: se persisten aqui. Antes se validaban en el brief y se perdian,
+        # y la cobertura los rescataba del JSON en bruto de la entrevista.
+        elementos_obligatorios=list(brief.elementos_obligatorios),
     )
     sesion.add(obra)
     await sesion.flush()

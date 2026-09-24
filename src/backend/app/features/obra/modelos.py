@@ -69,12 +69,32 @@ class Obra(Base):
     """
 
     __tablename__ = "obra"
+    __table_args__ = (
+        CheckConstraint(
+            "json_array_length(elementos_obligatorios) > 0",
+            name="ck_obra_elementos_obligatorios_no_vacios",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     titulo: Mapped[str] = mapped_column(String(200))
     genero: Mapped[str] = mapped_column(String(60))
     tono: Mapped[str] = mapped_column(String(60))
     nivel_de_calor: Mapped[int]
+
+    elementos_obligatorios: Mapped[list[str]] = mapped_column(JSON, default=list)
+    """Lo que el comprador pidio que apareciera, **en columna y no en el brief**.
+
+    Cierra P-2. Hasta ahora se validaban al cerrar la entrevista y no se
+    persistian: la cobertura los leia de `entrevista.respuestas`, asi que una
+    obra creada por cualquier otra ruta no tenia elementos que cubrir y
+    `cobertura_de_personalizacion` **aprobaba sin comprobar nada**.
+
+    El `CheckConstraint` esta aqui y no solo en `BriefEntrada` por el mismo
+    motivo que el de `palabra_prohibida.ambito`: una obra escrita por otra ruta
+    —un script, una migracion de datos, un test— no tendria quien la parase, y
+    una lista vacia es justo la que hace que el validador diga que si de balde.
+    """
     destinatario_id: Mapped[int | None] = mapped_column(ForeignKey("destinatario.id"))
     serie_id: Mapped[int | None] = mapped_column(ForeignKey("serie.id"))
 

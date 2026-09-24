@@ -65,10 +65,12 @@ async def test_una_serie_puede_existir_y_una_obra_pertenecer_a_ella(sesion):
     await sesion.flush()
 
     primera = Obra(
-        titulo="Uno", genero="romance", tono="calido", nivel_de_calor=2, serie_id=serie.id
+        titulo="Uno", genero="romance", tono="calido", nivel_de_calor=2, serie_id=serie.id,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
     )
     segunda = Obra(
-        titulo="Dos", genero="romance", tono="calido", nivel_de_calor=2, serie_id=serie.id
+        titulo="Dos", genero="romance", tono="calido", nivel_de_calor=2, serie_id=serie.id,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
     )
     sesion.add_all([primera, segunda])
     await sesion.flush()
@@ -78,7 +80,7 @@ async def test_una_serie_puede_existir_y_una_obra_pertenecer_a_ella(sesion):
 
 async def test_una_obra_sin_serie_sigue_siendo_legitima(sesion):
     """La mayoria de las obras no son de ninguna serie: `serie_id` es nulo."""
-    obra = Obra(titulo="Suelta", genero="romance", tono="calido", nivel_de_calor=2)
+    obra = Obra(titulo="Suelta", genero="romance", tono="calido", nivel_de_calor=2, elementos_obligatorios=["un elemento que el comprador pidio"])
     sesion.add(obra)
     await sesion.flush()
     assert obra.serie_id is None
