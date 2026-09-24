@@ -8,20 +8,24 @@ class ClienteModelo(Protocol):
 def obtener_cliente_modelo() -> ClienteModelo:
     """La dependencia por la que entra el modelo (RI-14, `CLAUDE.md` §6).
 
-    **En esta fase no hay proveedor real, y por eso esto falla en vez de
-    devolver algo.** La Fase 1 no escribe prosa y su suite corre sin red ni
-    credenciales (CA-4): la unica implementacion de `ClienteModelo` que existe
-    hoy es `DobleDeterminista`, y el cliente de Anthropic entra con el ciclo de
-    capitulo. Que la funcion exista y falle es lo que permite que los endpoints
-    la pidan por `Depends()` y que un test la sustituya sin tocar el codigo de
-    produccion.
+    Devuelve el cliente real: el **Claude Agent SDK** ya autenticado contra la
+    cuenta (P-08). Con esto se cierra el hueco que la Fase 1 dejo declarado —
+    `POST /entrevistas/{id}/respuestas` y `.../cerrar` respondian 500 contra la
+    aplicacion levantada, porque la unica implementacion de `ClienteModelo`
+    que existia era `DobleDeterminista`.
 
-    La consecuencia se escribe para que nadie la descubra tarde: con la
-    aplicacion levantada de verdad, `POST /entrevistas/{id}/respuestas` y
-    `.../cerrar` devuelven 500. El OpenAPI, que es lo que RI-13 pide de esta
-    fase, se sirve igual. Queda anotado en Desviaciones.
+    **Construirlo no llama a nadie ni lee credenciales**, y eso importa: es
+    una dependencia de FastAPI, asi que se resuelve en cada peticion. Lo que
+    abre el proceso del proveedor es `completar`, y solo `completar`.
+
+    En pruebas se sustituye por `DobleDeterminista` con
+    `dependency_overrides`: la suite corre sin red y sin credenciales
+    (RNF-FIA-01, CA-4). Que el cliente exista no cambia eso.
+
+    El import va dentro de la funcion a proposito: `claude_code` importa
+    `ClienteModelo` de aqui, y al reves seria un ciclo. De paso, importar este
+    modulo —que es lo que hace `features/obra/router.py`— no arrastra el SDK.
     """
-    raise NotImplementedError(
-        "No hay proveedor de modelo en la Fase 1: el cliente real entra con el "
-        "ciclo de capitulo. En pruebas se sustituye por DobleDeterminista."
-    )
+    from app.commons.llm.claude_code import ClienteClaudeCode
+
+    return ClienteClaudeCode()

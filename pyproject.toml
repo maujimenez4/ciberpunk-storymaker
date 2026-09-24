@@ -9,6 +9,12 @@ dependencies = [
   # declara por si mismo bajo un marcador de `platform_machine` que NO
   # incluye `arm64`, asi que en un Mac de Apple Silicon no se instala.
   "sqlalchemy[asyncio]>=2.0", "aiosqlite>=0.20", "alembic>=1.13",
+  # Las dos de la Tarea 1, de las catorce que P-01 aprobo en bloque.
+  # `claude-agent-sdk` es el proveedor de modelo (P-08): consumo de cuenta, sin
+  # clave de API. Necesita el CLI `claude` instalado y autenticado, y **no lo
+  # usa ni un test** (CA-4). `tiktoken` es el contador previo de P-A: un BPE
+  # local, que es lo que RF-CTX-02 pide y no una estimacion por caracteres.
+  "claude-agent-sdk>=0.2", "tiktoken>=0.8",
 ]
 
 [dependency-groups]
