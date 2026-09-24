@@ -71,7 +71,7 @@ from app.features.manuscrito.repository import (
     version_por_token,
     versiones_de,
 )
-from app.features.manuscrito.router import router
+from app.features.manuscrito.router import publicacion, router
 from app.features.manuscrito.schemas import (
     CapituloPublicado,
     DedicatoriaEntrada,
@@ -107,6 +107,7 @@ __all__ = [
     "ficha_de",
     "guardar_dedicatoria",
     "nuevo_identificador_publico",
+    "publicacion",
     "publicar",
     "router",
     "texto_publicado",

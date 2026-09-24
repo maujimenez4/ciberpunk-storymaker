@@ -43,10 +43,45 @@ from app.features.manuscrito.schemas import (
     FichaDeLectura,
     VersionPublicada,
 )
+from app.features.manuscrito.service import publicar
 
 Sesion = Annotated[AsyncSession, Depends(obtener_sesion)]
 
 router = APIRouter(prefix="/lectura", tags=["lectura"])
+
+# --- La publicacion, que es del Autor y va por `obra_id` ---------------------
+#
+# Router aparte y prefijo distinto **a proposito**. Las rutas de lectura se
+# indexan por el token porque es lo unico que las protege; esta la usa quien ya
+# es dueño de la obra y todavia **no tiene token** -- se lo da esta llamada --,
+# asi que indexarla por token seria imposible: pediria la llave que viene a
+# entregar.
+publicacion = APIRouter(prefix="/obras", tags=["publicacion"])
+
+
+@publicacion.post("/{obra_id}/publicar")
+async def publicar_obra(obra_id: int, sesion: Sesion) -> dict[str, object]:
+    """Fija una tirada inmutable y **devuelve el token con el que se lee**.
+
+    `publicar` existia en el servicio desde la Fase 4 y no tenia ruta, asi que
+    desde el navegador no habia forma de publicar ni de saber cuando una novela
+    se podia leer: el frontend llegaba hasta «se esta escribiendo» y ahi se
+    cortaba. No faltaba una pantalla, **faltaba el dato**.
+
+    **Es la unica ruta que devuelve el `identificador_publico`**, y la asimetria
+    con las de lectura es deliberada: alli no sale porque quien lee ya entro con
+    el, y repetirlo solo lo pondria en un sitio mas -- un registro, una captura,
+    un historial compartido --. Aqui sale porque quien publica aun no lo tiene.
+
+    Los fallos de dominio -- un capitulo que no paso su puerta, una cronologia
+    que Lean rechaza -- los traduce el manejador central de `commons/errors`
+    (`CLAUDE.md` §6). Aqui no hay ni un `HTTPException`: un 500 dejaria al
+    frontend sin nada que contarle a quien acaba de encargar la novela.
+    """
+    version = await publicar(sesion, obra_id)
+    await sesion.commit()
+    return {"token": version.identificador_publico, "ordinal": version.ordinal}
+
 
 # El mismo texto para los dos casos, y es deliberado: ver la cabecera.
 NO_ENCONTRADO = "No hay nada en este enlace."

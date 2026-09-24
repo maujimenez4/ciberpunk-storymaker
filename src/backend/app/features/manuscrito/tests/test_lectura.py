@@ -260,3 +260,87 @@ async def test_el_texto_que_se_lee_es_el_fijado_y_no_el_vigente(
 
     assert despues == antes
     assert "REESCRITO" not in despues
+
+
+# --- La publicacion por HTTP -------------------------------------------------
+#
+# `publicar` existia en el servicio desde T6 y **no tenia ruta**, asi que desde
+# el navegador no habia forma de publicar ni de saber cuando una novela se puede
+# leer. El frontend llegaba hasta «se esta escribiendo» y ahi se cortaba: no es
+# que faltara una pantalla, es que faltaba el dato.
+
+
+@pytest.fixture
+async def integrada(sesion: AsyncSession, obra_con_outline: ObraConOutline) -> ObraConOutline:
+    """Los diez capitulos listos, **sin publicar todavia**.
+
+    `version` publica; esta no, porque lo que se prueba aqui es justamente el
+    acto de publicar por HTTP.
+    """
+    await _integrar(sesion, obra_con_outline)
+    sesion.add(Dedicatoria(obra_id=obra_con_outline.obra.id, texto=DEDICATORIA))
+    await sesion.commit()
+    return obra_con_outline
+
+
+def test_la_ruta_de_publicacion_existe_en_el_openapi(cliente: TestClient) -> None:
+    """**Este test es el guardia de los tres siguientes.**
+
+    Sin el, `test_publicar_una_obra_sin_capitulos_listos_no_da_500` pasaba
+    **con la ruta sin escribir**: un 404 tambien es `>= 400` y tambien trae
+    `detail`. Es la familia de fallo que este repositorio lleva el dia entero
+    cazando -- un test con el nombre correcto que no puede fallar -- y aparecio
+    escribiendo justo estos tests.
+    """
+    rutas = cliente.get("/openapi.json").json()["paths"]
+
+    assert "/obras/{obra_id}/publicar" in rutas
+
+
+async def test_publicar_devuelve_el_token_con_el_que_se_lee(
+    cliente: TestClient, integrada: ObraConOutline
+) -> None:
+    """**El campo que cierra la cadena.**
+
+    Es la unica ruta que devuelve el `identificador_publico`, y tiene que
+    hacerlo: quien publica es el Autor y todavia no lo tiene. Las de lectura no
+    lo devuelven a proposito -- quien lee ya entro con el -- y esa asimetria es
+    deliberada, no un descuido de una de las dos.
+    """
+    respuesta = cliente.post(f"/obras/{integrada.obra.id}/publicar")
+
+    assert respuesta.status_code == 200, respuesta.text
+    token = respuesta.json()["token"]
+    assert token, "publicar no devuelve el token, y sin el no se puede leer"
+
+    # Y el token sirve de verdad: se entra con el sin tocar nada mas.
+    assert cliente.get(f"/lectura/{token}").status_code == 200
+
+
+async def test_publicar_dos_veces_sin_cambios_da_el_mismo_token(
+    cliente: TestClient, integrada: ObraConOutline
+) -> None:
+    """R-1 visto desde la API. Dos tiradas identicas serian dos enlaces al mismo
+    contenido, y ni el comprador sabria cual mandar de regalo."""
+    primero = cliente.post(f"/obras/{integrada.obra.id}/publicar").json()["token"]
+    segundo = cliente.post(f"/obras/{integrada.obra.id}/publicar").json()["token"]
+
+    assert primero == segundo
+
+
+async def test_publicar_una_obra_sin_capitulos_listos_no_da_500(
+    cliente: TestClient, obra_con_outline: ObraConOutline
+) -> None:
+    """Regla de dominio 14 desde el borde: **publicar es afirmar que paso la
+    puerta**, y una obra a medias no puede.
+
+    Lo que se comprueba no es solo que falle: es que falle **con un motivo
+    legible**. `CLAUDE.md` §6 dice que los errores de dominio los traduce el
+    handler central, y un 500 aqui dejaria al frontend sin nada que contarle a
+    quien acaba de pagar.
+    """
+    respuesta = cliente.post(f"/obras/{obra_con_outline.obra.id}/publicar")
+
+    assert respuesta.status_code != 500, "un capitulo sin puerta revienta en vez de explicarse"
+    assert respuesta.status_code >= 400
+    assert respuesta.json().get("detail"), "falla sin decir por que"
