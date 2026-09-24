@@ -26,9 +26,13 @@ const CAMPOS = [
  */
 export function Entrevista({
   onNovelaLanzada,
+  onNovelaPublicada,
+  onFallo,
   deshabilitado = false,
 }: {
   onNovelaLanzada?: () => void;
+  onNovelaPublicada?: (token: string) => void;
+  onFallo?: () => void;
   deshabilitado?: boolean;
 } = {}) {
   const peticionario = usePeticionario();
@@ -70,10 +74,22 @@ export function Entrevista({
         API_ENTREVISTA.cerrar(id),
         {},
       );
-      await peticionario.enviar(`/obras/${obra.obra_id}/novela`, {});
-      return obra;
+      onNovelaLanzada?.();
+      await peticionario.enviar(API_ENTREVISTA.novela(obra.obra_id), {});
+      // Publicar es lo que **da el token**, y sin token no hay nada que leer.
+      // Va aqui y no en la pagina porque es el ultimo paso de la misma cadena:
+      // si fallara, lo que no debe pasar es que se active una pestana que no
+      // lleva a ningun sitio.
+      const publicada = await peticionario.enviar<{ token: string }>(
+        API_ENTREVISTA.publicar(obra.obra_id),
+        {},
+      );
+      return publicada;
     },
-    onSuccess: () => onNovelaLanzada?.(),
+    onSuccess: (publicada) => onNovelaPublicada?.(publicada.token),
+    // Sin esto, un fallo deja la pantalla en «se esta escribiendo» **para
+    // siempre**, que es la peor forma de fallar porque parece que funciona.
+    onError: () => onFallo?.(),
   });
 
   const listo =

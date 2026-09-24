@@ -69,6 +69,12 @@ export function Paginas() {
           <>
             <Entrevista
               onNovelaLanzada={() => setEscribiendo(true)}
+              onNovelaPublicada={(suyo) => {
+                setToken(suyo);
+                setEscribiendo(false);
+                setVista(VISTAS.leer);
+              }}
+              onFallo={() => setEscribiendo(false)}
               deshabilitado={escribiendo}
             />
             {escribiendo ? <Escribiendo /> : null}
@@ -80,9 +86,6 @@ export function Paginas() {
         ) : null}
       </div>
 
-      {/* Mientras no exista el endpoint que publica y devuelve el token, la
-          lectura se abre con `?token=`. Ver el aviso del commit. */}
-      {!hayNovela && escribiendo ? <ParaCuandoEste alActivar={setToken} /> : null}
     </Pagina>
   );
 }
@@ -94,32 +97,5 @@ function Escribiendo() {
         Se está escribiendo tu novela. Son diez capítulos, así que tarda un rato.
       </Texto>
     </div>
-  );
-}
-
-/**
- * El último eslabón, y **hoy no existe en el backend**.
- *
- * `POST /obras/{id}/novela` devuelve `{obra_id, desde_el_capitulo, terminada}`
- * y **ninguna ruta publica una versión ni devuelve su token**, así que desde
- * aquí no hay forma de saber cuándo la novela se puede leer. Mientras tanto, el
- * token se acepta por `?token=` — que es además como llega el enlace del
- * regalo— y esto queda como el sitio exacto donde enchufarlo.
- */
-function ParaCuandoEste({ alActivar }: { alActivar: (token: string) => void }) {
-  return (
-    <p className="nota">
-      Cuando esté lista, el enlace que recibas la abre.{" "}
-      <button
-        type="button"
-        className="enlace enlace--boton"
-        onClick={() => {
-          const escrito = window.prompt("Pega aquí el enlace o el código de tu novela");
-          if (escrito) alActivar(escrito.trim());
-        }}
-      >
-        Ya tengo el enlace
-      </button>
-    </p>
   );
 }

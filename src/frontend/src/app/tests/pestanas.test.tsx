@@ -18,7 +18,16 @@ function dobleCompleto(extras: Record<string, unknown> = {}) {
     "/entrevistas": { id: 1 },
     "/entrevistas/1/respuestas": { faltantes: [], contradicciones: [] },
     "/entrevistas/1/cerrar": { obra_id: 7 },
-    "/obras/7/novela": { obra_id: 7, desde_el_capitulo: 1, terminada: false },
+    "/obras/7/novela": { obra_id: 7, desde_el_capitulo: 1, terminada: true },
+    "/obras/7/publicar": { token: "tok-7", ordinal: 1 },
+    "/lectura/tok-7": {
+      titulo: "El verano del 98",
+      ordinal: 1,
+      publicada_en: "2026-09-24T10:00:00Z",
+      dedicatoria: "Para Marta.",
+      capitulos: [{ numero: 1, titulo: "La casa", cambiado: false }],
+    },
+    "/lectura/tok-7/capitulos/1": { numero: 1, titulo: "La casa", texto: "Olía a sal." },
     ...extras,
   });
 }
@@ -73,8 +82,12 @@ describe("el puente", () => {
   });
 
   it("mientras se escribe, lo dice en vez de dejar la pantalla quieta", async () => {
+    // Con retraso: sin el, el doble publica en el mismo tic y el aviso no llega
+    // a verse. Lo que se comprueba es que **existe mientras dura**.
+    const lento = dobleCompleto();
+    Object.assign(lento, { opciones: { retraso: 50 } });
     const persona = userEvent.setup();
-    abrir("/", dobleCompleto());
+    abrir("/", lento);
 
     await rellenarYPulsar(persona);
 
@@ -98,5 +111,45 @@ describe("el puente", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/no se pudo/i);
     expect(screen.getByRole("button", { name: /escribir la novela/i })).toBeEnabled();
+  });
+});
+
+describe("el recorrido entero", () => {
+  it("al terminar se publica y se lee LA NOVELA, no una pestana vacia", async () => {
+    /**
+     * **El riesgo de este test es que pase sin que haya novela detrás.** Que la
+     * pestaña se active no prueba nada: se activaría igual con un token
+     * inventado. Por eso se comprueba la cadena entera — que se llamó a
+     * `publicar`, que el token salió de ahí, y que la lectura **pidió y pintó**
+     * la novela de ese token.
+     */
+    const doble = dobleCompleto();
+    const persona = userEvent.setup();
+    abrir("/", doble);
+
+    await rellenarYPulsar(persona);
+
+    await waitFor(() => expect(doble.llamadas).toContain("/obras/7/publicar"));
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /leer/i })).toBeEnabled(),
+    );
+    await persona.click(screen.getByRole("tab", { name: /leer/i }));
+
+    // La cadena entera: el token salio de `publicar` y la lectura lo uso.
+    expect(doble.llamadas).toContain("/lectura/tok-7");
+    expect(await screen.findByText(/Para Marta/)).toBeInTheDocument();
+    expect(await screen.findByText(/Olía a sal/)).toBeInTheDocument();
+  });
+
+  it("si publicar falla, no se activa una pestana que no lleva a nada", async () => {
+    const doble = dobleCompleto();
+    doble.respuestas["/obras/7/publicar"] = undefined;
+    const persona = userEvent.setup();
+    abrir("/", doble);
+
+    await rellenarYPulsar(persona);
+
+    await waitFor(() => expect(doble.llamadas).toContain("/obras/7/publicar"));
+    expect(screen.getByRole("tab", { name: /leer/i })).toBeDisabled();
   });
 });
