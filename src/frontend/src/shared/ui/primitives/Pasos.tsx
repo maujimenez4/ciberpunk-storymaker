@@ -3,6 +3,10 @@
  * información**: los pasos van en orden y ninguno se salta, así que es una
  * lista ordenada y no un adorno.
  *
+ * En el cuaderno de viaje (plan 4, enmienda 1) el paso actual es un **sello**
+ * con su número; los hechos, un punto de estilográfica con ✓; los pendientes,
+ * un círculo hueco con su número.
+ *
  * El actual lleva `aria-current="step"`; los anteriores dicen «hecho» **con
  * texto** (oculto a la vista, que ya ve la marca), no solo con color.
  *
@@ -30,11 +34,13 @@ export function Pasos({
             className={`pasos__paso${hecho ? " pasos__paso--hecho" : ""}${esActual ? " pasos__paso--actual" : ""}`}
             aria-current={esActual ? "step" : undefined}
           >
-            <span className="pasos__marca" aria-hidden="true">
+            <span className={`pasos__marca${esActual ? " sello" : ""}`} aria-hidden="true">
               {hecho ? "✓" : indice + 1}
             </span>
-            {paso}
-            {hecho ? <span className="solo-lector">, hecho</span> : null}
+            <span className="pasos__nombre">
+              {paso}
+              {hecho ? <span className="solo-lector">, hecho</span> : null}
+            </span>
           </li>
         );
       })}

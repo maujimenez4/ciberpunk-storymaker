@@ -112,6 +112,50 @@ describe("los primitivos", () => {
     ]);
   });
 
+  it("la barra es un mapa de ruta: una parada por unidad, la actual sellada con su numero y la bandera en la meta", () => {
+    const { container } = render(
+      <BarraDeProgreso etiqueta="Capítulos" total={10} hechos={2} enCurso={3} textoDelValor="" />,
+    );
+
+    const paradas = container.querySelectorAll(".barra__tramo");
+    expect(paradas).toHaveLength(10);
+    // La parada en curso es un sello con su número; ninguna otra lo es.
+    const selladas = container.querySelectorAll(".barra__tramo.sello");
+    expect(selladas).toHaveLength(1);
+    expect(selladas[0]).toHaveAttribute("data-tramo", "en-curso");
+    expect(selladas[0]).toHaveTextContent("3");
+    // La meta: una bandera que es adorno, no información.
+    const meta = container.querySelectorAll(".barra__meta");
+    expect(meta).toHaveLength(1);
+    expect(meta[0]!.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    // Los extremos del camino, con palabras.
+    expect(container).toHaveTextContent("Salida");
+    expect(container).toHaveTextContent("Publicación");
+  });
+
+  it("el mapa lleva lo recorrido hasta la parada en curso, o hasta la meta si todo esta hecho", () => {
+    const { container, rerender } = render(
+      <BarraDeProgreso etiqueta="Capítulos" total={10} hechos={2} enCurso={3} textoDelValor="" />,
+    );
+    const ruta = () => container.querySelector<HTMLElement>(".barra__ruta")!;
+    // Once paradas en el camino: diez unidades y la meta.
+    expect(ruta().style.getPropertyValue("--paradas")).toBe("11");
+    expect(ruta().style.getPropertyValue("--recorrido")).toBe("2");
+
+    rerender(<BarraDeProgreso etiqueta="Capítulos" total={10} hechos={10} textoDelValor="" />);
+    expect(ruta().style.getPropertyValue("--recorrido")).toBe("10");
+  });
+
+  it("el paso actual es un sello; los demas no", () => {
+    const { container } = render(
+      <Pasos etiqueta="Cómo va tu novela" pasos={["Entrevista", "Historia", "Capítulos"]} actual={1} />,
+    );
+
+    const marcas = [...container.querySelectorAll(".pasos__marca")];
+    expect(marcas.map((m) => m.classList.contains("sello"))).toEqual([false, true, false]);
+    expect(marcas[1]).toHaveTextContent("2");
+  });
+
   it("los pasos marcan el actual con aria-current y dicen con texto cuáles están hechos", async () => {
     const { container } = render(
       <Pasos etiqueta="Cómo va tu novela" pasos={["Entrevista", "Historia", "Capítulos"]} actual={1} />,
