@@ -170,11 +170,26 @@ function Recorrido({
     guardarNovelaEnCurso(novela);
   };
 
+  /**
+   * **Una entrevista por ronda, y solo una.** Abrirla es un `POST` que crea
+   * una fila, y una consulta de TanStack se repite sola por muchas razones:
+   * reintento tras un fallo, datos caducados al volver a montar, foco,
+   * reconexion o la cache recogida. Cada repeticion era otra entrevista
+   * huerfana en la base. Aqui se apagan **todas**, no solo la que se vio: un
+   * `POST` que fallo pudo haber guardado la fila, y reintentarlo a ciegas es
+   * otra forma de abrir dos. Si falla, se dice y la persona recarga.
+   */
   const entrevista = useQuery({
     queryKey: ["entrevista", ronda],
     queryFn: reanudada
       ? skipToken
       : () => peticionario.enviar<{ id: number }>(API_ENTREVISTA.abrir(), {}),
+    retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const guardar = useMutation({

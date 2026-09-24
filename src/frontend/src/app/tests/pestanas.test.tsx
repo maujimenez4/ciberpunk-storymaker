@@ -7,11 +7,12 @@
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { describe, expect, it } from "vitest";
 
 import { Aplicacion } from "@/app/Aplicacion";
 import { VISTAS } from "@/app/router";
-import { DobleDeApi } from "@/shared/api/doble";
+import { DobleDeApi, enSecuencia } from "@/shared/api/doble";
 
 function dobleCompleto(extras: Record<string, unknown> = {}) {
   return new DobleDeApi({
@@ -131,6 +132,50 @@ describe("el puente", () => {
       /no se pudo empezar a escribir la novela/i,
     );
     expect(screen.getByRole("button", { name: /escribir la novela/i })).toBeEnabled();
+  });
+});
+
+describe("una entrevista por carga de pagina", () => {
+  it("en StrictMode, como en main.tsx, se abre exactamente una", async () => {
+    /**
+     * La entrevista se abría con `useQuery` sobre un `POST`, y cada `POST
+     * /entrevistas` crea una fila: en desarrollo, con StrictMode montando dos
+     * veces, salían dos. La segunda quedaba huérfana en la base.
+     */
+    const doble = dobleCompleto();
+    const persona = userEvent.setup();
+    window.history.pushState({}, "", "/");
+    render(
+      <StrictMode>
+        <Aplicacion peticionario={doble} />
+      </StrictMode>,
+    );
+
+    await persona.type(await screen.findByLabelText(/cómo se llama/i), "Marta");
+    await persona.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(await screen.findByText(/hay bastante para empezar/i)).toBeInTheDocument();
+
+    expect(doble.metodos.filter((m) => m === "POST /entrevistas")).toHaveLength(1);
+  });
+
+  it("si abrirla falla, no se reintenta sola: un POST que falla puede haber creado la fila", async () => {
+    /**
+     * Con el backend escribiendo una novela, SQLite contesta a veces `database
+     * is locked` (596faba). Reintentar un `POST` a ciegas es la otra forma de
+     * abrir dos: el primero pudo guardar la fila antes de fallar. Se dice que
+     * falló y se deja que la persona recargue.
+     */
+    const doble = dobleCompleto({ "/entrevistas": enSecuencia(undefined, { id: 1 }) });
+    window.history.pushState({}, "", "/");
+    render(
+      <StrictMode>
+        <Aplicacion peticionario={doble} />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no se pudo conectar/i);
+    await new Promise((seguir) => setTimeout(seguir, 1500));
+    expect(doble.metodos.filter((m) => m === "POST /entrevistas")).toHaveLength(1);
   });
 });
 
