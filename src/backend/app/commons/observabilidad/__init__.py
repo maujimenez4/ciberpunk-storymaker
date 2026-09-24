@@ -31,7 +31,7 @@ _log = logging.getLogger(__name__)
 
 SIN_CREDENCIALES = (
     "Observabilidad desactivada: faltan LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY "
-    "o LANGFUSE_HOST. El sistema genera igual y no se mide nada."
+    "o LANGFUSE_HOST (o LANGFUSE_BASE_URL). El sistema genera igual y no se mide nada."
 )
 """El aviso sale **al arrancar**, no a mitad de escribir un capitulo.
 
