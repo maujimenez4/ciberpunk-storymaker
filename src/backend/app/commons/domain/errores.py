@@ -88,3 +88,24 @@ class EntrevistaDesconocida(ErrorDeDominio):
     def __init__(self, entrevista_id: int) -> None:
         self.entrevista_id = entrevista_id
         super().__init__(f"No existe la entrevista {entrevista_id}")
+
+
+class ContextBudgetExceeded(ErrorDeDominio):
+    """Una capa del paquete no cabe en su tope y no se puede recortar.
+
+    El nombre esta en ingles a proposito y no por descuido: es el literal de
+    `CLAUDE.md` §4.1 y de RF-CTX-03, y cambiarlo por una traduccion propia seria
+    exactamente lo que §2 prohibe. Se lanza **antes de llamar al modelo**: el
+    paquete que no cabe no llega a gastarse (RF-CTX-02).
+
+    `capa` es `str` y no el `Capa` de `features/contexto/`: `commons/` no importa
+    de ninguna feature (primer contrato de `import-linter`), y `Capa` es un
+    `StrEnum`, asi que quien la lanza pasa el miembro y quien la captura lee su
+    valor sin necesitar el enum para nombrarlo.
+    """
+
+    def __init__(self, capa: str, tokens: int, tope: int) -> None:
+        self.capa = str(capa)
+        self.tokens = tokens
+        self.tope = tope
+        super().__init__(f"La capa {self.capa} no cabe en su tope: {tokens} tokens sobre {tope}")
