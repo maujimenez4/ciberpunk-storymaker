@@ -36,6 +36,7 @@ from app.features.calidad import (
     ManuscritoAValidar,
     cerrar_manuscrito,
 )
+from app.features.manuscrito.lean import correr_lean
 from app.features.manuscrito.modelos import (
     CapituloPublicado,
     CuadroDeDefectos,
@@ -76,6 +77,23 @@ class CapituloSinPuerta(ErrorDeDominio):
         super().__init__(
             f"No se puede publicar: los capitulos {cuales} no han pasado su puerta de calidad."
         )
+
+
+class CronologiaIncoherente(ErrorDeDominio):
+    """Lean rechazo la cronologia, y **por eso no se publica**. `CA-21`.
+
+    T5 hizo que Lean lo diga; esto hace que lo impida. Son cosas distintas y la
+    segunda es la que el encargo exige: un validador que detecta y no bloquea
+    produce informes que nadie lee.
+
+    El mensaje lleva **quien y donde**. RF-FOR-03 pide que el fallo vuelva al
+    editor como *feedback*, y «la cronologia no es coherente» a secas obliga a
+    abrir la base para saber que arreglar.
+    """
+
+    def __init__(self, detalle: str) -> None:
+        self.detalle = detalle
+        super().__init__(f"No se puede publicar. {detalle}")
 
 
 @dataclass(frozen=True)
@@ -218,6 +236,18 @@ async def publicar(sesion: AsyncSession, obra_id: int) -> VersionPublicada:
     habia nada que publicar.
     """
     listos = await _capitulos_listos(sesion, obra_id)
+
+    # `CA-21`. **Antes de escribir nada**: `publicar` ya es atomico por su
+    # SAVEPOINT, pero verificar primero es mas barato y deja el fallo mas claro,
+    # porque no hay nada que deshacer.
+    #
+    # Si falta la herramienta, `correr_lean` lanza `HerramientaNoDisponible` y
+    # **tampoco se publica**: que no este instalado Lean no puede degradar a
+    # «pues entregamos sin comprobar». La verificacion formal es eliminatoria.
+    veredicto = await correr_lean(sesion, obra_id)
+    if not veredicto.ok:
+        raise CronologiaIncoherente(veredicto.mensaje)
+
     anterior = await ultima_version(sesion, obra_id)
     fijados = (
         {}

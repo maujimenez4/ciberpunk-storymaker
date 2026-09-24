@@ -57,6 +57,7 @@ commit que el simbolo.** Un `__all__` que nombra algo que no existe rompe la
 importacion de la feature entera, y con ella la de todo el que la use.
 """
 
+from app.features.manuscrito.lean import HerramientaNoDisponible, correr_lean
 from app.features.manuscrito.modelos import nuevo_identificador_publico
 from app.features.manuscrito.repository import (
     capitulos_cambiados,
@@ -80,6 +81,7 @@ from app.features.manuscrito.schemas import (
 )
 from app.features.manuscrito.service import (
     CapituloSinPuerta,
+    CronologiaIncoherente,
     dedicatoria_o_nada,
     ensamblar_manuscrito,
     publicar,
@@ -88,13 +90,16 @@ from app.features.manuscrito.service import (
 __all__ = [
     "CapituloPublicado",
     "CapituloSinPuerta",
+    "CronologiaIncoherente",
     "DedicatoriaEntrada",
     "DefectoDelCuadro",
     "EntradaDeFicha",
     "FichaDeLectura",
+    "HerramientaNoDisponible",
     "VersionPublicada",
     "capitulos_cambiados",
     "capitulos_de",
+    "correr_lean",
     "dedicatoria_de",
     "dedicatoria_o_nada",
     "ensamblar_manuscrito",

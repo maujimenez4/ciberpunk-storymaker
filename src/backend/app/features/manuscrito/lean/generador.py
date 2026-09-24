@@ -120,7 +120,7 @@ async def generar_lean(sesion: AsyncSession, obra_id: int) -> str:
         (
             await sesion.execute(
                 text(
-                    "SELECT evento_id, tiempo_historia, lugar, participantes"
+                    "SELECT evento_id, tiempo_historia, lugar, participantes, excluye"
                     " FROM cronologia WHERE obra_id = :obra"
                     " ORDER BY orden_discurso IS NULL DESC, orden_discurso, evento_id"
                 ),
@@ -133,8 +133,17 @@ async def generar_lean(sesion: AsyncSession, obra_id: int) -> str:
 
     momentos, lugares, personajes = _Indice(), _Indice(), _Indice()
     eventos: list[str] = []
+    exclusiones: list[str] = []
 
     for fila in filas:
+        # `excluye[]` se lee **aunque el evento no tenga participantes**: una
+        # muerte o una partida definitiva puede no tener a nadie «presente», y
+        # perderla dejaria el invariante 2 sin nada contra que comparar.
+        for excluido in _participantes_de(fila.get("excluye")):
+            exclusiones.append(
+                f"⟨{momentos.de(str(fila['tiempo_historia']))}, {personajes.de(excluido)}⟩"
+            )
+
         participantes = _participantes_de(fila["participantes"])
         if not participantes:
             # Un evento sin participantes no dice de nadie donde estaba. No hay
@@ -144,12 +153,6 @@ async def generar_lean(sesion: AsyncSession, obra_id: int) -> str:
         lugar = lugares.de(str(fila["lugar"] or ""))
         eventos.extend(f"⟨{momento}, {personajes.de(p)}, {lugar}⟩" for p in participantes)
 
-    if eventos:
-        cuerpo = "\n".join(f"    {e}," for e in eventos)
-        lista = f"def eventos : List Evento := [\n{cuerpo}\n  ]"
-    else:
-        lista = "def eventos : List Evento := []"
-
     return "\n".join(
         [
             CABECERA.format(obra_id=obra_id, filas=len(eventos)),
@@ -157,7 +160,21 @@ async def generar_lean(sesion: AsyncSession, obra_id: int) -> str:
             _lista_de_nombres("lugares", lugares.nombres),
             _lista_de_nombres("personajes", personajes.nombres),
             "",
-            lista,
+            _lista_de_registros("eventos", "Evento", eventos),
+            "",
+            _lista_de_registros("exclusiones", "Exclusion", exclusiones),
             "",
         ]
     )
+
+
+def _lista_de_registros(nombre: str, tipo: str, filas: list[str]) -> str:
+    """`def <nombre> : List <tipo> := [...]`, vacia o en varias lineas.
+
+    La lista vacia se emite en una sola linea a proposito: es la forma que R-3
+    busca en el fichero para distinguir «paso por vacio» de «paso comprobando».
+    """
+    if not filas:
+        return f"def {nombre} : List {tipo} := []"
+    cuerpo = "\n".join(f"    {f}," for f in filas)
+    return f"def {nombre} : List {tipo} := [\n{cuerpo}\n  ]"
