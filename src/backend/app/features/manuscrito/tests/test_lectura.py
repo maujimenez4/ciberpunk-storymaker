@@ -150,6 +150,22 @@ async def test_la_portada_trae_la_dedicatoria_y_los_capitulos_con_titulo(
     assert "cambiado" in cuerpo["capitulos"][0]
 
 
+async def test_la_portada_trae_el_titulo_de_la_obra(
+    cliente: TestClient, version: VersionPublicada
+) -> None:
+    """`RF-POR-01` pide «el titulo de la obra **y** la dedicatoria», y la
+    portada solo servia la segunda.
+
+    Lo encontro el frontend al pintar: con el esquema como estaba, **la novela
+    no podia llevar su nombre en la pagina donde se abre**. Es la clase de hueco
+    que no rompe ningun test del backend -nadie echa en falta un campo que nunca
+    estuvo- y que se ve en cuanto alguien intenta usarlo.
+    """
+    cuerpo = cliente.get(f"/lectura/{version.identificador_publico}").json()
+
+    assert cuerpo["titulo"], "la portada no trae el titulo de la obra (RF-POR-01)"
+
+
 async def test_la_portada_no_trae_la_prosa_de_los_diez(
     cliente: TestClient, version: VersionPublicada
 ) -> None:

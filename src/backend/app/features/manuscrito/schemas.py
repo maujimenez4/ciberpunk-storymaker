@@ -74,6 +74,15 @@ class VersionPublicada(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    # `RF-POR-01` pide «el titulo de la obra **y** la dedicatoria». Faltaba, y
+    # lo encontro el frontend al intentar pintar la portada: sin el, la novela
+    # no puede llevar su nombre en la pagina donde se abre. Es un hueco que no
+    # rompia ningun test -- nadie echa en falta un campo que nunca estuvo -- y
+    # que aparece en cuanto alguien intenta usarlo.
+    #
+    # Va con valor por defecto **vacio y no nulo**: la portada siempre pinta un
+    # encabezado, y `None` obligaria a cada llamador a decidir que poner ahi.
+    titulo: str = ""
     ordinal: int
     publicada_en: datetime
     dedicatoria: str | None = None

@@ -33,6 +33,7 @@ from app.features.manuscrito.repository import (
     dedicatoria_de,
     ficha_de,
     texto_publicado,
+    titulo_de_obra,
     version_por_token,
     versiones_de,
 )
@@ -74,6 +75,7 @@ async def portada(token: str, sesion: Sesion) -> VersionPublicada:
     dedicatoria = await dedicatoria_de(sesion, version.obra_id)
 
     return VersionPublicada(
+        titulo=await titulo_de_obra(sesion, version.obra_id),
         ordinal=version.ordinal,
         publicada_en=version.publicada_en,
         dedicatoria=dedicatoria.texto if dedicatoria else None,

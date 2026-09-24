@@ -221,6 +221,27 @@ async def elementos_obligatorios_de(sesion: AsyncSession, obra_id: int) -> list[
     return [str(v) for v in crudo or []]
 
 
+async def titulo_de_obra(sesion: AsyncSession, obra_id: int) -> str:
+    """El titulo de la novela, para la portada (`RF-POR-01`).
+
+    Por SQL crudo y no por el modelo `Obra`, igual que
+    `elementos_obligatorios_de` justo encima y por el mismo motivo: `Obra` vive
+    en la feature `obra` y una feature solo entra a otra por su `__init__.py`
+    (`CLAUDE.md` §5.1). Leer una columna por nombre no cruza esa frontera; su
+    modelo, si.
+
+    Devuelve cadena vacia si la obra no esta, y no lanza: la portada ya decidio
+    que existe -- llego por un token valido -- y un titulo ausente no es motivo
+    para negarle la novela a nadie.
+    """
+    titulo = (
+        await sesion.execute(
+            text("SELECT titulo FROM obra WHERE id = :obra_id"), {"obra_id": obra_id}
+        )
+    ).scalar_one_or_none()
+    return str(titulo or "")
+
+
 async def texto_publicado(sesion: AsyncSession, version_id: int, numero: int) -> str | None:
     """El texto **fijado** de un capitulo publicado, no el vigente de hoy.
 
