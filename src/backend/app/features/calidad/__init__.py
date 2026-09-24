@@ -58,6 +58,17 @@ from app.features.calidad.policy import (
     localizar_veto,
 )
 from app.features.calidad.puerta import ResultadoDePuerta, cruzar_g1a
+from app.features.calidad.rubrica import (
+    # `RUBRICA_V1` **no sale a proposito**. `CA-20` pide que la rubrica del juez
+    # y la que se le presenta al Autor sean *la misma*, y `rubrica_vigente()`
+    # devuelve la misma instancia mientras la constante invita a construir una
+    # copia igual pero distinta: dos objetos equivalentes miden dos reglas, y la
+    # distancia de `RF-JUZ-05` dejaria de comparar lo que dice comparar.
+    Criterio,
+    Rubrica,
+    hash_de_rubrica,
+    rubrica_vigente,
+)
 from app.features.calidad.schemas import (
     Defecto,
     NombreDeCanon,
@@ -97,6 +108,7 @@ __all__ = [
     "ConocimientoEnT",
     "Continuista",
     "ContrasteDeConocimiento",
+    "Criterio",
     "Critico",
     "DecisionDePolicy",
     "Defecto",
@@ -121,6 +133,7 @@ __all__ = [
     "ResultadoDePolicy",
     "ResultadoDePuerta",
     "RevisionDeContinuidad",
+    "Rubrica",
     "RubricaDiscordante",
     "SalidaMalFormada",
     "TiempoVerbal",
@@ -134,6 +147,8 @@ __all__ = [
     "cruzar_g1a",
     "discurso",
     "extension_de_capitulo",
+    "hash_de_rubrica",
     "localizar_veto",
     "nombres_literales",
+    "rubrica_vigente",
 ]
