@@ -211,6 +211,62 @@ describe("lo que el comprador cuenta", () => {
 });
 
 /**
+ * Plan 4 · T4 · **La entrevista en tres bloques con título.** Nueve preguntas
+ * seguidas se leían como un impreso; agrupadas, cada bloque dice de qué va. Los
+ * campos y el contrato con el backend no cambian: lo guardan los tests de
+ * arriba.
+ */
+describe("la entrevista en tres bloques", () => {
+  it.each([
+    ["quién es", [/cómo se llama/i, /qué edad/i, /cómo es/i, /un recuerdo/i]],
+    [
+      "cómo quieres la historia",
+      [/qué tipo de historia/i, /cómo quieres que suene/i, /cuánto romance/i, /tiene que aparecer/i],
+    ],
+    ["lo que no debe aparecer", [/prefieras que no aparezca/i]],
+  ] as const)("el bloque «%s» agrupa sus preguntas", async (titulo, campos) => {
+    render(<Entrevista />, { wrapper: conDoble(dobleDeEntrevista()) });
+
+    // `fieldset` + `legend`: el lector de pantalla anuncia el título del
+    // bloque al entrar en cualquiera de sus campos.
+    const bloque = await screen.findByRole("group", { name: new RegExp(`^${titulo}$`, "i") });
+    for (const campo of campos) {
+      expect(within(bloque).getByLabelText(campo)).toBeInTheDocument();
+    }
+  });
+
+  it("son tres bloques y ninguna pregunta se queda fuera de uno", async () => {
+    const { container } = render(<Entrevista />, { wrapper: conDoble(dobleDeEntrevista()) });
+    await screen.findByLabelText(/cómo se llama/i);
+
+    expect(screen.getAllByRole("group")).toHaveLength(3);
+    for (const control of container.querySelectorAll("form input, form select, form textarea")) {
+      expect(control.closest("fieldset")).not.toBeNull();
+    }
+  });
+
+  it("empezar otra novela es una salida discreta, y reintentar no compite con la accion", async () => {
+    apuntar({ obraId: 7, fase: "outline", desde: 1 });
+    const doble = dobleDeLaCadena({
+      obra_id: 7,
+      total: 0,
+      integrados: 0,
+      en_curso: null,
+      estado: "sin_outline",
+      motivo: null,
+    });
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    expect(await screen.findByRole("button", { name: /preparar la historia otra vez/i })).toHaveClass(
+      "boton--secundario",
+    );
+    expect(screen.getByRole("button", { name: /empezar otra novela/i })).toHaveClass(
+      "boton--discreto",
+    );
+  });
+});
+
+/**
  * La cadena de escribir: cerrar → outline → novela → consultar → publicar.
  *
  * La primera corrida real destapó dos cosas que ningún test veía: **no se

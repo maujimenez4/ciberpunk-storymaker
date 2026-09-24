@@ -6,6 +6,7 @@ import { Pagina } from "@/shared/ui/patterns/Pagina";
 import { Aviso, Boton, Pasos, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type EstadoDeLaNovela, type Evaluacion } from "../api/entrevista";
+import "../creacion.css";
 import {
   guardarNovelaEnCurso,
   leerNovelaEnCurso,
@@ -48,24 +49,76 @@ const QUE_FALLO: Record<Paso, string> = {
  */
 type Forma = "texto" | "entero" | "lista" | "calor";
 
-const CAMPOS: readonly { clave: string; etiqueta: string; forma: Forma }[] = [
-  { clave: "nombre", etiqueta: "¿Cómo se llama?", forma: "texto" },
-  { clave: "edad", etiqueta: "¿Qué edad tiene?", forma: "entero" },
-  { clave: "rasgos", etiqueta: "¿Cómo es? Tres o cuatro rasgos, separados por comas", forma: "lista" },
-  { clave: "recuerdos_aportados", etiqueta: "Un recuerdo que compartáis", forma: "lista" },
+/**
+ * Los tres bloques del formulario (plan 4, T4). Agrupan **la pantalla**, no el
+ * contrato: el cuerpo de `/respuestas` sale de `CAMPOS` en su orden, y ese
+ * orden no se toca.
+ */
+type Bloque = "quien" | "historia" | "vetos";
+
+const BLOQUES: readonly { bloque: Bloque; titulo: string; ayuda: string }[] = [
+  {
+    bloque: "quien",
+    titulo: "Quién es",
+    ayuda: "La persona que va a recibir la novela.",
+  },
+  {
+    bloque: "historia",
+    titulo: "Cómo quieres la historia",
+    ayuda: "El tipo de novela y lo que no puede faltar en ella.",
+  },
+  {
+    bloque: "vetos",
+    titulo: "Lo que no debe aparecer",
+    ayuda: "Si algo le molestaría leerlo, no saldrá en ninguna página.",
+  },
+];
+
+const CAMPOS: readonly { clave: string; etiqueta: string; forma: Forma; bloque: Bloque }[] = [
+  { clave: "nombre", etiqueta: "¿Cómo se llama?", forma: "texto", bloque: "quien" },
+  { clave: "edad", etiqueta: "¿Qué edad tiene?", forma: "entero", bloque: "quien" },
+  {
+    clave: "rasgos",
+    etiqueta: "¿Cómo es? Tres o cuatro rasgos, separados por comas",
+    forma: "lista",
+    bloque: "quien",
+  },
+  {
+    clave: "recuerdos_aportados",
+    etiqueta: "Un recuerdo que compartáis",
+    forma: "lista",
+    bloque: "quien",
+  },
   {
     clave: "genero",
     etiqueta: "¿Qué tipo de historia? Romance, aventura, misterio…",
     forma: "texto",
+    bloque: "historia",
   },
-  { clave: "tono", etiqueta: "¿Cómo quieres que suene? Divertida, seria, tierna…", forma: "texto" },
-  { clave: "nivel_de_calor", etiqueta: "¿Cuánto romance o intimidad quieres?", forma: "calor" },
+  {
+    clave: "tono",
+    etiqueta: "¿Cómo quieres que suene? Divertida, seria, tierna…",
+    forma: "texto",
+    bloque: "historia",
+  },
+  {
+    clave: "nivel_de_calor",
+    etiqueta: "¿Cuánto romance o intimidad quieres?",
+    forma: "calor",
+    bloque: "historia",
+  },
   {
     clave: "elementos_obligatorios",
     etiqueta: "¿Qué tiene que aparecer sí o sí? Un lugar, una mascota, un objeto… separados por comas",
     forma: "lista",
+    bloque: "historia",
   },
-  { clave: "vetos", etiqueta: "¿Hay algo que prefieras que no aparezca? Separado por comas", forma: "lista" },
+  {
+    clave: "vetos",
+    etiqueta: "¿Hay algo que prefieras que no aparezca? Separado por comas",
+    forma: "lista",
+    bloque: "vetos",
+  },
 ];
 
 const NIVELES_DE_CALOR = [
@@ -494,19 +547,23 @@ function Recorrido({
         {cadena}
 
         {fallaLaHistoria && !ocupado ? (
-          <Boton onClick={() => reintentar("outline")}>Preparar la historia otra vez</Boton>
+          <Boton variante="secundario" onClick={() => reintentar("outline")}>
+            Preparar la historia otra vez
+          </Boton>
         ) : null}
 
         {fallaLaNovela && !ocupado ? (
           // `POST /novela` sigue por el primer capitulo sin integrar: lo
           // escrito no se pierde, y el nombre del boton lo dice.
-          <Boton onClick={() => reintentar("novela")}>
+          <Boton variante="secundario" onClick={() => reintentar("novela")}>
             Escribir la novela desde donde se quedó
           </Boton>
         ) : null}
 
         {publicar.isError && !ocupado ? (
-          <Boton onClick={() => publicar.mutate(obra.obraId)}>Publicar la novela</Boton>
+          <Boton variante="secundario" onClick={() => publicar.mutate(obra.obraId)}>
+            Publicar la novela
+          </Boton>
         ) : null}
 
         <div className="otra">
@@ -514,7 +571,7 @@ function Recorrido({
             Si prefieres encargar otra, esta seguirá escribiéndose, pero la página dejará de
             seguirla.
           </p>
-          <Boton variante="secundario" onClick={onEmpezarOtra}>
+          <Boton variante="discreto" onClick={onEmpezarOtra}>
             Empezar otra novela
           </Boton>
         </div>
@@ -537,64 +594,56 @@ function Recorrido({
           guardar.mutate();
         }}
       >
-        {CAMPOS.map((campo) => (
-          <p key={campo.clave} className="campo">
-            {/* Etiqueta de verdad y no un `placeholder`: un `placeholder`
-                desaparece al escribir y deja al lector de pantalla sin nombre
-                que anunciar (`RF-ACC-03`). */}
-            <label className="campo__etiqueta" htmlFor={`campo-${campo.clave}`}>
-              {campo.etiqueta}
-            </label>
-            {campo.forma === "calor" ? (
-              // Con una opción en blanco por defecto: si se abriera en «0»,
-              // viajaría un dato que el comprador no dio.
-              <select
-                id={`campo-${campo.clave}`}
-                className="campo__control"
-                value={valores[campo.clave] ?? ""}
-                onChange={(e) =>
-                  setValores((previos) => ({ ...previos, [campo.clave]: e.target.value }))
-                }
-              >
-                <option value="">Elige uno</option>
-                {NIVELES_DE_CALOR.map((nivel) => (
-                  <option key={nivel.valor} value={nivel.valor}>
-                    {nivel.etiqueta}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                id={`campo-${campo.clave}`}
-                className="campo__control"
-                type="text"
-                inputMode={campo.forma === "entero" ? "numeric" : undefined}
-                value={valores[campo.clave] ?? ""}
-                onChange={(e) =>
-                  setValores((previos) => ({ ...previos, [campo.clave]: e.target.value }))
+        {BLOQUES.map(({ bloque, titulo, ayuda }) => (
+          // `fieldset` + `legend`: el lector de pantalla anuncia el título del
+          // bloque al entrar en cualquiera de sus campos.
+          <fieldset
+            key={bloque}
+            className="bloque"
+            aria-describedby={`bloque-${bloque}-ayuda`}
+          >
+            <legend className="bloque__titulo">{titulo}</legend>
+            <p id={`bloque-${bloque}-ayuda`} className="bloque__ayuda">
+              {ayuda}
+            </p>
+
+            {CAMPOS.filter((campo) => campo.bloque === bloque).map((campo) => (
+              <Campo
+                key={campo.clave}
+                clave={campo.clave}
+                etiqueta={campo.etiqueta}
+                forma={campo.forma}
+                valor={valores[campo.clave] ?? ""}
+                alCambiar={(valor) =>
+                  setValores((previos) => ({ ...previos, [campo.clave]: valor }))
                 }
               />
-            )}
-          </p>
-        ))}
+            ))}
 
-        <p className="campo">
-          <label className="campo__etiqueta" htmlFor="campo-pegado">
-            Si tienes una carta, una anécdota o un mensaje suyo, pega aquí el texto
-          </label>
-          <textarea
-            id="campo-pegado"
-            className="campo__control"
-            rows={6}
-            value={pegado}
-            onChange={(e) => setPegado(e.target.value)}
-          />
-        </p>
+            {/* El texto pegado va con quien es: una carta suya o una anécdota
+                dice de esa persona más que cualquier rasgo. Viaja en su propio
+                campo, nunca dentro de `respuestas` (§11). */}
+            {bloque === "quien" ? (
+              <p className="campo">
+                <label className="campo__etiqueta" htmlFor="campo-pegado">
+                  Si tienes una carta, una anécdota o un mensaje suyo, pega aquí el texto
+                </label>
+                <textarea
+                  id="campo-pegado"
+                  className="campo__control"
+                  rows={6}
+                  value={pegado}
+                  onChange={(e) => setPegado(e.target.value)}
+                />
+              </p>
+            ) : null}
+          </fieldset>
+        ))}
 
         {/* Desactivado mientras espera: el Entrevistador tarda segundos, y un
             segundo clic lanzaba otro `POST /respuestas` que moría con
             `database is locked` (596faba). */}
-        <Boton type="submit" disabled={guardar.isPending}>
+        <Boton type="submit" variante="principal" disabled={guardar.isPending}>
           Guardar y comprobar
         </Boton>
       </form>
@@ -624,6 +673,7 @@ function Recorrido({
 
       {listo ? (
         <Boton
+          variante="principal"
           onClick={() => {
             setParada(null);
             publicar.reset();
@@ -637,6 +687,57 @@ function Recorrido({
         </Boton>
       ) : null}
     </Pagina>
+  );
+}
+
+function Campo({
+  clave,
+  etiqueta,
+  forma,
+  valor,
+  alCambiar,
+}: {
+  clave: string;
+  etiqueta: string;
+  forma: Forma;
+  valor: string;
+  alCambiar: (valor: string) => void;
+}) {
+  return (
+    <p className="campo">
+      {/* Etiqueta de verdad y no un `placeholder`: un `placeholder`
+          desaparece al escribir y deja al lector de pantalla sin nombre
+          que anunciar (`RF-ACC-03`). */}
+      <label className="campo__etiqueta" htmlFor={`campo-${clave}`}>
+        {etiqueta}
+      </label>
+      {forma === "calor" ? (
+        // Con una opción en blanco por defecto: si se abriera en «0»,
+        // viajaría un dato que el comprador no dio.
+        <select
+          id={`campo-${clave}`}
+          className="campo__control"
+          value={valor}
+          onChange={(e) => alCambiar(e.target.value)}
+        >
+          <option value="">Elige uno</option>
+          {NIVELES_DE_CALOR.map((nivel) => (
+            <option key={nivel.valor} value={nivel.valor}>
+              {nivel.etiqueta}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={`campo-${clave}`}
+          className="campo__control"
+          type="text"
+          inputMode={forma === "entero" ? "numeric" : undefined}
+          value={valor}
+          onChange={(e) => alCambiar(e.target.value)}
+        />
+      )}
+    </p>
   );
 }
 
