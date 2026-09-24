@@ -22,6 +22,11 @@ paquete recibido».
   avance por capitulo** (T5 de la Fase 3), que es de lo que vive la reanudacion.
   Sale por la puerta porque quien lo consume —el orquestador de la novela— no
   esta dentro de esta feature.
+- `ESTADOS_VIVOS`, `Reanudacion`, `Retomada`, `TrabajoTerminal`, `descartar`,
+  `planificar_reanudacion`, `reanudar` y `trabajos_en_vuelo`: **la reanudacion
+  tras la caida** (T8 de la Fase 3), por el mismo motivo que el avance — quien
+  arranca el proceso y decide por donde sigue la novela es `novela.py` (T9), que
+  todavia no existe, y el router de operacion, que tampoco esta dentro.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
@@ -91,6 +96,16 @@ from app.features.escritura.maquina import (
     exigir_que_la_novela_siga,
     transitar,
 )
+from app.features.escritura.reanudacion import (
+    ESTADOS_VIVOS,
+    Reanudacion,
+    Retomada,
+    TrabajoTerminal,
+    descartar,
+    planificar_reanudacion,
+    reanudar,
+    trabajos_en_vuelo,
+)
 from app.features.escritura.router import obtener_sesion_de_fondo, router
 from app.features.escritura.service import (
     CODIGO_DE_PALABRA_PROHIBIDA,
@@ -104,6 +119,7 @@ __all__ = [
     "CODIGO_DE_PALABRA_PROHIBIDA",
     "DETIENEN_LA_NOVELA",
     "ESTADOS_TERMINALES",
+    "ESTADOS_VIVOS",
     "HASH_DE_PLANTILLA_V1",
     "PROMPT_ID",
     "PROMPT_VERSION",
@@ -126,16 +142,20 @@ __all__ = [
     "RastroEnEvento",
     "RastroEnHechoCanon",
     "RastroEnVersionTexto",
+    "Reanudacion",
     "Reparacion",
     "ResultadoDelCiclo",
     "ResultadoDelPaso",
+    "Retomada",
     "Senal",
     "TrabajoDesconocido",
     "TrabajoSinCapitulo",
+    "TrabajoTerminal",
     "TransicionInexistente",
     "abrir_trabajo",
     "atar_al_capitulo",
     "avanzar",
+    "descartar",
     "detiene_la_novela",
     "ejecutar_ciclo",
     "empezar_capitulo",
@@ -145,10 +165,13 @@ __all__ = [
     "leer_trabajo",
     "localizar_veto",
     "obtener_sesion_de_fondo",
+    "planificar_reanudacion",
+    "reanudar",
     "registrar_checkpoint",
     "reparaciones_del_capitulo",
     "router",
     "siguiente_capitulo",
+    "trabajos_en_vuelo",
     "transitar",
     "ultimo_capitulo_completado",
     "una_sola_vez",
