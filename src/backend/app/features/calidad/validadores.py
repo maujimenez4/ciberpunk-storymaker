@@ -388,6 +388,9 @@ class CierreDelManuscrito:
 
     cobertura: Cobertura
     validadores_ejecutados: tuple[str, ...]
+    validadores_rotos: tuple[str, ...] = ()
+    """Los que lanzaron. Mismo criterio que en `ResultadoDePuerta`: un validador
+    roto no es una cobertura completa, es una cobertura que nadie comprobo."""
 
 
 def _cobertura_de_personalizacion(manuscrito: ManuscritoAValidar) -> Cobertura:
@@ -424,9 +427,14 @@ def cerrar_manuscrito(
     ausentes: dict[str, ElementoAusente] = {}
     ejecutados: list[str] = []
 
+    rotos: list[str] = []
     for validador in catalogo:
+        try:
+            cobertura = validador.comprobar(manuscrito)
+        except Exception:  # noqa: BLE001 - fallo del validador, no del manuscrito
+            rotos.append(validador.nombre)
+            continue
         ejecutados.append(validador.nombre)
-        cobertura = validador.comprobar(manuscrito)
         for cubierto in cobertura.cubiertos:
             cubiertos[cubierto.elemento] = cubierto
         for ausente in cobertura.ausentes:
@@ -443,4 +451,5 @@ def cerrar_manuscrito(
             ausentes=tuple(ausentes[e] for e in orden if e in ausentes and e not in cubiertos),
         ),
         validadores_ejecutados=tuple(ejecutados),
+        validadores_rotos=tuple(rotos),
     )
