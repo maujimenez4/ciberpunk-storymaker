@@ -81,27 +81,36 @@ Hoy no existe nada: `src/frontend/` está vacío, y el backend que sirve estos d
 
 Tomadas por `maujimenez4` el 2026-09-23. Van aquí y no en Preguntas abiertas porque están cerradas, y cada una descarta una alternativa que parecía razonable.
 
-**D-06 · Un solo enlace y una sola página: tres vistas, ninguna URL nueva.** Decidido por `maujimenez4` el 2026-09-24, **e invierte la forma que esta spec tenía aprobada**.
+**D-06 · Dos entradas, una aplicación: la entrevista en la raíz, la lectura bajo el token.** Decidido por `maujimenez4` el 2026-09-24, **e invierte la forma que esta spec tenía aprobada**.
 
-Hasta hoy la lectura eran **cinco rutas** —portada, índice, capítulo, ficha y novedades— con el `token` repetido en todas. Ahora hay **un enlace, `/l/{token}`, y dentro tres vistas**:
+Hasta hoy la lectura eran **cinco rutas** —portada, índice, capítulo, ficha y novedades—, y la entrevista no estaba en esta spec. Ahora:
 
-| Vista | Qué es | De dónde sale |
-| --- | --- | --- |
-| **Leer** | La novela entera, continua, **tipo Kindle** | Sustituye a portada, índice y capítulo |
-| **La entrevista** | Lo que el comprador contó y que produjo esta novela | **Nueva.** No estaba en esta spec |
-| **Quién es quién** | Personajes y lugares | La ficha de lectura de D-02 y D-04 |
+| Entrada | Pantalla | Quién | Cuándo |
+| --- | --- | --- | --- |
+| **`/`** | **La entrevista.** El formulario que rellena el comprador y del que sale la novela | **Comprador** | Antes de que exista novela |
+| **`/l/{token}`** | **Leer**, la novela entera y continua, **tipo Kindle** | Destinatario | Después de publicar |
+| | **Quién es quién**, personajes y lugares | Destinatario | |
 
-**Por qué se invierte.** Cinco URLs eran la forma natural de una aplicación web y **la forma equivocada de un regalo**. El enlace se comparte por mensajería, se reenvía y se pega; cada URL de más es una manera de que alguien reciba el enlace a la página tres y no sepa que hay una uno. *«No se van a repartir links para la novela»* — y una novela que se lee saltando entre cinco direcciones no se lee como un libro, se navega como un sitio.
+**Una sola aplicación** —misma SPA, mismo diseño, misma navegación— con **dos puertas**, porque son dos actores en dos momentos y el encargo los separa él mismo: su §1 es *Configuración* y su §2 es *Lectura interactiva*.
 
-**Qué se conserva.** El `token` sigue siendo lo único que protege la lectura, y sigue siendo el único identificador de la URL: `RF-LEC-01` no cambia. El backend tampoco: sus rutas de lectura siguen siendo cinco porque son **API**, y una API con recursos separados es lo que permite que la página cargue un capítulo sin arrastrar los diez.
+**Por qué la lectura deja de tener cinco URLs.** Cinco direcciones eran la forma natural de una aplicación web y la forma equivocada de un regalo: el enlace se comparte por mensajería, se reenvía y se pega, y cada URL de más es una manera de que alguien reciba el enlace a la página tres sin saber que hay una uno. *«No se van a repartir links para la novela.»*
+
+**Por qué la entrevista no cuelga del token, y son dos motivos independientes.**
+
+1. **Es imposible cuando se usa.** El token nace con la versión publicada (`RF-PUB-07`) y la entrevista ocurre **antes de que exista novela**. Mientras el comprador rellena el formulario no hay token que poner en la URL. No es incómodo: no existe.
+2. **Sería indeseable cuando fuera posible.** Si la entrevista fuera una pestaña de `/l/{token}`, **el enlace que se reparte —el del regalo— llevaría al formulario donde está lo que el comprador escribió sobre el destinatario**: sus rasgos, sus recuerdos y, sobre todo, lo que pidió que no apareciera. *«No menciones la enfermedad de su padre»*, leído por el hijo, es peor que el silencio que se compraba, porque ahí aparece como una instrucción.
+
+Juntos: **bajo el token la entrevista es imposible cuando se necesita e insegura cuando sería posible.** `RF-LEC-01` no se toca — el token sigue protegiendo **la lectura**, que es lo que siempre protegió.
+
+*Se descartó* una pestaña de entrevista visible solo con una credencial distinta del token: eso es **una segunda credencial**, o sea justo lo que `D-01` quitó a propósito, y devuelve «dos enlaces con capacidades distintas» por la puerta de atrás.
 
 **Qué cuesta, y hay que decirlo.** Tres cosas dejan de ser gratis:
 
-1. **La posición de lectura ya no vive en la URL.** Con `/l/{token}/capitulo/7`, cerrar y volver era gratis. Ahora hace falta guardarla, y un fragmento (`#capitulo-7`) es lo mínimo para que el enlace siga pudiendo apuntar a un sitio concreto cuando alguien lo comparte a propósito.
-2. **`RF-VAL-08` de la 001 abre estas URLs desde fuera del repositorio** para la inspección visual. Al desaparecer cuatro rutas, ese validador deja de poder llegar a tres de las cuatro pantallas navegando. Hay que decidir cómo entra — y no se resuelve dejándolo roto.
-3. **Doce mil palabras en una página** no se pintan de una sola vez sin que el móvil sufra. La lectura continua es una decisión de producto que trae un problema de rendimiento con ella.
+1. **La posición de lectura ya no vive en la URL.** Con `/l/{token}/capitulo/7`, cerrar y volver era gratis. Ahora hace falta guardarla, y un fragmento (`#capitulo-7`) es lo mínimo para que alguien pueda compartir un punto concreto a propósito.
+2. **`RF-VAL-08` de la 001 abre estas URLs desde fuera del repositorio** para la inspección visual. Al desaparecer cuatro rutas, ese validador deja de poder llegar navegando. No se resuelve dejándolo roto.
+3. **Doce mil palabras en una página** no se pintan de una vez sin que un móvil sufra.
 
-**Y la entrevista es alcance nuevo**, no una reorganización: hoy ninguna ruta del backend la publica. Necesita su requisito, su endpoint y su decisión sobre **qué se enseña** — el brief lleva datos que el comprador escribió sobre el destinatario, y enseñárselos todos al destinatario no es obviamente lo que el comprador quería.
+**Y la entrevista es alcance nuevo para esta spec.** El backend ya tiene sus tres endpoints desde la Fase 1, así que la pantalla no parte de cero — pero el encargo §1 pide de ella dos cosas que no son pintar un formulario: **detectar los datos que faltan y al menos un tipo de contradicción**, y **tratar el texto libre que el comprador pega como contenido no confiable** (`CLAUDE.md` §11). Si la pantalla lo envía sin marcar como dato, la defensa se pierde en el último metro.
 
 ---
 
