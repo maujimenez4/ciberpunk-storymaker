@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1 / plan-2-capitulo
 titulo: "Fase 2 — Escribir un capítulo: el motor"
-estado: en-revision       # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo rellena una persona, nunca un agente
+estado: aprobado          # borrador | en-revision | aprobado | completado
+aprobado_por: maujimenez4 # firmado el 2026-09-24, con P-A, P-B y P-C cerradas
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
 hereda_de: specs/001-backend-v1/plan-1-encargo.md
