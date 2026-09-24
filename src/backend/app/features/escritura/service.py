@@ -37,12 +37,15 @@ from app.commons.llm.contador import ContadorDeTokens
 from app.features.calidad import (
     CODIGO_DE_PALABRA_PROHIBIDA,
     CapituloAContrastar,
+    CapituloAJuzgar,
     CapituloAPolicy,
     CapituloAValidar,
     ConocimientoEnT,
     Continuista,
+    Critico,
     Defecto,
     HechoDeCanon,
+    Juicio,
     NombreDeCanon,
     ParametrosDeDiscurso,
     Persona,
@@ -141,6 +144,12 @@ class Escritura:
     texto: str
     intentos: tuple[IntentoDeEscritura, ...]
     motivo_de_escalado: str | None = None
+    juicio: Juicio | None = None
+    """Lo que dijo el juez, **y nada mas que lo que dijo**.
+
+    Vive aqui y no en `ResultadoDePuerta` a proposito: la puerta decide y este
+    campo no, asi que separarlos hace estructural lo que RF-JUZ-06 pide. Es
+    `None` cuando no hay Critico, que no es lo mismo que un juicio vacio."""
 
     @property
     def reparaciones_gastadas(self) -> int:
@@ -273,6 +282,27 @@ def _coste_de_la_reparacion(
     return extra
 
 
+async def _juzgar(critico: Critico | None, version_texto_id: str, texto: str) -> Juicio | None:
+    """Puntua, y lo que devuelve **no decide nada**.
+
+    Que el juicio salga en `Escritura` y no en la puerta es la forma de que eso
+    sea estructural y no disciplina: no hay ningun sitio donde una puntuacion
+    pueda cambiar `aprobado`, asi que empezar a bloquear exigiria un cambio que
+    se ve en una revision, no un descuido.
+    """
+    if critico is None:
+        return None
+    return await critico.juzgar(
+        CapituloAJuzgar(
+            version_texto_id=version_texto_id,
+            texto=texto,
+            # La rubrica sale del propio juez y no se importa aqui: asi hay
+            # **una** en juego, que es lo que `CA-20` pide.
+            rubrica=critico.rubrica,
+        )
+    )
+
+
 async def escribir_capitulo(
     sesion: AsyncSession,
     escritor: Escritor,
@@ -288,6 +318,7 @@ async def escribir_capitulo(
     vetos: Sequence[str] = (),
     semilla: int = 0,
     continuista: Continuista | None = None,
+    critico: Critico | None = None,
     grafo: Sequence[HechoDeCanon] = (),
     conocimiento: Sequence[ConocimientoEnT] = (),
     orden_discurso: int = 0,
@@ -414,6 +445,13 @@ async def escribir_capitulo(
             )
         )
 
+        # El juez corre **despues** de la puerta y su resultado no entra en
+        # ninguna decision: `RF-JUZ-06` dice que no bloquea hasta que su
+        # correlacion con la revision humana este medida y **firmada con el
+        # numero delante**. Se le llama igualmente porque lo que no corre no
+        # puede calibrarse, y sin calibrar no deja de bloquear nunca.
+        juicio = await _juzgar(critico, str(version.id), texto)
+
         if resultado.aprobado:
             await _completar_ejecucion(sesion, ejecucion_id, escritor, "aprobada")
             return Escritura(
@@ -422,6 +460,7 @@ async def escribir_capitulo(
                 texto=texto,
                 intentos=tuple(intentos),
                 motivo_de_escalado=None,
+                juicio=juicio,
             )
 
         # RF-ORQ-04: dos reparaciones dirigidas y ni una mas. El contador es

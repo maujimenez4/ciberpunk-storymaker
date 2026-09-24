@@ -35,7 +35,7 @@ from app.commons.db.sesion import obtener_motor, obtener_sesion
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.cliente import ClienteModelo, obtener_cliente_modelo
 from app.commons.llm.contador import ContadorDeTokens, ContadorTiktoken
-from app.features.calidad import Continuista
+from app.features.calidad import Continuista, Critico, rubrica_vigente
 from app.features.canon import Extractor, Vector, vectorizador_de
 from app.features.escena import Planificador
 from app.features.escritura.agents import Escritor
@@ -125,6 +125,10 @@ def obtener_agentes(
         escritor=Escritor(cliente),
         extractor=Extractor(cliente),
         continuista=Continuista(cliente),
+        # `rubrica_vigente()` y no `RUBRICA_V1`: `CA-20` pide que la rubrica
+        # del juez y la que se le presenta al Autor sean **la misma**, y dos
+        # objetos iguales pero distintos midirian dos reglas.
+        critico=Critico(cliente, rubrica_vigente()),
     )
 
 

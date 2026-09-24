@@ -163,6 +163,9 @@ def _respuestas(prosa: str = PROSA_BUENA) -> dict[str, str]:
         # Sin esta clave el doble lanza `RespuestaNoPreparada`, y eso es una
         # buena noticia: significa que el rol dejo de estar escrito y sin llamar.
         "# Continuista": '{"defectos": []}',
+        # El juez **no bloquea** (RF-JUZ-06), pero corre: lo que no corre no
+        # se puede calibrar, y sin calibrar no deja de bloquear nunca.
+        "# Crítico": '{"puntuaciones": [{"criterio": "continuidad", "valor": 3, "justificacion": "lo que se ve en continuidad"}, {"criterio": "tono", "valor": 3, "justificacion": "lo que se ve en tono"}, {"criterio": "arco", "valor": 3, "justificacion": "lo que se ve en arco"}, {"criterio": "coherencia_de_personajes", "valor": 3, "justificacion": "lo que se ve en coherencia_de_personajes"}, {"criterio": "ritmo", "valor": 3, "justificacion": "lo que se ve en ritmo"}, {"criterio": "naturalidad_de_la_personalizacion", "valor": 3, "justificacion": "lo que se ve en naturalidad_de_la_personalizacion"}]}',
     }
 
 

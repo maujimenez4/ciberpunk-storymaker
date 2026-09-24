@@ -55,6 +55,7 @@ from app.commons.llm.contador import ContadorDeTokens
 from app.features.calidad import (
     ConocimientoEnT,
     Continuista,
+    Critico,
     NombreDeCanon,
     RangoDeExtension,
 )
@@ -141,6 +142,12 @@ class Agentes:
     Cuando el Critico entre, los dos dejan de tener valor por defecto: un rol
     opcional en produccion es la forma de volver a tener P-17 sin que se note.
     """
+    critico: Critico | None = None
+    """El juez. **No bloquea** (`RF-JUZ-06`), y por eso conviene que corra: hasta
+    hoy esa garantia se sostenia sobre que nadie lo llamaba, que no es un
+    requisito cumplido sino uno que no se habia podido incumplir todavia.
+    `architecture.md` §8.3 avisa de esa clase de invariante: caduca el dia que
+    alguien conecta la pieza **sin que nada se ponga rojo**."""
 
 
 def conocimiento_desde_filas(
@@ -433,6 +440,7 @@ async def _escribir(
             vetos=await _vetos(sesion, trabajo.obra_id),
             semilla=semilla,
             continuista=agentes.continuista,
+            critico=agentes.critico,
             grafo=await leer_hechos_del_canon(sesion, obra_id=trabajo.obra_id),
             conocimiento=await _conocimiento(sesion, trabajo.obra_id),
             orden_discurso=await _orden_discurso(sesion, contexto.escena_id),

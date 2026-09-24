@@ -211,10 +211,6 @@ def test_el_json_de_la_vista_no_convierte_el_nulo_en_cero() -> None:
 # --- La juntura cerrada: el ciclo se lo pasa, y el router los construye -------
 
 
-SIN_CRITICO = "El Critico no sale por `calidad/__init__.py`, y ese fichero es del integrador"
-
-
-@pytest.mark.skip(reason=SIN_CRITICO)
 def test_agentes_admite_tambien_al_critico() -> None:
     """R-6 de Vane quedaba «dicho y no comprobado» porque `Agentes` no tenia
     donde meter al juez. Sin campo, no hay test de extremo a extremo, y el
@@ -235,9 +231,9 @@ def test_agentes_admite_tambien_al_critico() -> None:
 
 
 def _critico(doble):  # type: ignore[no-untyped-def]
-    from app.features.calidad import Critico
+    from app.features.calidad import Critico, rubrica_vigente
 
-    return Critico(doble)
+    return Critico(doble, rubrica_vigente())
 
 
 def test_el_router_deja_de_pasar_none() -> None:
@@ -253,3 +249,99 @@ def test_el_router_deja_de_pasar_none() -> None:
     agentes = obtener_agentes(Doble({}))
 
     assert agentes.continuista is not None, "el Continuista no correria en produccion"
+
+
+# --- R-6: el juez no bloquea, y ahora se puede incumplir ---------------------
+
+
+def _juicio_pesimo() -> str:
+    """La peor puntuacion posible en los seis criterios de la rubrica."""
+    from app.features.calidad import rubrica_vigente
+
+    return json.dumps(
+        {
+            "puntuaciones": [
+                {
+                    "criterio": criterio.nombre,
+                    "valor": 1,
+                    "justificacion": f"lo peor que se puede ver en {criterio.nombre}",
+                }
+                for criterio in rubrica_vigente().criterios
+            ]
+        }
+    )
+
+
+async def test_el_peor_juicio_posible_no_bloquea_el_capitulo(sesion, obra_con_outline) -> None:
+    """R-6, y hasta hoy **no se podia incumplir**.
+
+    `RF-JUZ-06` dice que el juez no bloquea hasta que su correlacion con la
+    revision humana este medida **y firmada con el numero delante**. Mientras
+    nadie llamara al Critico, eso era cierto por ausencia, no por diseno: es la
+    clase de invariante de la que `architecture.md` §8.3 avisa que caduca el dia
+    que alguien conecta la pieza **sin que nada se ponga rojo**.
+
+    Conectada la pieza, la garantia pasa a ser comprobable: seis unos, y el
+    capitulo sale aprobado igual.
+    """
+    from app.commons.llm.contador import ContadorDeTokens  # noqa: F401
+    from app.features.calidad import Critico, rubrica_vigente
+    from app.features.contexto import ensamblar_capitulo
+    from app.features.escena import RestriccionesDeDiscurso
+    from app.features.escritura.agents import Escritor
+    from app.features.escritura.service import escribir_capitulo
+
+    respuestas = {
+        "ESCRITOR · v1": PROSA,
+        "# Continuista": '{"defectos": []}',
+        "# Crítico": _juicio_pesimo(),
+    }
+    doble = DobleDeterminista(respuestas)
+    # Sin un hecho, la capa de canon llega vacia y el ensamblado falla con
+    # `CapaVacia`: es la misma fixture que usa `test_escritura.py`.
+    from app.features.obra.modelos import HechoCanon
+
+    sesion.add(
+        HechoCanon(
+            obra_id=obra_con_outline.obra.id,
+            entidad="Nadia",
+            atributo="oficio",
+            valor="botanica",
+            origen="escena",
+            escena_de_origen=str(obra_con_outline.escena.id),
+        )
+    )
+    await sesion.flush()
+    contexto = await ensamblar_capitulo(
+        sesion, obra_con_outline.capitulos[0].id, _ContadorDePalabras()
+    )
+
+    escritura = await escribir_capitulo(
+        sesion,
+        Escritor(doble),
+        contexto=contexto,
+        contador=_ContadorDePalabras(),
+        run_id="run-r6",
+        modelo="doble",
+        restricciones=RestriccionesDeDiscurso(
+            persona="3ª limitada", tiempo_verbal="pasado", nivel_de_calor=2
+        ),
+        rango_de_extension=RangoDeExtension(minimo=1, maximo=10_000),
+        critico=Critico(doble, rubrica_vigente()),
+    )
+
+    assert escritura.aprobado, "el juez ha bloqueado, y RF-JUZ-06 dice que no puede"
+    assert escritura.juicio is not None, "y aun asi tiene que haber puntuado"
+    assert [p.valor for p in escritura.juicio.puntuaciones] == [1] * 6
+
+
+PROSA = (
+    "Marta cerró la puerta del taller y se quedó quieta un momento. "
+    "Estaba cansada y no dijo nada más aquella tarde de octubre, "
+    "cuando la lluvia empezaba a golpear los cristales del puerto."
+)
+
+
+class _ContadorDePalabras:
+    def contar(self, texto: str) -> int:
+        return len(texto.split())
