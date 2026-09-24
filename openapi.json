@@ -339,6 +339,47 @@
       }
      }
     }
+   },
+   "get": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Consultar La Novela",
+    "description": "Cuantos capitulos hay, cuantos estan integrados, y si la novela sigue.",
+    "operationId": "consultar_la_novela_obras__obra_id__novela_get",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EstadoDeLaNovela"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/lectura/{token}": {
@@ -572,6 +613,51 @@
      }
     }
    }
+  },
+  "/obras/{obra_id}/publicar": {
+   "post": {
+    "tags": [
+     "publicacion"
+    ],
+    "summary": "Publicar Obra",
+    "description": "Fija una tirada inmutable y **devuelve el token con el que se lee**.\n\n`publicar` existia en el servicio desde la Fase 4 y no tenia ruta, asi que\ndesde el navegador no habia forma de publicar ni de saber cuando una novela\nse podia leer: el frontend llegaba hasta «se esta escribiendo» y ahi se\ncortaba. No faltaba una pantalla, **faltaba el dato**.\n\n**Es la unica ruta que devuelve el `identificador_publico`**, y la asimetria\ncon las de lectura es deliberada: alli no sale porque quien lee ya entro con\nel, y repetirlo solo lo pondria en un sitio mas -- un registro, una captura,\nun historial compartido --. Aqui sale porque quien publica aun no lo tiene.\n\nLos fallos de dominio -- un capitulo que no paso su puerta, una cronologia\nque Lean rechaza -- los traduce el manejador central de `commons/errors`\n(`CLAUDE.md` §6). Aqui no hay ni un `HTTPException`: un 500 dejaria al\nfrontend sin nada que contarle a quien acaba de encargar la novela.",
+    "operationId": "publicar_obra_obras__obra_id__publicar_post",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Publicar Obra Obras  Obra Id  Publicar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -787,6 +873,65 @@
     "title": "EntrevistaAbierta",
     "description": "Salida de RI-01. Nunca se expone el modelo de base de datos."
    },
+   "EstadoDeLaNovela": {
+    "properties": {
+     "obra_id": {
+      "type": "integer",
+      "title": "Obra Id"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "integrados": {
+      "type": "integer",
+      "title": "Integrados"
+     },
+     "en_curso": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "En Curso"
+     },
+     "estado": {
+      "type": "string",
+      "enum": [
+       "sin_outline",
+       "escribiendo",
+       "terminada",
+       "detenida"
+      ],
+      "title": "Estado"
+     },
+     "motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Motivo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "obra_id",
+     "total",
+     "integrados",
+     "en_curso",
+     "estado",
+     "motivo"
+    ],
+    "title": "EstadoDeLaNovela",
+    "description": "Por donde va la novela: lo que el navegador consulta mientras espera.\n\n`en_curso` es el **numero de outline** del capitulo que se esta escribiendo,\nno su id, por lo mismo que `EstadoDelTrabajo` lleva `numero_de_capitulo`.\n`motivo` solo va relleno cuando `estado` es `detenida`."
+   },
    "EstadoDelTrabajo": {
     "properties": {
      "id": {
@@ -997,7 +1142,7 @@
      "terminada"
     ],
     "title": "NovelaLanzada",
-    "description": "Lo que devuelve el arranque de la novela: **por donde va a empezar**.\n\nNo lleva identificadores de trabajo porque todavia no existen —los abre el\nbucle, uno por capitulo— y prometerlos obligaria a abrirlos por adelantado,\nque es justo lo que la secuencia prohibe. Lo que se devuelve es lo unico\ncierto en ese instante: de que obra se trata y cual es el capitulo pendiente.\nEl progreso se consulta despues por `GET /trabajos/{id}` (RI-06)."
+    "description": "Lo que devuelve el arranque de la novela: **por donde va a empezar**.\n\nNo lleva identificadores de trabajo porque todavia no existen —los abre el\nbucle, uno por capitulo— y prometerlos obligaria a abrirlos por adelantado,\nque es justo lo que la secuencia prohibe. Lo que se devuelve es lo unico\ncierto en ese instante: de que obra se trata y cual es el capitulo pendiente.\nEl progreso de la novela se consulta despues por `GET /obras/{id}/novela`,\ny el de cada capitulo por `GET /trabajos/{id}` (RI-06)."
    },
    "ObraCreada": {
     "properties": {
@@ -1175,6 +1320,11 @@
    },
    "VersionPublicada": {
     "properties": {
+     "titulo": {
+      "type": "string",
+      "title": "Titulo",
+      "default": ""
+     },
      "ordinal": {
       "type": "integer",
       "title": "Ordinal"
