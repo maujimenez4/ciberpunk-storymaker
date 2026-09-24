@@ -1,7 +1,7 @@
 ---
 id: 002-frontend / plan-4-apariencia-de-lectura
 titulo: "Fase 4 — Que parezca un lector de libros, no un formulario"
-estado: aprobado          # borrador | en-revision | aprobado | completado
+estado: completado        # borrador | en-revision | aprobado | completado — revisión visual (U) de maujimenez4, 2026-09-24: «ya la revise y la apruebo»
 aprobado_por: maujimenez4 # firmado el 2026-09-24 («esta aprobado ese plan, implementalo»)
 fecha: 2026-09-24
 spec: specs/002-frontend/spec.md      # D-06 («Leer… tipo Kindle»), D-07, RF-ACC-*
