@@ -1,12 +1,31 @@
 """La UNICA puerta de entrada a la feature `outline` (`CLAUDE.md` §5.1).
 
-Lo que no esta aqui no se importa desde fuera: ni `modelos.py`, ni el
-`service.py` y el `router.py` que traera la Tarea 3 con el Arquitecto.
+Lo que no esta aqui no se importa desde fuera: ni `modelos.py`, ni `router.py`,
+ni `service.py`. `main.py` monta `router` y nada mas.
 
-Hoy no exporta nada, y no es un olvido: la Tarea 2 solo trae el esquema, y las
-tablas **no se importan entre features**. Las claves ajenas se declaran por
-nombre de tabla, que es lo que permite que `escena` cuelgue de `capitulo` sin
-que las dos features se conozcan.
+Lo que si se exporta es **vocabulario**, no tablas: `BeatDeGenero`
+(`definitions.md` §6), y `Persona` y `TiempoVerbal` (§5), que son los literales
+que el Planificador de escena compara contra la ficha y el Escritor contra el
+texto (regla de dominio 10). Se exportan justo para que ninguno de los dos los
+vuelva a escribir a mano: tres grafias del mismo valor no fallan aqui, fallan al
+integrar. Las **tablas** siguen sin cruzar: las claves ajenas se declaran por
+nombre.
 """
 
-__all__: list[str] = []
+from app.features.outline.router import router
+from app.features.outline.schemas import (
+    BeatDeGenero,
+    CapituloDelOutline,
+    OutlineCreado,
+    Persona,
+    TiempoVerbal,
+)
+
+__all__ = [
+    "BeatDeGenero",
+    "CapituloDelOutline",
+    "OutlineCreado",
+    "Persona",
+    "TiempoVerbal",
+    "router",
+]
