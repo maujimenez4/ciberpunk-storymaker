@@ -1,0 +1,10 @@
+name = "cronologia"
+version = "0.1.0"
+defaultTargets = ["cronologia"]
+
+[[lean_lib]]
+name = "Cronologia"
+
+[[lean_exe]]
+name = "cronologia"
+root = "Main"
