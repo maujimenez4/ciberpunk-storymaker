@@ -59,9 +59,24 @@ TARIFAS: dict[str, Tarifa] = {
     MODELO_ESCRITOR: Tarifa(Decimal("1.00"), Decimal("5.00")),
     MODELO_JUEZ: Tarifa(Decimal("5.00"), Decimal("25.00")),
 }
-"""Tarifa publica de Anthropic por modelo. No cubre lectura ni escritura de
-cache, que se facturan a otro precio: hoy no se usa cache de prompt, y cuando
-se use hay que ampliar esto y no dar el numero por bueno."""
+"""Tarifa publica de Anthropic por modelo. **No cubre la cache de prompt**, que
+se factura a otro precio.
+
+**Y la cache se usa.** Hasta el 2026-09-24 este comentario decia «hoy no se usa
+cache de prompt, y cuando se use hay que ampliar esto». Era falso, y
+probablemente ya lo era al escribirse: una medicion contra el proveedor con un
+prompt de 5.012 tokens devolvio `input_tokens=10` y
+`cache_read_input_tokens=6835`. La condicion futura que el comentario anunciaba
+**ya se cumplia**, asi que nadie fue a comprobarla.
+
+Sobrevivio porque la suite corre con dobles y un doble no tiene cache: no habia
+forma de que un test lo notara. Ahora `Consumo` guarda los dos campos y
+`ConsultaFalsa` puede devolverlos, que es lo que hace el fallo detectable.
+
+Lo que sigue sin decidirse **a proposito**: a que precio se imputan. Eso es una
+tarifa, y una tarifa se declara en el repositorio con quien la firma (P-18).
+Mientras tanto `coste_derivado` sigue mirando solo entrada y salida, y el numero
+que produce **se queda corto en toda llamada con cache**."""
 
 
 @dataclass(frozen=True)
@@ -73,6 +88,16 @@ class Consumo:
     tokens_entrada: int
     tokens_salida: int
     coste_usd: Decimal
+
+    cache_read_input_tokens: int = 0
+    """Lo que el modelo leyo de cache de prompt. **Se guarda y no se imputa** (P-18).
+
+    Llevan el nombre del SDK a proposito: son el dato del proveedor tal cual, y
+    traducirlos aqui obligaria a mirar dos sitios para saber si el mapeo es fiel.
+    """
+
+    cache_creation_input_tokens: int = 0
+    """Lo que el modelo escribio en cache. Mismo trato que el anterior."""
 
 
 class TarifaDesconocida(Exception):
@@ -204,6 +229,13 @@ class ClienteClaudeCode(ClienteModelo):
             tokens_entrada=tokens_entrada,
             tokens_salida=tokens_salida,
             coste_usd=coste_derivado(elegido, tokens_entrada, tokens_salida),
+            # P-18: se leen y se guardan, pero **no entran en `coste_derivado`**.
+            # Imputarlos exige decidir a que precio, y eso es una tarifa
+            # declarada, no una decision de implementacion. Guardarlos ya es lo
+            # unico que no se puede hacer despues: una corrida sin el dato no se
+            # recalcula.
+            cache_read_input_tokens=int(uso.get("cache_read_input_tokens", 0)),
+            cache_creation_input_tokens=int(uso.get("cache_creation_input_tokens", 0)),
         )
 
         if not partes:

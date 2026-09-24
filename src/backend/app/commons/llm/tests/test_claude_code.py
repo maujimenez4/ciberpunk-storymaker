@@ -250,6 +250,54 @@ async def test_el_coste_se_imputa_a_la_tarifa_del_modelo_que_de_verdad_se_uso():
     assert consumo.coste_usd == Decimal("30.00")
 
 
+async def test_los_tokens_de_cache_se_guardan_aunque_hoy_no_se_imputen():
+    """P-18. El CLI **usa** cache de prompt, y `usage` trae dos campos mas que
+    nadie leia: lo que el modelo lee de cache y lo que escribe en ella.
+
+    Las cifras son las de la medicion contra el proveedor: un prompt de 5.012
+    tokens devolvio `input_tokens=10` y `cache_read_input_tokens=6835`. Imputar
+    solo el primero deja el coste corto por un factor de ~680.
+
+    **Este test no arregla la imputacion y no debe.** Comprueba lo unico que no
+    se puede recuperar despues: que el dato quede guardado. A que precio se
+    cobra la cache es una tarifa declarada, y esa decision se toma con el dato
+    ya en la tabla en vez de perder cada corrida mientras se decide.
+    """
+    consulta = ConsultaFalsa(
+        ["x"],
+        uso={
+            "input_tokens": 10,
+            "output_tokens": 842,
+            "cache_read_input_tokens": 6835,
+            "cache_creation_input_tokens": 0,
+        },
+    )
+    cliente = ClienteClaudeCode(consulta=consulta)
+
+    await cliente.completar("p", semilla=1)
+
+    consumo = cliente.ultimo_consumo
+    assert consumo is not None
+    assert consumo.cache_read_input_tokens == 6835
+    assert consumo.cache_creation_input_tokens == 0
+    assert consumo.tokens_entrada == 10, "lo que ya guardaba no cambia"
+
+
+async def test_sin_cache_los_campos_valen_cero_y_no_son_none():
+    """El proveedor omite las claves cuando no hubo cache. Cero es una medicion
+    —no hubo lectura de cache—; `None` seria «no se sabe», y la diferencia
+    importa el dia que alguien sume una columna para rehacer un coste."""
+    consulta = ConsultaFalsa(["x"], uso={"input_tokens": 500, "output_tokens": 100})
+    cliente = ClienteClaudeCode(consulta=consulta)
+
+    await cliente.completar("p", semilla=1)
+
+    consumo = cliente.ultimo_consumo
+    assert consumo is not None
+    assert consumo.cache_read_input_tokens == 0
+    assert consumo.cache_creation_input_tokens == 0
+
+
 def test_obtener_cliente_modelo_ya_no_lanza_y_devuelve_el_cliente_real():
     """El hueco declarado de la Fase 1: `/respuestas` y `/cerrar` daban 500."""
     cliente = obtener_cliente_modelo()
