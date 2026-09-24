@@ -17,9 +17,12 @@ prueba sin catalogo.
 
 from app.features.calidad.agents import (
     CapituloAContrastar,
+    ConocimientoEnT,
     Continuista,
+    ContrasteDeConocimiento,
     HechoDeCanon,
     OrigenDeHecho,
+    PlantillaAusente,
     RevisionDeContinuidad,
     SalidaMalFormada,
 )
@@ -85,7 +88,9 @@ __all__ = [
     "CapituloAValidar",
     "CierreDelManuscrito",
     "Cobertura",
+    "ConocimientoEnT",
     "Continuista",
+    "ContrasteDeConocimiento",
     "DecisionDePolicy",
     "Defecto",
     "DefectoMalFormado",
@@ -100,6 +105,7 @@ __all__ = [
     "OrigenDeHecho",
     "ParametrosDeDiscurso",
     "Persona",
+    "PlantillaAusente",
     "PuntoDeEjecucion",
     "RangoDeExtension",
     "ReglaDePolicy",

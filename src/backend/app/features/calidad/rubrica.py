@@ -57,7 +57,7 @@ def hash_de_rubrica(rubrica: Rubrica) -> str:
     `definitions.md` §8: cambiar un criterio **invalida la comparacion con
     puntuaciones anteriores**. Sin el hash eso ocurre en silencio, y el *tuning*
     de T11 compararia numeros de dos rubricas distintas creyendo que son de la
-    misma. Es el mismo mecanismo que `HASH_DE_PLANTILLA_V1` en `agents.py`, y por
+    misma. Es el mismo mecanismo que `hash_de_plantilla` en `agents.py`, y por
     la misma razon: `CLAUDE.md` §10 prohibe editar en sitio lo versionado.
 
     El orden de los criterios entra en el hash a proposito: la lista es cerrada y

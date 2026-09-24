@@ -1,0 +1,162 @@
+# formal/tla/correspondencia.toml
+#
+# RF-FOR-07. Cada accion de `Harness.tla`, con el estado o la transicion del
+# codigo que la implementa. Lo lee `test_correspondencia_tla.py`.
+#
+# La especificacion abarca TRES sitios, no uno: el ciclo (`maquina.py`), la
+# reanudacion (`checkpoint.py`, `reanudacion.py`) y las versiones publicadas
+# (`features/manuscrito/`, Fases 4 y 5).
+#
+# `transiciones` son trios [estado, senal, destino] de la maquina de ESCENA
+# (§3.3). Una accion de la maquina de la NOVELA (§3.9) puede abarcar varias, y
+# puede no abarcar ninguna: la entrevista y la publicacion no pasan por ella.
+
+[[accion]]
+nombre = "FaltaUnDato"
+codigo = ["app.features.obra.service.responder_entrevista"]
+transiciones = []
+nota = "Faltantes y contradicciones; el brief parcial se persiste (§3.9)."
+
+[[accion]]
+nombre = "Planificar"
+codigo = [
+  "app.features.obra.service.cerrar_entrevista",
+  "app.features.outline.service.planificar_obra",
+]
+transiciones = []
+nota = "CONFIGURANDO -> PLANIFICADA: brief valido, biblia y outline de diez."
+
+[[accion]]
+nombre = "SiguienteCapitulo"
+codigo = [
+  "app.features.escritura.checkpoint.siguiente_capitulo",
+  "app.features.escritura.checkpoint.empezar_capitulo",
+  "app.features.escritura.novela.escribir_novela",
+]
+transiciones = []
+nota = "No toca el contador: `reparaciones_del_capitulo` cuenta por capitulo (R-1)."
+
+[[accion]]
+nombre = "Escribir"
+codigo = [
+  "app.features.escritura.ciclo.ejecutar_ciclo",
+  "app.features.escritura.service.escribir_capitulo",
+]
+transiciones = [
+  ["PLANIFICANDO", "paso_completado", "ENSAMBLANDO"],
+  ["ENSAMBLANDO", "paso_completado", "ESCRIBIENDO"],
+  ["ESCRIBIENDO", "paso_completado", "VALIDANDO"],
+]
+
+[[accion]]
+nombre = "Aprobar"
+codigo = [
+  "app.features.calidad.puerta.cruzar_g1a",
+  "app.features.canon.service.consolidar_escena",
+  "app.features.escritura.checkpoint.registrar_checkpoint",
+]
+transiciones = [
+  ["VALIDANDO", "aprobada", "EXTRAYENDO"],
+  ["EXTRAYENDO", "paso_completado", "INTEGRADA"],
+]
+nota = "El modelo abstrae EXTRAYENDO: §3.9 no lo tiene, y no se inventan estados."
+
+[[accion]]
+nombre = "Reparar"
+codigo = ["app.features.escritura.service.escribir_capitulo"]
+transiciones = [["VALIDANDO", "defecto_bloqueante", "REPARANDO"]]
+nota = "REPARANDO -> ESCRIBIENDO con intento < 2 NO esta en `_TRANSICIONES`: la decide el contador dentro de `maquina.transitar`. Es la decision previa 1 del plan."
+
+[[accion]]
+nombre = "Escalar"
+codigo = [
+  "app.features.escritura.maquina.transitar",
+  "app.features.escritura.maquina.exigir_que_la_novela_siga",
+]
+transiciones = []
+nota = "REPARANDO -> ESCALADA con intento >= 2, y `DETIENEN_LA_NOVELA` la convierte en la DETENIDA de §3.9."
+
+[[accion]]
+nombre = "Reanudar"
+codigo = [
+  "app.features.escritura.reanudacion.reanudar",
+  "app.features.escritura.reanudacion.descartar",
+]
+transiciones = []
+nota = "Hereda `arranque.intento`: es la linea que impide que una caida regale reintentos (§3.7)."
+
+[[accion]]
+nombre = "Verificar"
+codigo = ["app.features.manuscrito.lean.generador.generar_lean"]
+codigo_previsto = ["app.features.manuscrito.service.verificar_con_lean"]
+pendiente = "Fase 4 - falta la puerta, no el generador"
+transiciones = []
+nota = "Partida en dos, y hoy solo esta la primera mitad: `generar_lean` produce el fichero desde la cronologia, pero `publicar` NO lo invoca ni corre `lake build`. La accion del modelo es la puerta entera (RF-FOR-01 a 03), asi que queda emparejada a medias y declarada."
+
+[[accion]]
+nombre = "Publicar"
+codigo = ["app.features.manuscrito.service.publicar"]
+transiciones = []
+nota = "Crea la `VersionPublicada` inmutable (RF-PUB-01 a 08). Aterrizo con la Fase 4 el 2026-09-24. **Y cumple la guarda de S1 por su cuenta**: `_capitulos_listos` exige `estado == ESTADO_APROBADO` por capitulo y lanza si falta alguno, que es mas fuerte que lo que el modelo puede exhibir (ver §5 del README: alli integrar y validar son el mismo evento)."
+
+[[accion]]
+nombre = "LeanFalla"
+codigo = []
+codigo_previsto = ["app.features.manuscrito.service.verificar_con_lean"]
+pendiente = "Fase 4 - la puerta que aun no existe"
+transiciones = []
+nota = "Si Lean falla, no se publica y el fallo vuelve al editor (CA-21). Apunta a la puerta y no a `publicar`: `publicar` ya existe, pero hoy publica **sin** consultar a Lean, asi que esta rama no tiene codigo todavia."
+
+[[accion]]
+nombre = "PeticionDelLector"
+codigo = []
+codigo_previsto = ["app.features.manuscrito.peticiones.registrar_peticion"]
+pendiente = "Fase 5"
+transiciones = []
+nota = "El estado `regenerando` de `PeticionDeCambio` es el REGENERANDO de §3.9; no hay estado nuevo en la maquina de escena."
+
+[[accion]]
+nombre = "RehacerCapitulo"
+codigo = []
+codigo_previsto = ["app.features.manuscrito.peticiones.atender_peticion"]
+pendiente = "Fase 5"
+transiciones = []
+
+[[accion]]
+nombre = "DescartarPeticion"
+codigo = []
+codigo_previsto = ["app.features.manuscrito.reversion.revertir"]
+pendiente = "Fase 5"
+transiciones = []
+nota = "No crea version y no toca la vigente (§3.9). Es lo que S3 vigila."
+
+[[accion]]
+nombre = "Fin"
+codigo = ["app.features.escritura.maquina.ESTADOS_TERMINALES"]
+transiciones = []
+nota = "Los terminales de §3.3 y los `[*]` de §3.9."
+
+# --------------------------------------------------------------------------
+# Transiciones del codigo que NINGUNA accion del modelo reclama, con su motivo.
+# Si aparece una nueva sin declarar, el test se pone en rojo.
+# --------------------------------------------------------------------------
+
+[[sin_accion]]
+transicion = ["ENSAMBLANDO", "contexto_excedido", "FALLIDA"]
+motivo = "§3.9 no tiene averia tecnica: un capitulo FALLIDA detiene la novela por la via de `escribir_novela`, que exige INTEGRADA. Declarado, no modelado."
+
+[[sin_accion]]
+transicion = ["PLANIFICANDO", "cancelacion", "CANCELADA"]
+motivo = "La maquina de la novela de §3.9 no tiene cancelacion del Autor."
+
+[[sin_accion]]
+transicion = ["ENSAMBLANDO", "cancelacion", "CANCELADA"]
+motivo = "Idem."
+
+[[sin_accion]]
+transicion = ["ESCRIBIENDO", "cancelacion", "CANCELADA"]
+motivo = "Idem."
+
+[[sin_accion]]
+transicion = ["VALIDANDO", "cancelacion", "CANCELADA"]
+motivo = "Idem."

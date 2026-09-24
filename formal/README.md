@@ -4,16 +4,18 @@ Las dos que pide el encargo: **Lean 4** para la cronología de la historia
 (`examen-final.md` §5c) y **TLA+ / TLC** para la máquina de estados del harness
 (§5d). Este fichero dice cómo se instalan y cómo se comprueba que funcionan.
 
-**Lo que hay aquí es andamiaje, no los validadores.** El validador de §5c lo
-escribe la **Fase 4**, generando el fichero Lean desde la cronología en SQLite;
-la especificación de §5d la escribe la **Fase 7**, contra
-`src/backend/app/features/escritura/maquina.py`. Lo de esta carpeta existe para
-que ninguna de las dos fases arranque peleándose con la instalación.
+**Las dos mitades no están igual de avanzadas, y conviene saberlo al entrar.**
+La de TLA+ está **escrita y verificada**: `tla/Harness.tla` especifica la máquina
+de `architecture.md` §3.9 con tres invariantes de seguridad y una propiedad de
+*liveness*, y su correspondencia con el código la comprueba un test. La de Lean
+sigue siendo **andamiaje**: el fichero mínimo prueba que la herramienta y la
+puerta funcionan, pero el validador de §5c —generar el fichero desde la
+cronología en SQLite— es de la Fase 4.
 
 ```
 formal/
   lean/          proyecto Lake · fichero mínimo con dos invariantes probados
-  tla/           tla2tools.jar · modelo de juguete con invariante y liveness
+  tla/           tla2tools.jar · Juguete.tla (humo) · Harness.tla + su README
 ```
 
 ---
@@ -132,6 +134,8 @@ Model checking completed. No error has been found.
 7 states generated, 6 distinct states found, 0 states left on queue.
 The depth of the complete state graph search is 6.
 ```
+
+**`Juguete.tla` es el humo; la especificacion del harness y su tabla de correspondencia estan en [`tla/README.md`](tla/README.md).**
 
 `Juguete.tla` es un contador acotado con un invariante de seguridad
 (`EnRango`) y una propiedad de *liveness* (`Termina`). No modela nada del
