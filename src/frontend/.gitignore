@@ -1,0 +1,8 @@
+# Lo que instala pnpm y lo que compila Vite: se reconstruye con `pnpm install`
+# y `pnpm build`, asi que no entra en el historial.
+node_modules/
+dist/
+
+# El cliente generado del OpenAPI (`pnpm gen:api`). No se edita a mano y se
+# regenera; commitearlo invita a tocarlo.
+src/shared/api/generated/
