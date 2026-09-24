@@ -1,8 +1,8 @@
 ---
 id: 002-frontend / plan-2-ficha
 titulo: "Fase 2 — La ficha que no destripa, la petición del lector y la espera"
-estado: borrador          # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo rellena una persona, nunca un agente
+estado: aprobado          # borrador | en-revision | aprobado | completado
+aprobado_por: maujimenez4 # firmado el 2026-09-24
 fecha: 2026-09-24
 spec: specs/002-frontend/spec.md
 ---

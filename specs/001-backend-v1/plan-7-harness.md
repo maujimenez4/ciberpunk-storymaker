@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1 / plan-7-harness
 titulo: "Fase 7 — Probar el harness: TLA+, el hook que falta y los ficheros del encargo"
-estado: borrador          # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo rellena una persona, nunca un agente
+estado: aprobado          # borrador | en-revision | aprobado | completado
+aprobado_por: maujimenez4 # firmado el 2026-09-24
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
 hereda_de: specs/001-backend-v1/plan-3-novela.md

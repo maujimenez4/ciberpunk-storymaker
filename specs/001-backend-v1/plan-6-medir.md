@@ -1,7 +1,7 @@
 ---
 id: 001-backend-v1 / plan-6-medir
 titulo: "Fase 6 — Medir: los números del sistema, y de dónde salen"
-estado: borrador          # borrador | en-revision | aprobado | completado
+estado: aprobado          # borrador | en-revision | aprobado | completado
 aprobado_por:             # nadie. Un agente no aprueba un plan (CLAUDE.md §15)
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
