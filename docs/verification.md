@@ -464,6 +464,14 @@ como una lista de defensas: un catálogo sin puntos ciegos se cuenta, y contar n
 una generación. Un validador que no emite score no es comprobable a posteriori: no se puede
 decir si mejoró o empeoró entre dos versiones de prompt.
 
+**Esa frase es la regla, no el estado.** Lo que **hoy emite en producción**, en el span del
+validador que lo produce (`architecture.md` §9.2.1): `palabras_vetadas`, los validadores de la
+puerta G1a que corren —`extension_de_capitulo`, `nombres_literales`, `discurso` y
+`continuidad_y_canon`— y `juez_con_rubrica`, uno por criterio. Son los del ciclo del capítulo, y
+quitar cualquiera de las tres llamadas que los emiten —policy, G1a, juez— pone rojo un test
+(comprobado quitándolas una a una). Los demás de esta sección
+todavía no emiten: o no corren en una generación o corren sin span.
+
 ### 8.1 Programáticos — deterministas
 
 **En la configuración, puerta G0.**

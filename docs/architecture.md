@@ -961,7 +961,7 @@ El registro propio dice qué pasó dentro de una llamada. Langfuse es donde eso 
 | Concepto | Qué es aquí |
 | --- | --- |
 | **Sesión** | **Una por novela**, y abarca la entrevista, la generación y **todas las regeneraciones posteriores**. Una petición del lector de dentro de un mes cae en la misma sesión |
-| **Traza** | Una generación: la escritura completa, o una regeneración por petición |
+| **Traza** | Una **unidad de trabajo** dentro de la sesión: el ciclo de un capítulo —cada intento de escribirlo, uno—, o una regeneración por petición. La novela entera son diez trazas en la misma sesión (§9.2.1) |
 | **Span** | **Cada uno de los diez roles** —Entrevistador, Arquitecto, Planificador de escena, Ensamblador de contexto, Escritor, Continuista, Crítico, Editor de línea, Extractor, Auditor de manuscrito— y **cada llamada a tool**, con nombre identificable. El Ensamblador es código y no llama al modelo, pero genera span igual: es donde se ve el desglose por capa y el recorte |
 | **Score** | El resultado de **cada** validador: programático, semántico y Lean, asociado a su traza |
 | **Plantilla de prompt** | Versionada en Langfuse —`escritor.v3` y sus huecos sin rellenar—, de modo que una iteración de *tuning* pueda decir **qué versión produjo qué resultado** |
@@ -1005,6 +1005,22 @@ validador.
 ni fragmentos de manuscrito (§11), y la base de datos de la obra no sale de la máquina.
 
 **TLC no corre aquí.** El model checker se ejecuta en desarrollo, no en cada generación (§9.3).
+
+#### 9.2.1 Qué está cableado hoy
+
+La tabla de arriba es el diseño; esta es **lo que corre**. El observador entra por
+`Depends(obtener_observador)` en el router, llega **blindado** —si Langfuse se cae, el capítulo
+se escribe igual y el fallo se cuenta— y baja a la tarea de fondo por argumento, como el cliente
+de modelo. Los roles se construyen sobre `ClienteObservado`, que deja en el span en curso el
+prompt renderizado, la salida y el consumo de cada llamada: ningún agente sabe que existe.
+
+| Unidad de trabajo | Traza | Spans, en orden | *Scores* |
+| --- | --- | --- | --- |
+| El ciclo de un capítulo (`POST /capitulos/{id}/escribir` y cada vuelta de `POST /obras/{id}/novela`) | `capitulo N · <run_id>` | `planificador` —solo si se planifica—, `ensamblador` —con el desglose por capa como salida—, y por cada intento `escritor`, `policy`, `continuista`, `puerta_g1a`, `critico`; al integrar, `extractor` | En `policy`: `palabras_vetadas`. En `puerta_g1a`: uno por validador que corrió, `continuidad_y_canon` incluido. En `critico`: `juez_con_rubrica`, uno por criterio con su justificación |
+
+**Lo que todavía no emite**, para que la tabla de arriba no se lea como hecha: el Entrevistador,
+el Arquitecto, la publicación —G4 y `cronologia_lean`—, el Editor de línea y el Auditor, que no
+existen como roles en producción, y los validadores de la lectura publicada.
 
 ### 9.3 Verificación formal: dos sujetos distintos
 

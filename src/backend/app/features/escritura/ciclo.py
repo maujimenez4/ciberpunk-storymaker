@@ -52,6 +52,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.commons.domain.errores import ContextBudgetExceeded, ErrorDeDominio, RecursoDesconocido
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
+from app.commons.observabilidad import ClienteObservado, Observacion, Observador, ObservadorNulo
 from app.features.calidad import (
     ConocimientoEnT,
     Continuista,
@@ -148,6 +149,14 @@ class Agentes:
     requisito cumplido sino uno que no se habia podido incumplir todavia.
     `architecture.md` §8.3 avisa de esa clase de invariante: caduca el dia que
     alguien conecta la pieza **sin que nada se ponga rojo**."""
+    observado: ClienteObservado | None = None
+    """El cliente que comparten los roles, envuelto para que el prompt y la
+    salida de cada uno lleguen a su span (`CLAUDE.md` §4.3).
+
+    Lo rellena `obtener_agentes` con **el mismo** objeto con el que construye
+    los roles; si fueran dos, los spans se abririan y nadie les escribiria
+    dentro. Opcional porque un test que monta los roles a mano no lo necesita:
+    sus spans salen sin prompt, que es menos y no es un error."""
 
 
 def conocimiento_desde_filas(
@@ -250,8 +259,14 @@ async def ejecutar_ciclo(
     modelo: str = "desconocido",
     semilla: int = 0,
     rango_de_extension: RangoDeExtension = RANGO_DE_CAPITULO,
+    observador: Observador | None = None,
 ) -> ResultadoDelCiclo:
     """Planifica, ensambla, escribe, valida y consolida. En ese orden.
+
+    **Una traza por capitulo** en la sesion de la obra (`CLAUDE.md` §4.3), y
+    dentro un span por rol que se llama. El `observador` que llega de
+    produccion viene **blindado** (`obtener_observador`): si Langfuse se cae,
+    el capitulo se escribe igual (R-1). Sin observador, el nulo.
 
     **El cerrojo envuelve el ciclo entero y no solo la llamada** (RF-ORQ-08):
     la escena N+1 necesita el estado en T posterior a N, asi que dos escenas de
@@ -263,82 +278,124 @@ async def ejecutar_ciclo(
     Pedirlo antes de ensamblar seria pedirlo sin saber cuantos, que es la forma
     elegante de pedir cero.
     """
+    observador = observador if observador is not None else ObservadorNulo()
     async with cerrojo.por_obra(trabajo.obra_id):
-        try:
-            contexto = await _planificar_y_ensamblar(
+        numero = int((await _capitulo(sesion, capitulo_id))["numero"])
+        async with observador.traza(
+            obra_id=trabajo.obra_id, nombre=f"capitulo {numero} · {trabajo.run_id}"
+        ) as traza:
+            return await _ciclo_observado(
                 sesion,
                 trabajo,
-                capitulo_id,
-                agentes.planificador,
-                contador,
+                capitulo_id=capitulo_id,
+                agentes=agentes,
+                contador=contador,
+                presupuesto=presupuesto,
                 almacen=almacen,
                 consulta=consulta,
+                vectorizar=vectorizar,
+                modelo=modelo,
+                semilla=semilla,
+                rango_de_extension=rango_de_extension,
+                observacion=Observacion(traza=traza, cliente=agentes.observado),
             )
-        except (ContextBudgetExceeded, CapaVacia) as fallo:
-            # Las dos viajan con la **misma** senal, y es la fila de §3.6 que
-            # dice «fallo de diseno del ensamblado, no de ejecucion»: el
-            # paquete no se pudo construir y no se llega a llamar al modelo.
-            # Que una sea el presupuesto y la otra una capa obligatoria vacia
-            # cambia el diagnostico, no el destino, y el diagnostico se guarda
-            # en `causa_fallo`.
-            return await _terminar(sesion, trabajo, Senal.CONTEXTO_EXCEDIDO, causa=str(fallo))
 
-        escritura = await _escribir(
+
+async def _ciclo_observado(
+    sesion: AsyncSession,
+    trabajo: Trabajo,
+    *,
+    capitulo_id: int,
+    agentes: Agentes,
+    contador: ContadorDeTokens,
+    presupuesto: PresupuestoConcurrente,
+    almacen: VectorStore | None,
+    consulta: Sequence[float] | None,
+    vectorizar: Callable[[str], Vector] | None,
+    modelo: str,
+    semilla: int,
+    rango_de_extension: RangoDeExtension,
+    observacion: Observacion,
+) -> ResultadoDelCiclo:
+    """El cuerpo del ciclo, dentro del cerrojo y de la traza del capitulo."""
+    try:
+        contexto = await _planificar_y_ensamblar(
             sesion,
             trabajo,
-            agentes,
-            contexto=contexto,
-            contador=contador,
-            presupuesto=presupuesto,
-            modelo=modelo,
-            semilla=semilla,
-            rango_de_extension=rango_de_extension,
+            capitulo_id,
+            agentes.planificador,
+            contador,
+            almacen=almacen,
+            consulta=consulta,
+            observacion=observacion,
         )
+    except (ContextBudgetExceeded, CapaVacia) as fallo:
+        # Las dos viajan con la **misma** senal, y es la fila de §3.6 que
+        # dice «fallo de diseno del ensamblado, no de ejecucion»: el
+        # paquete no se pudo construir y no se llega a llamar al modelo.
+        # Que una sea el presupuesto y la otra una capa obligatoria vacia
+        # cambia el diagnostico, no el destino, y el diagnostico se guarda
+        # en `causa_fallo`.
+        return await _terminar(sesion, trabajo, Senal.CONTEXTO_EXCEDIDO, causa=str(fallo))
 
-        # La puerta mecanica de T12 ya corrio dentro de `escribir_capitulo`, y
-        # sus codigos son los que deciden si se escribe memoria de largo plazo.
-        # **Ese es el hilo que faltaba:** T9 recibia los codigos como dato de
-        # entrada y T12 los producia, y nadie los unia.
-        bloqueantes = _codigos_bloqueantes(escritura)
-        if not escritura.aprobado:
-            await _retirar_lo_descartado(sesion, contexto.escena_id, trabajo.run_id)
-            # **Se pasa por `REPARANDO`, que no es ceremonia.** `architecture.md`
-            # §3.3 no dibuja ninguna flecha de `VALIDANDO` a `ESCALADA`: el
-            # escalado es la salida de `REPARANDO` cuando el contador se agota,
-            # y hacerlo asi es lo que hace que sea el contador —y no este
-            # `if`— quien decide que la escena va a una persona.
-            await avanzar(sesion, trabajo, Senal.DEFECTO_BLOQUEANTE)
-            return await _terminar(
-                sesion,
-                trabajo,
-                Senal.PASO_COMPLETADO,
-                causa=escritura.motivo_de_escalado,
-                escritura=escritura,
-            )
+    escritura = await _escribir(
+        sesion,
+        trabajo,
+        agentes,
+        contexto=contexto,
+        contador=contador,
+        presupuesto=presupuesto,
+        modelo=modelo,
+        semilla=semilla,
+        rango_de_extension=rango_de_extension,
+        observacion=observacion,
+    )
 
-        await avanzar(sesion, trabajo, Senal.APROBADA)
-        extraccion = await agentes.extractor.extraer(escritura.texto)
-        consolidacion = await consolidar_escena(
+    # La puerta mecanica de T12 ya corrio dentro de `escribir_capitulo`, y
+    # sus codigos son los que deciden si se escribe memoria de largo plazo.
+    # **Ese es el hilo que faltaba:** T9 recibia los codigos como dato de
+    # entrada y T12 los producia, y nadie los unia.
+    bloqueantes = _codigos_bloqueantes(escritura)
+    if not escritura.aprobado:
+        await _retirar_lo_descartado(sesion, contexto.escena_id, trabajo.run_id)
+        # **Se pasa por `REPARANDO`, que no es ceremonia.** `architecture.md`
+        # §3.3 no dibuja ninguna flecha de `VALIDANDO` a `ESCALADA`: el
+        # escalado es la salida de `REPARANDO` cuando el contador se agota,
+        # y hacerlo asi es lo que hace que sea el contador —y no este
+        # `if`— quien decide que la escena va a una persona.
+        await avanzar(sesion, trabajo, Senal.DEFECTO_BLOQUEANTE)
+        return await _terminar(
             sesion,
-            obra_id=trabajo.obra_id,
-            escena_id=contexto.escena_id,
-            capitulo_id=contexto.capitulo_id,
-            extraccion=extraccion,
-            prosa=escritura.texto,
-            version_texto_id=escritura.version_texto_id,
-            vectorizar=vectorizar,
-            defectos_bloqueantes=bloqueantes,
-        )
-        await _registrar_uso(sesion, contexto)
-
-        resultado = await _terminar(sesion, trabajo, Senal.PASO_COMPLETADO, escritura=escritura)
-        return ResultadoDelCiclo(
-            trabajo_id=resultado.trabajo_id,
-            estado=resultado.estado,
-            run_id=resultado.run_id,
+            trabajo,
+            Senal.PASO_COMPLETADO,
+            causa=escritura.motivo_de_escalado,
             escritura=escritura,
-            consolidacion=consolidacion,
         )
+
+    await avanzar(sesion, trabajo, Senal.APROBADA)
+    async with observacion.span("extractor"):
+        extraccion = await agentes.extractor.extraer(escritura.texto)
+    consolidacion = await consolidar_escena(
+        sesion,
+        obra_id=trabajo.obra_id,
+        escena_id=contexto.escena_id,
+        capitulo_id=contexto.capitulo_id,
+        extraccion=extraccion,
+        prosa=escritura.texto,
+        version_texto_id=escritura.version_texto_id,
+        vectorizar=vectorizar,
+        defectos_bloqueantes=bloqueantes,
+    )
+    await _registrar_uso(sesion, contexto)
+
+    resultado = await _terminar(sesion, trabajo, Senal.PASO_COMPLETADO, escritura=escritura)
+    return ResultadoDelCiclo(
+        trabajo_id=resultado.trabajo_id,
+        estado=resultado.estado,
+        run_id=resultado.run_id,
+        escritura=escritura,
+        consolidacion=consolidacion,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -355,21 +412,29 @@ async def _planificar_y_ensamblar(
     *,
     almacen: VectorStore | None,
     consulta: Sequence[float] | None,
+    observacion: Observacion,
 ) -> ContextoDelCapitulo:
     """`PLANIFICANDO` y `ENSAMBLANDO`, que son dos estados y no uno.
 
     Se planifica **solo si no hay ficha**: replanificar una escena ya escrita
     cambiaria la entrada del Escritor sin que nadie lo pidiera, y `Escena` tiene
-    una sola fila por capitulo (P-C).
+    una sola fila por capitulo (P-C). Por eso el span `planificador` solo existe
+    cuando se planifica: un span de un rol que no se llamo mentiria.
+
+    El Ensamblador es codigo y no modelo (`CLAUDE.md` §9.1), y tiene span igual:
+    es donde se ve el desglose por capa, que es lo que dice que se recorto.
     """
     capitulo = await _capitulo(sesion, capitulo_id)
     if await _ficha_del_capitulo(sesion, capitulo_id) is None:
-        await _planificar(sesion, planificador, capitulo)
+        async with observacion.span("planificador"):
+            await _planificar(sesion, planificador, capitulo)
 
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
-    contexto = await ensamblar_capitulo(
-        sesion, capitulo_id, contador, consulta=consulta, almacen=almacen
-    )
+    async with observacion.span("ensamblador") as span:
+        contexto = await ensamblar_capitulo(
+            sesion, capitulo_id, contador, consulta=consulta, almacen=almacen
+        )
+        span.salida(json.dumps(contexto.paquete.tokens_por_capa, sort_keys=True))
     trabajo.escena_id = contexto.escena_id
     await sesion.flush()
     return contexto
@@ -412,6 +477,7 @@ async def _escribir(
     modelo: str,
     semilla: int,
     rango_de_extension: RangoDeExtension,
+    observacion: Observacion,
 ) -> Escritura:
     """`ESCRIBIENDO`, `VALIDANDO` y `REPARANDO`, dentro del turno del portero.
 
@@ -444,6 +510,7 @@ async def _escribir(
             grafo=await leer_hechos_del_canon(sesion, obra_id=trabajo.obra_id),
             conocimiento=await _conocimiento(sesion, trabajo.obra_id),
             orden_discurso=await _orden_discurso(sesion, contexto.escena_id),
+            observacion=observacion,
         )
 
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)

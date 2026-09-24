@@ -153,6 +153,13 @@ async def test_con_un_observador_que_revienta_la_llamada_sale_igual() -> None:
         assert await cliente.completar("X", semilla=0) == "y"
 
 
+async def test_la_observacion_nula_abre_spans_que_no_hacen_nada() -> None:
+    """Para quien llama al servicio sin observador: el mismo codigo, cero efecto."""
+    async with Observacion.nula().span("rol") as span:
+        span.entrada("x")
+        span.salida("y")
+
+
 async def test_sin_cliente_observado_el_span_se_abre_igual() -> None:
     """Un test del ciclo que monta sus roles a mano no envuelve el cliente: el
     span existe igual, sin prompt. Es menos, no es un error."""

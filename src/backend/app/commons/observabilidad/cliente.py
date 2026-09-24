@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.commons.llm.cliente import ClienteModelo, Vectorizacion
+from app.commons.observabilidad.dobles import _TrazaNula as TrazaNula
 from app.commons.observabilidad.trazas import Span, Traza
 
 
@@ -91,6 +92,15 @@ class Observacion:
 
     traza: Traza
     cliente: ClienteObservado | None = None
+
+    @staticmethod
+    def nula() -> "Observacion":
+        """Para quien llama sin observador: el mismo codigo, cero efecto.
+
+        Existe para que el servicio no tenga dos caminos -- con y sin
+        observacion --, que es como uno de los dos se queda sin probar.
+        """
+        return Observacion(traza=TrazaNula())
 
     @asynccontextmanager
     async def span(self, nombre: str) -> AsyncIterator[Span]:

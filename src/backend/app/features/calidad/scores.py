@@ -46,13 +46,20 @@ NOMBRE_DEL_JUEZ = "juez_con_rubrica"
 
 
 class _PuntuacionDelCritico(Protocol):
-    criterio: str
-    valor: int
-    justificacion: str
+    # Propiedades y no atributos: un atributo de protocolo es escribible y por
+    # tanto invariante, y el `Juicio` real -- `list[PuntuacionDelCritico]` --
+    # no encajaba. Nadie lo habia pasado por aqui hasta que se cableo.
+    @property
+    def criterio(self) -> str: ...
+    @property
+    def valor(self) -> int: ...
+    @property
+    def justificacion(self) -> str: ...
 
 
 class _Juicio(Protocol):
-    puntuaciones: Iterable[_PuntuacionDelCritico]
+    @property
+    def puntuaciones(self) -> Iterable[_PuntuacionDelCritico]: ...
 
 
 def puntuaciones_de_g1a(resultado: ResultadoDePuerta) -> tuple[Puntuacion, ...]:
