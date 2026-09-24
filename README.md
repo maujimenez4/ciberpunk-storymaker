@@ -46,20 +46,34 @@ de abajo describe el sistema, no una corrida que hoy termine.
 
 ## El brief de ejemplo
 
-Es el de los tests, y no es de nadie:
+Vive en [`ejemplos/brief-marta.json`](ejemplos/brief-marta.json), no aquí, y **una prueba lo
+carga y construye el modelo con él**. Es el de los tests, y no es de nadie:
 
 ```json
 {
-  "nombre": "Marta",
-  "edad": 34,
-  "rasgos": ["terca", "curiosa"],
-  "recuerdos_aportados": ["el verano en Cadiz"],
+  "destinatario": {
+    "nombre": "Marta",
+    "edad": 34,
+    "rasgos": ["terca", "curiosa"],
+    "recuerdos_aportados": ["el verano en Cadiz"]
+  },
   "genero": "romance",
   "tono": "calido",
   "nivel_de_calor": 2,
-  "elementos_obligatorios": ["el perro Luna", "la bufanda roja"]
+  "vetos": ["sangre"],
+  "elementos_obligatorios": ["el perro Luna", "la bufanda roja"],
+  "dedicatoria": "Para Marta, que nunca se rinde."
 }
 ```
+
+**Este bloque estuvo mal desde que se escribió** — ponía `nombre`, `edad`, `rasgos` y
+`recuerdos_aportados` al nivel de arriba, cuando `BriefEntrada` los quiere dentro de
+`destinatario`, y **no validaba**. Nadie lo notó porque nada lo ejecutaba: un bloque de
+código dentro de un documento no falla nunca.
+
+Por eso el ejemplo se mudó a [`ejemplos/`](ejemplos/) y la copia de arriba es solo eso, una
+copia. La que manda es el fichero, y [`test_ejemplos.py`](src/backend/app/features/obra/tests/test_ejemplos.py)
+lo pone en rojo el día que `BriefEntrada` cambie.
 
 La secuencia que lo convierte en novela:
 

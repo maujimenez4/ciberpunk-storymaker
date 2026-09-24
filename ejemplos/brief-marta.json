@@ -1,0 +1,14 @@
+{
+  "destinatario": {
+    "nombre": "Marta",
+    "edad": 34,
+    "rasgos": ["terca", "curiosa"],
+    "recuerdos_aportados": ["el verano en Cadiz"]
+  },
+  "genero": "romance",
+  "tono": "calido",
+  "nivel_de_calor": 2,
+  "vetos": ["sangre"],
+  "elementos_obligatorios": ["el perro Luna", "la bufanda roja"],
+  "dedicatoria": "Para Marta, que nunca se rinde."
+}

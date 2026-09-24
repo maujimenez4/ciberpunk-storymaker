@@ -1,0 +1,13 @@
+{
+  "destinatario": {
+    "nombre": "Luca",
+    "edad": 12,
+    "rasgos": ["curioso", "impaciente"],
+    "recuerdos_aportados": ["el dia que aprendio a nadar"]
+  },
+  "genero": "aventura",
+  "tono": "luminoso",
+  "nivel_de_calor": 0,
+  "vetos": [],
+  "elementos_obligatorios": ["la bicicleta azul"]
+}
