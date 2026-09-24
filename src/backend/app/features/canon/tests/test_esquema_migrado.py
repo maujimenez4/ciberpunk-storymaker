@@ -186,8 +186,12 @@ def _sembrar(con: sqlite3.Connection) -> None:
     un hecho de canon y una ejecucion **sin** `ids_por_capa`."""
     con.executescript(
         """
-        INSERT INTO obra (id, titulo, genero, tono, nivel_de_calor)
-          VALUES (1, 'De prueba', 'romance', 'calido', 2);
+        -- `elementos_obligatorios` desde P-2: la columna es obligatoria y no
+        -- admite lista vacia. Este fichero siembra por SQL crudo a proposito
+        -- —comprueba el esquema **migrado**, no el que construyen los modelos—
+        -- y por eso el arreglo del modelo no lo alcanzo.
+        INSERT INTO obra (id, titulo, genero, tono, nivel_de_calor, elementos_obligatorios)
+          VALUES (1, 'De prueba', 'romance', 'calido', 2, '["el perro Luna"]');
         INSERT INTO version_obra (id, obra_id, numero, biblia, vigente_desde)
           VALUES (1, 1, 1, '{}', '2026-09-24 00:00:00+00:00');
         INSERT INTO capitulo (id, obra_id, numero, titulo, pov_dominante,
