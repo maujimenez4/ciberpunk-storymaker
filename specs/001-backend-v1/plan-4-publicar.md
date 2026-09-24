@@ -706,6 +706,352 @@ def test_leer_no_expone_el_modelo_de_base_de_datos(cliente, version):
 
 ---
 
+## Tarea 10 · El PDF
+
+> **Firmada el 2026-09-24 por `maujimenez4`**, que autorizo expresamente el commit de la firma. Incluye la dependencia `playwright` (opcion A del spike) y las tres TTF de Literata con su `OFL.txt`: firmar la tarea es aceptar esos ficheros.
+
+Cierra la ruta **`/lectura/{token}/pdf`**, que hoy existe en el OpenAPI y responde **501**, y la parte de **`RI-11`** que es el PDF. Y cumple lo que pide el encargo §2 para el PDF: **una portada con dedicatoria, un índice navegable y una página inicial de «novedades»** con los capítulos que cambiaron y **enlaces internos** a cada uno.
+
+**Ficheros:**
+- Crear `features/manuscrito/pdf.py`: la composición del HTML, que es una función pura, y la impresora.
+- Crear `features/manuscrito/impresion/impresion.css` y `features/manuscrito/impresion/fuentes/Literata-{Regular,Italic,SemiBold}.ttf`, con su `OFL.txt`.
+- Modificar `features/manuscrito/router.py`: la ruta deja de dar 501.
+- Test nuevo `features/manuscrito/tests/test_pdf.py`.
+- `pyproject.toml` y `uv.lock`: **`playwright`**.
+- `CLAUDE.md` §14: el comando que instala el navegador.
+
+### Lo que el spike midió antes de escribir esto
+
+Chrome headless y 12.503 palabras de relleno generadas, en 10 capítulos. Todo desechable, nada en el repositorio.
+
+| Pregunta | Medido | Qué decide |
+| --- | --- | --- |
+| ¿Sin red? | **Sí**, con el HTML en local y la red cortada | CA-4 se sostiene con la impresora **inyectada**. La real también corre sin red si el HTML es autocontenido |
+| ¿Cuánto tarda? | **1,2–2,4 s** por novela (61 págs. A5). Con el triple de texto, entre 1,9 y 2,6 s | **Respuesta HTTP síncrona**, no trabajo en segundo plano. El tiempo es casi todo arranque del navegador, no cantidad de texto |
+| ¿Sobrevive la tipografía? | **No, tal como está hoy**: `estilos.css` carga Literata desde Google y sin red sale **Georgia**. Con las TTF en local, las tres variantes quedan incrustadas | Las fuentes viajan **dentro** del HTML, como `data:` en base64 |
+| ¿Reutilizar la lectura? | La página React tal cual imprime en Carta, con los capítulos seguidos y la dedicatoria pegada al capítulo 1 | **Mismo marcado y mismos tokens, plantilla de backend.** Imprimir la página React obligaría a servir el frontend, lo que rompe CA-4 y hace que el backend dependa del frontend |
+| ¿Anclas internas? | **Sí**: `/Link` con `/Dest /capitulo-N`, 0 `/URI` | La página de novedades se hace con `href="#capitulo-N"` y nada más |
+| ¿Accesible? | **Sale etiquetado sin pedirlo**: `/MarkInfo Marked true`, `/StructTreeRoot`, `/Lang (es)` | Es un argumento a favor de Chromium frente a las alternativas descartadas: la spec 002 exige accesibilidad, y un PDF sin estructura no lo lee un lector de pantalla |
+
+*Una medida engañó y se dice:* la primera variante «sin red» dio Literata porque reutilizaba la caché del perfil de la ejecución con red. **Toda medida de fuente se hace con perfil limpio.** El test de integración de abajo lo garantiza cortando la red dentro del propio navegador, no fiándose del entorno.
+
+### Cinco decisiones, con su motivo
+
+**1 · La impresora es una dependencia inyectada.** `obtener_impresora` va por `Depends()`, igual que el cliente de modelo (`CLAUDE.md` §6). La suite usa un doble que devuelve el HTML que recibió. Así se prueba **qué** se imprime sin arrancar Chromium, y CA-4 sigue pasando sin red y sin navegador.
+
+**2 · El HTML es autocontenido y el navegador no tiene red.** Las fuentes van en base64, `java_script_enabled=False`, y un `page.route("**/*")` aborta cualquier petición que no sea `data:`. Hay dos motivos, y el segundo es el que decide:
+- que el resultado no dependa de la red;
+- que **la prosa y la dedicatoria nunca salgan de la máquina** (`CLAUDE.md` §4.3). Un `@import` olvidado en la hoja lo incumpliría sin que ningún test lo viera.
+
+**3 · Toda cadena se escapa.** La prosa, los títulos y la dedicatoria pasan por `html.escape`. La prosa la escribió un modelo y la dedicatoria viene del comprador, que es texto no confiable (`CLAUDE.md` §11). Sin escapar, un `<` en la prosa rompe la maqueta, y un `<img src=…>` sería una petición de red a un tercero. Con el JavaScript desactivado no se ejecutaría nada, pero la petición sí se haría.
+
+**4 · Los tokens se duplican y un test vigila que no diverjan.** `impresion.css` repite la paleta, la medida y la escala de `src/frontend/src/app/estilos.css`.
+
+El **código** no lee ficheros del frontend: se despliegan por separado, y `componer_html` tiene que funcionar sin el frontend delante. **El test sí los lee**, y esa asimetría es el diseño. La duplicación es deliberada (`CLAUDE.md` §5.1, regla 4); lo que no puede ser deliberado es que diverja en silencio.
+
+**Lo que cuesta, y se asume a sabiendas:** la suite del backend falla si no está el árbol del frontend. En este monorepo siempre está. Si falta el fichero, **el test revienta y no se salta**: un `pytest.skip` lo volvería verde justo por no encontrar lo que tenía que comparar.
+
+**5 · Si no hay navegador, 503 con motivo, no 500.** Mismo patrón que `sqlite-vec` (`CLAUDE.md` §4.2): se degrada con un aviso. `ImpresoraNoDisponible` es una excepción de dominio y la traduce el handler central de `commons/errors/`, no un `HTTPException` dentro del servicio.
+
+### Las dos reglas de dominio que esta tarea toca
+
+- **Regla 14: el PDF sale de la versión publicada, nunca del texto vigente.** Se compone con `texto_publicado(sesion, version.id, numero)`, lo mismo que lee la ruta del capítulo. Un PDF armado con el texto vigente podría llevar un capítulo que no pasó ninguna puerta.
+- **Regla 15: la dedicatoria no es un capítulo.** Va en su propia página, con `.dedicatoria`, fuera de cualquier `<section class="capitulo">`. Hay exactamente diez secciones de capítulo.
+
+- [ ] **Paso 0: La dependencia** (autorizada por `maujimenez4` el 2026-09-24, opción A del spike)
+
+```bash
+uv add playwright
+uv run playwright install chromium
+```
+
+Añadir la segunda línea a `CLAUDE.md` §14, en el mismo commit.
+
+- [ ] **Paso 1: Escribir los tests que fallan**
+
+```python
+"""El PDF: la tirada publicada, impresa, sin red.
+
+`RI-11`, el encargo §2 para PDF y las reglas de dominio 14 y 15.
+
+**Casi toda la suite no arranca Chromium.** La impresora se inyecta y el doble
+devuelve el HTML que recibio: lo que se prueba es **que** se imprime. El unico
+test que imprime de verdad esta marcado y se salta si no hay navegador; aun
+asi corre sin red, porque es la red lo que comprueba.
+"""
+
+import re
+import zlib
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.features.manuscrito import modelos
+from app.features.manuscrito.pdf import (
+    ImpresoraNoDisponible,
+    componer_html,
+    obtener_impresora,
+)
+from app.features.manuscrito.tests.test_lectura import CAPITULOS, DEDICATORIA, version  # noqa: F401
+
+REPO = Path(__file__).resolve().parents[6]
+ESTILOS_LECTURA = REPO / "src/frontend/src/app/estilos.css"
+ESTILOS_PDF = Path(__file__).resolve().parents[1] / "impresion/impresion.css"
+
+
+class DobleDeImpresora:
+    """Guarda el HTML que le llega y devuelve un PDF de mentira."""
+
+    def __init__(self) -> None:
+        self.html: str | None = None
+
+    async def a_pdf(self, html: str) -> bytes:
+        self.html = html
+        return b"%PDF-1.7 doble"
+
+
+@pytest.fixture
+def impresora(cliente: TestClient) -> DobleDeImpresora:
+    doble = DobleDeImpresora()
+    cliente.app.dependency_overrides[obtener_impresora] = lambda: doble
+    return doble
+
+
+def _pdf(cliente: TestClient, version: modelos.VersionPublicada) -> str:
+    return f"/lectura/{version.identificador_publico}/pdf"
+
+
+# --- La ruta ------------------------------------------------------------
+
+
+async def test_la_ruta_devuelve_un_pdf_para_descargar(
+    cliente: TestClient, version: modelos.VersionPublicada, impresora: DobleDeImpresora
+) -> None:
+    respuesta = cliente.get(_pdf(cliente, version))
+
+    assert respuesta.status_code == 200
+    assert respuesta.headers["content-type"] == "application/pdf"
+    assert respuesta.headers["content-disposition"].startswith("attachment;")
+    assert respuesta.content.startswith(b"%PDF")
+
+
+def test_un_token_que_no_existe_da_404_tambien_en_el_pdf(
+    cliente: TestClient, impresora: DobleDeImpresora
+) -> None:
+    respuesta = cliente.get("/lectura/noexiste/pdf")
+
+    assert respuesta.status_code == 404
+    assert impresora.html is None        # ni siquiera se compuso
+
+
+async def test_sin_navegador_es_503_con_motivo_y_no_500(
+    cliente: TestClient, version: modelos.VersionPublicada
+) -> None:
+    class SinNavegador:
+        async def a_pdf(self, html: str) -> bytes:
+            raise ImpresoraNoDisponible("chromium no esta instalado")
+
+    cliente.app.dependency_overrides[obtener_impresora] = lambda: SinNavegador()
+
+    respuesta = cliente.get(_pdf(cliente, version))
+
+    assert respuesta.status_code == 503
+    assert "pdf" in respuesta.json()["detail"].lower()
+
+
+# --- Reglas 14 y 15 -----------------------------------------------------
+
+
+async def test_el_pdf_lleva_el_texto_fijado_y_no_el_vigente(
+    cliente: TestClient,
+    sesion: AsyncSession,
+    version: modelos.VersionPublicada,
+    impresora: DobleDeImpresora,
+) -> None:
+    """Regla 14. Se publica, se reescribe el capitulo 3 y se imprime: tiene que
+    salir **el viejo**. Si saliera el nuevo, el PDF llevaria un capitulo que no
+    paso por ninguna puerta."""
+    fijada = (
+        await sesion.execute(
+            text(
+                "SELECT v.id AS id, v.escena_id AS escena_id FROM capitulo_publicado AS c "
+                "JOIN version_texto AS v ON v.id = c.version_texto_id "
+                "WHERE c.version_id = :v AND c.numero = 3"
+            ),
+            {"v": version.id},
+        )
+    ).one()
+    await sesion.execute(text("UPDATE version_texto SET vigente = 0 WHERE id = :id"), {"id": fijada.id})
+    await sesion.execute(
+        text(
+            "INSERT INTO version_texto (escena_id, numero, texto, vigente, run_id) "
+            "VALUES (:e, 2, 'TEXTO QUE NUNCA PASO SU PUERTA', 1, 'run-nuevo')"
+        ),
+        {"e": fijada.escena_id},
+    )
+    await sesion.commit()
+
+    cliente.get(_pdf(cliente, version))
+
+    assert impresora.html is not None
+    assert "TEXTO QUE NUNCA PASO SU PUERTA" not in impresora.html
+    assert "Capitulo 3." in impresora.html
+
+
+async def test_la_dedicatoria_va_en_su_pagina_y_no_como_capitulo(
+    cliente: TestClient, version: modelos.VersionPublicada, impresora: DobleDeImpresora
+) -> None:
+    """Regla 15. Diez secciones de capitulo, ni una mas, y la dedicatoria fuera
+    de todas."""
+    cliente.get(_pdf(cliente, version))
+    html = impresora.html or ""
+
+    assert len(re.findall(r'<section class="capitulo"', html)) == CAPITULOS
+    assert html.count('class="dedicatoria"') == 1
+    antes_del_primer_capitulo = html.split('<section class="capitulo"', 1)[0]
+    assert "class=\"dedicatoria\"" in antes_del_primer_capitulo
+
+
+# --- El encargo §2 ------------------------------------------------------
+
+
+def test_el_indice_enlaza_a_los_diez_capitulos() -> None:
+    html = componer_html(
+        dedicatoria=None,
+        capitulos=[(n, f"Titulo {n}", "texto", False) for n in range(1, 11)],
+    )
+    for n in range(1, 11):
+        assert f'id="capitulo-{n}"' in html
+        assert f'href="#capitulo-{n}"' in html
+
+
+def test_con_capitulos_cambiados_abre_una_pagina_de_novedades_que_enlaza_a_ellos() -> None:
+    """El encargo §2, literal: una pagina inicial de «novedades» con los
+    capitulos modificados y enlaces internos a cada uno."""
+    html = componer_html(
+        dedicatoria=None,
+        capitulos=[(n, f"Titulo {n}", "texto", n in (3, 7)) for n in range(1, 11)],
+    )
+    novedades = html.split('class="novedades"', 1)[1].split("</section>", 1)[0]
+
+    assert 'href="#capitulo-3"' in novedades
+    assert 'href="#capitulo-7"' in novedades
+    assert 'href="#capitulo-4"' not in novedades
+    assert html.index('class="novedades"') < html.index('<section class="capitulo"')
+
+
+def test_la_primera_tirada_no_trae_pagina_de_novedades() -> None:
+    """Sin anterior no hay novedades. Una pagina vacia que dice «novedades»
+    seria una afirmacion falsa en la primera hoja del regalo."""
+    html = componer_html(
+        dedicatoria=None,
+        capitulos=[(n, None, "texto", False) for n in range(1, 11)],
+    )
+    assert 'class="novedades"' not in html
+
+
+# --- Lo que entra en el HTML --------------------------------------------
+
+
+def test_toda_cadena_se_escapa() -> None:
+    """La prosa la escribio un modelo y la dedicatoria el comprador. Ninguna de
+    las dos puede meter una etiqueta, y menos una que pida algo a la red."""
+    html = componer_html(
+        dedicatoria='<img src="https://tercero.example/x.png">',
+        capitulos=[(1, "<b>t</b>", "a < b y <script>alert(1)</script>", False)],
+    )
+    assert "<img" not in html
+    assert "<script>" not in html
+    assert "<b>t</b>" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_el_html_no_pide_nada_fuera_de_si_mismo() -> None:
+    """`CLAUDE.md` §4.3. Ni una URL externa: ni Google Fonts ni nada."""
+    html = componer_html(dedicatoria="d", capitulos=[(1, "t", "texto", False)])
+
+    assert "@import" not in html
+    assert not re.search(r"(src|href)=[\"']?https?://", html)
+    assert not re.search(r"url\(\s*[\"']?https?://", html)
+    assert "font/ttf;base64," in html     # la fuente viaja dentro
+
+
+def test_los_tokens_del_pdf_son_los_de_la_lectura() -> None:
+    """La regla 4 de §5.1, «se duplica primero», con alguien que vigila la copia.
+
+    Lee el frontend a proposito, y si el fichero no esta, **revienta**: un skip
+    aqui volveria verde el test por no encontrar lo que tenia que comparar."""
+    def tokens(css: str) -> dict[str, str]:
+        return dict(re.findall(r"(--[a-z-]+):\s*([^;]+);", css))
+
+    lectura, pdf = tokens(ESTILOS_LECTURA.read_text("utf-8")), tokens(ESTILOS_PDF.read_text("utf-8"))
+    for nombre in ("--papel", "--tinta", "--acento", "--tinta-suave"):
+        assert pdf[nombre] == lectura[nombre], nombre
+
+
+# --- La impresora real --------------------------------------------------
+
+
+@pytest.mark.chromium
+async def test_chromium_imprime_con_literata_y_sin_una_sola_peticion() -> None:
+    """El unico test que arranca el navegador. Se salta si no esta instalado, y
+    aun asi no toca la red: comprueba justo eso."""
+    from app.features.manuscrito.pdf import ImpresoraChromium
+
+    impresora = ImpresoraChromium()
+    html = componer_html(
+        dedicatoria="Dedicatoria de prueba",
+        capitulos=[(n, f"Titulo {n}", "Texto de prueba. " * 300, n == 2) for n in range(1, 11)],
+    )
+
+    pdf = await impresora.a_pdf(html)
+
+    assert pdf.startswith(b"%PDF")
+    assert impresora.peticiones_bloqueadas == 0
+    contenido = pdf + b"".join(
+        zlib.decompress(m.group(1).rstrip(b"\r\n"))
+        for m in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S)
+        if m.group(1)[:2] == b"x\x9c"
+    )
+    fuentes = {f.split(b"+")[-1] for f in re.findall(rb"/BaseFont\s*/([^\s/<>\[\]]+)", contenido)}
+    assert {b"Literata-Regular", b"Literata-Italic"} <= fuentes
+    assert b"Georgia" not in b"".join(fuentes)
+    assert re.search(rb"/Dest\s*/capitulo-2", contenido)      # la novedad enlaza
+```
+
+**Sobre `peticiones_bloqueadas == 0`.** Cuenta las peticiones que el `route` tuvo que abortar. Si fuera 1, el HTML habría intentado salir, y el test lo detecta aunque el PDF salga bien. Es la diferencia entre «no salió» y «no intentó salir».
+
+**Sobre el test de tokens.** Sale **en rojo** mientras `impresion.css` no exista, y ese es el rojo que se quiere ver. Si `estilos.css` cambia a Literata autoalojada, este test no se ve afectado: compara colores, no la carga de la fuente.
+
+- [ ] **Paso 2: Ejecutarlos y ver que fallan**
+
+```bash
+uv run pytest src/backend/app/features/manuscrito/tests/test_pdf.py -v
+```
+
+Esperado: **error de colección**, porque `app.features.manuscrito.pdf` no existe. Con el módulo creado con los nombres y sin cuerpo, de los 12 tests salen **10 FAIL, 1 PASS y el de Chromium en FAIL**. El navegador se instala en el paso 0 precisamente para verlo fallar a él también.
+
+**El PASS se declara, porque es un test que nunca se vio fallar.** `test_un_token_que_no_existe_da_404_tambien_en_el_pdf` ya pasa hoy: la ruta del 501 comprueba el token antes de responder. Se queda como guardia de regresión, para que la implementación no componga el PDF antes de validar el token. No cuenta como prueba de nada nuevo.
+
+- [ ] **Paso 3: Implementar la composición.** `componer_html(dedicatoria, capitulos)`, función pura, sin sesión ni red. `capitulos` es una lista de `(numero, titulo, texto, cambiado)`. Estructura: la portada con la dedicatoria, después la página de novedades si hay algún capítulo cambiado, después el índice, y después las diez `<section class="capitulo" id="capitulo-N">`. `@page { size: A5 }`, un salto antes de cada capítulo y `orphans`/`widows` a 2, que son los valores que midió el spike. Se crea `impresion.css`. Pasan **7 de 12**: los seis de composición, HTML y tokens, más el guardia del 404.
+
+- [ ] **Paso 4: Implementar la impresora y la ruta.** `ImpresoraChromium.a_pdf` con `playwright.async_api`, más `set_content`, `java_script_enabled=False`, el `route` que aborta y cuenta, y `page.pdf(prefer_css_page_size=True)`. Si Playwright no puede lanzar el navegador, lanza `ImpresoraNoDisponible`. En la ruta se sustituye el 501 por la composición desde `texto_publicado` y se devuelve `Response(media_type="application/pdf")`. **No se escribe ni la prosa ni el HTML en ningún log.**
+
+- [ ] **Paso 5: Verde** en todo el fichero y en la suite completa **sin red**, además de `ruff`, `mypy` sobre `pdf.py` y `lint-imports`. Registrar el marcador `chromium` en `pyproject.toml`.
+
+- [ ] **Paso 6: Abrir el PDF a ojo una vez**, con texto de los dobles: portada, novedades, índice y un capítulo. **El PDF no se commitea** (`CLAUDE.md` §16, última casilla).
+
+- [ ] **Paso 7: Avisar.**
+
+### Lo que esta tarea NO hace
+
+- **No cambia `estilos.css`.** El frontend también carga Literata desde Google, y eso es una fuga hacia un tercero cada vez que un destinatario abre su novela (`CLAUDE.md` §4.3). Pero es un cambio del plan 1 del frontend, no de este, y va aparte.
+- **No guarda el PDF.** Se genera en cada petición: 2 s no justifican una columna nueva ni un cambio de esquema (§3.7). Si algún día se guarda, va por versión publicada, porque la versión es inmutable.
+- **No resuelve la diferencia de ruta con `RI-11`.** La spec promete `…/versiones/{v}/pdf` y el código expone `/lectura/{token}/pdf`. Lo lleva Ezequiel con quien escribió la T9.
+
 ## Lo que esta fase deja cerrado
 
 | Criterio | Qué demuestra |
