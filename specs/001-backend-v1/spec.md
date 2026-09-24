@@ -150,6 +150,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 | RI-12 | `GET /obras/{id}/canon` — consulta del grafo | S | Test |
 | RI-13 | Todo aparece en el **OpenAPI** con sus modelos: es el contrato del que la 002 genera su cliente | M | Análisis (+Test) |
 | RI-14 | El cliente de modelo, el contador de tokens y el reloj se **inyectan**: ninguna prueba llama al proveedor | M | Análisis (+Test) |
+| RI-15 | `POST /obras/{id}/novela` — escribe la novela entera: abre un trabajo por capítulo y devuelve **por dónde empieza**, no identificadores que aún no existen. Responde `202` y el progreso se consulta por RI-06 | M | Test |
 
 ### Funcionales — entrevista y configuración (§1)
 
@@ -394,7 +395,9 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 - [ ] **CA-30** — La dedicatoria **no aparece** en el manuscrito ensamblado, ni en el PDF como capítulo, ni en `ngrama_vetado`. *(Test)* → RD-05.
 - [ ] **CA-31** — Un brief que empuja contra la edad mínima o el nivel de calor **se rechaza al construirlo**, no en el prompt. *(Test)* → RNF-SEG-02.
 - [ ] **CA-32** — El outline asigna cada beat obligatorio a **exactamente un** capítulo; uno duplicado o sin asignar falla. *(Test)* → RF-PLA-01, RF-PLA-02, RF-PLA-03, RF-PLA-04.
-- [ ] **CA-33** — Los catorce endpoints aparecen en el OpenAPI con sus modelos, y el estado de un trabajo se lee **por capítulo**. *(Test)* → RI-01, RI-02, RI-03, RI-04, RI-05, RI-06, RI-07, RI-08, RI-09, RI-10, RI-11, RI-12, RI-13, RF-ESC-01, RF-ESC-02, RF-MEM-01, RF-MEM-04, RF-MEM-08, RF-ORQ-01.
+- [ ] **CA-33** — Los **dieciséis** endpoints de RI-01 a RI-12 y RI-15 aparecen en el OpenAPI con sus modelos, y el estado de un trabajo se lee **por capítulo**. *(Test)* → RI-01, RI-02, RI-03, RI-04, RI-05, RI-06, RI-07, RI-08, RI-09, RI-10, RI-11, RI-12, RI-13, RI-15, RF-ESC-01, RF-ESC-02, RF-MEM-01, RF-MEM-04, RF-MEM-08, RF-ORQ-01.
+
+  *Dieciséis sale de contar, no de estimar: doce filas, de las cuales **RI-11 son cuatro rutas** —`versiones`, `…/{v}`, `…/{v}/ficha`, `…/{v}/pdf`—, más RI-15. RI-13 y RI-14 no son endpoints. El número se escribe con su desglose para que se pueda comprobar contando, que es como se descubrió que el anterior estaba mal.*
 
 - [ ] **CA-34** — Cuando la entrevista se completa sin faltantes ni contradicciones, entonces el brief resultante contiene **el destinatario con sus datos, los vetos del comprador y sus elementos obligatorios**, y valida contra su esquema; y la salida de cada rol valida contra el suyo. *(Test)* → RF-ENT-01, RF-ENT-02, RF-VAL-02.
 - [ ] **CA-35** — Un capítulo por debajo o por encima del rango declarado **se detecta y vuelve al escritor**; uno dentro del rango pasa. *(Test)* → RF-VAL-04.
@@ -547,6 +550,35 @@ Dos consecuencias que se escriben aquí porque cambian requisitos:
 ---
 
 ## Cierre
+
+**v3.3 · Necesita firma nueva, y por eso vuelve a pedirla el 2026-09-24.** La v3.2 la firmó
+`maujimenez4` el 2026-09-24; desde entonces **entra un requisito**, así que aquella firma ya no
+cubre lo que la spec dice.
+
+**Qué cambia, y es todo:** entra `RI-15` —`POST /obras/{id}/novela`— y `CA-33` pasa de
+**catorce** a **dieciséis** endpoints, citando ahora RI-15.
+
+**Es aditivo: no retira nada firmado**, a diferencia de la v3.2. El endpoint ya existe en el
+código desde T9; lo que faltaba era el requisito que lo justifica. Se añadió porque `CA-1`
+—una novela de principio a fin— y la corrida real necesitan **una sola entrada**: con solo
+`RI-05` son diez llamadas que alguien secuencia a mano sin conocer los identificadores.
+
+**Y hay una corrección que no viene de T9, conviene separarla porque cambia a quién se atribuye
+el error.** «Catorce» ya estaba mal **antes** de que existiera el endpoint nuevo: la tabla de
+interfaces especificaba **quince** rutas, porque `RI-11` son cuatro —`versiones`, `…/{v}`,
+`…/{v}/ficha`, `…/{v}/pdf`— y `RI-12` es una más. El recuento anterior omitía una fila. Por eso
+`CA-33` lleva ahora su desglose escrito: un número que solo se afirma no se puede desmentir, y
+este llevaba dos versiones sin que nadie lo contara.
+
+*Precedente que se imita: la v3.1, cuando `RF-PUB-05` ganó los capítulos de la ficha. Como
+entonces, el cambio se declara aquí y la firma la pone una persona en un commit suyo
+(`CLAUDE.md` §3.2 y §15). **Ningún agente la ha puesto.***
+
+**Lo que esta corrección no dice, y hay que leerlo antes de firmar:** `CA-33` sigue **sin
+cumplirse**, y no por el número. El OpenAPI publica hoy **ocho** operaciones —medidas el
+2026-09-24 sobre `crear_app()`—, de dieciséis. Las ocho que faltan son las de publicación,
+peticiones, versiones, ficha, PDF y canon, cuyas features todavía no tienen `router.py`.
+Corregir el número no acerca el criterio: lo deja medible.
 
 **v3.2 · Necesitó firma nueva, y por eso volvió a `en-revision` el 2026-09-24.** La v3.1 la firmó `maujimenez4` el 2026-09-24; desde entonces **cambió un requisito**, así que aquella firma ya no cubría lo que dice.
 
