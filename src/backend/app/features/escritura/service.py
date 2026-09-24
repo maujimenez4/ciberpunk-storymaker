@@ -1,0 +1,405 @@
+"""El ciclo de escritura de un capitulo: escribir, validar, reparar, detenerse.
+
+Aqui vive todo lo que el Escritor **no** hace, y la separacion es el diseno:
+
+| Quien | Que hace | Que no hace |
+| --- | --- | --- |
+| `agents.py` | Manda el prompt, devuelve prosa | No juzga, no guarda, no cuenta |
+| esto | Guarda, cruza la puerta, cuenta y para | No escribe prosa, no puntua |
+| `calidad` | Decide si el capitulo pasa | No repara, no reintenta, no persiste |
+
+Si el Escritor decidiera cuando su propia prosa esta bien, el mismo codigo que
+escribe se estaria dando permiso. Y si la puerta reparase, dejaria de poder
+probarse el rechazo sin un ciclo entero alrededor.
+
+**Los reintentos van dirigidos, siempre.** `CLAUDE.md` §15 prohibe con esas
+palabras los reintentos genericos: cada vuelta lleva el defecto concreto con la
+cita del pasaje (RF-ESC-03), y un defecto que no se puede citar no vuelve. El
+tope son **dos reparaciones por capitulo** (RF-ORQ-04), y el contador es una
+variable local: no hay ningun sitio donde pudiera sobrevivir al capitulo.
+
+**Lo que no es de esta tarea y se ve desde aqui:** el estado del `Trabajo`, el
+turno del presupuesto concurrente y la consolidacion en canon son del ciclo de
+punta a punta (T11). Esto devuelve un resultado y no toca ninguna de las tres.
+"""
+
+import re
+from collections.abc import Collection, Sequence
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Protocol, runtime_checkable
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.commons.db.auditoria import registrar
+from app.commons.domain.normalizacion import contiene_veto, normalizar
+from app.features.calidad import (
+    CapituloAValidar,
+    Defecto,
+    NombreDeCanon,
+    ParametrosDeDiscurso,
+    Persona,
+    RangoDeExtension,
+    ResultadoDePuerta,
+    TiempoVerbal,
+    cruzar_g1a,
+)
+from app.features.contexto import ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
+from app.features.escena import RestriccionesDeDiscurso
+from app.features.escritura.agents import (
+    HASH_DE_PLANTILLA_V1,
+    PROMPT_ID,
+    PROMPT_VERSION,
+    Escritor,
+    Reparacion,
+)
+from app.features.escritura.modelos import INTENTOS_MAXIMOS, Ejecucion, VersionTexto
+
+CODIGO_DE_PALABRA_PROHIBIDA = "SEG-02"
+"""`definitions.md` §8: «`PalabraProhibida` presente en el texto — reescritura
+obligatoria; se cuenta en el `RegistroDeAuditoria`».
+
+Que el veto viaje como un defecto de la taxonomia y no como un caso aparte es lo
+que hace que RF-GUA-03 y RF-ESC-03 sean **el mismo mecanismo**: entra por
+`defectos_recibidos`, pasa la comprobacion de forma como cualquier otro, bloquea
+como cualquier otro y vuelve al prompt con su cita como cualquier otro.
+"""
+
+PERSONA_DE_LA_OBRA: dict[str, Persona] = {
+    "1ª": Persona.PRIMERA,
+    "3ª limitada": Persona.TERCERA_LIMITADA,
+    "3ª omnisciente": Persona.TERCERA_OMNISCIENTE,
+}
+"""La obra dice `3ª limitada` y `calidad` dice `tercera_limitada`.
+
+**Son dos grafias del mismo concepto y las dos existen hoy en el repositorio**
+(ver Desviaciones): `definitions.md` §5 fija la ordinal abreviada, que es la que
+usan `outline` y `escena`, y T12 escribio su enum con nombres deletreados. No se
+elige aqui cual gana —eso es §3.2 y no una tarea de implementacion—: se traduce
+en **un solo sitio**, con un test que cae si aparece una persona sin traducir.
+"""
+
+TIEMPO_VERBAL_DE_LA_OBRA: dict[str, TiempoVerbal] = {
+    "pasado": TiempoVerbal.PASADO,
+    "presente": TiempoVerbal.PRESENTE,
+}
+"""Aqui los dos literales si coinciden. Se escribe igual que el de arriba para
+que la comprobacion sea la misma y no dos reglas distintas."""
+
+_PALABRA = re.compile(r"\w+", re.UNICODE)
+"""El mismo patron que `commons/domain/normalizacion.py`, y esa igualdad es lo
+que sostiene `localizar_veto`: si `contiene_veto` encontro un termino, es porque
+una de **estas** palabras normaliza igual que el."""
+
+
+@runtime_checkable
+class _Consumo(Protocol):
+    tokens_entrada: int
+    tokens_salida: int
+    coste_usd: Decimal
+
+
+@runtime_checkable
+class _ClienteQueDeclaraConsumo(Protocol):
+    @property
+    def ultimo_consumo(self) -> "_Consumo | None": ...
+
+
+@dataclass(frozen=True, slots=True)
+class IntentoDeEscritura:
+    """Una vuelta del ciclo: lo que se escribio y que dijo la puerta.
+
+    Se conservan **todos**, aprobados y rechazados. Sin ellos, «se reparo dos
+    veces y se escalo» seria una afirmacion del codigo sobre si mismo.
+    """
+
+    numero: int
+    version_texto_id: int
+    texto: str
+    resultado: ResultadoDePuerta
+    termino_vetado: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Escritura:
+    """Lo que el ciclo devuelve. **Se informa, no se lanza.**
+
+    RF-GUA-03 pide que, agotado el limite, «la generacion se detiene y **se
+    informa**». Una excepcion detendria tambien a quien orqueste, que es
+    justamente quien tiene que pasar el trabajo a `ESCALADA` y contarselo a una
+    persona: un final previsto del ciclo no es una averia.
+    """
+
+    aprobado: bool
+    version_texto_id: int
+    texto: str
+    intentos: tuple[IntentoDeEscritura, ...]
+    motivo_de_escalado: str | None = None
+
+    @property
+    def reparaciones_gastadas(self) -> int:
+        """Las vueltas que no fueron la primera. Tope: `INTENTOS_MAXIMOS`."""
+        return len(self.intentos) - 1
+
+
+def localizar_veto(texto: str, vetos: Sequence[str]) -> tuple[str, int, int] | None:
+    """El termino vetado **y donde esta**, o `None`.
+
+    `contiene_veto` devuelve el termino y no un booleano —la Fase 1 lo dejo asi
+    a proposito— y eso es la mitad de RF-GUA-03. La otra mitad es el
+    desplazamiento: sin el, la cita del defecto no seria subcadena exacta en su
+    desplazamiento (regla de dominio 8), el defecto saldria **mal formado** y no
+    bloquearia nada. Una palabra prohibida que no bloquea es peor que no
+    comprobarla, porque parece comprobada.
+
+    El `next` sin valor por defecto no es un descuido: `contiene_veto` compara
+    las palabras de **este mismo** patron con **esta misma** normalizacion, asi
+    que si devolvio un termino, hay una palabra que lo iguala. Poner un
+    `None` de respaldo crearia una rama que ningun test puede alcanzar.
+    """
+    veto = contiene_veto(texto, vetos)
+    if veto is None:
+        return None
+    objetivo = normalizar(veto)
+    encontrada = next(p for p in _PALABRA.finditer(texto) if normalizar(p.group(0)) == objetivo)
+    return veto, encontrada.start(), encontrada.end()
+
+
+def _defecto_de_veto(version_texto_id: int, texto: str, inicio: int, fin: int) -> Defecto:
+    """El veto, con la forma que la puerta exige de cualquier defecto."""
+    return Defecto(
+        codigo=CODIGO_DE_PALABRA_PROHIBIDA,
+        version_texto_id=str(version_texto_id),
+        cita=texto[inicio:fin],
+        desplazamiento_inicio=inicio,
+        desplazamiento_fin=fin,
+    )
+
+
+def _discurso(restricciones: RestriccionesDeDiscurso) -> ParametrosDeDiscurso:
+    """Regla de dominio 10: lo que la obra declara, traducido al validador.
+
+    Falla con `KeyError` si la persona no tiene traduccion, y es lo correcto:
+    inventar un valor por defecto haria que el validador comprobara el texto
+    contra algo que nadie decidio, que es lo mismo que T4 rechazo para la ficha.
+    """
+    return ParametrosDeDiscurso(
+        persona=PERSONA_DE_LA_OBRA[restricciones.persona],
+        tiempo_verbal=TIEMPO_VERBAL_DE_LA_OBRA[restricciones.tiempo_verbal],
+    )
+
+
+async def _guardar_version(
+    sesion: AsyncSession, escena_id: int, texto: str, run_id: str
+) -> VersionTexto:
+    """Una version nueva, vigente, sin tocar la anterior (RF-ESC-02).
+
+    El orden es obligatorio y no estetico: el indice parcial de T2 admite **una
+    sola** vigente por escena, asi que la anterior se apaga antes de encender la
+    nueva. Y se apaga con un `UPDATE` de `vigente` y de nada mas, que es la
+    unica columna que el disparador de inmutabilidad deja cambiar.
+
+    La descartada **no se borra**: R-7 nombra canon, ledger e indice, no el
+    manuscrito, y lo entregado tiene que seguir siendo recuperable.
+    """
+    ultimo = (
+        await sesion.execute(
+            select(VersionTexto.numero)
+            .where(VersionTexto.escena_id == escena_id)
+            .order_by(VersionTexto.numero.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    await sesion.execute(
+        update(VersionTexto)
+        .where(VersionTexto.escena_id == escena_id, VersionTexto.vigente.is_(True))
+        .values(vigente=False)
+    )
+    version = VersionTexto(
+        escena_id=escena_id,
+        numero=1 if ultimo is None else ultimo + 1,
+        texto=texto,
+        vigente=True,
+        run_id=run_id,
+    )
+    sesion.add(version)
+    await sesion.flush()
+    return version
+
+
+async def _completar_ejecucion(
+    sesion: AsyncSession, ejecucion_id: int, escritor: Escritor, veredicto: str
+) -> None:
+    """Cierra la fila que nacio antes de la llamada (P-A, decision de T6).
+
+    `tokens_previstos` ya estaba —es lo que decidio que se podia llamar— y aqui
+    entran los tres que solo existen despues: tokens reales, coste y veredicto.
+
+    **El consumo se pregunta y puede no estar**, y por eso no se imputa cero:
+    `ClienteModelo` declara `completar` y nada mas —su fichero es de T1 y ya
+    cerro—, asi que el cliente real expone `ultimo_consumo` y un doble puede no
+    hacerlo. Un cero se guarda, se suma y se publica sin que nadie note que el
+    dato no estaba; un nulo se ve.
+    """
+    valores: dict[str, object] = {"veredicto": veredicto}
+    cliente = escritor.cliente
+    if isinstance(cliente, _ClienteQueDeclaraConsumo):
+        consumo = cliente.ultimo_consumo
+        if consumo is not None:
+            valores["tokens_reales"] = consumo.tokens_entrada + consumo.tokens_salida
+            valores["coste"] = float(consumo.coste_usd)
+
+    await sesion.execute(update(Ejecucion).where(Ejecucion.id == ejecucion_id).values(**valores))
+
+
+async def escribir_capitulo(
+    sesion: AsyncSession,
+    escritor: Escritor,
+    *,
+    contexto: ContextoDelCapitulo,
+    run_id: str,
+    modelo: str,
+    restricciones: RestriccionesDeDiscurso,
+    rango_de_extension: RangoDeExtension,
+    nombres_del_canon: Sequence[NombreDeCanon] = (),
+    hechos_de_canon: Collection[str] = (),
+    vetos: Sequence[str] = (),
+    semilla: int = 0,
+) -> Escritura:
+    """Escribe el capitulo y lo repara dirigidamente hasta dos veces.
+
+    El orden de cada vuelta es este, y ninguno de los pasos se puede adelantar:
+
+    1. **Nace la fila de `ejecucion`**, con el recuento previo del paquete. Es
+       lo que acredita que se conto **antes** de llamar (RF-CTX-02, P-A).
+    2. Se llama al Escritor, que solo ve el paquete.
+    3. **Se guarda la version**, aprobada o no. Una prosa que no se guardara no
+       se podria citar, y un defecto sin cita no vuelve dirigido.
+    4. Se busca la palabra vetada y se anota la decision en el registro de
+       auditoria —lo permitido tambien, no solo lo bloqueado (RF-GUA-04)—.
+    5. Se cruza la puerta mecanica, con el veto entre los defectos recibidos.
+    6. Si bloquea y quedan reparaciones, los defectos vuelven **con su cita**.
+
+    `contexto` entra entero y no troceado porque `registrar_ejecucion` lo pide
+    asi: la fila de cada llamada necesita obra, escena, version de biblia,
+    tokens por capa e IDs recuperados, y trocearlo aqui seria volver a montarlo
+    alli. El paquete que se envia es `contexto.paquete` y ningun otro.
+    """
+    intentos: list[IntentoDeEscritura] = []
+    reparaciones: tuple[Reparacion, ...] = ()
+    texto_anterior: str | None = None
+
+    while True:
+        ejecucion_id = await registrar_ejecucion(
+            sesion,
+            contexto,
+            DatosDeLlamada(
+                run_id=run_id,
+                prompt_id=PROMPT_ID,
+                prompt_version=PROMPT_VERSION,
+                prompt_hash=HASH_DE_PLANTILLA_V1,
+                modelo=modelo,
+                semilla=semilla,
+            ),
+        )
+
+        texto = await escritor.escribir(
+            contexto.paquete,
+            restricciones,
+            texto_anterior=texto_anterior,
+            reparaciones=reparaciones,
+        )
+        version = await _guardar_version(sesion, contexto.escena_id, texto, run_id)
+
+        encontrado = localizar_veto(texto, vetos)
+        recibidos: list[Defecto] = []
+        if encontrado is None:
+            await registrar(
+                sesion, contexto.obra_id, "permitido", "sin veto", {"version_texto": version.id}
+            )
+        else:
+            veto, inicio, fin = encontrado
+            recibidos.append(_defecto_de_veto(version.id, texto, inicio, fin))
+            await registrar(
+                sesion,
+                contexto.obra_id,
+                "bloqueado",
+                f"veto: {veto}",
+                {"version_texto": version.id, "termino": veto, "desplazamiento": [inicio, fin]},
+            )
+
+        resultado = cruzar_g1a(
+            CapituloAValidar(
+                version_texto_id=str(version.id),
+                texto=texto,
+                rango_de_extension=rango_de_extension,
+                discurso=_discurso(restricciones),
+                nombres_del_canon=tuple(nombres_del_canon),
+            ),
+            hechos_de_canon,
+            recibidos,
+        )
+        intentos.append(
+            IntentoDeEscritura(
+                numero=len(intentos) + 1,
+                version_texto_id=version.id,
+                texto=texto,
+                resultado=resultado,
+                termino_vetado=None if encontrado is None else encontrado[0],
+            )
+        )
+
+        if resultado.aprobado:
+            await _completar_ejecucion(sesion, ejecucion_id, escritor, "aprobada")
+            return Escritura(
+                aprobado=True,
+                version_texto_id=version.id,
+                texto=texto,
+                intentos=tuple(intentos),
+                motivo_de_escalado=None,
+            )
+
+        # RF-ORQ-04: dos reparaciones dirigidas y ni una mas. El contador es
+        # `len(intentos)` y vive en esta llamada, asi que no hay donde pudiera
+        # sobrevivir al capitulo: avanzar al siguiente no consume nada.
+        if len(intentos) > INTENTOS_MAXIMOS:
+            await _completar_ejecucion(sesion, ejecucion_id, escritor, "escalada")
+            return Escritura(
+                aprobado=False,
+                version_texto_id=version.id,
+                texto=texto,
+                intentos=tuple(intentos),
+                motivo_de_escalado=_motivo(resultado, intentos[-1].termino_vetado),
+            )
+
+        await _completar_ejecucion(sesion, ejecucion_id, escritor, "rechazada")
+        reparaciones = tuple(
+            Reparacion.de_defecto(
+                defecto,
+                termino_vetado=(
+                    intentos[-1].termino_vetado
+                    if defecto.codigo == CODIGO_DE_PALABRA_PROHIBIDA
+                    else None
+                ),
+            )
+            for defecto in resultado.bloqueantes
+        )
+        texto_anterior = texto
+
+
+def _motivo(resultado: ResultadoDePuerta, termino_vetado: str | None) -> str:
+    """Por que se escala, **nombrando** el termino cuando lo hay.
+
+    «Se agotaron los intentos» no deja actuar a quien lo lea. RF-GUA-03 pide el
+    termino concreto en el camino de vuelta al escritor, y el mismo criterio
+    vale para el camino de vuelta a la persona.
+    """
+    codigos = ", ".join(sorted({defecto.codigo for defecto in resultado.bloqueantes}))
+    motivo = (
+        f"agotadas las {INTENTOS_MAXIMOS} reparaciones dirigidas; sigue bloqueado por {codigos}"
+    )
+    if termino_vetado is not None:
+        motivo += f"; palabra vetada: {termino_vetado}"
+    return motivo

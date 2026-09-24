@@ -14,6 +14,7 @@ from app.commons.llm.doble import DobleDeterminista
 from app.features.canon.modelos import Evento  # noqa: F401  (registra las tablas de `canon`)
 from app.features.contexto import Paquete, ensamblar_capitulo
 from app.features.escena.modelos import Escena
+from app.features.escritura import Escritor
 from app.features.escritura.modelos import VersionTexto  # noqa: F401  (registra `escritura`)
 from app.features.obra.modelos import HechoCanon, Obra
 from app.features.outline.modelos import Capitulo, VersionObra
@@ -204,6 +205,23 @@ def respuestas_del_modelo() -> dict[str, str]:
     esta mal escrito, y es mejor que falle a que reciba algo inventado.
     """
     return {}
+
+
+@pytest.fixture
+def escritor(respuestas_del_modelo: dict[str, str]) -> Escritor:
+    """El Escritor con el doble, y **sin sesion**. Es la fixture de T8.
+
+    No recibe `sesion` y no es un descuido: el Escritor solo ve el paquete y
+    nunca accede a la base de datos (RF-ESC-01, `CLAUDE.md` §9.1). Una fixture
+    que le pasara una sesion haria que la restriccion dependiera de que nadie
+    la usara.
+
+    Las respuestas salen de `respuestas_del_modelo`, que cada modulo de tests
+    sobrescribe. El doble elige por subcadena del prompt y **en orden de
+    insercion**, asi que preparar `MARCA_DE_REPARACION` antes que
+    `MARCA_DE_PLANTILLA` es lo que distingue el reintento de la primera vuelta.
+    """
+    return Escritor(DobleDeterminista(respuestas_del_modelo))
 
 
 @pytest.fixture
