@@ -20,7 +20,6 @@ llamar, y ese es el punto — el checkpoint es codigo determinista.
 """
 
 import pytest
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.commons.domain.errores import ErrorDeDominio
@@ -33,7 +32,6 @@ from app.features.escritura.checkpoint import (
     Checkpoint,
     CheckpointPrematuro,
     TrabajoSinCapitulo,
-    atar_al_capitulo,
     empezar_capitulo,
     registrar_checkpoint,
     reparaciones_del_capitulo,
@@ -175,28 +173,6 @@ async def test_no_hay_checkpoint_de_un_trabajo_sin_capitulo(
     )
     with pytest.raises(TrabajoSinCapitulo):
         await registrar_checkpoint(sesion, trabajo)
-
-
-async def test_atar_al_capitulo_deja_el_trabajo_listo_para_el_checkpoint(
-    sesion: AsyncSession, obra_con_outline: ObraConOutline
-):
-    """`trabajo.capitulo_id` lo anade T1 y es lo que hace anotable el avance."""
-    capitulo = obra_con_outline.capitulos[0]
-    trabajo = await _trabajo(
-        sesion,
-        obra_id=obra_con_outline.obra.id,
-        capitulo_id=None,
-        estado=Estado.PLANIFICANDO,
-    )
-    await atar_al_capitulo(sesion, trabajo, capitulo_id=capitulo.id)
-    assert trabajo.capitulo_id == capitulo.id
-
-    leido = (
-        await sesion.execute(
-            text("SELECT capitulo_id FROM trabajo WHERE id = :id"), {"id": trabajo.id}
-        )
-    ).scalar_one()
-    assert leido == capitulo.id
 
 
 # ---------------------------------------------------------------------------

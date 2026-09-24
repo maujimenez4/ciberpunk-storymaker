@@ -5,11 +5,16 @@ RF-VAL-05, `CA-15` y la **regla de dominio 11**, que es el axioma 15 de
 en al menos un `Capitulo`, comprobado contra `HechoCanon.usado_en[]`. Un dato que
 el comprador pidio y no esta no es una omision: es el producto sin entregar».
 
-**Solo se puede comprobar con la novela entera**, y por eso este modulo no esta
-en el `CATALOGO` de `validadores.py`: aquellos corren en el hook de capitulo y
-miran un capitulo solo. Un capitulo suelto no demuestra nada sobre la cobertura
-—que el elemento no este en el 3 no es un defecto si esta en el 8—, asi que un
+**Solo se puede comprobar con la novela entera**, y por eso no esta en el
+`CATALOGO` de `validadores.py`: aquellos corren en el hook de capitulo y miran
+un capitulo solo. Un capitulo suelto no demuestra nada sobre la cobertura —que
+el elemento no este en el 3 no es un defecto si esta en el 8—, asi que un
 validador de capitulo que lo comprobara solo sabria emitir falsos positivos.
+
+**Esta en el otro**, desde T9: `CATALOGO_DE_MANUSCRITO`, con el nombre que le da
+`verification.md` §8.1 —`cobertura_de_personalizacion`— y su punto de ejecucion,
+la puerta G4. Hasta entonces la funcion estaba escrita, probada y **sin que
+nadie la ejecutara**, que es la forma silenciosa de no tener un validador.
 
 **Contra la tabla de hechos, y no con un `in` sobre la prosa.** Esa diferencia no
 es un detalle de implementacion: es el requisito. Con una busqueda de subcadena

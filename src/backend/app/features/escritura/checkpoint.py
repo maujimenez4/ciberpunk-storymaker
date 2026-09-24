@@ -27,7 +27,18 @@ relato de lo ocurrido, que puede divergir del primero justo cuando importa
 
 Lo que si es una escritura es **atar el trabajo a su capitulo**: sin
 `trabajo.capitulo_id` —la columna que T1 anadio— el avance no se puede
-preguntar, porque un trabajo recien abierto todavia no tiene escena.
+preguntar, porque un trabajo recien abierto todavia no tiene escena. Eso lo hace
+`ciclo.abrir_trabajo`, en la misma linea en que crea la fila.
+
+**Y hubo aqui una `atar_al_capitulo` que se retira en T9**, con su motivo
+escrito porque invertir una decision razonada se explica (`CLAUDE.md` §3.3):
+nacio cuando `abrir_trabajo` no rellenaba la columna y tocarlo habria cruzado el
+alcance de la ola; el cierre de la ola 2 lo rellena, asi que la funcion quedaba
+exportada y sin un solo llamador en produccion. Se busco el otro desenlace que
+el aviso de T8 admitia —«o la usa quien abra trabajos por otra via»— y no lo
+hay: el bucle de la novela abre sus trabajos con `abrir_trabajo`, como todos.
+Una funcion publica que nadie llama es una invitacion a abrir trabajos por una
+segunda via, que es justo lo que no debe existir.
 
 ## Las dos reglas que dejan empezar el capitulo N+1
 
@@ -186,21 +197,6 @@ class CapituloAnteriorSinIntegrar(ErrorDeDominio):
             f"No se puede empezar el capitulo {numero} de la obra {obra_id}: el "
             f"{numero_pendiente} todavia no esta integrado"
         )
-
-
-async def atar_al_capitulo(sesion: AsyncSession, trabajo: Trabajo, *, capitulo_id: int) -> None:
-    """Deja escrito de que capitulo es el trabajo. **Es lo que hace anotable el avance.**
-
-    Se llama al abrir el trabajo y no al integrarlo: un trabajo que se cae a
-    mitad tiene que seguir sabiendo a que capitulo pertenece, o el contador de
-    reparaciones del capitulo se pondria a cero en la reanudacion y el limite de
-    dos dejaria de ser un limite.
-
-    Persiste, como `maquina.avanzar`: un `capitulo_id` que solo viva en el objeto
-    no sobrevive a la caida que justifica que exista.
-    """
-    trabajo.capitulo_id = capitulo_id
-    await sesion.commit()
 
 
 async def registrar_checkpoint(sesion: AsyncSession, trabajo: Trabajo) -> Checkpoint:

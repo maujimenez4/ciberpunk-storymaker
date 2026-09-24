@@ -39,6 +39,12 @@ from app.features.canon import Extractor, Vector, vectorizador_de
 from app.features.escena import Planificador
 from app.features.escritura.agents import Escritor
 from app.features.escritura.ciclo import Agentes, abrir_trabajo, ejecutar_ciclo, leer_trabajo
+from app.features.escritura.novela import (
+    ciclo_de_la_novela,
+    escribir_novela,
+    numero_de_capitulo,
+)
+from app.features.escritura.reanudacion import planificar_reanudacion
 
 FabricaDeSesion = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
@@ -150,10 +156,20 @@ class TrabajoLanzado(BaseModel):
 
 
 class EstadoDelTrabajo(BaseModel):
-    """RI-06. Es la unidad de trabajo de `architecture.md` §3.2, sin la fila."""
+    """RI-06. Es la unidad de trabajo de `architecture.md` §3.2, sin la fila.
+
+    **Lleva el capitulo, y eso es lo que RI-06 pide cuando dice «legible por
+    capitulo»**: hasta la Fase 3 salia `escena_id` y nada mas, y con diez
+    trabajos abiertos no habia forma de saber cual era el del capitulo siete sin
+    consultar otra tabla. Va el numero de outline junto al identificador por lo
+    mismo que `Checkpoint` lo lleva: quien pregunta razona en numeros, y una
+    clave primaria no dice cuanto queda.
+    """
 
     id: int
     obra_id: int
+    capitulo_id: int | None
+    numero_de_capitulo: int | None
     escena_id: int | None
     tipo: str
     estado: str
@@ -204,12 +220,73 @@ async def consultar(trabajo_id: int, sesion: Sesion) -> EstadoDelTrabajo:
     return EstadoDelTrabajo(
         id=trabajo.id,
         obra_id=trabajo.obra_id,
+        capitulo_id=trabajo.capitulo_id,
+        numero_de_capitulo=await numero_de_capitulo(sesion, capitulo_id=trabajo.capitulo_id),
         escena_id=trabajo.escena_id,
         tipo=trabajo.tipo,
         estado=trabajo.estado,
         intento=trabajo.intento,
         run_id=trabajo.run_id,
         causa_fallo=trabajo.causa_fallo,
+    )
+
+
+class NovelaLanzada(BaseModel):
+    """Lo que devuelve el arranque de la novela: **por donde va a empezar**.
+
+    No lleva identificadores de trabajo porque todavia no existen —los abre el
+    bucle, uno por capitulo— y prometerlos obligaria a abrirlos por adelantado,
+    que es justo lo que la secuencia prohibe. Lo que se devuelve es lo unico
+    cierto en ese instante: de que obra se trata y cual es el capitulo pendiente.
+    El progreso se consulta despues por `GET /trabajos/{id}` (RI-06).
+    """
+
+    obra_id: int
+    desde_el_capitulo: int | None
+    terminada: bool
+
+
+@router.post("/obras/{obra_id}/novela", status_code=status.HTTP_202_ACCEPTED)
+async def escribir_la_novela(
+    obra_id: int,
+    tareas: BackgroundTasks,
+    sesion: Sesion,
+    fabrica: Fabrica,
+    agentes: Roles,
+    contador: Contador,
+    presupuesto: Portero,
+    cerrojo: Cerrojo,
+    cliente: Cliente,
+) -> NovelaLanzada:
+    """`CA-1`: arranca —o reanuda— la novela entera, y responde con por donde va.
+
+    **Es un trabajo de fondo y no una peticion que espera** (`CLAUDE.md` §6):
+    diez capitulos son diez llamadas al modelo, y una respuesta HTTP que las
+    aguardara no es una respuesta, es un tiempo de espera.
+
+    **Y arrancar y reanudar son el mismo endpoint**, porque son la misma
+    llamada: `escribir_novela` pide siempre el primer capitulo no integrado, asi
+    que sobre una obra recien planificada empieza por el uno y sobre una que se
+    cayo sigue por donde estaba. Dos endpoints obligarian a quien llama a saber
+    cual de los dos casos tiene, que es precisamente lo que no se sabe despues
+    de una caida.
+    """
+    plan = await planificar_reanudacion(sesion, obra_id=obra_id)
+    tareas.add_task(
+        _correr_la_novela,
+        fabrica,
+        obra_id,
+        agentes=agentes,
+        contador=contador,
+        presupuesto=presupuesto,
+        cerrojo=cerrojo,
+        modelo=_nombre_del_modelo(cliente),
+        vectorizar=vectorizador_de(cliente),
+    )
+    return NovelaLanzada(
+        obra_id=obra_id,
+        desde_el_capitulo=None if plan.pendiente is None else plan.pendiente.numero,
+        terminada=plan.terminada,
     )
 
 
@@ -244,4 +321,37 @@ async def _correr_el_ciclo(
             cerrojo=cerrojo,
             modelo=modelo,
             vectorizar=vectorizar,
+        )
+
+
+async def _correr_la_novela(
+    fabrica: FabricaDeSesion,
+    obra_id: int,
+    *,
+    agentes: Agentes,
+    contador: ContadorDeTokens,
+    presupuesto: PresupuestoConcurrente,
+    cerrojo: CerrojoDeEscena,
+    modelo: str,
+    vectorizar: Callable[[str], Vector],
+) -> None:
+    """La tarea de fondo de la novela: abre su sesion y recorre los capitulos.
+
+    Abre sesion propia por lo mismo que `_correr_el_ciclo`: desde FastAPI 0.106
+    la de la peticion ya esta cerrada cuando la tarea corre. Y aqui pesa mas,
+    porque esta tarea vive lo que tarden diez capitulos.
+    """
+    async with fabrica() as sesion:
+        await escribir_novela(
+            sesion,
+            obra_id=obra_id,
+            ejecutar=ciclo_de_la_novela(
+                sesion,
+                agentes=agentes,
+                contador=contador,
+                presupuesto=presupuesto,
+                cerrojo=cerrojo,
+                modelo=modelo,
+                vectorizar=vectorizar,
+            ),
         )

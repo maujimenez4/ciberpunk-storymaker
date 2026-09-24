@@ -18,15 +18,21 @@ paquete recibido».
   que la hace citable.
 - `Checkpoint`, `Arranque`, `CapituloPendiente`, `empezar_capitulo`,
   `registrar_checkpoint`, `ultimo_capitulo_completado`, `siguiente_capitulo`,
-  `reparaciones_del_capitulo`, `atar_al_capitulo` y sus cuatro errores: **el
+  `reparaciones_del_capitulo` y sus cuatro errores: **el
   avance por capitulo** (T5 de la Fase 3), que es de lo que vive la reanudacion.
   Sale por la puerta porque quien lo consume —el orquestador de la novela— no
   esta dentro de esta feature.
 - `ESTADOS_VIVOS`, `Reanudacion`, `Retomada`, `TrabajoTerminal`, `descartar`,
   `planificar_reanudacion`, `reanudar` y `trabajos_en_vuelo`: **la reanudacion
   tras la caida** (T8 de la Fase 3), por el mismo motivo que el avance — quien
-  arranca el proceso y decide por donde sigue la novela es `novela.py` (T9), que
-  todavia no existe, y el router de operacion, que tampoco esta dentro.
+  arranca el proceso y decide por donde sigue la novela es `novela.py`, que
+  desde T9 si existe, y el router de operacion.
+- `Novela`, `CapituloDeLaNovela`, `escribir_novela`, `ciclo_de_la_novela`,
+  `numero_de_capitulo`, `hechos_usados`, `elementos_obligatorios_de` y
+  `cobertura_de_la_novela`: **la novela entera** (T9 de la Fase 3), que es lo
+  que cierra `CA-1`. Sale por la puerta porque quien la arranca de verdad no es
+  solo el router de esta feature: la cobertura la consumira la publicacion
+  (Fase 4), que vive en `manuscrito`.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
@@ -58,7 +64,6 @@ from app.features.escritura.checkpoint import (
     Checkpoint,
     CheckpointPrematuro,
     TrabajoSinCapitulo,
-    atar_al_capitulo,
     empezar_capitulo,
     registrar_checkpoint,
     reparaciones_del_capitulo,
@@ -96,6 +101,16 @@ from app.features.escritura.maquina import (
     exigir_que_la_novela_siga,
     transitar,
 )
+from app.features.escritura.novela import (
+    CapituloDeLaNovela,
+    Novela,
+    ciclo_de_la_novela,
+    cobertura_de_la_novela,
+    elementos_obligatorios_de,
+    escribir_novela,
+    hechos_usados,
+    numero_de_capitulo,
+)
 from app.features.escritura.reanudacion import (
     ESTADOS_VIVOS,
     Reanudacion,
@@ -126,6 +141,7 @@ __all__ = [
     "Agentes",
     "Arranque",
     "CapituloAnteriorSinIntegrar",
+    "CapituloDeLaNovela",
     "CapituloPendiente",
     "CapituloYaIntegrado",
     "Checkpoint",
@@ -134,6 +150,7 @@ __all__ = [
     "Escritura",
     "Estado",
     "IntentoDeEscritura",
+    "Novela",
     "NovelaDetenida",
     "Paso",
     "ProsaVacia",
@@ -153,17 +170,22 @@ __all__ = [
     "TrabajoTerminal",
     "TransicionInexistente",
     "abrir_trabajo",
-    "atar_al_capitulo",
     "avanzar",
+    "ciclo_de_la_novela",
+    "cobertura_de_la_novela",
     "descartar",
     "detiene_la_novela",
     "ejecutar_ciclo",
+    "elementos_obligatorios_de",
     "empezar_capitulo",
     "escribir_capitulo",
+    "escribir_novela",
     "estado_de",
     "exigir_que_la_novela_siga",
+    "hechos_usados",
     "leer_trabajo",
     "localizar_veto",
+    "numero_de_capitulo",
     "obtener_sesion_de_fondo",
     "planificar_reanudacion",
     "reanudar",

@@ -27,6 +27,13 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.commons.domain.normalizacion import normalizar
+from app.features.calidad.cobertura import (
+    Cobertura,
+    ElementoAusente,
+    ElementoCubierto,
+    HechoUsado,
+    cobertura_de_obligatorios,
+)
 from app.features.calidad.schemas import (
     Defecto,
     NombreDeCanon,
@@ -44,9 +51,18 @@ _COMILLAS = (("«", "»"), ('"', '"'), ("“", "”"))
 class PuntoDeEjecucion(StrEnum):
     """Donde corre un validador (`verification.md` §8.1). Sin esto, «cada
     validador corre en un punto concreto» es un deseo y no una afirmacion
-    comprobable."""
+    comprobable.
+
+    **`PUERTA_G4` entra en la Fase 3 y no es un punto inventado:** es el que
+    `verification.md` §8.1 declara para `cobertura_de_personalizacion` —«En la
+    publicacion, puerta G4»—. Existe aqui antes que la publicacion porque el
+    validador que lo declara **ya se puede ejecutar**: la cobertura solo es
+    comprobable con la novela entera, y la novela entera existe desde T9. Lo que
+    la Fase 4 anadira es la puerta que bloquea, no el punto.
+    """
 
     HOOK_DE_CAPITULO = "hook_de_capitulo"
+    PUERTA_G4 = "puerta_g4"
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,3 +337,109 @@ corre, y uno que corre fuera de aqui no aparece en el resultado."""
 def nombres_del_catalogo(catalogo: Sequence[Validador] = CATALOGO) -> tuple[str, ...]:
     """Los nombres, para que la puerta declare que ejecuto sin saber como."""
     return tuple(validador.nombre for validador in catalogo)
+
+
+# --------------------------------------------------------------------------
+# El manuscrito entero, puerta G4
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ManuscritoAValidar:
+    """Lo que mira un validador que **no puede mirar un capitulo solo**.
+
+    No lleva prosa, y esa ausencia es el requisito: RF-VAL-05 se comprueba
+    «contra la tabla de hechos» y no con un `in` sobre el texto, asi que lo que
+    entra son los hechos con los capitulos que se apoyan en ellos.
+    """
+
+    elementos_obligatorios: tuple[str, ...]
+    hechos: tuple[HechoUsado, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ValidadorDeManuscrito:
+    """Un validador de la novela entera, con su nombre y su punto (RF-VAL-01).
+
+    Es un tipo distinto de `Validador` y no una generalizacion suya porque lo
+    que cambia no es el detalle: **miran cosas distintas y producen cosas
+    distintas**. Uno recibe un capitulo y devuelve defectos con cita; este
+    recibe el manuscrito y devuelve cobertura, que senala una **ausencia** y por
+    tanto no tiene pasaje que citar (`cobertura.ElementoAusente`). Fundirlos
+    obligaria a fabricar una cita vacia, que es justo lo que `defectos.py`
+    existe para descartar.
+    """
+
+    nombre: str
+    punto: PuntoDeEjecucion
+    comprobar: Callable[[ManuscritoAValidar], Cobertura]
+
+
+@dataclass(frozen=True, slots=True)
+class CierreDelManuscrito:
+    """Lo que devuelve la puerta G4 de hoy, y **dice quien corrio**.
+
+    Por lo mismo que `ResultadoDePuerta`: un resultado que no nombra a los
+    validadores ejecutados no distingue «ninguno encontro nada» de «ninguno
+    corrio», y esa distincion es exactamente la que esta feature dejo abierta
+    cuando la cobertura vivia fuera de todo catalogo.
+    """
+
+    cobertura: Cobertura
+    validadores_ejecutados: tuple[str, ...]
+
+
+def _cobertura_de_personalizacion(manuscrito: ManuscritoAValidar) -> Cobertura:
+    """La entrada del catalogo: el nombre es el de `verification.md` §8.1."""
+    return cobertura_de_obligatorios(manuscrito.elementos_obligatorios, manuscrito.hechos)
+
+
+CATALOGO_DE_MANUSCRITO: tuple[ValidadorDeManuscrito, ...] = (
+    ValidadorDeManuscrito(
+        "cobertura_de_personalizacion", PuntoDeEjecucion.PUERTA_G4, _cobertura_de_personalizacion
+    ),
+)
+"""El segundo catalogo, y nace porque faltaba: la cobertura estaba escrita y
+probada desde T7 y **no la ejecutaba nadie**, que es lo que la frase de arriba
+—«un validador que no esta aqui no corre»— declaraba sin que nadie lo notara.
+
+Es de uno solo a proposito. Crecera en la Fase 4, cuando G4 tenga las suyas
+(`dedicatoria_fuera`, `spec_lean`); lo que no se hace es adelantarlas."""
+
+
+def cerrar_manuscrito(
+    manuscrito: ManuscritoAValidar,
+    catalogo: Sequence[ValidadorDeManuscrito] = CATALOGO_DE_MANUSCRITO,
+) -> CierreDelManuscrito:
+    """Corre el catalogo de G4 sobre la novela entera y declara a quien ejecuto.
+
+    Las coberturas de varios validadores se **suman por montones**: un elemento
+    esta cubierto si alguno lo da por cubierto, y ausente si ninguno lo hace.
+    Con un solo validador es la identidad, y se escribe asi de todas formas
+    porque la alternativa —devolver la del ultimo— seria correcta hoy y falsa el
+    dia que entre el segundo, sin que ningun test cayera.
+    """
+    cubiertos: dict[str, ElementoCubierto] = {}
+    ausentes: dict[str, ElementoAusente] = {}
+    ejecutados: list[str] = []
+
+    for validador in catalogo:
+        ejecutados.append(validador.nombre)
+        cobertura = validador.comprobar(manuscrito)
+        for cubierto in cobertura.cubiertos:
+            cubiertos[cubierto.elemento] = cubierto
+        for ausente in cobertura.ausentes:
+            ausentes.setdefault(ausente.elemento, ausente)
+
+    # El orden de salida es el del brief, en los dos montones: es el orden en
+    # que el comprador los pidio, y el unico que le dice algo a quien lea el
+    # informe. Un `dict` conserva el de insercion, que es el del catalogo, no el
+    # del brief.
+    orden = list(manuscrito.elementos_obligatorios)
+    return CierreDelManuscrito(
+        cobertura=Cobertura(
+            cubiertos=tuple(cubiertos[e] for e in orden if e in cubiertos),
+            ausentes=tuple(ausentes[e] for e in orden if e in ausentes and e not in cubiertos),
+        ),
+        validadores_ejecutados=tuple(ejecutados),
+    )
