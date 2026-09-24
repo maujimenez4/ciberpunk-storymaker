@@ -9,6 +9,10 @@ spec: specs/002-frontend/spec.md      # D-06 («Leer… tipo Kindle»), D-07, RF
 
 # Fase 4 — Que parezca un lector de libros, no un formulario
 
+> **Enmienda 1 · 2026-09-24 · la dirección visual pasa a ser «Cuaderno de viaje».** Implementada la primera dirección (papel frío, ciruela, Atkinson), `maujimenez4` la revisó y dijo que no le terminaba de gustar; pidió algo «más vintage». Se exploraron cuatro direcciones en un lienzo de diseño (Imprenta, Fichero, Tela y oro, Cuaderno de viaje) y eligió la última: *«Me gusto la D, asi que esa usaremos. Ahora si, implementala»*.
+>
+> **Qué cambia:** la sección *Dirección visual* de abajo queda **sustituida** en color, tipografía y ornamento por la de la enmienda (al final de este fichero). **Qué no cambia:** las tareas T1–T6, sus tests, la navegación en píldora, «Creación», el panel «Aa», el pie de lectura, los tres temas y todo lo que dice *Lo que esta fase no hace*. La decisión 1 (tipografía de interfaz aparte) **se revierte**: en D la interfaz también es serif (Spectral), porque una sans rompía el cuaderno.
+
 **Objetivo:** que la página se sienta como un lector electrónico —la interfaz se retira y queda el libro— sin tocar el proceso, que está bien: primero la entrevista, luego historia, capítulos y publicación.
 
 **Enfoque:** la casa se queda (tokens, primitivos, `Pagina`, fronteras de ESLint). Cambia **la piel**: tipografía de interfaz, controles redondeados, navegación en píldora, temas de lectura y una vista de progreso que sobrevive a la recarga **con su sitio en la navegación**.
@@ -148,3 +152,38 @@ Van con recomendación; si no dices nada, se aplica la recomendada.
 2. **Tema por defecto:** Papel (el actual) o seguir la preferencia del sistema (claro u oscuro). *Recomendado: seguir el sistema, con Papel como claro.*
 3. **Sepia sí o no** entre los temas. *Recomendado: sí, pero nunca por defecto.*
 4. **El nombre de la primera pestaña:** «Creación», «Tu novela» o «Encargo». *Recomendado: «Creación».*
+
+---
+
+## Enmienda 1 · Dirección visual «Cuaderno de viaje»
+
+**Una frase:** *la novela como un viaje anotado en un diario de los años veinte*: tinta azul de estilográfica, sellos postales en rojo desvaído y el margen rojo de un cuaderno. La maqueta aprobada son las cuatro pantallas de la fila D del lienzo de diseño (Leer, Quién es quién, Creación: entrevista, Creación: progreso).
+
+### Color (tema Papel; Sepia y Noche se derivan con las mismas reglas de contraste AA)
+
+| Token | Papel | Para qué |
+| --- | --- | --- |
+| `--papel` | `#e6e0d2` | Fondo |
+| `--tinta` | `#2a2a2e` | Texto |
+| `--tinta-suave` | `#5f5a50` | Metadatos, ayudas |
+| `--acento` | `#243a5e` | **Tinta de estilográfica**: títulos, pestaña activa, botón principal |
+| `--sello` *(nuevo)* | `#9b3b32` | Sellos, leyendas de bloque, lo recorrido en el mapa. Nunca texto de párrafo |
+| `--margen` *(nuevo)* | `#d3a8a0` | La línea roja del margen del cuaderno. Decorativa |
+| `--guarda` | `#f1ece0` | Hoja del cuaderno: formularios, etiquetas |
+
+### Tipografía
+
+| Rol | Familia |
+| --- | --- |
+| Títulos (novela, capítulo, pantalla), sellos | **Sorts Mill Goudy** (`--fuente-titulo`, nuevo) |
+| Prosa **e interfaz** | **Spectral** (`--fuente-libro` y `--fuente-interfaz` apuntan a ella) |
+
+### Ornamento, pantalla por pantalla
+
+- **Pasos:** el paso actual es un **sello** circular punteado e inclinado («paso 1 de 4»).
+- **Progreso:** un **mapa de ruta**: diez paradas sobre una línea de puntos, lo recorrido en `--sello`, la parada actual sellada, bandera en la meta. Copia: «Tu novela va de camino».
+- **Entrevista:** hoja de cuaderno rayada con margen rojo, campos en píldora, leyendas de bloque en cursiva `--sello`.
+- **Leer:** el número de capítulo como sello en el margen izquierdo, la línea roja de margen junto a la prosa, pie con la posición como un punto sobre una línea de puntos.
+- **Quién es quién:** «Quién viaja contigo»; cada entrada es una **etiqueta de equipaje** con su agujero; las no reveladas, un sello «+N».
+
+**Se mantienen:** botones en píldora, el control segmentado, «Aa», los tres temas, el foco visible y el contraste AA en los tres, que es test y gana a la estética.
