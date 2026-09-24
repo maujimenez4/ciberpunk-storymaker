@@ -1,0 +1,62 @@
+[project]
+name = "ciberpunk-storymaker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9",
+  "sqlalchemy>=2.0", "aiosqlite>=0.20", "alembic>=1.13",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "httpx>=0.27",
+       "ruff>=0.7", "mypy>=1.13", "import-linter>=2.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Hace que `app` sea importable de verdad, y no solo bajo pytest: sin esto
+# `lint-imports` no encuentra el paquete y la cuarta puerta no corre.
+packages = ["src/backend/app"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src/backend"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+# ruff 0.16 formatea los bloques de codigo dentro de Markdown. La prosa de este
+# repositorio no es codigo: `.claude/skills/` esta clavado a un commit upstream
+# con su licencia, y `docs/` y `specs/` contienen a proposito ejemplos
+# equivocados que no deben "arreglarse" solos.
+extend-exclude = [".claude", "docs", "specs"]
+
+[tool.mypy]
+strict = true
+files = ["src/backend/app"]
+follow_imports = "silent"
+# CLAUDE.md §6 exige estricto sobre `commons/domain/` y los `service.py`; se
+# aplica a todo el codigo de produccion, que es mas y no menos. Los tests
+# quedan fuera: `strict` les exigiria `-> None` en cada funcion, y un test es
+# una asercion, no una interfaz. `files` no expande comodines, asi que la
+# frontera se traza con `exclude`, que si es una expresion regular.
+exclude = ["/tests/", "conftest\\.py$"]
+
+[tool.importlinter]
+root_packages = ["app"]
+# El segundo contrato prohibe modulos que no son nuestros (fastapi, sqlalchemy,
+# httpx), y import-linter no los mira si no se le dice.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "commons no importa de ninguna feature"
+type = "forbidden"
+source_modules = ["app.commons"]
+forbidden_modules = ["app.features"]
+
+[[tool.importlinter.contracts]]
+name = "commons.domain no conoce el framework ni la base de datos"
+type = "forbidden"
+source_modules = ["app.commons.domain"]
+forbidden_modules = ["fastapi", "sqlalchemy", "httpx"]
