@@ -16,6 +16,12 @@ paquete recibido».
   `obtener_sesion_de_fondo`.
 - `localizar_veto`: la palabra prohibida **con su desplazamiento**, que es lo
   que la hace citable.
+- `Checkpoint`, `Arranque`, `CapituloPendiente`, `empezar_capitulo`,
+  `registrar_checkpoint`, `ultimo_capitulo_completado`, `siguiente_capitulo`,
+  `reparaciones_del_capitulo`, `atar_al_capitulo` y sus cuatro errores: **el
+  avance por capitulo** (T5 de la Fase 3), que es de lo que vive la reanudacion.
+  Sale por la puerta porque quien lo consume —el orquestador de la novela— no
+  esta dentro de esta feature.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
@@ -38,6 +44,21 @@ from app.features.escritura.agents import (
     Escritor,
     ProsaVacia,
     Reparacion,
+)
+from app.features.escritura.checkpoint import (
+    Arranque,
+    CapituloAnteriorSinIntegrar,
+    CapituloPendiente,
+    CapituloYaIntegrado,
+    Checkpoint,
+    CheckpointPrematuro,
+    TrabajoSinCapitulo,
+    atar_al_capitulo,
+    empezar_capitulo,
+    registrar_checkpoint,
+    reparaciones_del_capitulo,
+    siguiente_capitulo,
+    ultimo_capitulo_completado,
 )
 from app.features.escritura.ciclo import (
     Agentes,
@@ -87,6 +108,12 @@ __all__ = [
     "PROMPT_ID",
     "PROMPT_VERSION",
     "Agentes",
+    "Arranque",
+    "CapituloAnteriorSinIntegrar",
+    "CapituloPendiente",
+    "CapituloYaIntegrado",
+    "Checkpoint",
+    "CheckpointPrematuro",
     "Escritor",
     "Escritura",
     "Estado",
@@ -104,18 +131,25 @@ __all__ = [
     "ResultadoDelPaso",
     "Senal",
     "TrabajoDesconocido",
+    "TrabajoSinCapitulo",
     "TransicionInexistente",
     "abrir_trabajo",
+    "atar_al_capitulo",
     "avanzar",
     "detiene_la_novela",
     "ejecutar_ciclo",
+    "empezar_capitulo",
     "escribir_capitulo",
     "estado_de",
     "exigir_que_la_novela_siga",
     "leer_trabajo",
     "localizar_veto",
     "obtener_sesion_de_fondo",
+    "registrar_checkpoint",
+    "reparaciones_del_capitulo",
     "router",
+    "siguiente_capitulo",
     "transitar",
+    "ultimo_capitulo_completado",
     "una_sola_vez",
 ]
