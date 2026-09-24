@@ -15,8 +15,21 @@ final de una transaccion.
 """
 
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
+
+TextoNoVacio = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+"""Vivia en `agents.py` de esta misma feature y se baja aqui al necesitarlo
+`ConocimientoEnT`. No sube a `commons/` —`CLAUDE.md` §5.1 regla 4 lo pide al
+tercer uso real y este seria el cuarto del repositorio— porque `commons/` es
+de otra tarea de esta ola: queda anotado en Desviaciones."""
 
 
 class Persona(StrEnum):
@@ -87,6 +100,29 @@ class NombreDeCanon(BaseModel):
     variantes: tuple[str, ...] = ()
 
 
+class ConocimientoEnT(BaseModel):
+    """Una fila de la vista `estado_en_t`, tal y como el Continuista la ve.
+
+    Es una proyeccion, no la vista: `estado_en_t` se deriva del ledger en
+    `features/canon` y una feature solo entra a otra por su `__init__.py`
+    (`CLAUDE.md` §5.1). La misma decision que ya tomaron `Defecto` y
+    `HechoDeCanon`, y por el mismo motivo: asi el contraste se prueba sin
+    levantar SQLite.
+
+    **`sabe_desde` es el `orden_discurso` de la escena del evento**, y es nulo
+    cuando el evento no tiene escena. Nulo no es cero: significa que el ledger
+    **no situa** ese conocimiento en el discurso, y de algo que no esta situado
+    no se puede decir que sea anterior a nada.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    personaje: TextoNoVacio
+    evento_id: TextoNoVacio
+    tiempo_historia: str
+    sabe_desde: int | None = None
+
+
 class Defecto(BaseModel):
     """Un defecto no es una frase: es un registro con forma comprobable
     (`definitions.md` §8).
@@ -100,6 +136,11 @@ class Defecto(BaseModel):
 
     `defecto_id` es opcional porque en esta fase nadie lo asigna: no hay tabla.
     `definitions.md` §8 lo da con cardinalidad 1 sobre el defecto **persistido**.
+
+    **`evento_id` es a `CON-03` lo que `hecho_canon_id` es a `CAN-01`**: el
+    identificador contra el que se contrasta. Sin el, «este personaje sabe lo
+    que no deberia» es una frase que no senala nada y que ninguna comprobacion
+    puede confirmar ni desmentir — que es P-4 dicho en una linea.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -110,4 +151,5 @@ class Defecto(BaseModel):
     desplazamiento_inicio: int
     desplazamiento_fin: int
     hecho_canon_id: str | None = None
+    evento_id: str | None = None
     defecto_id: str | None = None

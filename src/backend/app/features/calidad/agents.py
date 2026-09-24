@@ -1,4 +1,4 @@
-"""El Continuista: el rol que contrasta el capitulo **contra el grafo de canon**.
+"""El Continuista: contrasta el capitulo **contra el grafo y contra el ledger**.
 
 Es el primer `agents.py` de esta feature, y la Fase 2 la construyo entera sin
 ninguno **a proposito**. La decision **P-B** de aquel plan lo dejo fuera con este
@@ -9,17 +9,27 @@ siete contradiga al cuatro, y este fichero es quien lo mira.
 **Contrastar no es opinar** (RF-VAL-06), y aqui esa diferencia es mecanica y no
 una promesa del prompt:
 
-1. **El grafo entra en el prompt con sus identificadores.** Lo que no esta en la
-   lista no existe para el Continuista. Un prompt sin grafo pide una opinion.
+1. **El grafo y el estado en T entran en el prompt con sus identificadores.**
+   Lo que no esta en la lista no existe para el Continuista. Un prompt sin ellos
+   pide una opinion.
 2. **Lo que vuelve se valida con esquema antes de creerselo** (RF-ORQ-09), con
    `extra="forbid"`: un `BaseModel` por defecto acepta una clave que no conoce,
    la tira y sigue, y eso **pierde datos en silencio**. La Fase 1 lo descubrio
    en el Entrevistador y la Fase 2 lo heredo en el Extractor.
 3. **La forma la comprueba la puerta de la Fase 2, no este fichero.**
    `clasificar` de `defectos.py` es quien decide si un `CAN-01` nombra un hecho
-   que existe (regla de dominio 9) y si la cita es subcadena exacta en su
-   desplazamiento (regla de dominio 8). Aqui se **usa**; reescribirla habria
-   dado dos comprobaciones que divergen.
+   que existe (regla de dominio 9), si la cita es subcadena exacta en su
+   desplazamiento (regla de dominio 8) y —desde P-4— si el `evento_id` de un
+   `CON-03` esta situado por el ledger **antes** de este capitulo (regla de
+   dominio 2). Aqui se **usa**; reescribirla habria dado dos comprobaciones que
+   divergen.
+
+**Que P-4 se pagara aqui no amplia el rol: lo completa.** RF-VAL-06 pide canon,
+continuidad **y conocimiento** contra el grafo, y hasta hoy solo el primero se
+contrastaba: un `CON-03` era una opinion cuya forma se comprobaba y cuyo fondo
+no. Lo que sigue siendo probabilistico es la **extraccion** —que el modelo vea
+el pasaje— y eso ninguna comprobacion de forma lo alcanza
+(`verification.md` §6.3).
 
 **El Continuista no repara** (`CLAUDE.md` §9.1). Devuelve codigos con cita y
 nada mas: en `DefectoDelContinuista` no hay ningun campo donde quepa una
@@ -40,31 +50,77 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import cache
 from hashlib import sha256
 from pathlib import Path
-from typing import Annotated
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    StringConstraints,
     ValidationError,
     model_validator,
 )
 
 from app.commons.llm.cliente import ClienteModelo
-from app.features.calidad.defectos import DefectoMalFormado, clasificar
-from app.features.calidad.schemas import Defecto
+from app.features.calidad.defectos import (
+    ContrasteDeConocimiento,
+    DefectoMalFormado,
+    clasificar,
+)
+from app.features.calidad.schemas import ConocimientoEnT, Defecto, TextoNoVacio
 
-PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "continuista.v1.md").read_text(encoding="utf-8")
+_PROMPTS = Path(__file__).parent / "prompts"
 
 PROMPT_ID = "continuista"
-PROMPT_VERSION = "v1"
-HASH_DE_PLANTILLA_V1 = sha256(PLANTILLA_V1.encode("utf-8")).hexdigest()
-"""Lo que ata la fila de `ejecucion` al fichero sin duplicarlo en cada llamada
-(regla de dominio 7). La plantilla **no se edita en sitio**: una version nueva
-es `continuista.v2.md` con su propio hash (`CLAUDE.md` §10)."""
+PROMPT_VERSION = "v2"
+
+
+class PlantillaAusente(Exception):
+    """Falta el fichero de una plantilla. Es un fallo del despliegue, no del
+    modelo, y por eso tiene excepcion propia y mensaje con la ruta."""
+
+
+@cache
+def _leer(nombre: str) -> str:
+    """La plantilla, leida **al usarla y no al importar el modulo**.
+
+    Se lee dentro de la funcion por algo que costo caro el dia que se escribio
+    la v2: leerla a nivel de modulo convierte «todavia no esta el fichero» en
+    «el backend entero no arranca». `calidad/__init__.py` importa este modulo, y
+    de el cuelgan `manuscrito`, `obra`, `canon` y `escritura`, asi que un
+    `FileNotFoundError` aqui dejaba de coleccionar **la suite entera** para
+    todas las sesiones a la vez. `CLAUDE.md` §10 pide crear la version nueva y
+    **despues** cambiar la referencia; esto hace que hacerlo al reves cueste un
+    fallo local y legible en vez de una tarde.
+
+    El `cache` mantiene lo que habia: se lee una vez por proceso.
+    """
+    fichero = _PROMPTS / nombre
+    if not fichero.is_file():
+        raise PlantillaAusente(str(fichero))
+    return fichero.read_text(encoding="utf-8")
+
+
+def plantilla_v1() -> str:
+    """La v1 **no se toca y no se retira**. Es la mitad de la iteracion de
+    *tuning*: el «antes» contra el que se compara la v2, y un «antes» que se
+    edita no mide nada."""
+    return _leer("continuista.v1.md")
+
+
+def plantilla_v2() -> str:
+    """La que corre. Anade la seccion de conocimiento —P-4— y es lo unico que la
+    separa de la v1: si la v2 emite menos `CON-03` mal formados, es por eso."""
+    return _leer("continuista.v2.md")
+
+
+def hash_de_plantilla(plantilla: str) -> str:
+    """Lo que ata la fila de `ejecucion` al fichero sin duplicarlo en cada
+    llamada (regla de dominio 7). La plantilla **no se edita en sitio**: una
+    version nueva es un fichero nuevo con su propio hash (`CLAUDE.md` §10)."""
+    return sha256(plantilla.encode("utf-8")).hexdigest()
+
 
 MARCA_CAPITULO = "capitulo"
 """La etiqueta con la que el capitulo entra **como dato** (`CLAUDE.md` §11).
@@ -72,6 +128,8 @@ Cinco de los diez roles reciben prosa, y ninguno la recibe como instruccion."""
 
 HUECO_DEL_CAPITULO = "{{CAPITULO}}"
 HUECO_DEL_CANON = "{{CANON}}"
+HUECO_DEL_CONOCIMIENTO = "{{CONOCIMIENTO}}"
+HUECO_DEL_ORDEN = "{{ORDEN_DISCURSO}}"
 
 SIN_GRAFO = (
     "No hay ningún hecho de canon. **No puede haber ninguna contradicción de canon**: "
@@ -80,10 +138,13 @@ SIN_GRAFO = (
 """Con el grafo vacio no hay contra que contrastar, y decirlo es mas honesto que
 dejar la seccion en blanco: un hueco vacio invita a rellenarlo de memoria."""
 
-TextoNoVacio = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-"""Se repite desde `features/canon/schemas.py`. `CLAUDE.md` §5.1 regla 4 lo
-manda a `commons/` al tercer uso real y este es el cuarto, pero `commons/` es de
-otra tarea de esta ola: queda anotado en Desviaciones."""
+SIN_CONOCIMIENTO = (
+    "El ledger no sitúa ningún conocimiento antes de este capítulo. "
+    "**No puede haber ningún `CON-03`**: no se devuelve ninguno."
+)
+"""Hermana de `SIN_GRAFO`, y por el mismo motivo. Con la vista vacia no hay
+conocimiento establecido que un personaje pueda estar usando antes de tiempo, y
+cualquier `CON-03` seria una opinion sobre algo que no esta."""
 
 
 class SalidaMalFormada(Exception):
@@ -176,6 +237,7 @@ class DefectoDelContinuista(BaseModel):
     desplazamiento_inicio: int
     desplazamiento_fin: int
     hecho_canon_id: str | None = None
+    evento_id: str | None = None
 
 
 class InformeDeContinuidad(BaseModel):
@@ -193,17 +255,33 @@ class CapituloAContrastar:
     `grafo` no es un parametro opcional de conveniencia: sin el no hay contraste
     y lo que salga es una opinion. Va en la misma estructura que el texto para
     que no se pueda llamar al Continuista «solo con la prosa» por descuido.
+
+    **`conocimiento` tampoco lleva valor por defecto**, por lo mismo que
+    `HechoUsado.usado_en`: un `()` implicito convertiria el olvido de quien
+    construye la proyeccion en «no hay contradiccion posible», y el validador
+    mediria el descuido en vez del capitulo. Quien la construye es la consulta
+    sobre `estado_en_t` (T6), y esta feature no la hace: recibe filas, no sesion.
     """
 
     version_texto_id: str
     texto: str
     grafo: tuple[HechoDeCanon, ...]
+    conocimiento: tuple[ConocimientoEnT, ...]
+    orden_discurso: int
 
     @property
     def ids_del_grafo(self) -> frozenset[str]:
         """Los identificadores que **existen**: la proyeccion que
         `comprobar_forma` necesita para la regla de dominio 9."""
         return frozenset(hecho.hecho_canon_id for hecho in self.grafo)
+
+    @property
+    def contraste(self) -> ContrasteDeConocimiento:
+        """La vista y el punto desde el que se mira, que es lo que necesita la
+        regla de dominio 2."""
+        return ContrasteDeConocimiento(
+            conocimiento=self.conocimiento, orden_discurso=self.orden_discurso
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,7 +334,45 @@ def render_grafo(grafo: Sequence[HechoDeCanon]) -> str:
     return "\n".join(hecho.como_linea() for hecho in grafo)
 
 
-def render_continuista(plantilla: str, texto: str, grafo: Sequence[HechoDeCanon]) -> str:
+def render_conocimiento(conocimiento: Sequence[ConocimientoEnT], orden_discurso: int) -> str:
+    """El estado en T, en lineas con su identificador de evento.
+
+    Solo entran las filas **anteriores** a este capitulo, y esa es la decision
+    que hace la seccion util: las posteriores no son conocimiento del capitulo
+    que se juzga, y ensenarselas al modelo seria invitarle a emitir `CON-03` que
+    el contraste descarta despues. Es «lo que no esta en la lista no existe»
+    aplicado tambien al tiempo, y deja al prompt y a `comprobar_forma` mirando
+    exactamente las mismas filas.
+    """
+    anteriores = [
+        fila
+        for fila in conocimiento
+        if fila.sabe_desde is not None and fila.sabe_desde < orden_discurso
+    ]
+    if not anteriores:
+        return SIN_CONOCIMIENTO
+    return "\n".join(_linea_de_conocimiento(fila) for fila in anteriores)
+
+
+def _linea_de_conocimiento(fila: ConocimientoEnT) -> str:
+    """El `evento_id` va **primero**: es lo que hay que copiar literal en el
+    `CON-03`, igual que el `hecho_canon_id` en el `CAN-01`."""
+    campos = (
+        fila.evento_id,
+        fila.personaje,
+        fila.tiempo_historia,
+        f"lo sabe desde la escena {fila.sabe_desde}",
+    )
+    return "- " + " · ".join(_en_una_linea(campo) for campo in campos)
+
+
+def render_continuista(
+    plantilla: str,
+    texto: str,
+    grafo: Sequence[HechoDeCanon],
+    conocimiento: Sequence[ConocimientoEnT],
+    orden_discurso: int,
+) -> str:
     """El capitulo entra SIEMPRE marcado como dato (`CLAUDE.md` §11).
 
     Dos propiedades, y la segunda es la que importa: que el capitulo no pueda
@@ -264,7 +380,10 @@ def render_continuista(plantilla: str, texto: str, grafo: Sequence[HechoDeCanon]
     capitulo**. La segunda es la que hace que un ataque no cambie el prompt, y
     por tanto que un capitulo no pueda desactivar al que lo revisa.
     """
-    con_canon = plantilla.replace(HUECO_DEL_CANON, render_grafo(grafo))
+    con_canon = plantilla.replace(HUECO_DEL_CANON, render_grafo(grafo)).replace(
+        HUECO_DEL_CONOCIMIENTO, render_conocimiento(conocimiento, orden_discurso)
+    )
+    con_canon = con_canon.replace(HUECO_DEL_ORDEN, str(orden_discurso))
     if not texto.strip():
         return con_canon.replace(HUECO_DEL_CAPITULO, "")
     bloque = f"<{MARCA_CAPITULO}>\n{sin_etiquetas(texto, MARCA_CAPITULO)}\n</{MARCA_CAPITULO}>"
@@ -279,9 +398,17 @@ class Continuista:
     probar el contraste sin levantar SQLite.
     """
 
-    def __init__(self, cliente: ClienteModelo, semilla: int = 0) -> None:
+    def __init__(
+        self, cliente: ClienteModelo, semilla: int = 0, plantilla: str | None = None
+    ) -> None:
         self._cliente = cliente
         self._semilla = semilla
+        self._plantilla = plantilla
+        """La v2 cuando no se dice otra cosa, y la v1 alcanzable por parametro.
+        Es la costura que la iteracion de *tuning* necesita: comparar dos
+        plantillas sobre los mismos capitulos exige poder pedir la vieja sin
+        editar nada. Se resuelve al revisar y no aqui, para que construir un
+        Continuista no dependa de que el fichero exista."""
 
     async def revisar(self, capitulo: CapituloAContrastar) -> RevisionDeContinuidad:
         """Contrasta el capitulo contra el grafo y devuelve codigos con cita.
@@ -295,7 +422,13 @@ class Continuista:
             return RevisionDeContinuidad(defectos=(), mal_formados=())
 
         crudo = await self._cliente.completar(
-            render_continuista(PLANTILLA_V1, capitulo.texto, capitulo.grafo),
+            render_continuista(
+                self._plantilla if self._plantilla is not None else plantilla_v2(),
+                capitulo.texto,
+                capitulo.grafo,
+                capitulo.conocimiento,
+                capitulo.orden_discurso,
+            ),
             semilla=self._semilla,
         )
         informe = _validar(crudo)
@@ -308,11 +441,13 @@ class Continuista:
                     desplazamiento_inicio=defecto.desplazamiento_inicio,
                     desplazamiento_fin=defecto.desplazamiento_fin,
                     hecho_canon_id=defecto.hecho_canon_id,
+                    evento_id=defecto.evento_id,
                 )
                 for defecto in informe.defectos
             ),
             capitulo.texto,
             capitulo.ids_del_grafo,
+            capitulo.contraste,
         )
         return RevisionDeContinuidad(
             defectos=clasificados.bien_formados,
