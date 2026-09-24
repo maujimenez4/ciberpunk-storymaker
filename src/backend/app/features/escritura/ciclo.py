@@ -26,9 +26,14 @@ subclase explicita y anadirle un miembro sin implementar romperia la suite
 entera. Lo que si esta es el punto de conexion: `vectorizar` llega por parametro
 y baja hasta el Extractor sin que nadie mas tenga que cambiar.
 
-**Los estados son los de `architecture.md` §3.3 y ninguno se salta.** El
-orquestador de diez capitulos —maquina de estados, checkpoint y reanudacion— es
-de la Fase 3; lo de aqui es un capitulo, que es lo que esta fase entrega.
+**Los estados ya no se escriben aqui: los decide `maquina.py`** (T2 de la Fase
+3). Este fichero dice **que paso** —«el ensamblado no cabe», «la puerta
+rechazo», «el Extractor termino»— y la maquina responde con el estado o se
+niega. Es lo que hace que `VALIDANDO` no pueda llegar a `ESCALADA` sin pasar
+por `REPARANDO`, que es exactamente el atajo que este fichero tomaba antes.
+
+Lo que sigue siendo de otra tarea: el checkpoint por capitulo (T5) y la
+reanudacion (T8). Aqui se escribe **un** capitulo.
 
 **Las tablas de otras features se leen por SQL con su nombre** —`capitulo` y
 `version_obra` son de `outline`, `obra` y `hecho_canon` de `obra`, `escena` de
@@ -65,6 +70,7 @@ from app.features.contexto import (
 )
 from app.features.escena import Planificador, RestriccionesDeDiscurso, planificar_escena
 from app.features.escritura.agents import Escritor
+from app.features.escritura.maquina import Estado, Senal, avanzar
 from app.features.escritura.modelos import Trabajo
 from app.features.escritura.service import Escritura, escribir_capitulo
 
@@ -152,7 +158,7 @@ async def abrir_trabajo(sesion: AsyncSession, *, capitulo_id: int) -> Trabajo:
         obra_id=int(capitulo["obra_id"]),
         escena_id=None,
         tipo=TIPO_DE_TRABAJO,
-        estado="PLANIFICANDO",
+        estado=Estado.PLANIFICANDO.value,
         intento=0,
         run_id="pendiente",
     )
@@ -211,7 +217,13 @@ async def ejecutar_ciclo(
                 consulta=consulta,
             )
         except (ContextBudgetExceeded, CapaVacia) as fallo:
-            return await _terminar(sesion, trabajo, "FALLIDA", causa=str(fallo))
+            # Las dos viajan con la **misma** senal, y es la fila de §3.6 que
+            # dice «fallo de diseno del ensamblado, no de ejecucion»: el
+            # paquete no se pudo construir y no se llega a llamar al modelo.
+            # Que una sea el presupuesto y la otra una capa obligatoria vacia
+            # cambia el diagnostico, no el destino, y el diagnostico se guarda
+            # en `causa_fallo`.
+            return await _terminar(sesion, trabajo, Senal.CONTEXTO_EXCEDIDO, causa=str(fallo))
 
         escritura = await _escribir(
             sesion,
@@ -232,15 +244,21 @@ async def ejecutar_ciclo(
         bloqueantes = _codigos_bloqueantes(escritura)
         if not escritura.aprobado:
             await _retirar_lo_descartado(sesion, contexto.escena_id, trabajo.run_id)
+            # **Se pasa por `REPARANDO`, que no es ceremonia.** `architecture.md`
+            # §3.3 no dibuja ninguna flecha de `VALIDANDO` a `ESCALADA`: el
+            # escalado es la salida de `REPARANDO` cuando el contador se agota,
+            # y hacerlo asi es lo que hace que sea el contador —y no este
+            # `if`— quien decide que la escena va a una persona.
+            await avanzar(sesion, trabajo, Senal.DEFECTO_BLOQUEANTE)
             return await _terminar(
                 sesion,
                 trabajo,
-                "ESCALADA",
+                Senal.PASO_COMPLETADO,
                 causa=escritura.motivo_de_escalado,
                 escritura=escritura,
             )
 
-        await _estado(sesion, trabajo, "EXTRAYENDO")
+        await avanzar(sesion, trabajo, Senal.APROBADA)
         extraccion = await agentes.extractor.extraer(escritura.texto)
         consolidacion = await consolidar_escena(
             sesion,
@@ -255,7 +273,7 @@ async def ejecutar_ciclo(
         )
         await _registrar_uso(sesion, contexto)
 
-        resultado = await _terminar(sesion, trabajo, "INTEGRADA", escritura=escritura)
+        resultado = await _terminar(sesion, trabajo, Senal.PASO_COMPLETADO, escritura=escritura)
         return ResultadoDelCiclo(
             trabajo_id=resultado.trabajo_id,
             estado=resultado.estado,
@@ -290,7 +308,7 @@ async def _planificar_y_ensamblar(
     if await _ficha_del_capitulo(sesion, capitulo_id) is None:
         await _planificar(sesion, planificador, capitulo)
 
-    await _estado(sesion, trabajo, "ENSAMBLANDO")
+    await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
     contexto = await ensamblar_capitulo(
         sesion, capitulo_id, contador, consulta=consulta, almacen=almacen
     )
@@ -344,7 +362,7 @@ async def _escribir(
     `turno(0)`, que pasa todas las puertas y deja el techo concurrente
     cumpliendose por consecuencia y no por regla.
     """
-    await _estado(sesion, trabajo, "ESCRIBIENDO")
+    await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
     restricciones = await _restricciones(sesion, trabajo.obra_id, contexto.version_obra_id)
 
     async with presupuesto.turno(
@@ -365,7 +383,7 @@ async def _escribir(
             semilla=semilla,
         )
 
-    await _estado(sesion, trabajo, "VALIDANDO")
+    await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
     trabajo.intento = escritura.reparaciones_gastadas
     await sesion.flush()
     return escritura
@@ -447,36 +465,32 @@ async def _registrar_uso(sesion: AsyncSession, contexto: ContextoDelCapitulo) ->
 async def _terminar(
     sesion: AsyncSession,
     trabajo: Trabajo,
-    estado: str,
+    senal: Senal,
     *,
     causa: str | None = None,
     escritura: Escritura | None = None,
 ) -> ResultadoDelCiclo:
-    """Estado terminal, `commit`, y el resultado que quien orqueste lee.
+    """El ultimo paso, y el resultado que quien orqueste lee.
 
-    El `commit` esta aqui y no en el transporte porque quien sabe que la unidad
-    de trabajo termino es el caso de uso (`commons/db/sesion.py`). Y termina
-    tambien cuando el final es `FALLIDA` o `ESCALADA`: el trabajo tiene que
-    quedar legible por `GET /trabajos/{id}` precisamente cuando algo salio mal.
+    **El estado terminal no se elige aqui: lo dice la maquina.** Antes este
+    parametro era la cadena del destino, y eso ponia la decision en el sitio
+    equivocado -- cualquier llamada podia terminar un trabajo donde quisiera,
+    incluso donde el documento no tiene flecha. Ahora lo que se pasa es la
+    senal, y `avanzar` responde con el destino o se niega.
+
+    El `commit` lo hace `avanzar`, y esta bien que sea el: quien sabe que la
+    unidad de trabajo termino es el caso de uso (`commons/db/sesion.py`), y el
+    trabajo tiene que quedar legible por `GET /trabajos/{id}` precisamente
+    cuando algo salio mal.
     """
-    trabajo.estado = estado
-    trabajo.causa_fallo = causa
-    await sesion.commit()
+    estado = await avanzar(sesion, trabajo, senal, causa=causa)
     return ResultadoDelCiclo(
         trabajo_id=trabajo.id,
-        estado=estado,
+        estado=estado.value,
         run_id=trabajo.run_id,
         escritura=escritura,
         causa_fallo=causa,
     )
-
-
-async def _estado(sesion: AsyncSession, trabajo: Trabajo, estado: str) -> None:
-    """Un estado intermedio, confirmado. **El `commit` no es ceremonia:** sin el,
-    `GET /trabajos/{id}` no veria avanzar nada hasta el final, y la unidad de
-    trabajo existe justamente para eso (`architecture.md` §3.2)."""
-    trabajo.estado = estado
-    await sesion.commit()
 
 
 # ---------------------------------------------------------------------------
