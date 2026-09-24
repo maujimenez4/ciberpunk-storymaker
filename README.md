@@ -28,19 +28,41 @@ y los fallos conocidos en [`specs/problemas-abiertos.md`](specs/problemas-abiert
 | Área del encargo | Estado |
 | --- | --- |
 | §1 Configuración y entrevista | Hecho |
-| §2 Lectura interactiva (web) | **Falta entera.** `src/frontend/` está vacío |
-| §3 Harness | A medias |
+| §2 Lectura interactiva (web) | **Hecha**: una dirección, tres pestañas. Falta el PDF |
+| §3 Harness | Hecho |
 | §4 Memoria | Hecho |
-| §5 Validación y evaluación | Parcial. Lean y TLA+ instalados y corriendo; los validadores formales, en curso |
-| §6 Observabilidad (Langfuse) | **Falta entera** |
-| §7 Guardarraíles | Hecho, salvo dos piezas |
+| §5a Validadores programáticos | Hecho |
+| §5b Validadores semánticos | Hecho: Continuista y Crítico, los dos corriendo en producción |
+| §5c Lean 4 | Hecho, **y detiene la publicación** |
+| §5d TLA+ / TLC | Hecho, con correspondencia comprobada contra el código |
+| §5 Evals | **Parcial**: falta la tabla de los cinco briefs y la iteración de *tuning* |
+| §6 Observabilidad (Langfuse) | Hecho: observador, *scores* por validador, coste y latencia |
+| §7 Guardarraíles | Hecho: hook de policy, vetos normalizados, registro de auditoría |
 
-**Y el que hay que leer antes de probar nada: [P-1](specs/problemas-abiertos.md).** Contra
-el servidor levantado, el Entrevistador responde *sobre el repositorio* en lugar de sobre
-la entrevista — el CLI carga el `CLAUDE.md` del proyecto como contexto pese a
-`setting_sources=None`. El esquema de salida lo rechaza, que es para lo que existe, pero
-**hasta que se arregle el flujo por HTTP no funciona con el proveedor real.** La secuencia
-de abajo describe el sistema, no una corrida que hoy termine.
+**Lo que todavía no existe, y conviene saberlo antes de probar:**
+
+- **`ejemplos/novela-ejemplo.pdf`**, que el encargo pide con esa ruta exacta como evidencia
+  de que el sistema funciona de principio a fin. La generación del PDF está escrita y sin
+  ejecutar sobre una novela completa.
+- **Una novela completa generada**. El outline de diez capítulos sí sale, con el
+  destinatario dentro; los capítulos están bloqueados por lo de abajo.
+- **La petición de cambio del lector** (`CA-25`).
+
+### El fallo que hay que conocer antes de lanzar una corrida
+
+**El modelo anonimiza el nombre del destinatario.** Con el brief de ejemplo, el outline sale
+correcto y personalizado —usa el perro y el recuerdo aportado— pero el protagonista se llama
+`[NOMBRE_ANONIMIZADO]`, con sufijo numerado para distinguir personajes.
+
+No es un defecto del código: es una **política de protección de datos personales** aplicándose
+sobre la salida del modelo. Hace bien su trabajo; lo que pasa es que aquí el nombre **es el
+producto**, y una novela de regalo cuyo protagonista se llama así no es una novela con un
+fallo, es un objeto inservible.
+
+La solución en curso es que el nombre **no lo escriba el modelo**: los agentes trabajan con un
+marcador y el sistema lo sustituye en código al servir. Cumple la política mejor que lo de hoy
+—el nombre real deja de entrar en el prompt y de subir con la traza a Langfuse (§4.3)— y es
+comprobable con un test, que es lo que `CLAUDE.md` §10 pide de cualquier regla que importe.
 
 ---
 
