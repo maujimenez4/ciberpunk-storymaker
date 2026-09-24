@@ -313,8 +313,14 @@ async def test_sin_dedicatoria_la_obra_se_publica_igual(sesion, obra_publicada, 
 **Sobre el segundo test y su segunda aserción.** `assert len(manuscrito) > 0` parece de relleno y es lo contrario: sin ella, un `ensamblar_manuscrito` que devuelva `""` pasa el criterio. Es la tercera vez en este proyecto que un criterio se cumple por vacío —R-6 de la Fase 1, P-2 de la cobertura, y este—, y las tres veces el arreglo fue el mismo: **afirmar también que hay algo que mirar**.
 
 - [ ] **Pasos 2-4:** falla, implementar, verde.
-- [ ] **Paso 5: Quitar la exclusión del ensamblado y ver caer el test.** Restaurarla.
+- [ ] **Paso 5: Quitar el guardado y ver caer los tests que dependen de él.** Restaurarlo.
 - [ ] **Paso 6: Avisar.**
+
+**Corrección de esta tarea, hecha al implementarla.** Los cuatro últimos tests de arriba usan `publicar(...)`, `ensamblar_manuscrito(...)` y `ngramas_vetados(...)`, **y ninguna de las tres existe en T2**: `publicar` la trae **T6**, que en el grafo va *después* de esta tarea, y las otras dos no las trae ninguna tarea de la fase.
+
+**Así que `CA-30` no se cierra aquí: se cierra en T6.** En T2 todavía no hay manuscrito ensamblado contra el que comprobar que la dedicatoria no aparece. Lo que sí se puede afirmar hoy —y es lo que T2 comprueba— es que **la dedicatoria no se está modelando como prosa**: no tiene `run_id`, ni `version_texto_id`, ni `ordinal`, ni `capitulo_id`. Es `RD-05` comprobado **por la forma**, de modo que si alguien la convierte en prosa cae antes de llegar al ensamblado.
+
+Era un error de secuencia del plan, no del árbol: se escribió el test de `CA-30` en la tarea que crea el dato en vez de en la que crea el manuscrito.
 
 ---
 
@@ -500,6 +506,18 @@ async def test_publicar_es_atomico(sesion, obra_integrada, monkeypatch):
     with pytest.raises(RuntimeError):
         await publicar(sesion, obra_integrada.id)
     assert await contar_versiones(sesion, obra_integrada.id) == 0
+
+
+async def test_la_dedicatoria_no_entra_en_el_manuscrito_ensamblado(sesion, obra_integrada):
+    """CA-30, movido desde T2: aqui SI hay manuscrito contra el que comprobar.
+
+    El `len(manuscrito) > 0` no es relleno: sin el, un ensamblado que devuelva
+    cadena vacia cumple el criterio sin comprobar nada.
+    """
+    await guardar_dedicatoria(sesion, obra_integrada.id, "Para Marta.")
+    manuscrito = await ensamblar_manuscrito(sesion, obra_integrada.id)
+    assert "Para Marta." not in manuscrito
+    assert len(manuscrito) > 0
 
 
 async def test_publicar_dos_veces_sin_cambios_no_duplica(sesion, obra_integrada):

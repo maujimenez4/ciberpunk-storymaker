@@ -27,6 +27,11 @@ class BriefEntrada(BaseModel):
     vetos: list[str] = Field(default_factory=list)
     elementos_obligatorios: list[TextoNoVacio] = Field(min_length=1)
 
+    # R-6: opcional, y sin `min_length`. Es lo unico del producto que escribe
+    # una persona y no el modelo, asi que no se valida contra nada: ni canon,
+    # ni nivel de calor, ni lista de vetos. Lo que el comprador quiera poner.
+    dedicatoria: str | None = None
+
     @model_validator(mode="after")
     def sin_contenido_adulto_con_menores(self) -> "BriefEntrada":
         """Regla de dominio 6. 18 NO es menor: la comparacion es estricta."""

@@ -65,3 +65,31 @@ class VersionPublicadaSalida(BaseModel):
     publicada_en: datetime
     dedicatoria: str | None = None
     capitulos: list[CapituloDelIndice] = Field(default_factory=list)
+
+
+class DedicatoriaEntrada(BaseModel):
+    """Lo que el comprador escribe para el destinatario (RD-05, R-6).
+
+    Es **entrada**, no salida, y es la unica de este modulo: la dedicatoria
+    sale por `VersionPublicadaSalida.dedicatoria`, con la portada, porque ese
+    es su unico uso.
+
+    `texto` admite `None` a proposito. R-6 la declara opcional -- un regalo sin
+    dedicatoria sigue siendo un regalo --, y quien cierra la entrevista no tiene
+    por que distinguir entre «no la escribio» y «la dejo en blanco»: las dos
+    cosas significan lo mismo y se normalizan aqui, no en cada llamador.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    texto: str | None = None
+
+    def limpia(self) -> str | None:
+        """El texto sin espacios de borde, o `None` si no queda nada.
+
+        Los tres vacios -- `None`, `""` y `"   "` -- se tratan igual. Guardar una
+        fila con tres espacios obligaria a la portada a distinguirla de una
+        dedicatoria de verdad, y ese `if` acabaria escrito en dos sitios.
+        """
+        limpio = (self.texto or "").strip()
+        return limpio or None

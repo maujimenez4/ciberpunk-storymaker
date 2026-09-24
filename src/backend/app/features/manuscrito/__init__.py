@@ -27,7 +27,7 @@ promete, y cada tarea anade su linea al llegar:
 | `EntradaDeFicha`         | `schemas`       | **T1**        |
 | `DefectoDelCuadro`       | `schemas`       | **T1**        |
 | `VersionPublicadaSalida` | `schemas`       | **T1**        |
-| `DedicatoriaEntrada`     | `schemas`       | T2            |
+| `DedicatoriaEntrada`     | `schemas`       | **T2**        |
 | `publicar`               | `service`       | T6            |
 | `diferencia_de_texto`    | `service`       | T7            |
 | `generar_lean`           | `lean.generador`| T4            |
@@ -54,6 +54,7 @@ from app.features.manuscrito.repository import (
 )
 from app.features.manuscrito.schemas import (
     CapituloDelIndice,
+    DedicatoriaEntrada,
     DefectoDelCuadro,
     EntradaDeFicha,
     VersionPublicadaSalida,
@@ -64,6 +65,7 @@ __all__ = [
     "CapituloPublicado",
     "CuadroDeDefectos",
     "Dedicatoria",
+    "DedicatoriaEntrada",
     "DefectoDelCuadro",
     "EntradaDeFicha",
     "FichaDeLectura",

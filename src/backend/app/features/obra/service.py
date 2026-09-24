@@ -20,6 +20,7 @@ from app.commons.domain.errores import (
     BriefIncompleto,
     EntrevistaDesconocida,
 )
+from app.features.manuscrito import Dedicatoria, DedicatoriaEntrada
 from app.features.obra.agents import Entrevistador, Evaluacion
 from app.features.obra.modelos import Entrevista, HechoCanon
 from app.features.obra.repository import (
@@ -42,7 +43,14 @@ _CAMPOS_DEL_DESTINATARIO = (
     "recuerdos_aportados",
     "fecha_de_nacimiento",
 )
-_CAMPOS_DE_LA_OBRA = ("genero", "tono", "nivel_de_calor", "vetos", "elementos_obligatorios")
+_CAMPOS_DE_LA_OBRA = (
+    "genero",
+    "tono",
+    "nivel_de_calor",
+    "vetos",
+    "elementos_obligatorios",
+    "dedicatoria",
+)
 
 
 @dataclass(frozen=True)
@@ -197,6 +205,30 @@ async def responder_entrevista(
     return evaluacion
 
 
+def _guardar_dedicatoria(sesion: AsyncSession, obra_id: int, texto: str | None) -> None:
+    """RD-05 y R-6. La dedicatoria se recoge aqui y se guarda en `manuscrito`.
+
+    **Es la juntura que el plan de la Fase 4 declara entera de su Tarea 2**, y
+    por eso esta funcion cruza a otra feature: recogerla es de `obra` -- llega
+    con el brief, de la entrevista -- y guardarla es de `manuscrito`, que es
+    quien la sirve con la portada. Se entra por su `__init__.py`, que es la
+    unica puerta (`CLAUDE.md` §5.1).
+
+    No es prosa del manuscrito (regla de dominio 15): no lleva `run_id`, no es
+    una `VersionDeTexto` y no entra en el ensamblado. Cuelga de la **obra** y
+    no de la version, porque es del regalo y no de la tirada: republicar no la
+    reescribe.
+
+    Sin dedicatoria no se escribe fila. Una fila con `None` obligaria a todo el
+    que la lea a distinguir dos formas de «no hay», y esa distincion no
+    significa nada para quien recibe el libro.
+    """
+    limpia = DedicatoriaEntrada(texto=texto).limpia()
+    if limpia is None:
+        return
+    sesion.add(Dedicatoria(obra_id=obra_id, texto=limpia))
+
+
 async def cerrar_entrevista(
     sesion: AsyncSession,
     entrevistador: Entrevistador,
@@ -234,6 +266,7 @@ async def cerrar_entrevista(
 
     brief = _brief_validado(entrevista.respuestas)
     obra = await crear_obra_desde_brief(sesion, brief)
+    _guardar_dedicatoria(sesion, obra.id, brief.dedicatoria)
     entrevista.obra_id = obra.id
     await sesion.commit()
     return CierreDeEntrevista(obra_id=obra.id, creada=True)
