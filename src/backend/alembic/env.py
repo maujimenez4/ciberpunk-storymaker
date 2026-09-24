@@ -9,7 +9,11 @@ from logging.config import fileConfig
 # ve como sobrantes y genera su `drop_table`. La linea entra con la tabla, no
 # despues. Los modulos de tablas que vengan se anaden aqui.
 import app.commons.db.auditoria
-import app.features.obra.modelos  # noqa: F401
+import app.features.canon.modelos
+import app.features.escena.modelos
+import app.features.escritura.modelos
+import app.features.obra.modelos
+import app.features.outline.modelos  # noqa: F401
 from alembic import context
 from app.commons.config.ajustes import Ajustes
 from app.commons.db.base import Base
