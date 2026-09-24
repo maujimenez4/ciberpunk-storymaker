@@ -23,7 +23,7 @@
 
 /**
  * **Los temas.** `data-tema` en `<html>` con `papel`, `sepia` o `noche`. Sin
- * atributo se sigue al sistema: claro es Papel, oscuro es Noche. Sepia existe
+ * atributo es Papel, **aunque el sistema esté en oscuro**. Sepia existe
  * porque un lector de libros lo ofrece, **pero nunca es el de defecto**.
  *
  * `--sello` es texto (leyendas de bloque, sellos) y pasa 4.5:1 sobre el papel y
@@ -84,23 +84,9 @@
   --margen: #6e4540;
 }
 
-/* El mismo Noche, cuando nadie ha elegido y el sistema está en oscuro. Lo
-   vigila un test: si los dos bloques divergen, falla. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema]) {
-    color-scheme: dark;
-
-    --papel: #141a24;
-    --tinta: #e4ddcd;
-    --acento: #9fb6de;
-    --acento-texto: #141a24;
-    --tinta-suave: #a8a191;
-    --guarda: #1d2531;
-    --fondo-campo: #0f141c;
-    --sello: #e58c80;
-    --margen: #6e4540;
-  }
-}
+/* Sin tema elegido manda Papel aunque el sistema esté en oscuro: decisión de
+   maujimenez4 del 2026-09-24, que revierte la 2 del plan 4. Noche solo se
+   aplica si alguien lo elige en «Aa». */
 
 :root {
   --fuente-libro: Spectral, Georgia, "Times New Roman", serif;

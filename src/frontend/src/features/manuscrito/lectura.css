@@ -354,11 +354,6 @@
   background: linear-gradient(135deg, #141a24 55%, #e4ddcd 55%);
 }
 
-/* Automático: mitad de día, mitad de noche. */
-.ajustes__tema--automatico {
-  background: linear-gradient(90deg, #e6e0d2 50%, #141a24 50%);
-}
-
 .ajustes__cerrar {
   display: block;
   margin-inline-start: auto;

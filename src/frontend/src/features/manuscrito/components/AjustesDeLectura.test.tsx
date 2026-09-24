@@ -36,19 +36,26 @@ describe("el tema", () => {
     expect(html).toHaveAttribute("data-tema", "noche");
   });
 
-  it("Automático quita el atributo y deja mandar al sistema", async () => {
-    const usuario = await abrir();
-    await usuario.click(screen.getByRole("radio", { name: "Sepia" }));
+  it("no hay opción «Automático»: el sistema ya no manda", async () => {
+    // maujimenez4, 2026-09-24: «solo que usa el modo claro, no el modo oscuro».
+    await abrir();
 
-    await usuario.click(screen.getByRole("radio", { name: "Automático" }));
-
-    expect(html).not.toHaveAttribute("data-tema");
+    expect(screen.queryByRole("radio", { name: "Automático" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("radio", { name: /papel|sepia|noche/i })).toHaveLength(3);
   });
 
-  it("sin elegir nada, sigue al sistema", () => {
+  it("sin elegir nada, es Papel", () => {
     render(<AjustesDeLectura />);
 
-    expect(html).not.toHaveAttribute("data-tema");
+    expect(html).toHaveAttribute("data-tema", "papel");
+  });
+
+  it("quien guardó «automatico» con la versión anterior vuelve a Papel", () => {
+    localStorage.setItem("lectura:ajustes", '{"tema":"automatico"}');
+
+    render(<AjustesDeLectura />);
+
+    expect(html).toHaveAttribute("data-tema", "papel");
   });
 });
 
@@ -97,7 +104,7 @@ describe("lo que se recuerda", () => {
 
     const usuario = await abrir();
 
-    expect(screen.getByRole("radio", { name: "Automático" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Papel" })).toBeChecked();
     // Tamaño e interlineado, los dos en su paso normal.
     const normales = screen.getAllByRole("radio", { name: "Normal" });
     expect(normales).toHaveLength(2);
@@ -111,7 +118,8 @@ describe("lo que se recuerda", () => {
 
     render(<AjustesDeLectura />);
 
-    expect(html).not.toHaveAttribute("data-tema");
+    // Cae al defecto, que desde el 2026-09-24 es Papel y no «sin atributo».
+    expect(html).toHaveAttribute("data-tema", "papel");
     expect(html.style.getPropertyValue("--cuerpo")).toBe("");
   });
 });

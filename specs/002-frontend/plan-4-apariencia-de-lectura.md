@@ -187,3 +187,5 @@ Van con recomendación; si no dices nada, se aplica la recomendada.
 - **Quién es quién:** «Quién viaja contigo»; cada entrada es una **etiqueta de equipaje** con su agujero; las no reveladas, un sello «+N».
 
 **Se mantienen:** botones en píldora, el control segmentado, «Aa», los tres temas, el foco visible y el contraste AA en los tres, que es test y gana a la estética.
+
+**Se revierte la decisión 2** (tema según el sistema), el mismo día, tras ver la D en un sistema en modo oscuro: *«solo que usa el modo claro, no el modo oscuro»* (`maujimenez4`). Sin elegir nada, el tema es **siempre Papel**; Noche y Sepia solo se aplican si se eligen en «Aa», y la opción «Automático» desaparece.

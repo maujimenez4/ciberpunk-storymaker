@@ -129,17 +129,18 @@ describe("los temas", () => {
     expect(ESTILOS).toMatch(/(^|\n):root,\s*:root\[data-tema="papel"\]\s*\{/);
   });
 
-  it("sin atributo y con el sistema oscuro, se aplica Noche tal cual", () => {
-    const sistema = ESTILOS.slice(ESTILOS.indexOf("prefers-color-scheme: dark"));
-    expect(sistema).toContain(":root:not([data-tema])");
-    expect(paleta(bloque(":root:not([data-tema])"))).toEqual(paleta(TEMAS.noche));
+  it("el sistema en oscuro no cambia el tema: sin elegir, siempre Papel", () => {
+    // Decisión de maujimenez4 (2026-09-24, «solo que usa el modo claro, no el
+    // modo oscuro»): revierte la decisión 2 del plan 4. Noche existe, pero solo
+    // si se elige en «Aa»; el modo del sistema no manda.
+    expect(ESTILOS).not.toContain("prefers-color-scheme: dark");
+    expect(ESTILOS).not.toContain(":root:not([data-tema])");
   });
 
   it("Sepia no es nunca el tema por defecto", () => {
     // Su bloque lleva un solo selector: solo se aplica si alguien lo elige.
     expect(ESTILOS).toMatch(/(^|\n):root\[data-tema="sepia"\]\s*\{/);
     expect(paleta(TEMAS.papel)).not.toEqual(paleta(TEMAS.sepia));
-    expect(paleta(bloque(":root:not([data-tema])"))).not.toEqual(paleta(TEMAS.sepia));
   });
 
   /**

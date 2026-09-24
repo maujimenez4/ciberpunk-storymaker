@@ -20,9 +20,13 @@ export const INTERLINEADOS = [
   { valor: "amplio", etiqueta: "Amplio", ritmo: "1.9" },
 ] as const;
 
-/** `automatico` no es un tema: es **no poner atributo** y dejar mandar al sistema. */
+/**
+ * Tres temas y **ninguno sigue al sistema**: decisión de maujimenez4 del
+ * 2026-09-24 («solo que usa el modo claro, no el modo oscuro»). Hubo un
+ * `automatico` que quitaba el atributo; quien lo tenga guardado cae a Papel
+ * porque ya no es un valor conocido.
+ */
 export const TEMAS = [
-  { valor: "automatico", etiqueta: "Automático" },
   { valor: "papel", etiqueta: "Papel" },
   { valor: "sepia", etiqueta: "Sepia" },
   { valor: "noche", etiqueta: "Noche" },
@@ -34,7 +38,7 @@ export type Tema = (typeof TEMAS)[number]["valor"];
 
 export type Ajustes = { tamano: Tamano; interlineado: Interlineado; tema: Tema };
 
-export const POR_DEFECTO: Ajustes = { tamano: "normal", interlineado: "normal", tema: "automatico" };
+export const POR_DEFECTO: Ajustes = { tamano: "normal", interlineado: "normal", tema: "papel" };
 
 const CLAVE = "lectura:ajustes";
 
@@ -87,11 +91,7 @@ export function aplicarAjustes(ajustes: Ajustes, raiz: HTMLElement = document.do
     ajustes.interlineado === POR_DEFECTO.interlineado ? null : (interlineado?.ritmo ?? null),
   );
 
-  if (ajustes.tema === "automatico") {
-    raiz.removeAttribute("data-tema");
-  } else {
-    raiz.setAttribute("data-tema", ajustes.tema);
-  }
+  raiz.setAttribute("data-tema", ajustes.tema);
 }
 
 function poner(raiz: HTMLElement, variable: string, valor: string | null): void {
