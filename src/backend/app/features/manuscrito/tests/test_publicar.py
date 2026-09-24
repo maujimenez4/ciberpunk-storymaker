@@ -13,7 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.conftest import ObraConOutline
 from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import Trabajo, VersionTexto
-from app.features.manuscrito import CapituloSinPuerta, ensamblar_manuscrito, publicar
+from app.features.manuscrito import (
+    CapituloSinPuerta,
+    ObraSinCapitulos,
+    ensamblar_manuscrito,
+    publicar,
+)
 from app.features.manuscrito.modelos import (
     CapituloPublicado,
     CuadroDeDefectos,
@@ -21,6 +26,7 @@ from app.features.manuscrito.modelos import (
     FichaDeLectura,
     VersionPublicada,
 )
+from app.features.obra.modelos import Obra
 
 CAPITULOS = 10
 
@@ -268,6 +274,35 @@ async def test_un_capitulo_sin_trabajo_tampoco_se_publica(
         await publicar(sesion, obra_con_outline.obra.id)
 
     assert "5" in str(fallo.value)
+
+
+async def test_una_obra_sin_capitulos_no_se_publica_y_lean_ni_se_llama(
+    sesion: AsyncSession, obra: Obra, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regla de dominio 14 en el caso vacio: **cero capitulos no es «todos pasaron»**.
+
+    Sin capitulos, la comprobacion por capitulo no encuentra ninguno sin puerta
+    y la puerta quedaba solo en manos de Lean -- que con cero eventos no tiene
+    nada que objetar --. El frontend publicaba nada mas lanzar la novela y se
+    habria repartido un enlace a una novela en blanco.
+
+    Lean se sustituye por un espia: el rechazo tiene que llegar **antes**, y en
+    una maquina sin Lean lo que saldria seria «falta la herramienta», que manda
+    a instalar algo en vez de a escribir la novela.
+    """
+    llamadas: list[int] = []
+
+    async def espia(_sesion: AsyncSession, obra_id: int) -> object:
+        llamadas.append(obra_id)
+        raise AssertionError("Lean no deberia llegar a correr")
+
+    monkeypatch.setattr("app.features.manuscrito.service.correr_lean", espia)
+
+    with pytest.raises(ObraSinCapitulos):
+        await publicar(sesion, obra.id)
+
+    assert llamadas == []
+    assert await _cuantas(sesion, obra.id) == 0
 
 
 # --- ayudas de lectura, no del servicio ------------------------------------

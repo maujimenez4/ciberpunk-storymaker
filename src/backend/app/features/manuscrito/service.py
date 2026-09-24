@@ -79,6 +79,23 @@ class CapituloSinPuerta(ErrorDeDominio):
         )
 
 
+class ObraSinCapitulos(ErrorDeDominio):
+    """La obra no tiene capitulos: **cero capitulos no es «todos pasaron»**.
+
+    Sin esta guarda, la comprobacion por capitulo no encontraba ninguno sin
+    puerta y dejaba pasar; lo unico que quedaba delante era Lean, que con cero
+    eventos no tiene nada que objetar. El resultado era una tirada en blanco con
+    su token repartible (regla de dominio 14).
+    """
+
+    def __init__(self, obra_id: int) -> None:
+        self.obra_id = obra_id
+        super().__init__(
+            f"No se puede publicar: la obra {obra_id} no tiene capitulos. "
+            "Falta el outline o la novela no se ha escrito."
+        )
+
+
 class CronologiaIncoherente(ErrorDeDominio):
     """Lean rechazo la cronologia, y **por eso no se publica**. `CA-21`.
 
@@ -115,7 +132,11 @@ async def _capitulos_listos(sesion: AsyncSession, obra_id: int) -> list[_Capitul
     listos: list[_CapituloListo] = []
     sin_puerta: list[int] = []
 
-    for fila in await capitulos_con_su_puerta(sesion, obra_id):
+    filas = await capitulos_con_su_puerta(sesion, obra_id)
+    if not filas:
+        raise ObraSinCapitulos(obra_id)
+
+    for fila in filas:
         if fila["estado"] != ESTADO_APROBADO or fila["version_texto_id"] is None:
             sin_puerta.append(int(fila["numero"]))
             continue

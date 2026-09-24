@@ -83,6 +83,7 @@ from app.features.manuscrito.schemas import (
 from app.features.manuscrito.service import (
     CapituloSinPuerta,
     CronologiaIncoherente,
+    ObraSinCapitulos,
     dedicatoria_o_nada,
     ensamblar_manuscrito,
     publicar,
@@ -97,6 +98,7 @@ __all__ = [
     "EntradaDeFicha",
     "FichaDeLectura",
     "HerramientaNoDisponible",
+    "ObraSinCapitulos",
     "VersionPublicada",
     "capitulos_cambiados",
     "capitulos_de",
