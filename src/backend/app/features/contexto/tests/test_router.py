@@ -87,7 +87,7 @@ async def test_ri_07_con_la_capa_de_canon_vacia_responde_409_y_no_prosa(
     """
     respuesta = cliente_con_contador.get(f"/capitulos/{obra_con_outline.capitulos[0].id}/contexto")
 
-    assert respuesta.status_code == 409
+    assert respuesta.status_code == 409  # capa vacia: el estado no admite la peticion
     assert "canon" in respuesta.json()["detail"]
 
 
@@ -96,7 +96,7 @@ async def test_ri_07_sobre_un_capitulo_que_no_existe_no_revienta(
 ) -> None:
     respuesta = cliente_con_contador.get("/capitulos/9999/contexto")
 
-    assert respuesta.status_code == 409
+    assert respuesta.status_code == 404  # RecursoDesconocido: no existe, no es conflicto
 
 
 def test_ri_07_esta_en_el_openapi_con_su_modelo(cliente: TestClient) -> None:

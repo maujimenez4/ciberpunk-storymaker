@@ -81,14 +81,14 @@ async def test_un_beat_sin_asignar_responde_409_y_no_deja_outline(cliente, sesio
 
     respuesta = cliente.post(f"/obras/{obra.id}/outline")
 
-    assert respuesta.status_code == 409
+    assert respuesta.status_code == 409  # un beat sin asignar SI es conflicto de estado
     assert (await sesion.execute(select(func.count()).select_from(Capitulo))).scalar_one() == 0
 
 
 async def test_planificar_una_obra_inexistente_no_responde_500(cliente):
     respuesta = cliente.post("/obras/9999/outline")
 
-    assert respuesta.status_code == 409
+    assert respuesta.status_code == 404  # RecursoDesconocido: no existe, no es conflicto
 
 
 async def test_el_endpoint_esta_en_el_openapi_con_su_modelo(cliente):

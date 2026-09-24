@@ -18,8 +18,8 @@ from fastapi.responses import JSONResponse
 from app.commons.domain.errores import (
     BriefContradictorio,
     BriefIncompleto,
-    EntrevistaDesconocida,
     ErrorDeDominio,
+    RecursoDesconocido,
 )
 
 _POR_DEFECTO = status.HTTP_409_CONFLICT
@@ -29,10 +29,10 @@ def _codigo(error: ErrorDeDominio) -> int:
     """409 salvo que se sepa algo mejor.
 
     409 es el que corresponde a la familia entera: el dominio entiende la
-    peticion y el estado actual no la admite. `EntrevistaDesconocida` es la
+    peticion y el estado actual no la admite. `RecursoDesconocido` es la
     excepcion, porque lo que falla no es el estado sino el recurso.
     """
-    if isinstance(error, EntrevistaDesconocida):
+    if isinstance(error, RecursoDesconocido):
         return status.HTTP_404_NOT_FOUND
     return _POR_DEFECTO
 

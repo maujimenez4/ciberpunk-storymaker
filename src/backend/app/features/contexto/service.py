@@ -39,7 +39,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.commons.domain.errores import ErrorDeDominio
+from app.commons.domain.errores import ErrorDeDominio, RecursoDesconocido
 from app.commons.domain.normalizacion import normalizar
 from app.commons.llm.contador import ContadorDeTokens
 from app.features.contexto.almacenes import VectorStore
@@ -52,7 +52,7 @@ from app.features.contexto.recuperacion import (
 )
 
 
-class CapituloDesconocido(ErrorDeDominio):
+class CapituloDesconocido(RecursoDesconocido):
     """El id que se pide no es de ningun capitulo."""
 
     def __init__(self, capitulo_id: int) -> None:

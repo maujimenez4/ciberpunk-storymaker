@@ -20,7 +20,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.commons.domain.errores import ErrorDeDominio
+from app.commons.domain.errores import ErrorDeDominio, RecursoDesconocido
 from app.features.outline.agents import Arquitecto, OutlineGenerado
 from app.features.outline.modelos import VersionObra
 from app.features.outline.repository import (
@@ -33,7 +33,7 @@ from app.features.outline.repository import (
 from app.features.outline.schemas import CAPITULOS_DEL_OUTLINE, BeatDeGenero, DiscursoDeLaObra
 
 
-class ObraDesconocida(ErrorDeDominio):
+class ObraDesconocida(RecursoDesconocido):
     """El id que se pide no es de ninguna obra.
 
     Sin ella, un id mal escrito llega hasta la clave ajena de `capitulo` y sale

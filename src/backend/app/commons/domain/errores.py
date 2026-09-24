@@ -76,7 +76,22 @@ class BriefContradictorio(ErrorDeDominio):
         super().__init__(f"El brief se contradice en {len(self.contradicciones)} punto(s)")
 
 
-class EntrevistaDesconocida(ErrorDeDominio):
+class RecursoDesconocido(ErrorDeDominio):
+    """Se pidio algo que no existe. El manejador central lo baja a **404**.
+
+    Es una marca, no una excepcion que se lance tal cual: cada feature declara
+    la suya —`ObraDesconocida`, `CapituloDesconocido`— y hereda de esta. El
+    manejador vive en `commons/` y por el primer contrato de `import-linter`
+    **no puede importar de ninguna feature**, asi que preguntar por la clase
+    concreta obligaba a que `commons` conociera a quien no debe conocer. Con la
+    marca, la dependencia va en el sentido correcto.
+
+    Antes de existir, cada feature que anadia la suya respondia 409 en silencio
+    —«el estado actual no admite esta peticion»— y eso paso dos veces.
+    """
+
+
+class EntrevistaDesconocida(RecursoDesconocido):
     """El id que se pide no es de ninguna entrevista.
 
     No estaba en el plan y entra con la Tarea 9 (ver Desviaciones): sin ella,

@@ -20,10 +20,12 @@ from app.features.outline.schemas import (
     Persona,
     TiempoVerbal,
 )
+from app.features.outline.service import ObraDesconocida
 
 __all__ = [
     "BeatDeGenero",
     "CapituloDelOutline",
+    "ObraDesconocida",
     "OutlineCreado",
     "Persona",
     "TiempoVerbal",
