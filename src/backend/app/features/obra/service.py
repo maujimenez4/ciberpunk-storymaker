@@ -192,17 +192,21 @@ async def responder_entrevista(
     No decide nada: devuelve la evaluacion tal cual. La decision de crear o no
     la obra es de `cerrar_entrevista`, y esta en codigo y no en la prosa del
     modelo (CA-2).
+
+    **Se commitea antes de llamar al modelo.** Lo guardado ya es verdad con o
+    sin evaluacion, y la llamada tarda: con la transaccion abierta, el
+    `UPDATE` retiene la escritura de toda la base durante ese tiempo y el
+    segundo clic del comprador muere en `busy_timeout` con `database is
+    locked`. Lo que se evalua es lo que se acaba de guardar, leido antes de
+    soltar la sesion.
     """
     entrevista = await _entrevista_o_error(sesion, entrevista_id)
     await guardar_respuestas(sesion, entrevista, respuestas)
     await guardar_texto_aportado(sesion, entrevista.id, texto_aportado)
-    evaluacion = await evaluar_entrevista(
-        entrevistador,
-        entrevista.respuestas,
-        await _texto_de_la_entrevista(sesion, entrevista.id),
-    )
+    acumuladas = dict(entrevista.respuestas)
+    texto = await _texto_de_la_entrevista(sesion, entrevista.id)
     await sesion.commit()
-    return evaluacion
+    return await evaluar_entrevista(entrevistador, acumuladas, texto)
 
 
 async def cerrar_entrevista(
