@@ -1,0 +1,1216 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "ciberpunk-storymaker",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/entrevistas": {
+   "post": {
+    "tags": [
+     "entrevista"
+    ],
+    "summary": "Abrir",
+    "description": "RI-01. Abre una entrevista vacia y devuelve su id.",
+    "operationId": "abrir_entrevistas_post",
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EntrevistaAbierta"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/entrevistas/{entrevista_id}/respuestas": {
+   "post": {
+    "tags": [
+     "entrevista"
+    ],
+    "summary": "Responder",
+    "description": "RI-02. Aporta datos o texto libre; devuelve faltantes y contradicciones.",
+    "operationId": "responder_entrevistas__entrevista_id__respuestas_post",
+    "parameters": [
+     {
+      "name": "entrevista_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Entrevista Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RespuestasEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EvaluacionSalida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/entrevistas/{entrevista_id}/cerrar": {
+   "post": {
+    "tags": [
+     "entrevista"
+    ],
+    "summary": "Cerrar",
+    "description": "RI-03. Valida el brief con esquema y crea la obra.\n\nEl segundo cierre devuelve 200 y **la misma** obra (R-5). Se baja el codigo\nen vez de dejar el 201 porque un «Created» que no creo nada es lo unico que\nesta respuesta no debe decir.",
+    "operationId": "cerrar_entrevistas__entrevista_id__cerrar_post",
+    "parameters": [
+     {
+      "name": "entrevista_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Entrevista Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ObraCreada"
+        }
+       }
+      }
+     },
+     "200": {
+      "description": "La entrevista ya estaba cerrada (R-5)"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/obras/{obra_id}/outline": {
+   "post": {
+    "tags": [
+     "outline"
+    ],
+    "summary": "Planificar",
+    "description": "RI-04. Produce la biblia versionada y el outline de diez capitulos.",
+    "operationId": "planificar_obras__obra_id__outline_post",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineCreado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/capitulos/{capitulo_id}/contexto": {
+   "get": {
+    "tags": [
+     "contexto"
+    ],
+    "summary": "Contexto Del Capitulo",
+    "description": "RI-07. Ensambla el paquete y lo devuelve **sin llamar a ningun modelo**.",
+    "operationId": "contexto_del_capitulo_capitulos__capitulo_id__contexto_get",
+    "parameters": [
+     {
+      "name": "capitulo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Capitulo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PaqueteDeContexto"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/capitulos/{capitulo_id}/escribir": {
+   "post": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Escribir",
+    "description": "RI-05. Crea el trabajo, lo devuelve, y el ciclo sigue por detras.",
+    "operationId": "escribir_capitulos__capitulo_id__escribir_post",
+    "parameters": [
+     {
+      "name": "capitulo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Capitulo Id"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TrabajoLanzado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/trabajos/{trabajo_id}": {
+   "get": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Consultar",
+    "description": "RI-06. El estado del trabajo, que es lo que el frontend consulta.",
+    "operationId": "consultar_trabajos__trabajo_id__get",
+    "parameters": [
+     {
+      "name": "trabajo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Trabajo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EstadoDelTrabajo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/obras/{obra_id}/novela": {
+   "post": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Escribir La Novela",
+    "description": "`CA-1`: arranca —o reanuda— la novela entera, y responde con por donde va.\n\n**Es un trabajo de fondo y no una peticion que espera** (`CLAUDE.md` §6):\ndiez capitulos son diez llamadas al modelo, y una respuesta HTTP que las\naguardara no es una respuesta, es un tiempo de espera.\n\n**Y arrancar y reanudar son el mismo endpoint**, porque son la misma\nllamada: `escribir_novela` pide siempre el primer capitulo no integrado, asi\nque sobre una obra recien planificada empieza por el uno y sobre una que se\ncayo sigue por donde estaba. Dos endpoints obligarian a quien llama a saber\ncual de los dos casos tiene, que es precisamente lo que no se sabe despues\nde una caida.",
+    "operationId": "escribir_la_novela_obras__obra_id__novela_post",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NovelaLanzada"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Portada",
+    "description": "La portada: dedicatoria, indice y nada de prosa.\n\n**Los diez capitulos no vienen embebidos.** Serian unas doce mil palabras\ncargadas al abrir la pagina donde no se lee ni una; la lectura es capitulo\na capitulo y la peticion tambien.\n\nLa dedicatoria se sirve aqui, y es su unico uso: la creo T2 y hasta ahora\nno la leia nadie.",
+    "operationId": "portada_lectura__token__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VersionPublicada"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/capitulos/{numero}": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Capitulo",
+    "description": "La prosa de un capitulo, **la que se fijo al publicar**.\n\nNo la vigente: `capitulo_publicado` apunta a un `version_texto_id` concreto\n(`RF-PUB-01`), y resolver la version de hoy haria que un enlace ya\nrepartido cambiara de contenido sin que nadie lo tocara.",
+    "operationId": "capitulo_lectura__token__capitulos__numero__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Numero"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Capitulo Lectura  Token  Capitulos  Numero  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/ficha": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Ficha",
+    "description": "Quien es quien, y en que capitulos aparece (`RF-PUB-05`).\n\nUna tirada sin ficha devuelve la ficha vacia y no un 404: el enlace es\nvalido y la portada se lee igual. Un 404 aqui diria que el regalo no\nexiste, que es otra cosa.",
+    "operationId": "ficha_lectura__token__ficha_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FichaDeLectura"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/versiones": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Versiones",
+    "description": "Las tiradas de esta obra, de la mas reciente a la primera.\n\nSin prosa y sin capitulos: es el historial para volver a una ya leida, y\ncada una se abre por su propio enlace.",
+    "operationId": "versiones_lectura__token__versiones_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VersionPublicada"
+         },
+         "title": "Response Versiones Lectura  Token  Versiones Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/pdf": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Pdf",
+    "description": "El regalo en un fichero, para imprimir o guardar.\n\n**Fuera del alcance de T9 por decision del 2026-09-24.** El enfoque\n-- imprimir desde el Chromium de Playwright, sin dependencia nueva -- esta\npendiente de aprobacion, y escribirlo antes seria escribir contra una\ndecision que puede cambiar. Sale como tarea propia cuando se apruebe.",
+    "operationId": "pdf_lectura__token__pdf_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Pdf Lectura  Token  Pdf Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "BeatDeGenero": {
+    "type": "string",
+    "enum": [
+     "presentacion_de_carencias",
+     "encuentro",
+     "punto_de_no_retorno",
+     "diversion_y_juegos",
+     "punto_medio",
+     "la_grieta",
+     "ruptura",
+     "revelacion_interior",
+     "gran_gesto",
+     "hea_hfn"
+    ],
+    "title": "BeatDeGenero",
+    "description": "Los diez hitos obligatorios del romance (`definitions.md` §6).\n\n**El conjunto es cerrado y el orden es el del contrato**, no alfabetico: es\nel orden en que el lector los espera, y `domain-knowledge.md` §8.1 dice que\nla presencia y el orden son lo unico que no admite excepcion. Que sea un\n`StrEnum` es lo que hace que un beat inventado no llegue a ser un beat: lo\npara el esquema del agente, no una comprobacion escrita a mano.\n\nSon diez, y el outline tiene diez capitulos: con `beat_de_genero` de\ncardinalidad 0..1 en cada capitulo (`definitions.md` §4.1), «cada beat en\nexactamente un capitulo» acaba siendo una biyeccion. No se codifica asi a\nproposito: la regla que RF-PLA-03 enuncia es la de los beats, y el dia que\nel outline tenga doce capitulos seguira siendo la misma."
+   },
+   "CapituloDelOutline": {
+    "properties": {
+     "numero": {
+      "type": "integer",
+      "maximum": 10.0,
+      "minimum": 1.0,
+      "title": "Numero"
+     },
+     "titulo": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "pov_dominante": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Pov Dominante"
+     },
+     "lugar": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Lugar"
+     },
+     "objetivo": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Objetivo"
+     },
+     "obstaculo": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Obstaculo"
+     },
+     "valor_entrada": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Valor Entrada"
+     },
+     "valor_salida": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Valor Salida"
+     },
+     "gancho_de_apertura": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Gancho De Apertura"
+     },
+     "tipo_de_corte_final": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Tipo De Corte Final"
+     },
+     "extension_objetivo": {
+      "type": "integer",
+      "maximum": 1500.0,
+      "minimum": 1000.0,
+      "title": "Extension Objetivo"
+     },
+     "beat_de_genero": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/BeatDeGenero"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "numero",
+     "titulo",
+     "pov_dominante",
+     "lugar",
+     "objetivo",
+     "obstaculo",
+     "valor_entrada",
+     "valor_salida",
+     "gancho_de_apertura",
+     "tipo_de_corte_final",
+     "extension_objetivo"
+    ],
+    "title": "CapituloDelOutline",
+    "description": "Un capitulo del outline: lo que RF-PLA-04 exige, capitulo a capitulo.\n\n`extra=forbid` no es celo. Sin el, un modelo que escribe `beat` en vez de\n`beat_de_genero` produce un capitulo que valida, sale con su beat en blanco\ny **pierde el dato en silencio**. La Fase 1 lo descubrio ejecutando, con un\nbrief que salia «completo» perdiendo justo lo que faltaba.\n\n`extension_objetivo` repite aqui el rango que `capitulo` sostiene con un\n`CheckConstraint`. La duplicidad es deliberada: si solo lo parase la base,\nuna extension fuera de rango seria un `IntegrityError` —un 500— en vez de lo\nque es, un agente que devolvio algo fuera de su esquema (RF-ORQ-09)."
+   },
+   "CapituloPublicado": {
+    "properties": {
+     "numero": {
+      "type": "integer",
+      "title": "Numero"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "cambiado": {
+      "type": "boolean",
+      "title": "Cambiado",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "numero"
+    ],
+    "title": "CapituloPublicado",
+    "description": "Una entrada del indice de la 002 (`RF-IND-01`, `RF-IND-02`).\n\n`cambiado` viene del backend calculado y no se recalcula en el navegador: el\nnavegador solo tiene delante la tirada que esta leyendo, y `cambiado`\ncompara con la anterior."
+   },
+   "ContradiccionSalida": {
+    "properties": {
+     "campos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Campos"
+     },
+     "explicacion": {
+      "type": "string",
+      "title": "Explicacion"
+     }
+    },
+    "type": "object",
+    "required": [
+     "campos",
+     "explicacion"
+    ],
+    "title": "ContradiccionSalida",
+    "description": "Los mismos dos campos que devuelve el Entrevistador, ni uno mas."
+   },
+   "EntradaDeFicha": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "title": "Nombre"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "descripcion": {
+      "type": "string",
+      "title": "Descripcion",
+      "default": ""
+     },
+     "capitulos": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Capitulos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "tipo"
+    ],
+    "title": "EntradaDeFicha",
+    "description": "Quien es quien, con los capitulos en que aparece (`RF-PUB-05`)."
+   },
+   "EntrevistaAbierta": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id"
+    ],
+    "title": "EntrevistaAbierta",
+    "description": "Salida de RI-01. Nunca se expone el modelo de base de datos."
+   },
+   "EstadoDelTrabajo": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "obra_id": {
+      "type": "integer",
+      "title": "Obra Id"
+     },
+     "capitulo_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capitulo Id"
+     },
+     "numero_de_capitulo": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Numero De Capitulo"
+     },
+     "escena_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Escena Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "intento": {
+      "type": "integer",
+      "title": "Intento"
+     },
+     "run_id": {
+      "type": "string",
+      "title": "Run Id"
+     },
+     "causa_fallo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Causa Fallo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "obra_id",
+     "capitulo_id",
+     "numero_de_capitulo",
+     "escena_id",
+     "tipo",
+     "estado",
+     "intento",
+     "run_id",
+     "causa_fallo"
+    ],
+    "title": "EstadoDelTrabajo",
+    "description": "RI-06. Es la unidad de trabajo de `architecture.md` §3.2, sin la fila.\n\n**Lleva el capitulo, y eso es lo que RI-06 pide cuando dice «legible por\ncapitulo»**: hasta la Fase 3 salia `escena_id` y nada mas, y con diez\ntrabajos abiertos no habia forma de saber cual era el del capitulo siete sin\nconsultar otra tabla. Va el numero de outline junto al identificador por lo\nmismo que `Checkpoint` lo lleva: quien pregunta razona en numeros, y una\nclave primaria no dice cuanto queda."
+   },
+   "EvaluacionSalida": {
+    "properties": {
+     "faltantes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Faltantes"
+     },
+     "contradicciones": {
+      "items": {
+       "$ref": "#/components/schemas/ContradiccionSalida"
+      },
+      "type": "array",
+      "title": "Contradicciones"
+     }
+    },
+    "type": "object",
+    "required": [
+     "faltantes",
+     "contradicciones"
+    ],
+    "title": "EvaluacionSalida",
+    "description": "Salida de RI-02: que falta y que se contradice, nombrado (CA-2)."
+   },
+   "FichaDeLectura": {
+    "properties": {
+     "entradas": {
+      "items": {
+       "$ref": "#/components/schemas/EntradaDeFicha"
+      },
+      "type": "array",
+      "title": "Entradas"
+     }
+    },
+    "type": "object",
+    "title": "FichaDeLectura",
+    "description": "La ficha entera de una tirada: quien es quien, y donde sale.\n\nEs la **respuesta** de `/lectura/{token}/ficha`, no una fila: `EntradaDeFicha`\nes una entrada suelta y el frontend necesita el tipo del cuerpo completo\npara derivar su cliente."
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "LineaDelDesglose": {
+    "properties": {
+     "capa": {
+      "type": "string",
+      "title": "Capa"
+     },
+     "tope": {
+      "type": "integer",
+      "title": "Tope"
+     },
+     "tokens": {
+      "type": "integer",
+      "title": "Tokens"
+     },
+     "piezas": {
+      "type": "integer",
+      "title": "Piezas"
+     },
+     "identificadores": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Identificadores"
+     },
+     "descartados": {
+      "type": "integer",
+      "title": "Descartados"
+     }
+    },
+    "type": "object",
+    "required": [
+     "capa",
+     "tope",
+     "tokens",
+     "piezas",
+     "identificadores",
+     "descartados"
+    ],
+    "title": "LineaDelDesglose",
+    "description": "Una capa: lo que costo, lo que cabia, y que entro y que se quito.\n\n`identificadores` y `descartados` van separados a proposito: es la\ndiferencia entre lo que el modelo vera y lo que no, y RF-CTX-09 dice que\nsolo lo primero se persiste."
+   },
+   "NovelaLanzada": {
+    "properties": {
+     "obra_id": {
+      "type": "integer",
+      "title": "Obra Id"
+     },
+     "desde_el_capitulo": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desde El Capitulo"
+     },
+     "terminada": {
+      "type": "boolean",
+      "title": "Terminada"
+     }
+    },
+    "type": "object",
+    "required": [
+     "obra_id",
+     "desde_el_capitulo",
+     "terminada"
+    ],
+    "title": "NovelaLanzada",
+    "description": "Lo que devuelve el arranque de la novela: **por donde va a empezar**.\n\nNo lleva identificadores de trabajo porque todavia no existen —los abre el\nbucle, uno por capitulo— y prometerlos obligaria a abrirlos por adelantado,\nque es justo lo que la secuencia prohibe. Lo que se devuelve es lo unico\ncierto en ese instante: de que obra se trata y cual es el capitulo pendiente.\nEl progreso se consulta despues por `GET /trabajos/{id}` (RI-06)."
+   },
+   "ObraCreada": {
+    "properties": {
+     "obra_id": {
+      "type": "integer",
+      "title": "Obra Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "obra_id"
+    ],
+    "title": "ObraCreada",
+    "description": "Salida de RI-03. La segunda llamada devuelve el mismo `obra_id` (R-5)."
+   },
+   "OutlineCreado": {
+    "properties": {
+     "obra_id": {
+      "type": "integer",
+      "title": "Obra Id"
+     },
+     "version_obra_id": {
+      "type": "integer",
+      "title": "Version Obra Id"
+     },
+     "version": {
+      "type": "integer",
+      "title": "Version"
+     },
+     "capitulos": {
+      "items": {
+       "$ref": "#/components/schemas/CapituloDelOutline"
+      },
+      "type": "array",
+      "title": "Capitulos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "obra_id",
+     "version_obra_id",
+     "version",
+     "capitulos"
+    ],
+    "title": "OutlineCreado",
+    "description": "Lo que RI-04 devuelve: la version de la biblia y los diez capitulos.\n\nLleva los capitulos enteros, con su plan dramatico, y no solo sus ids: el\nplan de cada capitulo **no tiene columna donde persistirse hoy** (ver\nDesviaciones), asi que esta respuesta es el unico sitio donde sale completo."
+   },
+   "PaqueteDeContexto": {
+    "properties": {
+     "capitulo_id": {
+      "type": "integer",
+      "title": "Capitulo Id"
+     },
+     "escena_id": {
+      "type": "integer",
+      "title": "Escena Id"
+     },
+     "version_obra_id": {
+      "type": "integer",
+      "title": "Version Obra Id"
+     },
+     "tokens_previstos": {
+      "type": "integer",
+      "title": "Tokens Previstos"
+     },
+     "reserva_libre": {
+      "type": "integer",
+      "title": "Reserva Libre"
+     },
+     "capas": {
+      "items": {
+       "$ref": "#/components/schemas/LineaDelDesglose"
+      },
+      "type": "array",
+      "title": "Capas"
+     },
+     "texto": {
+      "type": "string",
+      "title": "Texto"
+     }
+    },
+    "type": "object",
+    "required": [
+     "capitulo_id",
+     "escena_id",
+     "version_obra_id",
+     "tokens_previstos",
+     "reserva_libre",
+     "capas",
+     "texto"
+    ],
+    "title": "PaqueteDeContexto",
+    "description": "Lo que se enviaria al modelo, con su desglose (`definitions.md` §7)."
+   },
+   "RespuestasEntrada": {
+    "properties": {
+     "respuestas": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Respuestas"
+     },
+     "texto_aportado": {
+      "type": "string",
+      "title": "Texto Aportado",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "title": "RespuestasEntrada",
+    "description": "Lo que el comprador manda a RI-02. Entrada, y solo entrada.\n\n`respuestas` es un diccionario abierto a proposito: la entrevista se\nresponde a trozos y un esquema cerrado obligaria a mandarla entera de una\nvez, que es justo lo que RF-ENT-03 existe para evitar. La forma se exige\n**al cerrar**, contra `BriefEntrada`; aqui solo se acumula."
+   },
+   "TrabajoLanzado": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "run_id": {
+      "type": "string",
+      "title": "Run Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "estado",
+     "run_id"
+    ],
+    "title": "TrabajoLanzado",
+    "description": "Lo que devuelve RI-05: el identificador con el que se consulta despues."
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VersionPublicada": {
+    "properties": {
+     "ordinal": {
+      "type": "integer",
+      "title": "Ordinal"
+     },
+     "publicada_en": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Publicada En"
+     },
+     "dedicatoria": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dedicatoria"
+     },
+     "capitulos": {
+      "items": {
+       "$ref": "#/components/schemas/CapituloPublicado"
+      },
+      "type": "array",
+      "title": "Capitulos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ordinal",
+     "publicada_en"
+    ],
+    "title": "VersionPublicada",
+    "description": "La tirada, **sin** `id` ni `obra_id`.\n\nEl `identificador_publico` no sale aqui: quien lee ya lo tiene, porque es\npor donde entro. Devolverlo otra vez solo lo pondria en un sitio mas -- un\nregistro, una captura, un historial del navegador compartido."
+   }
+  }
+ }
+}
