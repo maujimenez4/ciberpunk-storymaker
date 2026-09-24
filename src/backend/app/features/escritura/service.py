@@ -23,7 +23,6 @@ turno del presupuesto concurrente y la consolidacion en canon son del ciclo de
 punta a punta (T11). Esto devuelve un resultado y no toca ninguna de las tres.
 """
 
-import re
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -34,9 +33,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.auditoria import registrar
 from app.commons.domain.errores import ContextBudgetExceeded
-from app.commons.domain.normalizacion import contiene_veto, normalizar
 from app.commons.llm.contador import ContadorDeTokens
 from app.features.calidad import (
+    CODIGO_DE_PALABRA_PROHIBIDA,
+    CapituloAPolicy,
     CapituloAValidar,
     Defecto,
     NombreDeCanon,
@@ -45,6 +45,7 @@ from app.features.calidad import (
     RangoDeExtension,
     ResultadoDePuerta,
     TiempoVerbal,
+    aplicar_policy,
     cruzar_g1a,
 )
 from app.features.contexto import Capa, ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
@@ -59,16 +60,6 @@ from app.features.escritura.agents import (
     render_escritor,
 )
 from app.features.escritura.modelos import INTENTOS_MAXIMOS, Ejecucion, VersionTexto
-
-CODIGO_DE_PALABRA_PROHIBIDA = "SEG-02"
-"""`definitions.md` §8: «`PalabraProhibida` presente en el texto — reescritura
-obligatoria; se cuenta en el `RegistroDeAuditoria`».
-
-Que el veto viaje como un defecto de la taxonomia y no como un caso aparte es lo
-que hace que RF-GUA-03 y RF-ESC-03 sean **el mismo mecanismo**: entra por
-`defectos_recibidos`, pasa la comprobacion de forma como cualquier otro, bloquea
-como cualquier otro y vuelve al prompt con su cita como cualquier otro.
-"""
 
 PERSONA_DE_LA_OBRA: dict[str, Persona] = {
     "1ª": Persona.PRIMERA,
@@ -95,11 +86,6 @@ TIEMPO_VERBAL_DE_LA_OBRA: dict[str, TiempoVerbal] = {
 }
 """Aqui los dos literales si coinciden. Se escribe igual que el de arriba para
 que la comprobacion sea la misma y no dos reglas distintas."""
-
-_PALABRA = re.compile(r"\w+", re.UNICODE)
-"""El mismo patron que `commons/domain/normalizacion.py`, y esa igualdad es lo
-que sostiene `localizar_veto`: si `contiene_veto` encontro un termino, es porque
-una de **estas** palabras normaliza igual que el."""
 
 
 @runtime_checkable
@@ -152,40 +138,6 @@ class Escritura:
     def reparaciones_gastadas(self) -> int:
         """Las vueltas que no fueron la primera. Tope: `INTENTOS_MAXIMOS`."""
         return len(self.intentos) - 1
-
-
-def localizar_veto(texto: str, vetos: Sequence[str]) -> tuple[str, int, int] | None:
-    """El termino vetado **y donde esta**, o `None`.
-
-    `contiene_veto` devuelve el termino y no un booleano —la Fase 1 lo dejo asi
-    a proposito— y eso es la mitad de RF-GUA-03. La otra mitad es el
-    desplazamiento: sin el, la cita del defecto no seria subcadena exacta en su
-    desplazamiento (regla de dominio 8), el defecto saldria **mal formado** y no
-    bloquearia nada. Una palabra prohibida que no bloquea es peor que no
-    comprobarla, porque parece comprobada.
-
-    El `next` sin valor por defecto no es un descuido: `contiene_veto` compara
-    las palabras de **este mismo** patron con **esta misma** normalizacion, asi
-    que si devolvio un termino, hay una palabra que lo iguala. Poner un
-    `None` de respaldo crearia una rama que ningun test puede alcanzar.
-    """
-    veto = contiene_veto(texto, vetos)
-    if veto is None:
-        return None
-    objetivo = normalizar(veto)
-    encontrada = next(p for p in _PALABRA.finditer(texto) if normalizar(p.group(0)) == objetivo)
-    return veto, encontrada.start(), encontrada.end()
-
-
-def _defecto_de_veto(version_texto_id: int, texto: str, inicio: int, fin: int) -> Defecto:
-    """El veto, con la forma que la puerta exige de cualquier defecto."""
-    return Defecto(
-        codigo=CODIGO_DE_PALABRA_PROHIBIDA,
-        version_texto_id=str(version_texto_id),
-        cita=texto[inicio:fin],
-        desplazamiento_inicio=inicio,
-        desplazamiento_fin=fin,
-    )
 
 
 def _discurso(restricciones: RestriccionesDeDiscurso) -> ParametrosDeDiscurso:
@@ -389,22 +341,22 @@ async def escribir_capitulo(
         )
         version = await _guardar_version(sesion, contexto.escena_id, texto, run_id)
 
-        encontrado = localizar_veto(texto, vetos)
-        recibidos: list[Defecto] = []
-        if encontrado is None:
-            await registrar(
-                sesion, contexto.obra_id, "permitido", "sin veto", {"version_texto": version.id}
+        resultado_policy = aplicar_policy(
+            CapituloAPolicy(
+                version_texto_id=str(version.id),
+                texto=texto,
+                vetos=tuple(vetos),
             )
-        else:
-            veto, inicio, fin = encontrado
-            recibidos.append(_defecto_de_veto(version.id, texto, inicio, fin))
+        )
+        for decision in resultado_policy.decisiones:
             await registrar(
                 sesion,
                 contexto.obra_id,
-                "bloqueado",
-                f"veto: {veto}",
-                {"version_texto": version.id, "termino": veto, "desplazamiento": [inicio, fin]},
+                decision.decision,
+                f"{decision.regla}: {decision.motivo}",
+                decision.evidencia,
             )
+        recibidos: list[Defecto] = list(resultado_policy.defectos)
 
         resultado = cruzar_g1a(
             CapituloAValidar(
@@ -423,7 +375,7 @@ async def escribir_capitulo(
                 version_texto_id=version.id,
                 texto=texto,
                 resultado=resultado,
-                termino_vetado=None if encontrado is None else encontrado[0],
+                termino_vetado=resultado_policy.termino_vetado,
             )
         )
 

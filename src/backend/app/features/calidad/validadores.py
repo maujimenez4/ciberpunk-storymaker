@@ -62,6 +62,7 @@ class PuntoDeEjecucion(StrEnum):
     """
 
     HOOK_DE_CAPITULO = "hook_de_capitulo"
+    HOOK_DE_POLICY = "hook_de_policy"
     PUERTA_G4 = "puerta_g4"
 
 

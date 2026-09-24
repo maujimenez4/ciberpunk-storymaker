@@ -27,17 +27,20 @@ from sqlalchemy import select
 
 from app.commons.db.auditoria import leer_auditoria
 from app.commons.llm.doble import DobleDeterminista
-from app.features.calidad import NombreDeCanon, RangoDeExtension
+from app.features.calidad import (
+    CODIGO_DE_PALABRA_PROHIBIDA,
+    NombreDeCanon,
+    RangoDeExtension,
+    localizar_veto,
+)
 from app.features.contexto import ensamblar_capitulo
 from app.features.escena import RestriccionesDeDiscurso
 from app.features.escritura.agents import MARCA_DE_PLANTILLA, MARCA_DE_REPARACION, Escritor
 from app.features.escritura.modelos import Ejecucion, VersionTexto
 from app.features.escritura.service import (
-    CODIGO_DE_PALABRA_PROHIBIDA,
     PERSONA_DE_LA_OBRA,
     TIEMPO_VERBAL_DE_LA_OBRA,
     escribir_capitulo,
-    localizar_veto,
 )
 from app.features.obra.modelos import HechoCanon
 
@@ -232,6 +235,11 @@ async def test_la_coincidencia_queda_en_el_registro_de_auditoria(sesion, obra_co
     Y se anota tambien lo permitido: un registro que solo guarda los bloqueos
     responde «que salio mal» y no «por que aquella novela salio como salio»
     (`commons/db/auditoria.py`).
+
+    **Desde la Fase 7 el motivo lleva delante el nombre de la regla.** No es
+    cosmetica: el encargo §7 pide «un audit log de las **decisiones del policy
+    engine**», y una decision sin la regla que la tomo no se puede atribuir
+    cuando el catalogo tenga mas de una (RF-GUA-07).
     """
     await _escribir(
         sesion,
@@ -242,8 +250,9 @@ async def test_la_coincidencia_queda_en_el_registro_de_auditoria(sesion, obra_co
 
     anotado = await leer_auditoria(sesion, obra_con_outline.obra.id)
     decisiones = [(f.decision, f.motivo) for f in anotado]
-    assert ("bloqueado", "veto: sangre") in decisiones
+    assert ("bloqueado", "palabras_vetadas: veto: sangre") in decisiones
     assert any(d == "permitido" for d, _ in decisiones)
+    assert all(m.startswith("palabras_vetadas: ") for _, m in decisiones)
 
 
 # ---------------------------------------------------------------------------

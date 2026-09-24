@@ -14,8 +14,9 @@ paquete recibido».
   `ResultadoDelCiclo`: **el ciclo de punta a punta** (T11), que es lo que monta
   `main.py` con `router` y lo que un test sustituye por
   `obtener_sesion_de_fondo`.
-- `localizar_veto`: la palabra prohibida **con su desplazamiento**, que es lo
-  que la hace citable.
+- El veto de palabras **ya no vive aqui**: es una regla del hook de policy y
+  entra por `features.calidad` (`aplicar_policy`, `localizar_veto`,
+  `CODIGO_DE_PALABRA_PROHIBIDA`). RF-GUA-07, Fase 7.
 - `Checkpoint`, `Arranque`, `CapituloPendiente`, `empezar_capitulo`,
   `registrar_checkpoint`, `ultimo_capitulo_completado`, `siguiente_capitulo`,
   `reparaciones_del_capitulo` y sus cuatro errores: **el
@@ -123,15 +124,12 @@ from app.features.escritura.reanudacion import (
 )
 from app.features.escritura.router import obtener_sesion_de_fondo, router
 from app.features.escritura.service import (
-    CODIGO_DE_PALABRA_PROHIBIDA,
     Escritura,
     IntentoDeEscritura,
     escribir_capitulo,
-    localizar_veto,
 )
 
 __all__ = [
-    "CODIGO_DE_PALABRA_PROHIBIDA",
     "DETIENEN_LA_NOVELA",
     "ESTADOS_TERMINALES",
     "ESTADOS_VIVOS",
@@ -184,7 +182,6 @@ __all__ = [
     "exigir_que_la_novela_siga",
     "hechos_usados",
     "leer_trabajo",
-    "localizar_veto",
     "numero_de_capitulo",
     "obtener_sesion_de_fondo",
     "planificar_reanudacion",
