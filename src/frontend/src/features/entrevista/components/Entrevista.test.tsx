@@ -173,6 +173,29 @@ describe("lo que el comprador cuenta", () => {
     }
   });
 
+  it("mientras se comprueba, guardar no se puede volver a pulsar y lo dice", async () => {
+    /** El Entrevistador tarda varios segundos y la pantalla no decía nada: el
+     * comprador pulsaba otra vez, y el segundo `POST /respuestas` moría con
+     * `database is locked` (596faba). */
+    const lento = new DobleDeApi(
+      {
+        "/entrevistas": { id: 1 },
+        "/entrevistas/1/respuestas": { faltantes: [], contradicciones: [] },
+      },
+      { retraso: 50 },
+    );
+    const persona = userEvent.setup();
+    render(<Entrevista />, { wrapper: conDoble(lento) });
+
+    await persona.type(await screen.findByLabelText(/cómo se llama/i), "Marta");
+    await persona.click(screen.getByRole("button", { name: /guardar/i }));
+
+    expect(screen.getByRole("button", { name: /guardar/i })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(/comprobando/i);
+    expect(await screen.findByText(/hay bastante para empezar/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /guardar/i })).toBeEnabled();
+  });
+
   it("si el servidor no responde, lo dice al abrir y no al pulsar", async () => {
     /** Quien abre la página con el backend caído rellenaría el formulario
      * entero para enterarse al final. El fallo ocurrió antes de que escribiera

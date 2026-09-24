@@ -225,8 +225,19 @@ export function Entrevista({
           />
         </p>
 
-        <Boton type="submit">Guardar y comprobar</Boton>
+        {/* Desactivado mientras espera: el Entrevistador tarda segundos, y un
+            segundo clic lanzaba otro `POST /respuestas` que moría con
+            `database is locked` (596faba). */}
+        <Boton type="submit" disabled={guardar.isPending}>
+          Guardar y comprobar
+        </Boton>
       </form>
+
+      {guardar.isPending ? (
+        <p className="nota" role="status">
+          Comprobando…
+        </p>
+      ) : null}
 
       {entrevista.isError ? (
         // Sin esto, quien abre la pagina con el backend caido rellena el
