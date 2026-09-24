@@ -90,3 +90,39 @@ name = "commons.domain no conoce el framework ni la base de datos"
 type = "forbidden"
 source_modules = ["app.commons.domain"]
 forbidden_modules = ["fastapi", "sqlalchemy", "httpx"]
+
+# La regla 1 de `CLAUDE.md` §5.1 se cumplia hasta el 2026-09-24 **por disciplina
+# y no por mecanismo**: no habia contrato que la comprobara. Se anade el dia que
+# pasa en verde, que es el momento barato -- meterla cuando ya falla obliga a
+# arreglar codigo y contrato a la vez, y entonces nadie sabe cual estaba mal.
+#
+# Los tests quedan fuera: un test entra a los internos de otra feature a
+# proposito -- fabrica el estado que necesita para comprobar algo -- y eso no es
+# deuda.
+
+[[tool.importlinter.contracts]]
+name = "una feature solo entra a otra por su __init__ (§5.1 regla 1)"
+type = "forbidden"
+source_modules = [
+  "app.features.obra", "app.features.outline", "app.features.escena",
+  "app.features.contexto", "app.features.escritura", "app.features.calidad",
+  "app.features.canon", "app.features.manuscrito",
+]
+forbidden_modules = [
+  "app.features.*.modelos", "app.features.*.service", "app.features.*.repository",
+  "app.features.*.agents", "app.features.*.router", "app.features.*.schemas",
+]
+allow_indirect_imports = true
+ignore_imports = ["app.features.**.tests.** -> **", "app.conftest -> **"]
+
+# La regla 5 -- ningun ciclo entre features -- **no tiene contrato, y no por
+# olvido**. El `layers` de import-linter es la forma natural de expresarla, y no
+# se deja: sigue cadenas que pasan por `app.main`, que es el raiz de composicion
+# y monta todas las features por diseno, asi que cualquier capa acaba
+# «importando» a todas las demas a traves de el. Ignorar esas cadenas exige
+# ignorar tantas que el contrato deja de comprobar lo que dice.
+#
+# Medido el 2026-09-24 con un script propio: **cero ciclos** entre las ocho
+# features, y ocho imports cruzados, todos por `__init__` y todos en una sola
+# direccion. Queda como comprobacion manual y **declarada**, que es peor que un
+# contrato y mejor que creer que hay uno.
