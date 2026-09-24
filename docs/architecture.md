@@ -292,7 +292,13 @@ Un defecto de calidad **no** es un fallo técnico: `ESCALADA` y `FALLIDA` son es
 
 ### 3.7 Reanudación
 
-Al arrancar, el orquestador busca trabajos en estado no terminal y los retoma desde su último estado persistido. Un paso interrumpido se **repite entero**, nunca se reanuda a medias: es posible porque la salida solo se persiste al completarse y porque el `run_id` evita duplicados.
+Al arrancar, el orquestador busca trabajos en estado no terminal y **relanza su capítulo como trabajo nuevo**. Un paso interrumpido se **repite entero**, nunca se reanuda a medias.
+
+**Relanza, no retoma, y la corrección es de este documento** *(2026-09-24)*. Hasta hoy esta sección decía «los retoma desde su último estado persistido», y §3.3 dice de un `FALLIDA` que «se relanza como trabajo nuevo»: **las dos frases no podían ser ciertas a la vez**. Gana §3.3, porque es lo único implementable con el ciclo que hay: `ejecutar_ciclo` es una sola función que recorre la máquina de `PLANIFICANDO` a `INTEGRADA`, así que volver a entrar con un trabajo que quedó en `VALIDANDO` **no lo retoma — lo empuja por transiciones que no son las suyas** hasta que la máquina se niega. Retomar de verdad exigiría partir el ciclo en pasos direccionables, que es un refactor y no un detalle.
+
+**Lo que la garantía necesita sigue en pie**, y es la frase siguiente: un paso interrumpido se repite entero. El trabajo muerto se cierra, la prosa que dejó sin confirmar se retira, y las reparaciones ya gastadas **se heredan** al relanzar — si no, una caída regalaría dos intentos.
+
+**Son seis los estados no terminales**, no nueve: de los diez de §3.3, cuatro son terminales. `CA-5` se prueba matando el proceso en cada uno de los seis.
 
 El único paso caro de repetir es `ESCRIBIENDO`, porque vuelve a pagar la llamada al modelo. Se acepta a cambio de no tener que razonar sobre respuestas parciales.
 
