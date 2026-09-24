@@ -7,7 +7,7 @@
 | Canon relevante | Grafo de canon, **filtrado por la ficha** |
 | Estado en T | La vista derivada del ledger |
 | Continuidad local | Escenas N-1 y N-2, en su version **vigente** |
-| Memoria recuperada | Indice vectorial, tras la recuperacion hibrida de T7 |
+| Memoria recuperada | Indice vectorial **+ resumenes de capitulo**, tras T7 |
 | Instruccion | La ficha de escena |
 | Reserva | — no tiene almacen, y por eso no se surte |
 
@@ -26,9 +26,17 @@ distinta en cada fila de §4.8. Los dos casos que importan:
   tiene hechos que la surtirian», R-3— y las piezas son los que la ficha trae.
   Cuando la obra tiene canon y la ficha no trae ninguno, la capa sale vacia
   teniendo con que llenarse, y eso **falla antes de llamar**.
-- **Memoria.** `recuperar` devuelve `[]` por tres motivos distintos y solo uno
-  es una averia. Se separan en `_surtir_memoria`, que es donde vive el aviso de
-  la ola 2.
+- **Memoria.** Es la unica capa con **dos almacenes** -- el indice vectorial y
+  los resumenes de capitulo (§4.8) --, asi que su censo suma dos criterios y
+  cada almacen responde de lo suyo. `recuperar` devuelve `[]` por tres motivos
+  distintos y solo uno es una averia; y desde que los resumenes la surten
+  tambien, esa averia ya no se ve mirando la capa entera, porque el otro
+  almacen la llena. Se separan en `_surtir_recuperado`, que es donde vive el
+  aviso que la ola 1 de la Fase 3 dejo escrito.
+
+**El resumen de un capitulo no lo lee esta feature por su cuenta**: entra por
+el `__init__.py` de `canon`, que es quien lo escribe y de quien es la tabla.
+Es la misma puerta por la que ya entraba `Embedding` (`CLAUDE.md` §5.1).
 """
 
 import json
@@ -42,8 +50,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.commons.domain.errores import ErrorDeDominio, RecursoDesconocido
 from app.commons.domain.normalizacion import normalizar
 from app.commons.llm.contador import ContadorDeTokens
+from app.features.canon import (
+    contar_capitulos_con_texto_aprobado,
+    leer_resumenes_anteriores,
+)
 from app.features.contexto.almacenes import VectorStore
-from app.features.contexto.capas import CAPAS_CON_ORIGEN, Paquete, Surtido, ensamblar
+from app.features.contexto.capas import (
+    CAPAS_CON_ORIGEN,
+    CapaVacia,
+    Paquete,
+    Surtido,
+    ensamblar,
+)
 from app.features.contexto.presupuesto import Capa, Pieza
 from app.features.contexto.recuperacion import (
     FiltroEstructural,
@@ -463,15 +481,72 @@ async def _surtir_memoria(
     consulta: Sequence[float] | None,
     almacen: VectorStore | None,
 ) -> Surtido:
+    """**Dos almacenes, una capa**: los resumenes y el indice (`architecture.md` §4.8).
+
+    Su fila dice «indice vectorial **+ resumenes**», y hasta la Fase 3 solo
+    estaba el primero: la tabla `resumen_capitulo` crecia y no la leia nadie.
+    Sin lector, diez capitulos son diez cuentos (R-7).
+
+    **Los resumenes van delante**, y no es orden alfabetico: el recorte quita
+    por el final (`presupuesto.py`), y un fragmento es un parrafo entre muchos
+    del mismo capitulo mientras que un resumen es lo unico que representa al
+    capitulo entero. Perder un fragmento pierde un parrafo; perder el resumen
+    pierde el capitulo.
+
+    **El censo suma los dos almacenes**, cada uno con su propio criterio de
+    «lo que tenia y era pertinente»: los capitulos anteriores ya escritos, que
+    son los que deberian haber dejado resumen, y las escenas pertinentes que
+    estan indexadas.
+    """
+    numero = int(capitulo["numero"])
+    resumenes = await _surtir_resumenes(sesion, obra_id, numero)
+    vectores = await _surtir_recuperado(
+        sesion, obra_id, numero, ficha, consulta=consulta, almacen=almacen
+    )
+    return Surtido(
+        piezas=resumenes.piezas + vectores.piezas,
+        disponibles=resumenes.disponibles + vectores.disponibles,
+    )
+
+
+async def _surtir_resumenes(sesion: AsyncSession, obra_id: int, numero: int) -> Surtido:
+    """Los resumenes de los capitulos anteriores, del mas reciente al mas antiguo.
+
+    **El censo son los capitulos ya escritos, no los resumenes encontrados.** La
+    consolidacion escribe el resumen en la misma transaccion que los hechos
+    (`canon/service.py`), asi que un capitulo con texto vigente y sin resumen es
+    un almacen que no surtio, y eso es lo que RF-CTX-06 existe para destapar.
+    Contar los encontrados los igualaria siempre y haria la regla inalcanzable.
+    """
+    resumenes = await leer_resumenes_anteriores(sesion, obra_id=obra_id, antes_de=numero)
+    piezas = tuple(
+        Pieza(
+            texto=f"Resumen del capitulo {r.numero}: {r.texto}",
+            identificador=f"rc:{r.capitulo_id}",
+        )
+        for r in resumenes
+    )
+    censo = await contar_capitulos_con_texto_aprobado(sesion, obra_id=obra_id, antes_de=numero)
+    return Surtido(piezas=piezas, disponibles=censo)
+
+
+async def _surtir_recuperado(
+    sesion: AsyncSession,
+    obra_id: int,
+    numero: int,
+    ficha: _Ficha,
+    *,
+    consulta: Sequence[float] | None,
+    almacen: VectorStore | None,
+) -> Surtido:
     """El indice vectorial, tras la recuperacion hibrida de T7. **Y el aviso.**
 
     `recuperar` devuelve `[]` por tres motivos distintos y **son tres cosas
     distintas**; si no se separan, RF-CTX-06 se cumple por consecuencia y su
     test pasa sin comprobar nada:
 
-    1. **Nadie trajo vector de consulta.** Hoy nadie puede: `ClienteModelo` no
-       tiene metodo de vectorizar (Desviaciones de la ola 2), asi que el indice
-       no se llena en produccion. Censo 0.
+    1. **Nadie trajo vector de consulta.** Es el ensamblado de depuracion
+       (`router.py`, RI-07), que no vectoriza. Censo 0.
     2. **El filtro estructural no deja nada pertinente.** No hay memoria que
        venga a cuento, y eso es lo normal en los primeros capitulos. Censo 0.
        Contar aqui el indice entero convertiria el caso normal en averia.
@@ -481,7 +556,15 @@ async def _surtir_memoria(
        simplemente todavia no ha vectorizado nada.
 
     Y queda el cuarto, que **si** es averia: hay escenas pertinentes, estan
-    indexadas, y no sale nada. Censo > 0, capa vacia, `CapaVacia`.
+    indexadas, y no sale nada.
+
+    **Ese cuarto caso se lanza aqui, y no en `ensamblar`, desde que la capa
+    tiene dos almacenes.** Era el aviso que la ola 1 dejo escrito: mientras el
+    indice estuvo vacio bastaba con mirar la capa entera -- vacia con censo, se
+    falla --, pero un resumen la llena por el otro lado y la averia del indice
+    quedaria escondida detras de el. La comprobacion de `ensamblar` sigue viva y
+    sigue haciendo falta: es la que cubre a las otras seis capas y a esta cuando
+    el que no surte es el almacen de resumenes.
     """
     if consulta is None or almacen is None:
         return Surtido()
@@ -498,7 +581,7 @@ async def _surtir_memoria(
         # misma**, asi que seria candidata de su propio filtro y el caso «el
         # filtro no deja nada» dejaria de existir. Lo destapo la mutacion de
         # CA-6, con el test en verde por el motivo equivocado (ver Desviaciones).
-        hasta_capitulo=int(capitulo["numero"]) - 1,
+        hasta_capitulo=numero - 1,
     )
     candidatos = await filtrar_estructuralmente(sesion, filtro)
     if not candidatos:
@@ -515,6 +598,9 @@ async def _surtir_memoria(
         almacen=almacen,
         orden_actual=ficha.orden_discurso,
     )
+    if not recuperados:
+        raise CapaVacia(capa=Capa.MEMORIA, disponibles=len(indexadas))
+
     piezas = tuple(
         Pieza(texto=r.fragmento, identificador=f"emb:{r.embedding_id}") for r in recuperados
     )
