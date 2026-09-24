@@ -239,7 +239,12 @@ async def descartar(sesion: AsyncSession, trabajo: Trabajo) -> None:
         raise TrabajoTerminal(trabajo.id, estado)
     await _retirar_la_prosa_de(sesion, trabajo.run_id)
     await avanzar(
-        sesion, trabajo, Senal.TIEMPO_AGOTADO, causa=f"caida del proceso en {estado.value}"
+        sesion,
+        trabajo,
+        # P-12. Era `TIEMPO_AGOTADO` **por descarte**, y la traza decia que la
+        # novela agoto su plazo cuando lo que paso fue que el proceso murio.
+        Senal.PROCESO_INTERRUMPIDO,
+        causa=f"caida del proceso en {estado.value}",
     )
 
 

@@ -286,9 +286,12 @@ resultado bloquea; el otro lo usa quien desarrolla, y su resultado es una observ
 | `ContextBudgetExceeded` | El paquete no cabe ni tras recortar (§2.1) | `FALLIDA` inmediata, sin llamar al modelo. Es un fallo de diseño del ensamblado, no de ejecución |
 | `DefectoBloqueante` | El Continuista o el Crítico rechazan | `REPARANDO`, hasta dos veces; luego `ESCALADA` |
 | `TiempoAgotado` | Un paso supera su plazo, o la espera de turno de §2.2 vence | `FALLIDA`, con el paso anotado. Si no se llegó a llamar, es relanzable sin coste |
+| `ProcesoInterrumpido` | El proceso murió: ni terminó, ni falló el proveedor, ni venció el plazo. Lo detecta la reanudación al encontrar un trabajo vivo sin proceso detrás | `FALLIDA`, y el capítulo se relanza como trabajo nuevo (§3.7). **Tiene flecha desde los diez estados vivos**, porque una caída no elige dónde te pilla |
 | `Cancelacion` | Petición del autor | `CANCELADA` en el primer punto seguro |
 
 Un defecto de calidad **no** es un fallo técnico: `ESCALADA` y `FALLIDA` son estados distintos a propósito, y se cuentan por separado en las métricas de §9.
+
+**`ProcesoInterrumpido` entró el 2026-09-24, y hasta entonces la reanudación usaba `TiempoAgotado` por descarte** (P-12): era la única averia con flecha desde cualquier estado vivo, porque `Cancelacion` no la tiene desde `REPARANDO` ni `EXTRAYENDO`. Daba igual mientras nadie leyera las trazas; con la observabilidad de §9 deja de dar igual, porque **una novela que se cayó aparecióa como una que agotó su plazo** y las dos se arreglan mirando sitios distintos.
 
 ### 3.7 Reanudación
 

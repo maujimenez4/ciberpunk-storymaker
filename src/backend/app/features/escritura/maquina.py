@@ -76,6 +76,18 @@ class Senal(StrEnum):
     CONTEXTO_EXCEDIDO = "contexto_excedido"
     FALLO_DE_PROVEEDOR = "fallo_de_proveedor"
     TIEMPO_AGOTADO = "tiempo_agotado"
+    PROCESO_INTERRUMPIDO = "proceso_interrumpido"
+    """El proceso murio: no termino, no fallo el proveedor y no vencio el plazo.
+
+    Existe porque `reanudacion.py` cerraba el trabajo muerto con
+    `TIEMPO_AGOTADO` **por descarte** —era la unica averia con flecha desde
+    cualquier estado vivo— y con Langfuse esa traza es lo que alguien va a abrir:
+    una novela que se cayo aparecia como una que agoto su plazo. Son dos averias
+    que se arreglan de forma distinta, asi que confundirlas manda a quien la lea
+    a mirar donde no es.
+
+    `CANCELACION` no valia: no tiene flecha desde `REPARANDO` ni `EXTRAYENDO`, y
+    una caida no elige en que estado te pilla (P-12)."""
     CANCELACION = "cancelacion"
 
 
@@ -188,7 +200,9 @@ _TRANSICIONES: dict[tuple[Estado, Senal], Estado] = {
     (Estado.VALIDANDO, Senal.CANCELACION): Estado.CANCELADA,
 }
 
-_AVERIAS: frozenset[Senal] = frozenset({Senal.FALLO_DE_PROVEEDOR, Senal.TIEMPO_AGOTADO})
+_AVERIAS: frozenset[Senal] = frozenset(
+    {Senal.FALLO_DE_PROVEEDOR, Senal.TIEMPO_AGOTADO, Senal.PROCESO_INTERRUMPIDO}
+)
 """Las dos causas de §3.6 que pueden aparecer en cualquier paso vivo.
 
 El diagrama de §3.3 solo dibuja la flecha de `ContextBudgetExceeded`, pero la
