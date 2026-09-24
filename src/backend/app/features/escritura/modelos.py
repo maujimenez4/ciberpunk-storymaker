@@ -141,6 +141,18 @@ class Ejecucion(Base):
     tokens_previstos: Mapped[int] = mapped_column(default=0)
     tokens_reales: Mapped[int | None] = mapped_column(default=None)
     coste: Mapped[float | None] = mapped_column(default=None)
+    latencia_ms: Mapped[int | None] = mapped_column(default=None)
+    """Lo que tardo la llamada. La anade la Fase 6 (T2) y la rellena T7.
+
+    **RF-OBS-03 pide tokens, coste y latencia por llamada, por capitulo y por
+    novela.** Los dos primeros ya salen de esta tabla; si la latencia saliera
+    solo de Langfuse, el numero **dejaria de existir cuando el servicio no
+    responde**, que es exactamente `R-1`. Las tres salen del mismo sitio o
+    ninguna.
+
+    Nullable porque las filas anteriores a esta fase no la tienen y **no se
+    puede inventar**: un cero seria una latencia falsa con aspecto de medida.
+    """
 
     # P-18. Van **aparte de `tokens_reales`** a proposito: aquel alimenta el
     # coste imputado, y sumarle la cache moveria una cifra publicada sin que

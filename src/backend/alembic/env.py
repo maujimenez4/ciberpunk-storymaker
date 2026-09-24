@@ -9,6 +9,7 @@ from logging.config import fileConfig
 # ve como sobrantes y genera su `drop_table`. La linea entra con la tabla, no
 # despues. Los modulos de tablas que vengan se anaden aqui.
 import app.commons.db.auditoria
+import app.features.calidad.modelos
 import app.features.canon.modelos
 import app.features.escena.modelos
 import app.features.escritura.modelos
