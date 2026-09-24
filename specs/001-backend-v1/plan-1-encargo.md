@@ -201,7 +201,7 @@ La regla es **un solo autor por fichero dentro de una misma ola**. Estos son los
 
 | Fichero | Dueño | Quién más lo toca, y en qué ola |
 | --- | --- | --- |
-| `features/obra/modelos.py` | **T4, y solo T4** | Nadie más. Las cuatro tablas entran juntas |
+| `features/obra/modelos.py` | T4 (ola 3) · **T9 (ola 5)** | T4 mete las cinco tablas de la obra; T9 añade `entrevista` y `texto_aportado`, que el plan no le había dado a nadie. **Nunca dos en la misma ola**, y T9 va sola en la suya |
 | `alembic/versions/` | T2 (`0001`) | T4 (`0002`, ola 3) · T10 (`0003`, ola 4). **Nunca dos en la misma ola** |
 | `alembic/env.py` | T2 crea | **Quien añade una tabla añade aquí su `import` del módulo que la declara**, en el mismo commit. T4 lo hizo en la ola 3; a T10 le toca en la ola 4 |
 | `app/conftest.py` | T2 crea `motor` y `sesion` | T4 añade `obra` (ola 3) · T9 añade `cliente` (ola 5) |
@@ -1374,7 +1374,18 @@ Cierra **RI-01**, **RI-02**, **RI-03**, **CU-01** entero y la otra mitad de **CA
 **Ficheros:**
 - Crear: `features/obra/router.py`, `commons/errors/manejador.py`
 - Modificar: `main.py`, `features/obra/__init__.py`, `features/obra/service.py`, `commons/domain/errores.py`, `src/backend/app/conftest.py` (añade la fixture `cliente`)
+- Modificar: **`features/obra/modelos.py`** — las tablas `entrevista` y `texto_aportado`
+- Crear: **una migración**, la última de la fase
 - Test: `features/obra/tests/test_endpoints.py`
+
+**El alcance de esta tarea creció al cerrar la ola 4, y conviene saber por qué.** El plan aprobado no le daba `modelos.py` a T9, pero su propio Paso 3 dice que la idempotencia de R-5 «se resuelve guardando `obra_id` en la fila de la entrevista» — **y la tabla `entrevista` no existía ni la tenía asignada nadie**. Sus cuatro tests empiezan con `cliente.post("/entrevistas")`, así que tal y como estaba escrito T9 no podía implementar ni uno. Con ella entran otras dos cosas que tampoco tenían dueño y que son postcondición literal de CU-01 —«existe una `Obra` con su `Destinatario`, **sus vetos** y sus elementos obligatorios»—:
+
+- **`texto_aportado`** (RF-ENT-05: «el texto libre **se guarda** como `TextoAportado`»). Hasta ahora solo se marcaba como dato en el prompt; nadie lo persistía.
+- **Los vetos del brief pasan al ámbito `brief` de `palabra_prohibida`** (RF-ENT-02). La tabla existe desde T4 y nadie escribía en ella.
+
+Darle `modelos.py` a T9 no rompe el reparto: **va sola en la ola 5**, así que no hay con quién colisionar. Y al añadir tablas le toca la regla de `alembic/env.py` — aunque en este caso el `import` de `modelos.py` ya está puesto desde la ola 3, así que no hay nada que añadir ahí.
+
+**Lo que NO entra, y no es olvido:** extraer hechos del `TextoAportado` (la otra mitad de RF-ENT-06). Ver «Lo que esta fase NO hace».
 
 **Interfaces:**
 - Produce: `POST /entrevistas`, `POST /entrevistas/{id}/respuestas`, `POST /entrevistas/{id}/cerrar`.
@@ -1552,7 +1563,7 @@ git commit -m "Registro de auditoria append-only: que se permitio, que se bloque
 | Criterio | Qué demuestra |
 | --- | --- |
 | **CA-2** | Brief con contradicción o dato que falta → **no se crea la obra**, y se dice cuál |
-| **CA-3** *(mitad)* | «Ignora tus instrucciones» → sus hechos se extraen y **ningún prompt cambia**. La otra mitad, RNF-SEG-03, es del Extractor (Fase 2) |
+| **CA-3** *(solo el prompt)* | «Ignora tus instrucciones» → **ningún prompt cambia**. Lo de «sus hechos se extraen» **NO se cierra aquí**: nadie extrae hechos de un texto en esta fase (ver abajo). RNF-SEG-03 es del Extractor, Fase 2 |
 | **CA-4** | La suite pasa **sin red y sin credenciales** |
 | **CA-13** *(mitad)* | Veto con acento o plural se detecta igual, en los tres ámbitos. Devolver el capítulo es Fase 2 |
 | **CA-31** | Brief contra la edad mínima o el calor → rechazado **al construirlo** |
@@ -1560,7 +1571,7 @@ git commit -m "Registro de auditoria append-only: que se permitio, que se bloque
 | **CA-6** *(método)* | Cada regla de dominio se prueba **quitando la validación y viendo caer el test** |
 | **CA-28** *(parcial)* | `ruff`, `mypy`, `pytest`, `lint-imports` y migraciones en limpio |
 
-**Requisitos:** RI-01, RI-02, RI-03, RI-14 · RF-ENT-01 a RF-ENT-08 · RF-GUA-01, RF-GUA-02, RF-GUA-04, RF-GUA-05, RF-GUA-06 · RF-OBS-07 · RF-VAL-02 *(parcial: el brief)* · RF-ORQ-09 *(parcial)* · RD-01, RD-02, RD-06 · RNF-SEG-02, RNF-FIA-01.
+**Requisitos:** RI-01, RI-02, RI-03, RI-14 · RF-ENT-01 a RF-ENT-05, RF-ENT-07, RF-ENT-08 · **RF-ENT-06 solo a medias** (la entrada al canon, no la extracción) · RF-GUA-01, RF-GUA-02, RF-GUA-04, RF-GUA-05, RF-GUA-06 · RF-OBS-07 · RF-VAL-02 *(parcial: el brief)* · RF-ORQ-09 *(parcial)* · RD-01, RD-02, RD-06 · RNF-SEG-02, RNF-FIA-01.
 
 ## Lo que esta fase NO hace, y no es un olvido
 
@@ -1569,6 +1580,7 @@ git commit -m "Registro de auditoria append-only: que se permitio, que se bloque
 - **No hay Langfuse.** La observabilidad entra con el ciclo de capítulo, que es lo primero que produce trazas que valga la pena mirar.
 - **No hay Lean ni TLA+.** Necesitan cronología y máquina de estados, que aún no existen.
 - **La tabla `hecho_canon` nace aquí pero incompleta:** el `usado_en` por capítulos (RF-MEM-02) entra cuando haya capítulos que lo usen.
+- **No se extraen hechos del `TextoAportado`, y eso deja `RF-ENT-06` a medias.** El requisito son dos cosas: «de ese texto **se extraen hechos**» y «que **entran al canon** con `origen: brief` y sin escena». La segunda la cierra T8 y está probada; la primera no la tiene asignada ninguna tarea de esta fase, y se descubrió implementándola. Producir enunciados a partir de prosa es trabajo del **Extractor**, que `CLAUDE.md` §9.3 asigna a la feature `canon` —Fase 2—, así que **no se mete aquí a última hora**: inventar un décimo rol en la última tarea es peor que declarar el hueco. Mientras tanto, los hechos del brief entran por donde los ponga quien llame al servicio.
 
 ---
 
@@ -1578,6 +1590,8 @@ git commit -m "Registro de auditoria append-only: que se permitio, que se bloque
 
 | Fecha | Paso | Qué se desvió y por qué |
 | --- | --- | --- |
+| 2026-09-24 | Cierre de la ola 4 | **El plan dejaba a T9 sin la tabla que sus cuatro tests necesitan, y con ella tres requisitos sin dueño.** Su Paso 3 dice que R-5 se resuelve «guardando `obra_id` en la fila de la entrevista», pero `entrevista` no estaba en `modelos.py` ni en la lista de ficheros de nadie: T4, dueña única de `modelos.py`, creó cinco tablas y ninguna era esa. Lo mismo con `texto_aportado` (RF-ENT-05 dice que el texto **se guarda**) y con los vetos del brief, que nunca llegaban al ámbito `brief` de `palabra_prohibida` (RF-ENT-02). Las tres van a T9 y `modelos.py` pasa a tener dos dueños en dos olas distintas; T9 va sola en la suya, así que no colisiona. **Se descubrió tirando del hilo que dejó el agente de T8**, no leyendo el plan: la lista de requisitos de la fase daba RF-ENT-01 a RF-ENT-08 por cerrados enteros |
+| 2026-09-24 | Cierre de la ola 4 | **`RF-ENT-06` se queda a medias a propósito, y la tabla de cierre deja de decir lo contrario.** El requisito son dos cosas: extraer hechos del texto, y meterlos al canon sin escena. T8 cerró la segunda y está probada; la primera **no la tiene ninguna tarea**. Producir enunciados desde prosa es el Extractor, que `CLAUDE.md` §9.3 asigna a la feature `canon`, de la Fase 2: meterlo en la última tarea sería inventar un décimo rol con la fase acabándose. Se corrigen «Lo que esta fase deja cerrado» —CA-3 pasa de *(mitad)* a *(solo el prompt)*, y la línea de requisitos separa RF-ENT-06— y se añade la entrada correspondiente a «Lo que esta fase NO hace». **Dejar en pie que estaba cerrado era justo el error que la spec se reprocha en su propia historia:** «un requisito que decía estar probado» y no lo estaba |
 | 2026-09-24 | Cierre de la ola 3 | **Entran `Serie` (RD-04) y la restricción de dominio de `hecho_canon.origen`.** El plan citaba media frase de Impacto técnico y cortaba justo antes de «y contempla `Serie` desde el principio», así que la tabla se quedó fuera; y `origen` tenía la restricción de *coherencia* con la escena pero ninguna que lo atara al conjunto cerrado de `definitions.md` §4.5, de modo que `origen='cualquier_cosa'` entraba. Las dos en una migración nueva y no reescribiendo la de T4, que ya está empujada: reescribir una migración publicada es el hábito que se paga caro más tarde. `Serie` llega igualmente antes que ninguna obra, que es lo que RD-04 protege |
 | 2026-09-24 | Cierre de la ola 3 | **Dos trampas de Alembic que le tocarán también a T10, y por eso se escriben.** (1) `--autogenerate` **no compara `CheckConstraint`**: el de `origen` estaba en el modelo y la migración salió sin él. Hay que escribirlo a mano. (2) En modo batch —el único que vale en SQLite, que no altera tablas sino que las recrea— toda restricción necesita nombre: `create_foreign_key(None, ...)` que genera `--autogenerate` muere con «Constraint must have a name», y recrear `hecho_canon` exige además un `naming_convention` porque su clave ajena a `obra` venía sin nombre de la migración inicial. Se comprobó que la restricción muerde **sobre la base migrada**, no solo sobre la que `create_all` construye en los tests |
 | 2026-09-24 | Aplazado al cierre de la fase | **Dos divergencias de vocabulario contra `docs/definitions.md`, que según `CLAUDE.md` §2 gana el documento.** `DestinatarioEntrada.recuerdos` frente a `Destinatario.recuerdos_aportados[]` (§9.1), y `HechoCanon.enunciado` frente a los cuatro campos `entidad`/`atributo`/`valor`/`confianza` (§4.5). Lo detectó el agente de T4 y **no se corrige ahora a propósito**: los dos nombres están en la interfaz pública de la feature, T7 ya escribe contra ellos y T8 lo hará en la ola 4. Renombrar con agentes escribiendo encima es justo la rotura que el reparto evita. Se renombra de una vez al cerrar la fase, con la suite entera delante |
