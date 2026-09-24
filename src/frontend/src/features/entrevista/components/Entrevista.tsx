@@ -147,6 +147,15 @@ export function Entrevista({
         <Boton type="submit">Guardar y comprobar</Boton>
       </form>
 
+      {entrevista.isError ? (
+        // Sin esto, quien abre la pagina con el backend caido rellena el
+        // formulario entero y solo se entera al pulsar. El fallo es de antes.
+        <Aviso tono="error">
+          No se pudo conectar. Comprueba que el servidor está en marcha y vuelve
+          a cargar la página.
+        </Aviso>
+      ) : null}
+
       {guardar.isError ? (
         <Aviso tono="error">No se pudo guardar lo que escribiste. Vuelve a intentarlo.</Aviso>
       ) : null}

@@ -111,4 +111,17 @@ describe("lo que el comprador cuenta", () => {
       expect(await screen.findByLabelText(campo)).toBeInTheDocument();
     }
   });
+
+  it("si el servidor no responde, lo dice al abrir y no al pulsar", async () => {
+    /** Quien abre la página con el backend caído rellenaría el formulario
+     * entero para enterarse al final. El fallo ocurrió antes de que escribiera
+     * nada, y decirlo entonces es lo honesto. */
+    const caido = new DobleDeApi({}, { fallo: 500 });
+
+    render(<Entrevista />, { wrapper: conDoble(caido) });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /comprueba que el servidor está en marcha/i,
+    );
+  });
 });
