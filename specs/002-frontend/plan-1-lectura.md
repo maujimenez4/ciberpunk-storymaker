@@ -1,8 +1,8 @@
 ---
 id: 002-frontend / plan-1-lectura
 titulo: "Fase 1 — Que se pueda leer: cimientos, portada, índice y capítulo"
-estado: borrador          # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo rellena una persona, nunca un agente
+estado: aprobado          # borrador | en-revision | aprobado | completado
+aprobado_por: maujimenez4 # firmado el 2026-09-24
 fecha: 2026-09-24
 spec: specs/002-frontend/spec.md
 ---
