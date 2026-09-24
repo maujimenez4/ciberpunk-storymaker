@@ -323,6 +323,42 @@ describe("la cadena de escribir la novela", () => {
     expect(screen.getByText(/escribiendo el capítulo 3 de 10/i).closest("[role=status]")).not.toBeNull();
   });
 
+  it("una barra con un tramo por capítulo dice cuántos van, también sin mirarla", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await pulsarEscribir(persona);
+
+    const barra = await screen.findByRole("progressbar", { name: /capítulos/i });
+    expect(barra).toHaveAttribute("aria-valuemin", "0");
+    expect(barra).toHaveAttribute("aria-valuemax", "10");
+    expect(barra).toHaveAttribute("aria-valuenow", "2");
+    expect(barra).toHaveAttribute("aria-valuetext", "2 de 10 capítulos terminados");
+    expect(barra.querySelectorAll("[data-tramo]")).toHaveLength(10);
+    expect(barra.querySelector("[data-tramo='en-curso']")).not.toBeNull();
+  });
+
+  it("dice cuánto lleva y cuánto falta, y que lo que falta es una estimación", async () => {
+    /** Hora y media delante de una pantalla que no dice cuánto queda se lee
+     * como un cuelgue. Ocho minutos por capítulo es lo medido, no una promesa:
+     * por eso se dice que es una estimación. */
+    let ahora = 1_000_000;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} ahora={() => ahora} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+    await screen.findByRole("progressbar");
+    ahora += 12 * 60_000;
+
+    expect(await screen.findByText(/empezó hace 12 min/i)).toBeInTheDocument();
+    // Faltan ocho capítulos: el 3, que va en curso, y los siete pendientes.
+    expect(screen.getByText(/1 h 4 min/)).toHaveTextContent(/estimación/i);
+  });
+
   it("mientras el Arquitecto trabaja, dice que se prepara la historia", async () => {
     const doble = dobleDeLaCadena(ESCRIBIENDO_3, { retraso: 50 });
     const persona = userEvent.setup();

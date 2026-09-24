@@ -6,6 +6,7 @@ import { Pagina } from "@/shared/ui/patterns/Pagina";
 import { Aviso, Boton, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type EstadoDeLaNovela, type Evaluacion } from "../api/entrevista";
+import { Espera } from "./Espera";
 
 /** Un capitulo tarda unos ocho minutos: preguntar cada cinco segundos basta
  * para que el avance se vea y no carga al servidor. */
@@ -19,13 +20,6 @@ const QUE_FALLO: Record<Paso, string> = {
   outline: "preparar la historia",
   novela: "empezar a escribir la novela",
 };
-
-function avance(datos: EstadoDeLaNovela): string {
-  if (datos.en_curso !== null) {
-    return `Escribiendo el capítulo ${datos.en_curso} de ${datos.total}.`;
-  }
-  return `Van ${datos.integrados} de ${datos.total} capítulos.`;
-}
 
 /**
  * Las claves y las formas son las de `BriefEntrada` (`features/obra/schemas.py`),
@@ -110,6 +104,7 @@ export function Entrevista({
   onFallo,
   deshabilitado = false,
   intervaloDeConsulta = INTERVALO_DE_CONSULTA,
+  ahora = Date.now,
 }: {
   onNovelaLanzada?: () => void;
   onNovelaPublicada?: (token: string) => void;
@@ -117,6 +112,9 @@ export function Entrevista({
   deshabilitado?: boolean;
   /** Cada cuanto se pregunta como va la novela, en milisegundos. */
   intervaloDeConsulta?: number;
+  /** El reloj, inyectado como en el backend: sin el, probar «lleva doce
+   * minutos» obligaria a esperar doce minutos. */
+  ahora?: () => number;
 } = {}) {
   const peticionario = usePeticionario();
   const [valores, setValores] = useState<Record<string, string>>({});
@@ -157,6 +155,8 @@ export function Entrevista({
   const [paso, setPaso] = useState<Paso | null>(null);
   const [enMarcha, setEnMarcha] = useState<{ obraId: number; intento: number } | null>(null);
   const [detenida, setDetenida] = useState<string | null>(null);
+  /** Cuando se cerro la entrevista: desde ahi cuenta «empezó hace». */
+  const [desde, setDesde] = useState<number | null>(null);
 
   const lanzar = useMutation({
     mutationFn: async () => {
@@ -167,6 +167,7 @@ export function Entrevista({
         API_ENTREVISTA.cerrar(id),
         {},
       );
+      setDesde(ahora());
       onNovelaLanzada?.();
       setPaso("outline");
       await peticionario.enviar(API_ENTREVISTA.outline(obra.obra_id), {});
@@ -240,6 +241,20 @@ export function Entrevista({
         return;
     }
   }, [datos, enMarcha, publicarObra, onFallo]);
+
+  /**
+   * El reloj de la pantalla. Es un sistema externo y por eso va en un efecto:
+   * la consulta devuelve lo mismo durante ocho minutos y, sin esto, «empezó
+   * hace» se quedaria quieto ese rato.
+   */
+  const [instante, setInstante] = useState(ahora);
+  const escribiendo = enMarcha !== null;
+  useEffect(() => {
+    if (!escribiendo) return;
+    setInstante(ahora());
+    const reloj = setInterval(() => setInstante(ahora()), intervaloDeConsulta);
+    return () => clearInterval(reloj);
+  }, [escribiendo, ahora, intervaloDeConsulta]);
 
   const ocupado = lanzar.isPending || enMarcha !== null || publicar.isPending;
 
@@ -371,14 +386,11 @@ export function Entrevista({
       ) : null}
 
       {(lanzar.isPending && paso === "novela") || enMarcha !== null ? (
-        <div className="comprobacion" role="status">
-          <Texto>
-            Se está escribiendo tu novela. Son diez capítulos, así que tarda un rato.
-          </Texto>
-          {datos !== undefined && enMarcha !== null ? (
-            <p className="nota">{avance(datos)}</p>
-          ) : null}
-        </div>
+        <Espera
+          datos={enMarcha !== null ? datos : undefined}
+          desde={desde ?? instante}
+          instante={instante}
+        />
       ) : null}
 
       {publicar.isPending ? (

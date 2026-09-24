@@ -333,3 +333,66 @@ body {
   padding: 0.75rem 1rem;
   margin-block: var(--aire);
 }
+
+/* --- la espera ------------------------------------------------------------ */
+
+/**
+ * La misma guarda con hilo ciruela que la comprobación: es la misma voz de la
+ * interfaz, no una pantalla nueva.
+ */
+.espera {
+  background: var(--guarda);
+  border-inline-start: 3px solid var(--acento);
+  padding: 0.75rem 1rem 1rem;
+  margin-block: var(--aire);
+}
+
+.espera__tiempo {
+  margin-block: 0.25rem 0;
+}
+
+/**
+ * **Diez cuadernillos cosidos, no un porcentaje.** Una novela se encuaderna por
+ * pliegos, y la barra se cuenta igual: un tramo por capítulo, lleno de hilo
+ * ciruela cuando está escrito, con la mitad cosida el que va en curso, y en
+ * blanco los que faltan. El borde de tinta aguada da el 3:1 que pide un
+ * componente no textual sobre la guarda.
+ */
+.barra {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.25rem;
+  margin-block: 1rem 0.75rem;
+}
+
+.barra__tramo {
+  block-size: 0.75rem;
+  border: 1px solid var(--tinta-suave);
+  border-radius: 1px;
+  background: var(--papel);
+}
+
+.barra__tramo--hecho {
+  background: var(--acento);
+  border-color: var(--acento);
+}
+
+.barra__tramo--en-curso {
+  border-color: var(--acento);
+  background: linear-gradient(to right, var(--acento) 50%, var(--papel) 50%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* El único movimiento de la pantalla, y solo aquí: dice «esto sigue vivo»
+     sin que haya que leer nada. */
+  .barra__tramo--en-curso {
+    animation: latido 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.55;
+  }
+}
