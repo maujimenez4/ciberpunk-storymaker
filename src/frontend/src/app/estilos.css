@@ -1,0 +1,211 @@
+/**
+ * Los tokens de la lectura.
+ *
+ * **La dirección, en una frase: esto es un regalo hecho a mano, no un libro de
+ * librería.** Por eso no hay papel crema ni serif de alto contraste: el papel es
+ * un blanco roto **frío**, de cuaderno; la tinta es azul-negro de estilográfica
+ * y no un negro tintado; y el único acento es el ciruela del hilo de una
+ * cabezada. Se lee de noche, en un móvil, de una sentada.
+ *
+ * **La jerarquía la manda el texto.** No hay tarjetas, ni sombras, ni filetes
+ * decorativos: lo único que se ve es la prosa y lo que se puede tocar.
+ *
+ * `RF-ACC-04` exige contraste AA y **gana sobre cualquier elección estética**
+ * (`architecture.md` §7.2). Las tres parejas de esta paleta se comprueban con
+ * `axe`, no a ojo.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap");
+
+:root {
+  --papel: #f2f3ee;
+  --tinta: #1b2a3a;
+  --acento: #6b3a52;
+
+  /* La tinta aguada de los metadatos. Sigue siendo AA sobre el papel. */
+  --tinta-suave: #4a5b68;
+  /* La guarda: el fondo de un bloque que no es prosa. */
+  --guarda: #e4e7de;
+
+  /**
+   * `RF-ACC-05`. Una novela a ancho completo de pantalla no se lee: el ojo
+   * pierde el renglón al volver. 34rem son unos 64 caracteres con este cuerpo,
+   * y una serif admite algo más de medida que una sans.
+   */
+  --medida: 34rem;
+
+  /* Escala tipográfica, razón 1.25. El cuerpo manda y lo demás se ordena. */
+  --cuerpo: 1.125rem;
+  --nota: 0.9375rem;
+  --titulo: 1.75rem;
+  --dedicatoria: 1.5rem;
+
+  --ritmo: 1.7;
+  --aire: 1.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: Literata, Georgia, "Times New Roman", serif;
+  font-size: var(--cuerpo);
+  line-height: var(--ritmo);
+  /* La lectura en móvil es vertical y estrecha: el aire lateral es del gesto
+     del pulgar, no de una rejilla. */
+  padding: var(--aire) 1.25rem 4rem;
+}
+
+/* --- lo que se puede tocar ------------------------------------------------ */
+
+:where(a, button):focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where(a, button) {
+    transition: color 120ms ease-out;
+  }
+}
+
+/* --- la página ------------------------------------------------------------ */
+
+.pagina {
+  max-inline-size: var(--medida);
+  margin-inline: auto;
+}
+
+.pagina__titulo {
+  font-size: var(--titulo);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 var(--aire);
+  /* Sin `text-wrap: balance` en el cuerpo, pero sí aquí: un título de novela
+     partido por una preposición se lee mal. */
+  text-wrap: balance;
+}
+
+/**
+ * **Ritmo de libro, y es lo que separa una novela de un blog.** Los párrafos no
+ * se separan con un hueco: se encadenan, y el segundo en adelante entra con
+ * sangría. Es como está impreso cualquier libro, y en pantalla se nota.
+ */
+.prosa {
+  margin: 0;
+  text-align: start;
+  hyphens: auto;
+}
+
+.prosa + .prosa {
+  text-indent: 1.5em;
+}
+
+/**
+ * La dedicatoria es la voz de **quien regala**, no la del narrador, y por eso
+ * se distingue en tipografía en vez de con una etiqueta encima. Es lo único de
+ * esta novela que no existe en ninguna otra, así que es ella la que abre.
+ */
+.dedicatoria {
+  font-size: var(--dedicatoria);
+  font-style: italic;
+  line-height: 1.5;
+  margin: 3rem 0;
+  text-wrap: pretty;
+}
+
+.nota {
+  font-size: var(--nota);
+  color: var(--tinta-suave);
+}
+
+/* --- avisos --------------------------------------------------------------- */
+
+.aviso {
+  background: var(--guarda);
+  border-inline-start: 3px solid var(--acento);
+  padding: 0.75rem 1rem;
+  margin: var(--aire) 0;
+  font-size: var(--nota);
+}
+
+.aviso--error {
+  border-inline-start-color: var(--acento);
+  font-weight: 600;
+}
+
+/* --- controles ------------------------------------------------------------ */
+
+.boton {
+  font: inherit;
+  font-size: var(--nota);
+  font-weight: 600;
+  color: var(--papel);
+  background: var(--acento);
+  border: 0;
+  padding: 0.625rem 1.25rem;
+  cursor: pointer;
+}
+
+.enlace {
+  color: var(--acento);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.enlace:hover {
+  color: var(--tinta);
+}
+
+/* --- índice --------------------------------------------------------------- */
+
+/**
+ * El número **sí** es información aquí: los capítulos son una secuencia y se
+ * leen en orden. Por eso va delante y en la tinta aguada, no como adorno.
+ */
+.indice {
+  list-style: none;
+  margin: 2.5rem 0;
+  padding: 0;
+}
+
+.indice li + li {
+  margin-block-start: 0.75rem;
+}
+
+.indice a {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--tinta);
+}
+
+.indice a:hover .indice__titulo,
+.indice a:focus-visible .indice__titulo {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.indice__numero {
+  color: var(--tinta-suave);
+  font-size: var(--nota);
+}
+
+@media (width < 30rem) {
+  .indice a {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

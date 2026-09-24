@@ -11,7 +11,9 @@ export default defineConfig({
   test: {
     // La suite corre **sin backend levantado** (CA-15): la API se sustituye por
     // un doble en T2. Aqui todavia no hay red que doblar.
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: ["./src/app/tests/preparar.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    css: true,
   },
 });
