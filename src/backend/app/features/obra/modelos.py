@@ -1,4 +1,4 @@
-"""Las cuatro tablas de la Fase 1, y solo ellas.
+"""Las cinco tablas de la Fase 1, y solo ellas.
 
 Entran juntas y en una sola migracion porque la spec lo pide en Impacto
 tecnico —«Esquema: toda la base de datos. Es la migracion inicial»— y porque
@@ -14,6 +14,28 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.commons.db.base import Base
 
 AMBITOS_DE_VETO = ("global", "obra", "brief")
+ORIGENES_DE_HECHO = ("escena", "brief", "edicion_humana")
+
+
+class Serie(Base):
+    """Conjunto de obras que comparten canon, personajes o mundo.
+
+    Hoy no hace nada, y entra igual: RD-04 la exige desde la migracion
+    inicial porque `definitions.md` §4.1 avisa de que anadirla despues
+    **obliga a reescribir referencias** que ya apuntan a otro sitio. Es de
+    las pocas tablas cuyo coste no esta en construirla sino en llegar tarde.
+
+    `personajes_recurrentes` guarda nombres y no claves ajenas porque
+    `Personaje` es de la Fase 2. Cuando exista, pasa a ser una relacion.
+    """
+
+    __tablename__ = "serie"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    titulo: Mapped[str] = mapped_column(String(200))
+    canon_compartido: Mapped[bool] = mapped_column(default=True)
+    orden_de_lectura: Mapped[list[int]] = mapped_column(JSON, default=list)
+    personajes_recurrentes: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 class Destinatario(Base):
@@ -48,6 +70,7 @@ class Obra(Base):
     tono: Mapped[str] = mapped_column(String(60))
     nivel_de_calor: Mapped[int]
     destinatario_id: Mapped[int | None] = mapped_column(ForeignKey("destinatario.id"))
+    serie_id: Mapped[int | None] = mapped_column(ForeignKey("serie.id"))
 
 
 class PalabraProhibida(Base):
@@ -92,6 +115,10 @@ class HechoCanon(Base):
             "(origen = 'escena' AND escena_de_origen IS NOT NULL) OR "
             "(origen <> 'escena' AND escena_de_origen IS NULL)",
             name="ck_hecho_origen_coherente",
+        ),
+        CheckConstraint(
+            "origen IN ('escena', 'brief', 'edicion_humana')",
+            name="ck_hecho_origen_valido",
         ),
     )
 
