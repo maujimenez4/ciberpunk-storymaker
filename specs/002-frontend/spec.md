@@ -81,6 +81,26 @@ Hoy no existe nada: `src/frontend/` está vacío, y el backend que sirve estos d
 
 Tomadas por `maujimenez4` el 2026-09-23. Van aquí y no en Preguntas abiertas porque están cerradas, y cada una descarta una alternativa que parecía razonable.
 
+**D-07 · Una sola dirección y tres pestañas: al terminar la entrevista se activa la de leer.** Decidido por `maujimenez4` el 2026-09-24, **y sustituye a `D-06` en su parte de rutas**.
+
+`D-06` dejó dos entradas —`/` para la entrevista y `/l/{token}` para leer—. Se reduce a **una**: la misma página, tres pestañas.
+
+| Pestaña | Cuándo se puede usar |
+| --- | --- |
+| **La entrevista** | Siempre que no se haya llegado con un enlace ajeno |
+| **Leer** | En cuanto hay una versión publicada |
+| **Quién es quién** | Igual que leer |
+
+**Nadie navega.** Se rellena la entrevista, se escribe la novela, y **la pestaña de leer se activa sola** con la novela dentro. Sin saltar de dirección, sin perder lo que había en pantalla, sin una segunda página que cargar.
+
+**El token no desaparece: deja de ser una ruta y pasa a ser un parámetro** de esta misma dirección. Sigue siendo lo único que protege la lectura (`RF-LEC-01` intacto) y sigue siendo lo que se manda de regalo — lo que cambia es que abrirlo no lleva a otra página, sino a esta con la pestaña de leer ya puesta.
+
+**La entrevista no se muestra a quien llega con un enlace que no generó.** `D-06` resolvía esto separando rutas; con una sola dirección se resuelve por estado: la pestaña existe para quien tiene la entrevista abierta en este navegador, y no para quien abre un enlace recibido. El motivo es el mismo y no ha cambiado — **el enlace del regalo no puede llevar al formulario donde está lo que el comprador escribió sobre el destinatario**, y sobre todo lo que pidió que no apareciera.
+
+**Y hay que decir qué es esto y qué no.** Es una separación de interfaz, **no una frontera de seguridad**: quien sepa manipular la dirección puede pedir la pestaña. Lo que de verdad protege sigue siendo que **el backend no publica la entrevista de una obra por su token** — ninguna ruta de lectura la sirve, así que la pestaña no tendría nada que enseñar. La comprobación está donde debe; la interfaz solo evita el accidente.
+
+---
+
 **D-06 · Dos entradas, una aplicación: la entrevista en la raíz, la lectura bajo el token.** Decidido por `maujimenez4` el 2026-09-24, **e invierte la forma que esta spec tenía aprobada**.
 
 Hasta hoy la lectura eran **cinco rutas** —portada, índice, capítulo, ficha y novedades—, y la entrevista no estaba en esta spec. Ahora:
