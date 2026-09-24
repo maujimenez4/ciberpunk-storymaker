@@ -148,9 +148,15 @@ class ClienteClaudeCode(ClienteModelo):
         - `tools` y `allowed_tools` vacios: el Escritor **solo ve el paquete**
           (RF-ESC-01). Una herramienta de lectura le daria acceso a la base de
           datos, y con el se perderia la atribucion de los defectos.
-        - `setting_sources=None`: no se cargan ajustes del usuario ni del
-          repositorio. Sin esto, el `CLAUDE.md` de este proyecto entraria en el
-          prompt de la novela.
+        - `setting_sources=[]`: no se cargan ajustes del usuario ni del
+          repositorio. Sin esto, el `CLAUDE.md` de este proyecto entra en el
+          prompt de la novela. **La lista vacia y `None` no son lo mismo**, y
+          confundirlos costo la primera corrida real: el SDK documenta que con
+          `None` se cargan *todas* las fuentes -- es el defecto del CLI, no su
+          ausencia -- y solo pasa `--setting-sources` cuando el valor no es
+          `None`. El Entrevistador respondio «He recibido y procesado el
+          contexto completo del proyecto ciberpunk-storymaker» en vez de la
+          entrevista.
         - `verbatim_prompts=True`: el prompt se entrega tal cual, sin expandir
           `@ruta` ni despachar barras. El texto que aporta el comprador es
           contenido no confiable (`CLAUDE.md` §11) y viaja dentro del prompt.
@@ -161,7 +167,7 @@ class ClienteClaudeCode(ClienteModelo):
             model=modelo,
             tools=[],
             allowed_tools=[],
-            setting_sources=None,
+            setting_sources=[],
             verbatim_prompts=True,
             max_turns=1,
         )

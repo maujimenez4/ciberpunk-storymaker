@@ -102,9 +102,38 @@ async def test_el_modelo_y_las_restricciones_viajan_en_las_opciones():
     assert opciones.model == MODELO_JUEZ
     assert opciones.tools == []
     assert opciones.allowed_tools == []
-    assert opciones.setting_sources is None
+    assert opciones.setting_sources == []
     assert opciones.max_turns == 1
     assert opciones.verbatim_prompts is True
+
+
+async def test_los_ajustes_del_repositorio_no_se_cargan_nunca():
+    """`None` no es «ninguna fuente»: es **todas**, y con ellas el `CLAUDE.md`.
+
+    Lo dice el propio SDK en `ClaudeAgentOptions.setting_sources`: «When
+    ``None``, all sources are loaded (matches CLI defaults). Pass ``[]`` to
+    disable filesystem settings. Must include ``"project"`` to load CLAUDE.md
+    files». Y su transporte solo anade `--setting-sources` al comando cuando el
+    valor **no** es `None`, asi que con `None` no se manda el flag y decide el
+    defecto del CLI, que carga los ajustes del proyecto.
+
+    Lo que costo: la primera llamada real del Entrevistador devolvio «He
+    recibido y procesado el contexto completo del proyecto
+    ciberpunk-storymaker». El modelo respondio sobre el repositorio en vez de
+    sobre la entrevista, el esquema de salida lo rechazo -que es para lo que
+    esta- y el endpoint devolvio 500.
+
+    **Lo que este test no cubre.** Comprueba el valor que pedimos, no lo que el
+    CLI hace con el: si el SDK cambiara el significado de `[]`, esto seguiria
+    verde. Cubrir eso exige lanzar el binario, y entonces ya no seria un test
+    -gastaria cuota y CA-4 pide que la suite corra sin red-.
+    """
+    consulta = ConsultaFalsa(["x"])
+    await ClienteClaudeCode(consulta=consulta).completar("p", semilla=1)
+
+    fuentes = consulta.opciones[0].setting_sources
+    assert fuentes == [], f"se cargarian ajustes del repositorio: {fuentes!r}"
+    assert fuentes is not None, "`None` significa «todas las fuentes», no «ninguna»"
 
 
 @pytest.mark.parametrize(
