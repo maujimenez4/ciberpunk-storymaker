@@ -1,15 +1,19 @@
 import asyncio
 from logging.config import fileConfig
 
+# `app.features.obra.modelos` se importa por su efecto, no por lo que expone:
+# `--autogenerate` solo ve lo que este registrado en `Base.metadata` en el
+# momento de correr, y una tabla que nadie importo no produce migracion, sin
+# avisar. Y lo que no avisa no es solo la migracion que falta: con las tablas
+# en la base y ausentes de `Base.metadata`, el siguiente `--autogenerate` las
+# ve como sobrantes y genera su `drop_table`. La linea entra con la tabla, no
+# despues. Los modulos de tablas que vengan se anaden aqui.
+import app.features.obra.modelos  # noqa: F401
 from alembic import context
 from app.commons.config.ajustes import Ajustes
 from app.commons.db.base import Base
 from app.commons.db.motor import crear_motor
 from sqlalchemy.engine import Connection
-
-# Importar aqui los modulos de tablas segun entren: `--autogenerate` solo ve
-# lo que este registrado en `Base.metadata` en el momento de correr, y una
-# tabla que nadie importo no produce migracion, sin avisar.
 
 config = context.config
 
