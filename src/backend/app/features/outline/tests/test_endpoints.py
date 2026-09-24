@@ -97,3 +97,29 @@ async def test_el_endpoint_esta_en_el_openapi_con_su_modelo(cliente):
 
     assert "/obras/{obra_id}/outline" in esquema["paths"]
     assert "post" in esquema["paths"]["/obras/{obra_id}/outline"]
+
+
+async def test_el_outline_queda_confirmado_y_lo_ve_otra_sesion(cliente, obra, motor) -> None:
+    """RI-04 escribe en el fichero, no solo en la sesion de quien pregunta.
+
+    Lo destapo T11 al cerrar la fase: `planificar_obra` no confirmaba, asi que
+    contra la aplicacion levantada el endpoint respondia y **no dejaba ni un
+    capitulo en disco**. La suite no lo veia por una razon que conviene
+    entender: sus tests comparten la sesion del `cliente`, asi que lo escrito y
+    sin confirmar se lee igual de bien que lo confirmado.
+
+    Es la misma clase de fallo que la Fase 1 encontro tres veces --una
+    afirmacion que solo es cierta dentro de la suite-- y por eso este test abre
+    **otra sesion** sobre el mismo motor.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    respuesta = cliente.post(f"/obras/{obra.id}/outline")
+    assert respuesta.status_code == 201, respuesta.text
+
+    async with AsyncSession(motor) as otra:
+        capitulos = (await otra.execute(select(func.count()).select_from(Capitulo))).scalar_one()
+        versiones = (await otra.execute(select(func.count()).select_from(VersionObra))).scalar_one()
+
+    assert capitulos == 10, "sin `commit`, otra sesion no ve ningun capitulo"
+    assert versiones == 1

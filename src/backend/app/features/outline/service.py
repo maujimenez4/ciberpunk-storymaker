@@ -239,4 +239,9 @@ async def planificar_obra(
         biblia,
         outline.capitulos,
     )
+    # Y se confirma, que es lo que faltaba: sin esto el endpoint respondia 201 y
+    # no dejaba un solo capitulo en el fichero. La suite no lo veia porque sus
+    # tests comparten la sesion del `cliente`, asi que lo escrito y sin
+    # confirmar se lee igual de bien que lo confirmado.
+    await sesion.commit()
     return PlanDeObra(version_obra=version, outline=outline)
