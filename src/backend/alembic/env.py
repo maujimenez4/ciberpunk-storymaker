@@ -12,6 +12,7 @@ import app.commons.db.auditoria
 import app.features.canon.modelos
 import app.features.escena.modelos
 import app.features.escritura.modelos
+import app.features.manuscrito.modelos
 import app.features.obra.modelos
 import app.features.outline.modelos  # noqa: F401
 from alembic import context
