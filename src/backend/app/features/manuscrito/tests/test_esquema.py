@@ -18,13 +18,13 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.manuscrito import (
+from app.features.manuscrito import nuevo_identificador_publico
+from app.features.manuscrito.modelos import (
     CapituloPublicado,
     CuadroDeDefectos,
     Dedicatoria,
     FichaDeLectura,
     VersionPublicada,
-    nuevo_identificador_publico,
 )
 from app.features.obra.modelos import Obra
 

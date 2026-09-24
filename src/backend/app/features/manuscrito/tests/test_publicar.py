@@ -13,14 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.conftest import ObraConOutline
 from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import Trabajo, VersionTexto
-from app.features.manuscrito import (
+from app.features.manuscrito import CapituloSinPuerta, ensamblar_manuscrito, publicar
+from app.features.manuscrito.modelos import (
     CapituloPublicado,
-    CapituloSinPuerta,
+    CuadroDeDefectos,
+    Dedicatoria,
+    FichaDeLectura,
     VersionPublicada,
-    ensamblar_manuscrito,
-    publicar,
 )
-from app.features.manuscrito.modelos import CuadroDeDefectos, Dedicatoria, FichaDeLectura
 
 CAPITULOS = 10
 

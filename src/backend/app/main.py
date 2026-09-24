@@ -11,7 +11,7 @@ from fastapi import FastAPI
 
 from app.commons.db.vectores import extension_disponible
 from app.commons.errors.manejador import registrar_manejadores
-from app.features import contexto, escritura, obra, outline
+from app.features import contexto, escritura, manuscrito, obra, outline
 
 
 @asynccontextmanager
@@ -39,4 +39,5 @@ def crear_app() -> FastAPI:
     app.include_router(outline.router)
     app.include_router(contexto.router)
     app.include_router(escritura.router)
+    app.include_router(manuscrito.router)
     return app

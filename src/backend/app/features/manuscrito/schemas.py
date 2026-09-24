@@ -14,7 +14,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CapituloDelIndice(BaseModel):
+class CapituloPublicado(BaseModel):
     """Una entrada del indice de la 002 (`RF-IND-01`, `RF-IND-02`).
 
     `cambiado` viene del backend calculado y no se recalcula en el navegador: el
@@ -40,6 +40,19 @@ class EntradaDeFicha(BaseModel):
     capitulos: list[int] = Field(default_factory=list)
 
 
+class FichaDeLectura(BaseModel):
+    """La ficha entera de una tirada: quien es quien, y donde sale.
+
+    Es la **respuesta** de `/lectura/{token}/ficha`, no una fila: `EntradaDeFicha`
+    es una entrada suelta y el frontend necesita el tipo del cuerpo completo
+    para derivar su cliente.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    entradas: list[EntradaDeFicha] = Field(default_factory=list)
+
+
 class DefectoDelCuadro(BaseModel):
     """Un defecto tal y como quedo al publicar, para que la Fase 5 pueda
     clasificarlo despues en preexistente o introducido."""
@@ -51,7 +64,7 @@ class DefectoDelCuadro(BaseModel):
     cita: str = ""
 
 
-class VersionPublicadaSalida(BaseModel):
+class VersionPublicada(BaseModel):
     """La tirada, **sin** `id` ni `obra_id`.
 
     El `identificador_publico` no sale aqui: quien lee ya lo tiene, porque es
@@ -64,7 +77,7 @@ class VersionPublicadaSalida(BaseModel):
     ordinal: int
     publicada_en: datetime
     dedicatoria: str | None = None
-    capitulos: list[CapituloDelIndice] = Field(default_factory=list)
+    capitulos: list[CapituloPublicado] = Field(default_factory=list)
 
 
 class DedicatoriaEntrada(BaseModel):

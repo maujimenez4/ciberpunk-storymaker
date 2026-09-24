@@ -19,8 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.manuscrito.modelos import (
     CapituloPublicado,
     Dedicatoria,
+    FichaDeLectura,
     VersionPublicada,
 )
+from app.features.manuscrito.schemas import DedicatoriaEntrada
 
 
 async def version_por_token(
@@ -217,3 +219,72 @@ async def elementos_obligatorios_de(sesion: AsyncSession, obra_id: int) -> list[
         except json.JSONDecodeError:
             return []
     return [str(v) for v in crudo or []]
+
+
+async def texto_publicado(sesion: AsyncSession, version_id: int, numero: int) -> str | None:
+    """El texto **fijado** de un capitulo publicado, no el vigente de hoy.
+
+    Es la lectura que sostiene `RF-PUB-01`, y la distincion lo es todo:
+    `capitulo_publicado.version_texto_id` apunta a una fila concreta de
+    `version_texto`, y esta consulta va por ahi. Resolver la version vigente
+    de la escena daria el texto de hoy, y entonces **un enlace ya repartido
+    cambiaria de contenido sin que nadie lo tocara** -- que es exactamente lo
+    que la tirada inmutable existe para impedir.
+
+    Por `text()` y no por el modelo: `VersionTexto` es de `escritura` y no
+    cruza su puerta (`CLAUDE.md` §5.1). Misma via que `capitulos_con_su_puerta`.
+    """
+    fila = (
+        await sesion.execute(
+            text(
+                "SELECT v.texto AS texto "
+                "FROM capitulo_publicado AS c "
+                "JOIN version_texto AS v ON v.id = c.version_texto_id "
+                "WHERE c.version_id = :version_id AND c.numero = :numero"
+            ),
+            {"version_id": version_id, "numero": numero},
+        )
+    ).first()
+    return str(fila.texto) if fila else None
+
+
+async def ficha_de(sesion: AsyncSession, version_id: int) -> FichaDeLectura | None:
+    """La ficha de lectura de una tirada. Puede no existir en tiradas viejas."""
+    resultado = await sesion.execute(
+        select(FichaDeLectura).where(FichaDeLectura.version_id == version_id)
+    )
+    return resultado.scalar_one_or_none()
+
+
+async def versiones_de(sesion: AsyncSession, obra_id: int) -> list[VersionPublicada]:
+    """Todas las tiradas de la obra, de la mas reciente a la primera.
+
+    De mas nueva a mas vieja porque la lectura entra por la ultima: quien
+    abre el enlace quiere lo de ahora, y las anteriores son el historial.
+    """
+    resultado = await sesion.execute(
+        select(VersionPublicada)
+        .where(VersionPublicada.obra_id == obra_id)
+        .order_by(VersionPublicada.ordinal.desc())
+    )
+    return list(resultado.scalars())
+
+
+async def guardar_dedicatoria(sesion: AsyncSession, obra_id: int, texto: str | None) -> None:
+    """Guarda la dedicatoria de una obra, o no guarda nada si esta vacia.
+
+    **Vive aqui y no en `obra` aunque la recoja la entrevista.** Es la juntura
+    que T2 declaro entera, y desde el otro lado solo se puede cruzar por esta
+    puerta: `obra` no puede tocar `Dedicatoria`, porque el modelo de base de
+    datos no sale de la feature (`CLAUDE.md` §6) y una feature no importa los
+    ficheros internos de otra (§5.1). Pedir la escritura es lo correcto;
+    construir la fila desde fuera, no.
+
+    Los tres vacios -- `None`, `""` y `"   "` -- se tratan igual y no dejan
+    fila. Guardar una con tres espacios obligaria a la portada a distinguirla
+    de una dedicatoria de verdad, y ese `if` acabaria escrito en dos sitios.
+    """
+    limpia = DedicatoriaEntrada(texto=texto).limpia()
+    if limpia is None:
+        return
+    sesion.add(Dedicatoria(obra_id=obra_id, texto=limpia))
