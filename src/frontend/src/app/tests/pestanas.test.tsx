@@ -74,6 +74,19 @@ describe("una pagina, tres pestanas", () => {
     expect(screen.getByRole("tab", { name: /quién es quién/i })).toBeDisabled();
   });
 
+  it("el tema elegido en «Aa» se aplica tambien en la creacion", () => {
+    // Plan 4 · T5: el panel vive en «Leer», pero quien eligió Noche no quiere
+    // que la entrevista o el progreso le deslumbren al volver.
+    window.localStorage.setItem("lectura:ajustes", '{"tema":"noche"}');
+    document.documentElement.removeAttribute("data-tema");
+
+    abrir("/", dobleCompleto());
+
+    expect(document.documentElement).toHaveAttribute("data-tema", "noche");
+    window.localStorage.removeItem("lectura:ajustes");
+    document.documentElement.removeAttribute("data-tema");
+  });
+
   it("con un token en la direccion, la lectura se abre ya puesta", () => {
     // Es lo que se manda de regalo: abrirlo lleva a leer, no al formulario.
     abrir(`/?token=abc123&vista=${VISTAS.leer}`, dobleCompleto());

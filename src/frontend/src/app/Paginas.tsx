@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useRef, useState } from "react";
 
 import { type AvanceDeLaNovela, Entrevista, leerNovelaEnCurso } from "@/features/entrevista";
-import { Leer, QuienEsQuien } from "@/features/manuscrito";
+import { Leer, QuienEsQuien, useAjustesDeLectura } from "@/features/manuscrito";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
 
 import "./navegacion.css";
@@ -54,6 +54,9 @@ function motivo(novela: Novela): string {
  * una frontera de seguridad, y fingir que lo es sería peor que no tenerla.
  */
 export function Paginas() {
+  // El tema y el tamaño que se eligieron en «Aa» valen para toda la página, no
+  // solo para «Leer»: quien leyó de noche no quiere volver a la creación en claro.
+  useAjustesDeLectura();
   const parametros = new URLSearchParams(window.location.search);
   const [token, setToken] = useState<string | null>(parametros.get("token"));
   const [escribiendo, setEscribiendo] = useState(false);
