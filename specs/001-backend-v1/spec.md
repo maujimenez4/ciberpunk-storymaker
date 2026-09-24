@@ -472,6 +472,16 @@ Todos los términos existen en `docs/definitions.md` v2.1. Los que esta spec usa
 
 ## Decisiones
 
+**P-08 · El cliente de modelo invoca el Claude Agent SDK, no la API con clave.** Decidido por `maujimenez4`, 2026-09-24.
+
+P-02 dejó dicho **qué** —Anthropic, consumo de cuenta, sin clave de API— y ningún documento decía **cómo**. La Fase 1 lo destapó de la peor manera posible: sus tres endpoints existen, están en el OpenAPI y **responden 500 contra la aplicación levantada**, porque la única implementación de `ClienteModelo` al terminar es `DobleDeterminista`. Ninguna tarea tenía asignado el cliente real.
+
+Se invoca el **Claude Agent SDK / Claude Code**, ya autenticado contra la cuenta. Es lo único coherente con «sin clave de API», y deja RF-OBS-07 barato en vez de relajado: no hay clave que leer de ninguna parte.
+
+**Y abre una pregunta que esta decisión no cierra**, planteada en `plan-2-capitulo.md` como **P-A**: RF-CTX-02 exige contar los tokens antes de llamar y prohíbe con esas palabras la estimación por caracteres, pero contar exactamente los de Anthropic requiere su endpoint `count_tokens`, que necesita clave. **Si la respuesta obliga a relajar RF-CTX-02, esta spec cambia y vuelve a firmarse.** Va escrito aquí para que no se resuelva por costumbre dentro de una tarea.
+
+**Aditiva:** no retira ni contradice ningún requisito. P-02 sigue entero.
+
 **P-07 · Una sola base de datos, y «un fichero por obra» se retira.** Decidido por `maujimenez4`, 2026-09-24.
 
 Lo destapó escribir el plan de la fase 1: **la entrevista existe antes que la obra.** `POST /entrevistas` precede a `cerrar`, que es lo que crea la `Obra`, así que con un fichero por obra la entrevista no tiene dónde vivir. Y al tirar del hilo aparecieron dos cosas más:
