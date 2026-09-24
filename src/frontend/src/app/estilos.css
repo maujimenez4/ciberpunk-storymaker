@@ -1,72 +1,87 @@
 /**
  * Los tokens de la lectura.
  *
- * **La dirección, en una frase: esto es un regalo hecho a mano, no un libro de
- * librería.** Por eso no hay papel crema ni serif de alto contraste: el papel es
- * un blanco roto **frío**, de cuaderno; la tinta es azul-negro de estilográfica
- * y no un negro tintado; y el único acento es el ciruela del hilo de una
- * cabezada. Se lee de noche, en un móvil, de una sentada.
+ * **La dirección, en una frase (plan 4, enmienda 1 «Cuaderno de viaje»): la
+ * novela como un viaje anotado en un diario de los años veinte.** Tinta azul
+ * de estilográfica para lo que se toca y los títulos, sellos postales en rojo
+ * desvaído para lo que marca el camino, y la línea roja del margen de un
+ * cuaderno. El papel es el de una libreta vieja, no el crema de una librería.
  *
- * **La jerarquía la manda el texto.** No hay tarjetas, ni sombras, ni filetes
- * decorativos: lo único que se ve es la prosa y lo que se puede tocar.
+ * **La jerarquía la manda el texto.** No hay tarjetas ni sombras: el ornamento
+ * —sello, margen, renglón, etiqueta— solo aparece donde dice algo.
  *
- * **Dos voces** (plan 4): el libro habla en Literata; la interfaz —pestañas,
- * botones, etiquetas, avisos, progreso— en Atkinson Hyperlegible Next, un
- * escalón más pequeña. Así el libro no compite con los mandos.
+ * **Una voz y un rótulo.** Libro e interfaz hablan en Spectral (la enmienda
+ * revierte la tipografía de interfaz aparte: una sans rompía el cuaderno);
+ * títulos y sellos, en Sorts Mill Goudy.
  *
  * `RF-ACC-04` exige contraste AA y **gana sobre cualquier elección estética**
  * (`architecture.md` §7.2). Cada pareja de cada tema se comprueba con la
  * fórmula de la WCAG en `shared/ui/tests/contraste.test.ts`, no a ojo.
  */
 
-@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&family=Spectral:ital,wght@0,400;0,500;1,400;1,500&display=swap");
 
 /**
  * **Los temas.** `data-tema` en `<html>` con `papel`, `sepia` o `noche`. Sin
  * atributo se sigue al sistema: claro es Papel, oscuro es Noche. Sepia existe
  * porque un lector de libros lo ofrece, **pero nunca es el de defecto**.
+ *
+ * `--sello` es texto (leyendas de bloque, sellos) y pasa 4.5:1 sobre el papel y
+ * sobre la guarda; nunca es texto de párrafo. `--margen` es solo la línea roja
+ * del cuaderno: decorativa, no lleva información y no se mide.
  */
 :root,
 :root[data-tema="papel"] {
   color-scheme: light;
 
-  --papel: #f2f3ee;
-  --tinta: #1b2a3a;
-  --acento: #6b3a52;
+  --papel: #e6e0d2;
+  --tinta: #2a2a2e;
+  /* Tinta de estilográfica: títulos, pestaña activa, botón principal. */
+  --acento: #243a5e;
   /* El texto que va encima del acento: el botón principal. */
-  --acento-texto: #f2f3ee;
+  --acento-texto: #f1ece0;
 
   /* La tinta aguada de los metadatos. Sigue siendo AA sobre el papel. */
-  --tinta-suave: #4a5b68;
-  /* La guarda: el fondo de un bloque que no es prosa. */
-  --guarda: #e4e7de;
-  /* Donde se escribe: un punto más claro que el papel. */
-  --fondo-campo: #ffffff;
+  --tinta-suave: #5f5a50;
+  /* La hoja del cuaderno: formularios, etiquetas, avisos. */
+  --guarda: #f1ece0;
+  /* Donde se escribe: un punto más claro que la hoja. */
+  --fondo-campo: #fbf8f1;
+  /* El rojo desvaído de un matasellos. */
+  --sello: #9b3b32;
+  /* La línea roja del margen. */
+  --margen: #d3a8a0;
 }
 
+/* Sepia: el mismo cuaderno, más tostado; la tinta, más parda. */
 :root[data-tema="sepia"] {
   color-scheme: light;
 
-  --papel: #efe6d4;
-  --tinta: #3b2f22;
-  --acento: #6b3a52;
-  --acento-texto: #efe6d4;
-  --tinta-suave: #6a5a47;
-  --guarda: #e3d8c3;
-  --fondo-campo: #f8f2e6;
+  --papel: #e8d9bb;
+  --tinta: #3a2e21;
+  --acento: #2b3d5c;
+  --acento-texto: #f4ead6;
+  --tinta-suave: #62533f;
+  --guarda: #f4ead6;
+  --fondo-campo: #fbf5e9;
+  --sello: #8f352b;
+  --margen: #cd9c8c;
 }
 
-/* Noche no es negro ni gris neutro: es pizarra, de la familia de la tinta. */
+/* Noche no es negro ni gris neutro: es el azul de la tinta seca, con la tinta
+   clara, la estilográfica aclarada y el sello en un rojo más encendido. */
 :root[data-tema="noche"] {
   color-scheme: dark;
 
-  --papel: #1c2024;
-  --tinta: #d9d6ce;
-  --acento: #c9a0b6;
-  --acento-texto: #1c2024;
-  --tinta-suave: #9aa3ab;
-  --guarda: #262b30;
-  --fondo-campo: #15191c;
+  --papel: #141a24;
+  --tinta: #e4ddcd;
+  --acento: #9fb6de;
+  --acento-texto: #141a24;
+  --tinta-suave: #a8a191;
+  --guarda: #1d2531;
+  --fondo-campo: #0f141c;
+  --sello: #e58c80;
+  --margen: #6e4540;
 }
 
 /* El mismo Noche, cuando nadie ha elegido y el sistema está en oscuro. Lo
@@ -75,25 +90,37 @@
   :root:not([data-tema]) {
     color-scheme: dark;
 
-    --papel: #1c2024;
-    --tinta: #d9d6ce;
-    --acento: #c9a0b6;
-    --acento-texto: #1c2024;
-    --tinta-suave: #9aa3ab;
-    --guarda: #262b30;
-    --fondo-campo: #15191c;
+    --papel: #141a24;
+    --tinta: #e4ddcd;
+    --acento: #9fb6de;
+    --acento-texto: #141a24;
+    --tinta-suave: #a8a191;
+    --guarda: #1d2531;
+    --fondo-campo: #0f141c;
+    --sello: #e58c80;
+    --margen: #6e4540;
   }
 }
 
 :root {
-  --fuente-libro: Literata, Georgia, "Times New Roman", serif;
-  --fuente-interfaz: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
+  --fuente-libro: Spectral, Georgia, "Times New Roman", serif;
+  --fuente-interfaz: Spectral, Georgia, "Times New Roman", serif;
+  --fuente-titulo: "Sorts Mill Goudy", "Goudy Old Style", Georgia, serif;
+
+  /* Derivados del tema: el filete de un contenedor y el renglón de la hoja.
+     Decorativos; lo que lleva información usa los tokens de arriba. */
+  --linea: color-mix(in srgb, var(--tinta-suave) 42%, var(--papel));
+  --renglon: color-mix(in srgb, var(--tinta-suave) 16%, var(--guarda));
 
   /* El radio sigue la jerarquía: lo que se toca es lo más redondo; el bloque,
      lo que menos. */
   --radio-pildora: 999px;
   --radio-campo: 12px;
   --radio-bloque: 16px;
+  --radio-hoja: 10px;
+
+  /* El diámetro de un sello; cada uso puede cambiarlo. */
+  --tam-sello: 92px;
 
   /**
    * `RF-ACC-05`. Una novela a ancho completo de pantalla no se lee: el ojo
@@ -102,10 +129,11 @@
    */
   --medida: 34rem;
 
-  /* Escala tipográfica, razón 1.25. El cuerpo manda y lo demás se ordena. */
+  /* Escala tipográfica, razón 1.25. El cuerpo manda y lo demás se ordena; el
+     título, en Goudy, se permite crecer: es rótulo, no texto. */
   --cuerpo: 1.125rem;
   --nota: 0.9375rem;
-  --titulo: 1.75rem;
+  --titulo: clamp(2rem, 1.4rem + 2.6vw, 2.875rem);
   --dedicatoria: 1.5rem;
 
   --ritmo: 1.7;
@@ -127,15 +155,15 @@ body {
   line-height: var(--ritmo);
   /* La lectura en móvil es vertical y estrecha: el aire lateral es del gesto
      del pulgar, no de una rejilla. */
-  padding: var(--aire) 1.25rem 4rem;
+  padding: var(--aire) 1rem 4rem;
 }
 
 /* --- la voz de la interfaz ------------------------------------------------ */
 
 /**
  * Todo lo que no es el libro habla en la familia de interfaz, en caja normal y
- * sin mayúsculas sostenidas. La prosa, los títulos de capítulo, el índice y la
- * dedicatoria se quedan en `--fuente-libro`.
+ * sin mayúsculas sostenidas. Hoy es la misma que la del libro; el token se
+ * mantiene para poder separarlas con una línea.
  */
 :where(
     .pestanas,
@@ -154,6 +182,34 @@ body {
     textarea
   ) {
   font-family: var(--fuente-interfaz);
+}
+
+/**
+ * **Los rótulos**: título de pantalla, de novela y de capítulo, en Goudy y en
+ * tinta de estilográfica. Peso normal: Goudy no tiene negrita, y fingirla la
+ * emborrona. `:where` para que una feature pueda ajustar tamaño sin pelear.
+ */
+:where(h1, h2, .pagina__titulo, .capitulo__titulo) {
+  font-family: var(--fuente-titulo);
+  font-weight: 400;
+  color: var(--acento);
+}
+
+/**
+ * **Las leyendas de bloque**, como se anota a mano el título de una sección
+ * del cuaderno: Goudy cursiva en rojo de sello. Solo las de la entrevista; las
+ * del panel «Aa» son interfaz y no se tocan.
+ */
+:where(.formulario, .hoja) legend,
+.bloque__titulo {
+  padding: 0;
+  margin-block-end: 0.25rem;
+  font-family: var(--fuente-titulo);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  color: var(--sello);
 }
 
 /* --- lo que se puede tocar ------------------------------------------------ */
@@ -179,8 +235,7 @@ body {
 
 .pagina__titulo {
   font-size: var(--titulo);
-  font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.1;
   margin: 0 0 var(--aire);
   /* Sin `text-wrap: balance` en el cuerpo, pero sí aquí: un título de novela
      partido por una preposición se lee mal. */
@@ -220,12 +275,120 @@ body {
   color: var(--tinta-suave);
 }
 
+/* --- el ornamento del cuaderno ------------------------------------------- */
+
+/**
+ * **Un sello de correos**: círculo punteado en rojo, inclinado como si se
+ * hubiera estampado a mano. Marca dónde se está (el paso actual, la parada en
+ * curso, el capítulo). Su tamaño es `--tam-sello`; el texto pequeño escala con
+ * él, y `.sello__cifra` es el número grande del centro.
+ */
+.sello {
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tam-sello);
+  block-size: var(--tam-sello);
+  border: 2px dashed var(--sello);
+  border-radius: 50%;
+  color: var(--sello);
+  font-family: var(--fuente-titulo);
+  font-size: max(0.75rem, calc(var(--tam-sello) * 0.14));
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+  transform: rotate(-8deg);
+}
+
+.sello--derecha {
+  transform: rotate(8deg);
+}
+
+.sello__cifra {
+  font-size: calc(var(--tam-sello) * 0.36);
+  line-height: 1;
+}
+
+/**
+ * **La hoja del cuaderno**: rayada cada 36 px y con la línea roja del margen a
+ * la izquierda. Donde se escribe (la entrevista), no donde se lee.
+ */
+.hoja {
+  background-color: var(--guarda);
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0 35px,
+    var(--renglon) 35px 36px
+  );
+  border-inline-start: 2px solid var(--margen);
+  border-radius: var(--radio-hoja);
+  padding: 1.625rem clamp(1rem, 4vw, 2.75rem);
+}
+
+/* Solo la línea roja del margen, junto a la prosa que se lee. */
+.margen-rojo {
+  border-inline-start: 1px solid var(--margen);
+  padding-inline-start: 36px;
+}
+
+@media (width < 30rem) {
+  .margen-rojo {
+    padding-inline-start: 1rem;
+  }
+}
+
+/**
+ * **Una etiqueta de equipaje** (quién es quién): la parte del ojal a la
+ * izquierda, separada por un troquel, y la punta redondeada a la derecha. El
+ * primer hijo `.etiqueta__ojal` va vacío: el agujero lo dibuja la hoja.
+ */
+.etiqueta {
+  display: flex;
+  align-items: stretch;
+  background: var(--guarda);
+  border: 1px solid var(--linea);
+  border-radius: 12px 40px 40px 12px;
+}
+
+.etiqueta__ojal {
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-inline-end: 1.5px dashed var(--linea);
+}
+
+.etiqueta__ojal::before {
+  content: "";
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--tinta-suave);
+  background: var(--papel);
+}
+
+/* Lo que aún no se ha leído: el hueco de una etiqueta, sin la etiqueta. */
+.etiqueta--pendiente {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--tinta-suave);
+  color: var(--tinta-suave);
+}
+
+@media (width < 30rem) {
+  .etiqueta__ojal {
+    flex-basis: 44px;
+  }
+}
+
 /* --- avisos --------------------------------------------------------------- */
 
 /**
- * Un bloque que no es prosa: la guarda, con el radio de bloque y **sin
- * sombra**. El error no se distingue solo por color: lleva el hilo ciruela
- * alrededor y el texto en seminegrita.
+ * Un bloque que no es prosa: la hoja, con el radio de bloque y **sin sombra**.
+ * El error no se distingue solo por color: lleva el filete de sello alrededor
+ * y el texto en peso medio.
  */
 .aviso {
   background: var(--guarda);
@@ -238,8 +401,8 @@ body {
 }
 
 .aviso--error {
-  border-color: var(--acento);
-  font-weight: 600;
+  border-color: var(--sello);
+  font-weight: 500;
 }
 
 /* --- controles ------------------------------------------------------------ */
@@ -253,15 +416,15 @@ body {
 .boton--principal {
   font: inherit;
   font-family: var(--fuente-interfaz);
-  font-size: var(--nota);
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-block-size: 2.75rem;
-  padding: 0.625rem 1.375rem;
+  padding: 0.625rem 1.5rem;
   color: var(--acento-texto);
   background: var(--acento);
   border: 1px solid var(--acento);
@@ -269,11 +432,12 @@ body {
   cursor: pointer;
 }
 
-/* La acción que no es la de la pantalla: el mismo ciruela, sin relleno. */
+/* La acción que no es la de la pantalla: contorno de tinta aguada, texto en
+   tinta. No compite con la estilográfica del principal. */
 .boton--secundario {
-  color: var(--acento);
+  color: var(--tinta);
   background: transparent;
-  border-color: var(--acento);
+  border-color: var(--tinta-suave);
 }
 
 /* Una salida, no el siguiente paso: solo el texto, y la píldora al pasar. */
@@ -312,7 +476,7 @@ body {
 }
 
 .enlace:hover {
-  color: var(--tinta);
+  color: var(--sello);
 }
 
 /* --- índice --------------------------------------------------------------- */
@@ -348,6 +512,7 @@ body {
 .indice__numero {
   color: var(--tinta-suave);
   font-size: var(--nota);
+  font-style: italic;
 }
 
 @media (width < 30rem) {
@@ -360,18 +525,18 @@ body {
 /* --- la página de la lectura --------------------------------------------- */
 
 /**
- * **Control segmentado en píldora**, como el de un lector electrónico: una
- * guarda redonda y, dentro, la pestaña activa recortada en papel con el hilo
- * ciruela. «Dónde estás» no se dice solo con color: cambia el relleno, el
- * borde y el peso.
+ * **Control segmentado en píldora**: un contorno fino de tinta aguada y, dentro,
+ * la pestaña activa rellena de estilográfica. «Dónde estás» no se dice solo con
+ * color: cambia el relleno y el texto pasa a claro.
  */
 .pestanas {
   display: flex;
   inline-size: fit-content;
   max-inline-size: 100%;
-  gap: 0.125rem;
-  padding: 0.25rem;
-  background: var(--guarda);
+  gap: 0.375rem;
+  padding: 0.3125rem;
+  background: transparent;
+  border: 1px solid var(--linea);
   border-radius: var(--radio-pildora);
   margin-block-end: var(--aire);
 }
@@ -379,11 +544,11 @@ body {
 .pestana {
   font: inherit;
   font-family: var(--fuente-interfaz);
-  font-size: var(--nota);
+  font-size: 1rem;
   line-height: 1.2;
   flex: 1 1 auto;
   min-block-size: 2.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.4375rem 1.25rem;
   white-space: nowrap;
   color: var(--tinta-suave);
   background: transparent;
@@ -397,16 +562,16 @@ body {
 }
 
 .pestana--activa {
-  color: var(--tinta);
-  background: var(--papel);
+  color: var(--acento-texto);
+  background: var(--acento);
   border-color: var(--acento);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Apagada, y se nota: el motivo lo dice el texto asociado, no el color. */
 .pestana:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 @media (width < 24rem) {
@@ -437,21 +602,24 @@ body {
 
 .capitulo__titulo {
   font-size: var(--titulo);
-  font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.1;
   margin-block-end: var(--aire);
   text-wrap: balance;
 }
 
+/* «Tercera parada», encima del título: nota a mano, no rótulo. */
 .capitulo__numero {
   display: block;
+  margin-block-end: 0.25rem;
+  font-family: var(--fuente-libro);
   font-size: var(--nota);
+  font-style: italic;
   font-weight: 400;
   color: var(--tinta-suave);
 }
 
 .indice__marca {
-  color: var(--acento);
+  color: var(--sello);
   font-size: var(--nota);
 }
 
@@ -466,7 +634,10 @@ body {
 }
 
 .ficha__nombre {
-  font-weight: 600;
+  font-family: var(--fuente-titulo);
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--acento);
 }
 
 .ficha__descripcion {
@@ -486,25 +657,39 @@ body {
 
 .campo__etiqueta {
   display: block;
-  font-size: var(--nota);
+  font-size: 1rem;
   color: var(--tinta);
-  margin-block-end: 0.375rem;
+  margin-block-end: 0.25rem;
 }
 
+/**
+ * Campos en píldora sobre el blanco de la hoja. El área de texto no: una
+ * píldora de varias líneas se come las esquinas del texto, así que conserva el
+ * radio de campo.
+ */
 .campo__control {
   font: inherit;
   font-family: var(--fuente-interfaz);
   inline-size: 100%;
-  /* 1rem y no el escalón de interfaz: por debajo de 16 px, Safari en iOS
-     amplía la página al enfocar el campo. */
-  font-size: 1rem;
+  /* Nunca por debajo de 1rem: por debajo de 16 px, Safari en iOS amplía la
+     página al enfocar el campo. */
+  font-size: 1.0625rem;
   line-height: 1.5;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5625rem 1rem;
   color: var(--tinta);
   background: var(--fondo-campo);
   /* La tinta aguada da el 3:1 de un componente sobre el fondo del campo. */
   border: 1px solid var(--tinta-suave);
+  border-radius: var(--radio-pildora);
+}
+
+textarea.campo__control {
   border-radius: var(--radio-campo);
+}
+
+.campo__control::placeholder {
+  color: var(--tinta-suave);
+  font-style: italic;
 }
 
 .campo__control:focus-visible {

@@ -53,6 +53,12 @@ const TOKENS = [
   "--acento",
   "--acento-texto",
   "--fondo-campo",
+  // Enmienda 1 («Cuaderno de viaje»): el rojo de los sellos y de las leyendas
+  // de bloque. Las leyendas son texto, así que se mide como texto.
+  "--sello",
+  // La línea roja del margen del cuaderno. Es decorativa y no se mide, pero
+  // tiene que existir en cada tema: la usan `.hoja` y `.margen-rojo`.
+  "--margen",
 ] as const;
 
 function paleta(cuerpo: string): Record<(typeof TOKENS)[number], string> {
@@ -85,6 +91,9 @@ describe.each(Object.entries(TEMAS))("el contraste del tema %s", (_tema, cuerpo)
     ["los metadatos sobre la guarda", p["--tinta-suave"], p["--guarda"]],
     ["un enlace dentro de un aviso", p["--acento"], p["--guarda"]],
     ["lo que se escribe en un campo", p["--tinta"], p["--fondo-campo"]],
+    ["una leyenda de bloque o un sello sobre el papel", p["--sello"], p["--papel"]],
+    ["una leyenda de bloque sobre la hoja del cuaderno", p["--sello"], p["--guarda"]],
+    ["un titulo en tinta de estilografica sobre la hoja", p["--acento"], p["--guarda"]],
   ])("%s pasa AA de texto (4.5:1)", (_nombre, frente, fondo) => {
     expect(ratio(frente, fondo)).toBeGreaterThanOrEqual(4.5);
   });
@@ -94,12 +103,28 @@ describe.each(Object.entries(TEMAS))("el contraste del tema %s", (_tema, cuerpo)
     ["el anillo de foco sobre la guarda", p["--acento"], p["--guarda"]],
     ["el borde de un campo sobre su fondo", p["--tinta-suave"], p["--fondo-campo"]],
     ["el tramo de la barra sobre la guarda", p["--acento"], p["--guarda"]],
+    ["lo recorrido en el mapa de ruta sobre el papel", p["--sello"], p["--papel"]],
+    ["una parada hecha del mapa sobre el papel", p["--acento"], p["--papel"]],
   ])("%s pasa AA de componente (3:1)", (_nombre, frente, fondo) => {
     expect(ratio(frente, fondo)).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe("los temas", () => {
+  it("Papel es el de la maqueta aprobada (enmienda 1, «Cuaderno de viaje»)", () => {
+    expect(paleta(TEMAS.papel)).toMatchObject({
+      "--papel": "#e6e0d2",
+      "--tinta": "#2a2a2e",
+      "--tinta-suave": "#5f5a50",
+      "--acento": "#243a5e",
+      "--acento-texto": "#f1ece0",
+      "--guarda": "#f1ece0",
+      "--fondo-campo": "#fbf8f1",
+      "--sello": "#9b3b32",
+      "--margen": "#d3a8a0",
+    });
+  });
+
   it("sin atributo, el claro es Papel: comparten el mismo bloque", () => {
     expect(ESTILOS).toMatch(/(^|\n):root,\s*:root\[data-tema="papel"\]\s*\{/);
   });
@@ -117,8 +142,21 @@ describe("los temas", () => {
     expect(paleta(bloque(":root:not([data-tema])"))).not.toEqual(paleta(TEMAS.sepia));
   });
 
-  it("la interfaz y el libro tienen cada uno su familia", () => {
-    expect(ESTILOS).toMatch(/--fuente-libro:\s*Literata/);
-    expect(ESTILOS).toMatch(/--fuente-interfaz:\s*"Atkinson Hyperlegible Next"/);
+  /**
+   * Enmienda 1 del plan 4 **revierte** la decisión 1 (interfaz en sans aparte):
+   * en el cuaderno de viaje una sans rompía el papel, así que libro e interfaz
+   * hablan en Spectral y los títulos y sellos en Sorts Mill Goudy.
+   */
+  it("el libro y la interfaz van en Spectral, y los titulos en Sorts Mill Goudy", () => {
+    expect(ESTILOS).toMatch(/--fuente-libro:\s*Spectral/);
+    expect(ESTILOS).toMatch(/--fuente-interfaz:\s*Spectral/);
+    expect(ESTILOS).toMatch(/--fuente-titulo:\s*"Sorts Mill Goudy"/);
+  });
+
+  it("las dos familias se cargan, y las anteriores ya no", () => {
+    const importacion = /@import url\("([^"]+)"\)/.exec(ESTILOS)?.[1] ?? "";
+    expect(importacion).toContain("family=Spectral:");
+    expect(importacion).toContain("family=Sorts+Mill+Goudy:");
+    expect(ESTILOS).not.toMatch(/Literata|Atkinson/);
   });
 });
