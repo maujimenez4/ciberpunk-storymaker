@@ -1,7 +1,7 @@
 ---
 id: 002-frontend
 titulo: Frontend, versión 1 — la lectura del regalo
-estado: borrador          # borrador | en-revision | aprobada | implementada
+estado: en-revision       # borrador | en-revision | aprobada | implementada
 aprobada_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-23
 depende_de: specs/001-backend-v1/spec.md
@@ -371,19 +371,19 @@ Todos los términos existen en `docs/definitions.md` v2.1: `Destinatario`, `Comp
 
 ---
 
-## Preguntas abiertas
+## Decisiones
 
-Mientras quede una, esta spec **no se aprueba** (`CLAUDE.md` §3.2).
+Las tres que quedaban, cerradas por `maujimenez4` el 2026-09-24.
 
-| ID | Pregunta | Quién responde |
-| --- | --- | --- |
-| P-02 | **D-04 y RF-FIC-02 necesitan que la ficha diga, por entrada, en qué capítulos aparece.** La 001 promete la `FichaDeLectura` derivada y reproducible (RF-PUB-05), pero **no promete que lleve los capítulos**. El dato existe en el canon (RF-MEM-02). ¿Se añade a la ficha de la 001, o el frontend hace una consulta aparte al canon (RI-12)? | Autor |
-| P-03 | ¿Se implementa esta spec **después** de la Fase 3 de la 001, o en paralelo contra un doble de la API, aceptando que la mitad no se puede probar de punta a punta hasta que aquella exista? | Autor |
-| P-04 | El encargo §8 exige el PDF de una novela completa en `/ejemplos/novela-ejemplo.pdf`. ¿Ese fichero lo produce la corrida de evaluación de la 001 (RF-EVA-01) o es un paso aparte de la entrega? | Autor |
+**P-02 · Los capítulos van dentro de la ficha, y para eso se amplía la 001.** El encargo §2 pide el enlace **dentro** de la ficha, y el dato ya existe en el canon (RF-MEM-02 registra en qué capítulos se usa cada hecho). *Se descartó* que el frontend lo recompusiera consultando el canon aparte: serían dos peticiones donde basta una, y el navegador rehaciendo algo que el backend ya sabe.
 
-**P-02 es el hallazgo de escribir esta spec.** La 001 se escribió declarando que la interfaz era de la 002 y que aquí solo se consumía su API. Al detallar qué consume exactamente, **apareció algo que nadie prometió**. No es un fallo de la 001: es lo que pasa cuando dos specs se escriben con distancia y la segunda es la primera que mira el contrato de verdad.
+**Cuesta una firma y conviene decirlo:** `RF-PUB-05` de la 001 cambia, y la 001 estaba firmada. Es aditivo —ningún otro requisito se toca— pero `CLAUDE.md` §3.4 exige volver a aprobarla, y una firma que cubre un texto distinto del que se firmó no es una firma.
 
-*Había una P-01 —dos enlaces con permisos distintos, que la 001 no podía dar— y **la reversión de D-01 la disolvió**: sin dos modos, no hacen falta dos identificadores. Queda anotado porque es el caso más limpio del día de una pregunta que no se responde, se deja de necesitar.*
+**P-03 · El backend primero, el frontend después.** Nada de paralelo contra un doble de la API. *Se descartó* empezar ya, que habría aprovechado antes los subagentes, porque **la mitad de esta spec no se podría probar de punta a punta**: novedades, corrección y espera dependen de datos que solo produce la Fase 3 del backend, y un frontend probado solo contra dobles descubre sus fallos el día que se enchufa.
+
+**Consecuencia para el plan:** este plan se escribe ahora pero **no se ejecuta hasta que el backend esté**. Es lo contrario de lo que se hizo con el plan de la Fase 1, que se escribió para implementarse enseguida.
+
+**P-04 · El PDF de ejemplo sale de la corrida de evaluación.** `RF-EVA-01` de la 001 ya corre cinco briefs; uno produce el PDF que se commitea en `/ejemplos/novela-ejemplo.pdf`. *Se descartó* generarlo a mano al final: un artefacto que nadie vuelve a regenerar se desfasa respecto al sistema que dice demostrar, y el encargo §8 lo llama «la evidencia de que el sistema funciona de principio a fin».
 
 ---
 
@@ -402,4 +402,8 @@ Mientras quede una, esta spec **no se aprueba** (`CLAUDE.md` §3.2).
 
 ## Cierre
 
-Pendiente. Esta spec está en `borrador` y tiene **cuatro preguntas abiertas**, dos de las cuales —P-01 y P-02— **no se pueden resolver dentro de esta spec**: obligan a decidir si se amplía la 001, que ya está aprobada y firmada.
+**No queda ninguna pregunta abierta**, que es la única condición que `CLAUDE.md` §3.2 pone para aprobar. Por eso pasa a `en-revision`.
+
+**Aprobada por `maujimenez4` el 2026-09-24**, a la vez que la v3.1 de la 001: P-02 amplía su `RF-PUB-05`, y firmar esta sin aquella la habría dejado apoyada en un requisito que nadie firmó.
+
+**Lo que esta firma NO abre todavía.** Por P-03 el backend va primero, así que el plan de esta spec se escribe ahora y **se ejecuta después**. Es al revés que el plan de la Fase 1, y conviene tenerlo presente: un plan escrito lejos de su implementación acumula desviaciones, y este las va a acumular a propósito.

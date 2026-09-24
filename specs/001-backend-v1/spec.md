@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — de la entrevista a la novela publicada
-estado: aprobada          # borrador | en-revision | aprobada | implementada
-aprobada_por: maujimenez4 # firmada el 2026-09-23
+estado: en-revision       # borrador | en-revision | aprobada | implementada
+aprobada_por:             # necesita firma nueva: ver Cierre
 fecha: 2026-09-23
 ---
 
@@ -310,7 +310,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 | RF-PUB-02 | Publicar una versión **no altera** ninguna anterior | M | Test |
 | RF-PUB-03 | **No se publica ningún capítulo que no haya pasado su puerta.** Un intento con un capítulo escalado falla con error de dominio | M | Test |
 | RF-PUB-04 | Al publicar se guarda el **cuadro de defectos** de esa versión | M | Test |
-| RF-PUB-05 | Al publicar se deriva y guarda la `FichaDeLectura`, que es **reproducible** desde el ledger | M | Test |
+| RF-PUB-05 | Al publicar se deriva y guarda la `FichaDeLectura`, que es **reproducible** desde el ledger. Cada entrada lleva **los capítulos en que aparece**, tomados del uso registrado del hecho (RF-MEM-02) | M | Test |
 | RF-PUB-06 | Cada versión apunta a la que sucede, y los capítulos cambiados se calculan por **diferencia de texto** | M | Test |
 | RF-PUB-07 | El identificador de una obra publicada **no es adivinable** | M | Test |
 | RF-PUB-08 | Publicar es **atómico**: o queda la versión entera con su ficha y su cuadro, o no queda nada | M | Test |
@@ -527,7 +527,13 @@ Dos consecuencias que se escriben aquí porque cambian requisitos:
 
 ## Cierre
 
-**Aprobada por `maujimenez4` el 2026-09-23**, con las seis preguntas cerradas y ninguna abierta, que es la condición que `CLAUDE.md` §3.2 pone.
+**Vuelve a `en-revision` el 2026-09-24, y necesita firma nueva.** Estuvo `aprobada` por `maujimenez4` el 2026-09-23; desde entonces **cambió un requisito**, así que la firma anterior ya no cubre lo que dice.
+
+**Qué cambió, y es todo:** `RF-PUB-05` pasa a exigir que **cada entrada de la `FichaDeLectura` lleve los capítulos en que aparece**. Lo pide el encargo §2 —«ficha de personajes y lugares… **con enlaces al capítulo donde aparece cada uno**»— y lo destapó escribir la spec 002, que es la primera que miró este contrato de verdad. El dato ya existía en el canon (RF-MEM-02); lo que faltaba era prometerlo en la ficha.
+
+Es **aditivo**: no retira ni contradice nada de lo firmado, y ningún otro requisito ni criterio cambia. Pero `CLAUDE.md` §3.4 dice que una spec corregida **se vuelve a aprobar**, y una firma que cubre un texto distinto del que se firmó no es una firma.
+
+**Lo que se mantiene de la aprobación del 2026-09-23**, y no se vuelve a preguntar: las seis decisiones P-01 a P-06 y las catorce dependencias en bloque.
 
 Es **firma nueva y no heredada**: reemplaza a la spec aprobada el 2026-09-22, cuyo alcance era otro. Y aprueba además, **en bloque**, las catorce dependencias de Impacto técnico (P-01).
 

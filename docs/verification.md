@@ -446,6 +446,15 @@ decir si mejoró o empeoró entre dos versiones de prompt.
 | `dedicatoria_fuera` | G4 | Que la dedicatoria entre como fragmento del manuscrito, al PDF como capítulo o a la lista de n-gramas | Si la dedicatoria es buena, ni si va dirigida a quien debe |
 | `inspeccion_visual` | G4, sobre la lectura publicada | Índice, ficha de personajes o portada que no renderizan | Que lo que se ve sea **correcto**: un índice con once entradas para diez capítulos renderiza perfectamente |
 
+**En la lectura publicada.** Los cuatro que siguen comprueban **lo que el `Destinatario` recibe**, no el código que lo produce —esa distinción y por qué importa, en §8.5—. Corren donde corre `inspeccion_visual` y emiten *score* como cualquier otro.
+
+| Nombre | Dónde corre | Qué bloquea | Qué no detecta |
+| --- | --- | --- | --- |
+| `no_revelado_no_se_envia` | G4, sobre la respuesta de la ficha | Que un personaje aún no revelado **llegue al navegador**, aunque no se pinte (`RF-FIC-04` de la 002) | Lo que se revela **de más por otra vía**: un resumen, un título de capítulo o la propia dedicatoria pueden nombrar a quien la ficha esconde |
+| `prosa_como_texto` | G4, sobre cada capítulo renderizado | Que el manuscrito se interprete en vez de mostrarse: un capítulo con `<script>` se lee, no se ejecuta (`RF-EST-04`) | Que el texto **diga** algo dañino. Comprueba que no se ejecuta, no que sea inofensivo — y el manuscrito lo escribió un modelo sobre texto que aportó un `Comprador` |
+| `accesibilidad` | G4, sobre las rutas publicadas | Violaciones mecánicas: contraste, etiquetas de formulario, foco, orden de encabezados | **Casi todo lo que importa.** Las reglas automáticas cazan una fracción de lo que encuentra una persona con un lector de pantalla: una página puede pasarlas enteras y ser inservible. `CLAUDE.md` §7 ya lo dice — renderizar no es ser accesible, y pasar `axe-core` tampoco |
+| `rutas_estables` | G4, antes de `inspeccion_visual` | Que portada, índice, capítulo y ficha cambien de URL (`RNF-REN-01`) | Nada del contenido. **Existe para proteger a otro validador:** si una ruta cambia, `inspeccion_visual` abre una página que no es y sigue dando verde. Es el único de los veintiocho cuyo objeto es que otro no mienta |
+
 ### 8.2 Semánticos
 
 | Nombre | Dónde corre | Qué bloquea | Qué no detecta |
@@ -462,9 +471,9 @@ decir si mejoró o empeoró entre dos versiones de prompt.
 
 ### 8.4 Qué deja ver este eje y los otros dos no
 
-**De los veinticuatro, tres no bloquean nada y uno de esos tres no corre siquiera en producción.** El juez con
+**De los veintiocho, tres no bloquean nada y uno de esos tres no corre siquiera en producción.** El juez con
 rúbrica es el más caro de los dos semánticos y hoy es telemetría. No es un defecto de la
-tabla: es el estado real, y verlo en una columna evita contar veinticuatro validadores como veinticuatro
+tabla: es el estado real, y verlo en una columna evita contar veintiocho validadores como veintiocho
 defensas.
 
 **La concentración en G4.** Cobertura de personalización, dedicatoria, inspección visual y
@@ -478,6 +487,37 @@ esquema no juzga el contenido, la extensión no juzga el relleno, la cobertura n
 integración, el renderizado no juzga la corrección. Es una propiedad de lo determinista, no
 un defecto de diseño — pero explica por qué los dos semánticos, que son los únicos que miran
 el fondo, son también los únicos que hoy no detienen nada.
+
+### 8.5 Por qué las comprobaciones de la *build* del frontend no entran en esta tabla
+
+Al añadir los cuatro de la lectura publicada se planteó si el resto de lo que pide la 002
+—las tres reglas de frontera de `CLAUDE.md` §5.2 por ESLint, que no haya `any`, que el
+cliente de API sea el **generado** del OpenAPI y no escrito a mano— debía entrar aquí
+también. **No entra, y el motivo separa dos cosas que es fácil confundir.**
+
+El corte no es *cuándo* corre —en una generación o en la *build*—, que es donde uno mira
+primero. Es **qué verifica**, y es el corte de §1 de este documento:
+
+| | Verifica | Dónde vive |
+| --- | --- | --- |
+| Los veintiocho de §8 | **La novela**: lo que se le entrega a alguien | Este catálogo |
+| ESLint, `tsc`, cliente generado | **El código** que la fabrica | §2, nivel de artefacto |
+
+`fronteras_frontend` es el gemelo exacto de `import-linter`, que nunca estuvo en esta tabla
+y sí en §2; `sin_any` es comprobación de tipos; el cliente generado es un test de contrato.
+Los tres ya tienen sitio, y están en la tubería de `CLAUDE.md` §15 que la fila de CI/CD de
+§3 describe. Meterlos aquí no añadiría cobertura: **duplicaría el mismo control en dos
+inventarios**, que es como se llega a dos listas que divergen.
+
+**La consecuencia práctica importa más que la taxonomía, y es la razón de escribir esto:**
+así **`RF-VAL-01` de la 001 no necesita una excepción nueva**. Aquel requisito dice que todo
+validador que corre dentro de una generación emite su *score*, con TLC como única excepción.
+Los cuatro de la lectura publicada corren en G4 y emiten; los de la *build* nunca fueron
+validadores en el sentido de aquel requisito. **La 001 está firmada y no hay que tocarla.**
+
+Lo que sí hace falta es que §2 nombre sus comprobaciones de frontend con la misma concreción
+con que nombra las de backend, porque hoy dice `ruff` e `import-linter` y deja lo demás en
+«TypeScript estricto sin `any`». Eso es trabajo de §2, no de aquí.
 
 ## 9. Registro de cambios
 
