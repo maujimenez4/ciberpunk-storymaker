@@ -7,6 +7,7 @@ declaran por nombre y quien necesite la ficha recibe la ficha, no la fila.
 """
 
 from app.features.escena.agents import Planificador, SalidaMalFormada
+from app.features.escena.repository import ids_de_escenas_de_capitulo
 from app.features.escena.schemas import (
     DiscursoNoDeclarado,
     FichaDeEscena,
@@ -20,5 +21,6 @@ __all__ = [
     "Planificador",
     "RestriccionesDeDiscurso",
     "SalidaMalFormada",
+    "ids_de_escenas_de_capitulo",
     "planificar_escena",
 ]

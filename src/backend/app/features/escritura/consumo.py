@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.llm.claude_code import Consumo
+from app.features.escena import ids_de_escenas_de_capitulo
 from app.features.escritura.modelos import Ejecucion
 
 
@@ -219,13 +220,7 @@ async def consumo_de_capitulo(sesion: AsyncSession, *, capitulo_id: int) -> Resu
     lectura y otro de generacion— y hoy van uno a uno. Se resuelve por la
     escena del capitulo en vez de suponer que los identificadores coinciden.
     """
-    from app.features.escena.modelos import Escena
-
-    escenas = (
-        (await sesion.execute(select(Escena.id).where(Escena.capitulo_id == capitulo_id)))
-        .scalars()
-        .all()
-    )
+    escenas = await ids_de_escenas_de_capitulo(sesion, capitulo_id)
     if not escenas:
         return ResumenDeConsumo()
     filas = (

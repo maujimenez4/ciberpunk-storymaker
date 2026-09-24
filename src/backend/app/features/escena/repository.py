@@ -19,6 +19,31 @@ async def obtener_escena_de_capitulo(sesion: AsyncSession, capitulo_id: int) -> 
     ).scalar_one_or_none()
 
 
+async def ids_de_escenas_de_capitulo(sesion: AsyncSession, capitulo_id: int) -> list[int]:
+    """Los identificadores de las escenas de un capitulo, **sin la fila**.
+
+    Existe para que otra feature pueda resolver «que escenas tiene este
+    capitulo» **sin importar `Escena`**. `escritura.consumo` lo necesitaba para
+    sumar el coste de un capitulo, y lo hacia importando
+    `app.features.escena.modelos` desde dentro de una funcion: eso rompe la
+    regla 1 de `CLAUDE.md` §5.1 y el import diferido no lo arregla, solo lo
+    esconde del arranque.
+
+    **Devuelve `int` y no `Escena` a proposito.** Exportar el modelo por el
+    `__init__` habria cerrado el contrato de import y abierto otro peor -§6:
+    nunca se expone el modelo de base de datos-. Lo que cruza la frontera es un
+    dato, no una fila con su sesion y sus relaciones detras.
+
+    En plural aunque hoy sea una o ninguna (P-C): el que llama suma sobre el
+    conjunto, asi que no tiene que enterarse el dia que sean varias.
+    """
+    return list(
+        (await sesion.execute(select(Escena.id).where(Escena.capitulo_id == capitulo_id)))
+        .scalars()
+        .all()
+    )
+
+
 async def guardar_ficha(sesion: AsyncSession, ficha: FichaDeEscena) -> Escena:
     """La ficha, como fila.
 
