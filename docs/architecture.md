@@ -59,7 +59,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | Frontend | React 19 + TypeScript + Vite | **Nuestro** | El encargo §2 dice «web o PDF» y **no nombra ninguna tecnología de frontend**. Elegir web, y elegir React, fue decisión de `maujimenez4` |
 | Backend | FastAPI, Python 3.12+, Pydantic v2 | **Nuestro**, presupuesto por el encargo | Async por defecto; OpenAPI como contrato. El encargo lo menciona **una vez y en una sección opcional** —«el FastAPI que ya tienen»—: da por hecho que existe, no lo exige |
-| Persistencia | **SQLite (WAL) + Alembic** | **Encargo §4, literal** | «Story bible en SQLite (obligatorio)». Fichero único por obra; sin segunda base de datos |
+| Persistencia | **SQLite (WAL) + Alembic** | **Encargo §4, literal** | «Story bible en SQLite (obligatorio)». **Una sola base y un solo motor**; ninguna obra vive en un fichero aparte (`specs/001-backend-v1/spec.md`, P-07) |
 | Búsqueda por afinidad de vectores | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Nuestro** | El encargo **no menciona vectores en ninguna parte**. El sistema nunca falla por falta de la extensión |
 | Modelo | **Dos techos de 100.000 tokens**: uno por llamada y otro sobre la suma en vuelo | El segundo, **encargo §7, literal**; el primero, nuestro | Presupuesto por capa; fallo explícito, nunca truncado silencioso. Ver §2.1 y §2.2 |
 | Modelo | **Anthropic**, consumo de cuenta **sin clave de API**. **Haiku 4.5** escribe y edita; **Opus 5** juzga | **Nuestro** | Escritor y juez **no comparten modelo**, a propósito (§8.3). Sin cargo por llamada, el coste de §9.2 es **derivado**, no facturado |
@@ -599,8 +599,9 @@ La ruta de evolución está prevista: si el número de features crece, se agrupa
 | `POST` | `/obras/{id}/biblia` | Genera o actualiza la biblia (Arquitecto) |
 | `POST` | `/obras/{id}/outline` | Genera outline y asigna beats de género |
 | `POST` | `/escenas/{id}/planificar` | Produce la ficha de escena |
-| `POST` | `/escenas/{id}/escribir` | Lanza el ciclo escribir → validar → reparar |
-| `GET` | `/escenas/{id}/contexto` | Devuelve el paquete y su desglose de tokens (depuración) |
+| `POST` | `/obras/{id}/novela` | Escribe la novela entera: un trabajo por capítulo (RI-15) |
+| `POST` | `/capitulos/{id}/escribir` | Lanza el ciclo escribir → validar → reparar (RI-05) |
+| `GET` | `/capitulos/{id}/contexto` | Devuelve el paquete y su desglose de tokens (depuración) (RI-07) |
 | `GET` | `/escenas/{id}/versiones` | Historial inmutable de versiones |
 | `POST` | `/obras/{id}/auditoria` | Auditoría de manuscrito: beats, plantados, curva |
 | `GET` | `/obras/{id}/canon` | Consulta del grafo de canon |
@@ -656,7 +657,9 @@ capítulo en el momento de publicar. Resolver por «la versión vigente de cada 
 «el manuscrito ahora» y no «el que se entregó», y entonces la versión anterior dejaría de ser
 recuperable en cuanto se publicara otra — que es exactamente lo que el encargo prohíbe.
 
-**Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia. La búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes.
+**Recuperación híbrida, en este orden:** filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → **afinidad de vectores** sobre el conjunto ya filtrado → fusión con recencia. La búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes.
+
+*Se llamaba aquí «similitud semántica» y se corrigió el 2026-09-24, como ya se había corregido en §2 y en `CLAUDE.md` §4.2: el vector se calcula **local y léxicamente**, y **dos fragmentos que dicen lo mismo con otras palabras no se reconocen**. Quien aporta la pertinencia es el filtro estructural que va delante, no el paso vectorial.*
 
 ---
 
@@ -842,7 +845,7 @@ sequenceDiagram
   participant EX as Extractor
   participant DB as SQLite
 
-  FE->>API: POST /escenas/{id}/escribir
+  FE->>API: POST /capitulos/{id}/escribir
   API->>PL: ficha de escena
   PL->>DB: lee outline y estado en T
   PL-->>EN: ficha
@@ -1013,7 +1016,7 @@ Se verifican formalmente dos cosas que **no son la misma**, y confundirlas es el
 
 ## 10. Modos de despliegue
 
-- **Local**: backend y frontend en la misma máquina, un fichero SQLite por obra. Es el modo de referencia.
+- **Local**: backend y frontend en la misma máquina, con **una sola base SQLite**. Es el modo de referencia. *«Un fichero por obra» se retiró el 2026-09-24: `serie` comparte canon entre obras y un `comprador` encarga varias, así que un fichero por obra parte en dos esas dos tablas. El porqué entero está en P-07 de `specs/001-backend-v1/spec.md`.*
 - **Servidor**: un proceso FastAPI, SQLite en volumen persistente con WAL, trabajos en segundo plano **en el mismo proceso**: el límite de concurrencia de §2.2 es por proceso, así que repartirlos en un *worker* lo duplicaría. Si la concurrencia de escritura crece, el cuello es SQLite: se resuelve serializando las escrituras por obra, no cambiando de base de datos.
 
 ---
