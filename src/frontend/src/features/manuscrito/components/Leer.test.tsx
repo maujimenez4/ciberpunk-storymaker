@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { DobleDeApi } from "@/shared/api/doble";
 
-import { ProveedorDeApi } from "../api/contexto";
+import { ProveedorDeApi } from "@/shared/api/contexto";
 import { Leer } from "./Leer";
 
 function novela({

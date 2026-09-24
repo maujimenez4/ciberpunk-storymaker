@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Peticionario } from "@/shared/api/cliente";
 import type { Capitulo, Ficha, Version } from "@/shared/api/tipos";
 
-import { usePeticionario } from "./contexto";
+import { usePeticionario } from "@/shared/api/contexto";
 
 /** Las rutas del backend, en un sitio y solo uno. */
 export const API = {

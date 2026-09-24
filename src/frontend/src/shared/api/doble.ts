@@ -7,6 +7,9 @@ import { ErrorDeLectura } from "./cliente";
  */
 export class DobleDeApi implements Peticionario {
   readonly llamadas: string[] = [];
+  /** Lo que se envio, en orden. Es lo que permite comprobar **como** viaja un
+   * dato y no solo que la pantalla no reviente. */
+  readonly cuerpos: unknown[] = [];
 
   constructor(
     private readonly respuestas: Record<string, unknown>,
@@ -26,5 +29,10 @@ export class DobleDeApi implements Peticionario {
       throw new ErrorDeLectura(404, "Este enlace ya no vale.");
     }
     return respuesta as T;
+  }
+
+  async enviar<T>(ruta: string, cuerpo: unknown): Promise<T> {
+    this.cuerpos.push(cuerpo);
+    return this.pedir<T>(ruta);
   }
 }

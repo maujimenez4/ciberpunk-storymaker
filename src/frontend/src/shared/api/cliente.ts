@@ -19,6 +19,7 @@ export class ErrorDeLectura extends Error {
 
 export interface Peticionario {
   pedir<T>(ruta: string): Promise<T>;
+  enviar<T>(ruta: string, cuerpo: unknown): Promise<T>;
 }
 
 export const BASE = "/api";
@@ -33,6 +34,18 @@ export const clienteHttp: Peticionario = {
           ? "Este enlace ya no vale."
           : "No se pudo cargar tu novela.",
       );
+    }
+    return (await respuesta.json()) as T;
+  },
+
+  async enviar<T>(ruta: string, cuerpo: unknown): Promise<T> {
+    const respuesta = await fetch(`${BASE}${ruta}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(cuerpo),
+    });
+    if (!respuesta.ok) {
+      throw new ErrorDeLectura(respuesta.status, "No se pudo guardar lo que escribiste.");
     }
     return (await respuesta.json()) as T;
   },

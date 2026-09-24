@@ -60,7 +60,7 @@ export default tseslint.config(
               // **cerrada**, que es el lado bueno en el que fallar.
               target: "./src/app",
               from: "./src/features",
-              except: ["manuscrito/index.ts", "canon/index.ts"],
+              except: ["manuscrito/index.ts", "canon/index.ts", "entrevista/index.ts"],
               message: "se entra a una feature solo por su index.ts (RF-FRO-03)",
             },
           ],
