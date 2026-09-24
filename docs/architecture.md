@@ -319,7 +319,8 @@ modelo explora.
 stateDiagram-v2
   [*] --> CONFIGURANDO
   CONFIGURANDO --> PLANIFICADA: brief válido
-  CONFIGURANDO --> CONFIGURANDO: falta un dato o hay contradicción
+  CONFIGURANDO --> CONFIGURANDO: falta un dato o hay contradicción, rondas < límite
+  CONFIGURANDO --> DETENIDA: límite de rondas agotado
   PLANIFICADA --> ESCRIBIENDO_CAPITULO
   ESCRIBIENDO_CAPITULO --> VALIDANDO_CAPITULO
   VALIDANDO_CAPITULO --> ESCRIBIENDO_CAPITULO: Reparar · defecto, intento < límite
@@ -337,7 +338,7 @@ stateDiagram-v2
 
 | Estado | Qué está pasando | Checkpoint |
 | --- | --- | --- |
-| `CONFIGURANDO` | El Entrevistador recoge datos, detecta faltantes y contradicciones | El brief parcial se persiste |
+| `CONFIGURANDO` | El Entrevistador recoge datos, detecta faltantes y contradicciones. **Con límite de rondas** | El brief parcial se persiste |
 | `PLANIFICADA` | Existe biblia y outline de diez capítulos | — |
 | `ESCRIBIENDO_CAPITULO` | Ciclo de escena del §3.3 para el capítulo N | — |
 | `VALIDANDO_CAPITULO` | Puertas mecánicas, guardarraíles y juez | — |
@@ -345,6 +346,14 @@ stateDiagram-v2
 | `PUBLICADA` | Existe una `VersionPublicada` inmutable | — |
 | `REGENERANDO` | Se rehacen los capítulos afectados por una `PeticionDeCambio` | La versión anterior **no se toca** |
 | `DETENIDA` | Se agotó el límite o falló la verificación. **Se informa** | Terminal |
+
+**El bucle de `CONFIGURANDO` lleva límite, y esto cambia el 2026-09-24.** Hasta hoy la flecha a sí mismo no tenía cota: un comprador que siguiera dando respuestas contradictorias se quedaba preguntando para siempre.
+
+**Por qué se cierra en el documento y no como hipótesis del modelo.** El encargo §5d pide una propiedad de *liveness*: «toda generación termina publicando una versión o detenléndose con error; **nunca queda en bucle infinito**». Esa es una propiedad **del sistema**, no del modelo. Acotar el bucle solo dentro del `.tla` haría que TLC demostrara la propiedad sobre un modelo que difiere de producción **justo donde la propiedad podría fallar** — y eso es de la misma familia que un validador que pasa porque no hay nada que mirar.
+
+**Y el patrón ya existía en esta misma máquina:** `VALIDANDO_CAPITULO → DETENIDA` cuando se agota el límite de intentos. Un capitulo que no sale a la tercera se detiene y se informa; una entrevista que no cierra tampoco debería seguir preguntando indefinidamente. La flecha nueva es la misma decisión aplicada un nivel más arriba.
+
+**Lo que esto deja pendiente y no se toca aquí:** `specs/001-backend-v1/spec.md` no tiene requisito para ese límite —`CU-01` dice «se vuelve a preguntar» sin cota— y la spec está firmada. **Necesita un requisito y una firma**, y hasta entonces esta flecha describe una decisión de arquitectura que el código todavía no implementa. Está dicho porque `CLAUDE.md` §3.3 prohíbe que `docs/` describa lo que no existe, y esta línea es la excepción declarada, no una omisión.
 
 **Tres pares de flechas que parecen una y son dos**, y conviene fijarlo aquí porque quien escriba
 la especificación de §9.3 las va a encontrar:
