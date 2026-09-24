@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1
 titulo: Backend, versión 1 — de la entrevista a la novela publicada
-estado: aprobada          # borrador | en-revision | aprobada | implementada
-aprobada_por: maujimenez4 # firmada el 2026-09-24 (v3.1: la ficha lleva sus capitulos)
+estado: en-revision       # borrador | en-revision | aprobada | implementada
+aprobada_por:             # v3.1 la firmo maujimenez4 el 2026-09-24; v3.2 cambia RD-01 y necesita firma nueva
 fecha: 2026-09-23
 ---
 
@@ -78,7 +78,7 @@ Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de
 | Restricción | Origen | Dónde se detalla |
 | --- | --- | --- |
 | **FastAPI** (Python 3.12+), Pydantic v2 | **Nuestro**, presupuesto por el encargo, que lo nombra una vez en una sección opcional | `CLAUDE.md` §4 |
-| **SQLite**, un fichero por obra, sin segunda base de datos | **Encargo §4, literal:** «story bible en SQLite (obligatorio)» | `CLAUDE.md` §4.2 · RD-01 |
+| **SQLite**, sin segundo motor de base de datos | **Encargo §4, literal:** «story bible en SQLite (obligatorio)» | `CLAUDE.md` §4.2 · RD-01 · P-07 |
 | **React 19 + TypeScript + Vite** en el frontend | **Nuestro.** El encargo §2 dice «web o PDF» y no nombra tecnología | `CLAUDE.md` §5.2 · es de la 002 |
 | **Techo de 100.000 tokens por llamada** | **Nuestro**, derivado del presupuesto por capas | `CLAUDE.md` §4.1 · RF-CTX-02, RF-CTX-03 |
 | **Techo de 100.000 tokens concurrentes** —el **presupuesto concurrente**: la suma de lo que está en vuelo— | **Encargo §7, literal** | `architecture.md` §2.2 · RF-ORQ-10 |
@@ -338,7 +338,7 @@ React es del frontend y esta spec no lo implementa; se lista porque **fija el co
 
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
-| RD-01 | **SQLite, un fichero por obra**, con WAL, `foreign_keys=ON` y `busy_timeout`. Sin segunda base de datos | M | Test |
+| RD-01 | **SQLite**, con WAL, `foreign_keys=ON` y `busy_timeout`. **Una sola base y un solo motor:** ninguna obra vive en un fichero aparte, porque `serie` comparte canon **entre** obras (RD-04) y un `comprador` encarga varias. Ver P-07 | M | Test |
 | RD-02 | Migraciones con **Alembic desde el primer commit** | M | Test |
 | RD-03 | Esquema para: canon con **uso por capítulos**, ledger, cronología, resúmenes, manuscrito versionado, vetos, auditoría, ejecuciones, defectos, personalización y entrega | M | Test |
 | RD-04 | `Serie` contemplada **desde la migración inicial**: si existe, el canon se comparte desde el primer día (`definitions.md` §4.1) | M | Test |
@@ -472,6 +472,17 @@ Todos los términos existen en `docs/definitions.md` v2.1. Los que esta spec usa
 
 ## Decisiones
 
+**P-07 · Una sola base de datos, y «un fichero por obra» se retira.** Decidido por `maujimenez4`, 2026-09-24.
+
+Lo destapó escribir el plan de la fase 1: **la entrevista existe antes que la obra.** `POST /entrevistas` precede a `cerrar`, que es lo que crea la `Obra`, así que con un fichero por obra la entrevista no tiene dónde vivir. Y al tirar del hilo aparecieron dos cosas más:
+
+- **El encargo nunca lo pidió.** El §4 dice, literal, «una **story bible en SQLite (obligatorio)**». Lo obligatorio es SQLite. «Un fichero por obra» era glosa nuestra en `CLAUDE.md` §4, no una cita.
+- **Contradecía la arquitectura y dos requisitos de esta spec.** `architecture.md` §5.5 describe un esquema único, con `serie` —cuyo canon se comparte **entre** obras desde el primer día (RD-04)— y con un `comprador` que encarga 0..\* obras. Las dos tablas cruzan obras; un fichero por obra las parte en dos.
+
+**Qué se conserva, porque es lo que el encargo sí exige:** SQLite y **ningún segundo motor**. No entra Postgres, ni Redis, ni un almacén de vectores aparte.
+
+*Esto invierte una decisión ya razonada, así que se escribe por qué (`CLAUDE.md` §3.3). El motivo original —que la base de una obra fuera portable y aislada— sigue siendo bueno; lo que no era cierto es que se pudiera tener a la vez que `serie`, que `comprador` y que una entrevista anterior a la obra. Cuando haya una razón de peso para aislar una obra en su fichero, será un cambio de esquema con su spec, no una frase heredada.*
+
 **P-05 · Quién aprueba la novela y quién calibra al juez son dos personas distintas.** Decidido por `maujimenez4`, 2026-09-23.
 
 **El comprador aprueba o rechaza la entrega.** Eso, y no más: un veredicto, no una rúbrica puntuada. Es la respuesta correcta para un producto de regalo —quien decide si el regalo sirve es quien lo paga, no un crítico literario— y es lo único que se le puede pedir de verdad a un comprador.
@@ -527,13 +538,17 @@ Dos consecuencias que se escriben aquí porque cambian requisitos:
 
 ## Cierre
 
-**Vuelve a `en-revision` el 2026-09-24, y necesita firma nueva.** Estuvo `aprobada` por `maujimenez4` el 2026-09-23; desde entonces **cambió un requisito**, así que la firma anterior ya no cubre lo que dice.
+**v3.2 · Necesitó firma nueva, y por eso volvió a `en-revision` el 2026-09-24.** La v3.1 la firmó `maujimenez4` el 2026-09-24; desde entonces **cambió un requisito**, así que aquella firma ya no cubría lo que dice.
 
-**Qué cambió, y es todo:** `RF-PUB-05` pasa a exigir que **cada entrada de la `FichaDeLectura` lleve los capítulos en que aparece**. Lo pide el encargo §2 —«ficha de personajes y lugares… **con enlaces al capítulo donde aparece cada uno**»— y lo destapó escribir la spec 002, que es la primera que miró este contrato de verdad. El dato ya existía en el canon (RF-MEM-02); lo que faltaba era prometerlo en la ficha.
+**Qué cambió, y es todo:** `RD-01` retira **«un fichero por obra»** y conserva lo demás —SQLite, WAL, `foreign_keys=ON`, `busy_timeout` y ningún segundo motor—. Con ello cambia también su fila en Restricciones de diseño, y entra la decisión **P-07**, que explica por qué.
 
-Es **aditivo**: no retira ni contradice nada de lo firmado, y ningún otro requisito ni criterio cambia. Pero `CLAUDE.md` §3.4 dice que una spec corregida **se vuelve a aprobar**, y una firma que cubre un texto distinto del que se firmó no es una firma.
+**No es aditivo: retira algo que estaba firmado**, y por eso importa más que el cambio anterior. Lo destapó escribir el plan de la fase 1, al preguntarse dónde vive una entrevista que existe antes que su obra. Ningún criterio de aceptación cambia; el único que cita RD-01 es CA-28, y lo cita para exigir que las migraciones pasen en limpio, que sigue siendo cierto.
 
-**Lo que se mantiene de la aprobación del 2026-09-23**, y no se vuelve a preguntar: las seis decisiones P-01 a P-06 y las catorce dependencias en bloque.
+*Precedente, y conviene dejarlo escrito: esto es exactamente lo que `CLAUDE.md` §3.4 manda hacer —«si al implementar descubres que la spec está equivocada, **para**: se corrige, se vuelve a aprobar»—. La spec se descubrió equivocada escribiendo el plan, que es el momento más barato en que podía pasar: antes de la primera línea de código.*
+
+**Qué cambió en la v3.1**, y se mantiene: `RF-PUB-05` exige que cada entrada de la `FichaDeLectura` lleve los capítulos en que aparece, como pide el encargo §2.
+
+**Lo que se mantiene de las firmas anteriores**, y no se vuelve a preguntar: las decisiones P-01 a P-06 y las catorce dependencias en bloque.
 
 Es **firma nueva y no heredada**: reemplaza a la spec aprobada el 2026-09-22, cuyo alcance era otro. Y aprueba además, **en bloque**, las catorce dependencias de Impacto técnico (P-01).
 
