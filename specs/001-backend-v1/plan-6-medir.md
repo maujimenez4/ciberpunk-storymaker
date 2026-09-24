@@ -2,7 +2,7 @@
 id: 001-backend-v1 / plan-6-medir
 titulo: "Fase 6 — Medir: los números del sistema, y de dónde salen"
 estado: aprobado          # borrador | en-revision | aprobado | completado
-aprobado_por:             # nadie. Un agente no aprueba un plan (CLAUDE.md §15)
+aprobado_por: maujimenez4 # firmado el 2026-09-24 en el commit cc84b02, suyo y sin nada más
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
 hereda_de: specs/001-backend-v1/plan-5-peticion.md   # aún sin escribir · ver «Lo que hereda de las Fases 4 y 5»

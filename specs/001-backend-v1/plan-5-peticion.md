@@ -2,7 +2,7 @@
 id: 001-backend-v1 / plan-5-peticion
 titulo: "Fase 5 — Atender al lector: la petición que regenera solo lo que toca"
 estado: aprobado          # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo firma una persona, en un commit suyo. Ningún agente.
+aprobado_por: maujimenez4 # firmado el 2026-09-24 en el commit cc84b02, suyo y sin nada más
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
 hereda_de: specs/001-backend-v1/plan-4-publicar.md
