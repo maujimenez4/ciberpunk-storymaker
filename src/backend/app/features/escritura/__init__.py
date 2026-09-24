@@ -22,6 +22,13 @@ paquete recibido».
 Las tablas **no cruzan**: `VersionTexto`, `Ejecucion` y `Trabajo` se quedan
 dentro, y las claves ajenas se declaran por nombre. Quien necesite el texto
 recibe el texto, no la fila.
+
+**Se exporta desde el cierre de la ola 1 de la Fase 3**, y va dicho por que:
+la maquina de estados (T2) y el guardia de idempotencia (T3) nacieron sin
+exportar **a proposito**. El `__init__.py` de una feature no tiene dueno en la
+tabla del reparto —lo tienen `modelos.py` y `alembic/env.py`, no este— y tres
+agentes de la misma ola tocandolo habria repetido el conflicto de codigo que la
+regla 8 describe. Los tres hicieron lo correcto dejandolo al integrador.
 """
 
 from app.features.escritura.agents import (
@@ -40,6 +47,29 @@ from app.features.escritura.ciclo import (
     ejecutar_ciclo,
     leer_trabajo,
 )
+from app.features.escritura.idempotencia import (
+    Paso,
+    RastroCompuesto,
+    RastroEnEjecucion,
+    RastroEnEvento,
+    RastroEnHechoCanon,
+    RastroEnVersionTexto,
+    ResultadoDelPaso,
+    una_sola_vez,
+)
+from app.features.escritura.maquina import (
+    DETIENEN_LA_NOVELA,
+    ESTADOS_TERMINALES,
+    Estado,
+    NovelaDetenida,
+    Senal,
+    TransicionInexistente,
+    avanzar,
+    detiene_la_novela,
+    estado_de,
+    exigir_que_la_novela_siga,
+    transitar,
+)
 from app.features.escritura.router import obtener_sesion_de_fondo, router
 from app.features.escritura.service import (
     CODIGO_DE_PALABRA_PROHIBIDA,
@@ -51,22 +81,41 @@ from app.features.escritura.service import (
 
 __all__ = [
     "CODIGO_DE_PALABRA_PROHIBIDA",
+    "DETIENEN_LA_NOVELA",
+    "ESTADOS_TERMINALES",
     "HASH_DE_PLANTILLA_V1",
     "PROMPT_ID",
     "PROMPT_VERSION",
     "Agentes",
     "Escritor",
     "Escritura",
+    "Estado",
     "IntentoDeEscritura",
+    "NovelaDetenida",
+    "Paso",
     "ProsaVacia",
+    "RastroCompuesto",
+    "RastroEnEjecucion",
+    "RastroEnEvento",
+    "RastroEnHechoCanon",
+    "RastroEnVersionTexto",
     "Reparacion",
     "ResultadoDelCiclo",
+    "ResultadoDelPaso",
+    "Senal",
     "TrabajoDesconocido",
+    "TransicionInexistente",
     "abrir_trabajo",
+    "avanzar",
+    "detiene_la_novela",
     "ejecutar_ciclo",
     "escribir_capitulo",
+    "estado_de",
+    "exigir_que_la_novela_siga",
     "leer_trabajo",
     "localizar_veto",
     "obtener_sesion_de_fondo",
     "router",
+    "transitar",
+    "una_sola_vez",
 ]

@@ -60,7 +60,7 @@ flowchart TD
 | Frontend | React 19 + TypeScript + Vite | **Nuestro** | El encargo §2 dice «web o PDF» y **no nombra ninguna tecnología de frontend**. Elegir web, y elegir React, fue decisión de `maujimenez4` |
 | Backend | FastAPI, Python 3.12+, Pydantic v2 | **Nuestro**, presupuesto por el encargo | Async por defecto; OpenAPI como contrato. El encargo lo menciona **una vez y en una sección opcional** —«el FastAPI que ya tienen»—: da por hecho que existe, no lo exige |
 | Persistencia | **SQLite (WAL) + Alembic** | **Encargo §4, literal** | «Story bible en SQLite (obligatorio)». Fichero único por obra; sin segunda base de datos |
-| Búsqueda semántica | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Nuestro** | El encargo **no menciona vectores en ninguna parte**. El sistema nunca falla por falta de la extensión |
+| Búsqueda por afinidad de vectores | `sqlite-vec` si carga; si no, fuerza bruta con NumPy | **Nuestro** | El encargo **no menciona vectores en ninguna parte**. El sistema nunca falla por falta de la extensión |
 | Modelo | **Dos techos de 100.000 tokens**: uno por llamada y otro sobre la suma en vuelo | El segundo, **encargo §7, literal**; el primero, nuestro | Presupuesto por capa; fallo explícito, nunca truncado silencioso. Ver §2.1 y §2.2 |
 | Modelo | **Anthropic**, consumo de cuenta **sin clave de API**. **Haiku 4.5** escribe y edita; **Opus 5** juzga | **Nuestro** | Escritor y juez **no comparten modelo**, a propósito (§8.3). Sin cargo por llamada, el coste de §9.2 es **derivado**, no facturado |
 | Observabilidad | **Langfuse** | **Encargo §6** | Una sesión por novela; cada rol y cada tool, un span; validadores como *scores* (§9) |
@@ -380,12 +380,15 @@ se apoya en la misma idempotencia por `run_id` del §3.1.
 
 | Pieza | Sitio |
 | --- | --- |
-| Motor de la máquina de estados, cerrojos, reserva de tokens | `commons/jobs/` |
+| **Motor de la máquina de estados** | `features/escritura/maquina.py` |
+| Cerrojos y reserva de tokens | `commons/jobs/` |
 | Pasos del ciclo de escena | `features/escritura/service.py` |
 | Contador de tokens y cliente de modelo | `commons/llm/` |
 | Definición de los agentes y sus prompts | `features/<feature>/agents.py` y `prompts/` |
 
 El router solo crea el trabajo y consulta su estado. Ninguna decisión de orquestación vive en `router.py`.
+
+**Por qué el motor bajó de `commons/jobs/` a la feature**, que es una corrección de este documento y no del código *(2026-09-24)*. La máquina **persiste su estado en la tabla `trabajo`**, que es de `escritura`, y §5.1 prohíbe que `commons/` importe de una feature — es el primer contrato de `import-linter` y **falla la build**. Dejarla en `commons/jobs/` obligaba a subir `Trabajo` con ella, y detrás media feature. Los cerrojos y la reserva de tokens **sí** se quedan: no tocan ninguna tabla de feature, y ahí siguen desde la Fase 2.
 
 ---
 

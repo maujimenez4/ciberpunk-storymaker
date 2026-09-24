@@ -95,9 +95,9 @@ def escritura_de_ejecucion(sesion: AsyncSession, obra_id: int, run_id: str) -> C
             text(
                 "INSERT INTO ejecucion (run_id, obra_id, prompt_id, prompt_version, prompt_hash, "
                 "modelo, semilla, parametros, tokens_por_capa, tokens_previstos, "
-                "ids_recuperados, ids_canon, creado_en) "
+                "ids_recuperados, ids_canon, ids_por_capa, creado_en) "
                 "VALUES (:r, :o, 'escritor', 'v1', 'h', 'doble', 0, '{}', '{}', 10, '[]', '[]', "
-                "CURRENT_TIMESTAMP)"
+                "'{}', CURRENT_TIMESTAMP)"
             ),
             {"r": run_id, "o": obra_id},
         )

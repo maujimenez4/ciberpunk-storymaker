@@ -177,7 +177,8 @@ Es la restricción de diseño más importante del proyecto.
 
 - WAL activado, `foreign_keys=ON`, `busy_timeout`. Migraciones con Alembic desde el primer commit.
 - Recuperación **híbrida y en este orden**: filtro estructural (presentes, lugar, hilos abiertos, rango de capítulos) → similitud semántica sobre el conjunto ya filtrado → fusión con recencia. Ordenar por parecido sin filtrar antes trae escenas parecidas, no pertinentes.
-- La búsqueda semántica vive detrás de `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta si la extensión carga; si no, se degrada con un aviso.
+- La búsqueda por **afinidad de vectores** vive detrás de `VectorStore`, con `SqliteVecStore` y `BruteForceStore`. En arranque se detecta si la extensión carga; si no, se degrada con un aviso.
+- **Y no es búsqueda semántica, aunque se le pareciera en el nombre** *(corregido el 2026-09-24)*. Anthropic no publica un extremo de *embeddings* y P-02 fija consumo de cuenta **sin clave de API**, así que el vector se calcula **local y léxicamente**: palabras normalizadas repartidas con `blake2b` sobre 256 componentes. **Dos fragmentos que dicen lo mismo con otras palabras no se reconocen.** Llamarlo semántico prometía algo que el sistema no hace; el filtro estructural que va delante (§4.2) es quien de verdad aporta la pertinencia. Cambiarlo exige un proveedor de *embeddings*, con su dependencia y su credencial, y eso contradiría P-02: **es una decisión de producto, no de implementación**.
 - Toda escritura de estado pasa por el ledger *append-only*; `estado_en_t` y la cronología son **vistas derivadas**, jamás tablas que se editan.
 - **Corregir no edita.** Un hecho equivocado no se modifica: se registra uno nuevo que lo sustituye y cita al anterior (`architecture.md` §4.7). Así se puede encontrar la escena que se apoyó en el hecho viejo.
 
