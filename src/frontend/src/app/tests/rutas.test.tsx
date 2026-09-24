@@ -1,68 +1,79 @@
 /**
- * T3 · Las cinco rutas, y que no se muevan.
+ * Plan 3 · T1 · Una dirección, tres vistas.
  *
- * **Este test parece tonto y no lo es.** Congela un contrato que vive **fuera de
- * este repositorio**: `RF-VAL-08` de la spec 001 abre estas URLs. Cambiar
- * `/indice` por `/contenidos` no rompería nada aquí y dejaría al validador
- * visual comprobando una página de error con cara de éxito.
+ * **D-06.** Cinco URLs eran la forma natural de una aplicación web y la forma
+ * equivocada de un regalo: el enlace se comparte por mensajería y se reenvía, y
+ * cada dirección de más es una manera de que alguien reciba la página tres sin
+ * saber que hay una uno.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Aplicacion } from "@/app/Aplicacion";
-import { RUTAS } from "@/app/router";
+import { RUTAS, VISTAS, vistaDe } from "@/app/router";
 
 function abrir(ruta: string) {
   window.history.pushState({}, "", ruta);
   return render(<Aplicacion />);
 }
 
-describe("las rutas son estables", () => {
-  it("son exactamente las que el validador visual del backend abre", () => {
-    expect(RUTAS.portada("T")).toBe("/l/T");
-    expect(RUTAS.indice("T")).toBe("/l/T/indice");
-    expect(RUTAS.capitulo("T", 4)).toBe("/l/T/capitulo/4");
-    expect(RUTAS.ficha("T")).toBe("/l/T/ficha");
-    expect(RUTAS.novedades("T")).toBe("/l/T/novedades");
-  });
-});
-
-describe("las cinco rutas responden", () => {
-  /**
-   * `CA-21` pide que **las cinco respondan**, y eso incluye la de novedades,
-   * que esta fase declara que no hace. Una ruta registrada que pinta en blanco
-   * cumpliría el criterio sin que nadie vea nada: es el modo de fallo por vacío
-   * que este proyecto lleva persiguiendo todo el día. Se comprueba que cada una
-   * dice algo legible.
-   */
-  it.each([
-    ["la portada", RUTAS.portada("T")],
-    ["el indice", RUTAS.indice("T")],
-    ["un capitulo", RUTAS.capitulo("T", 4)],
-    ["la ficha", RUTAS.ficha("T")],
-    ["las novedades", RUTAS.novedades("T")],
-  ])("%s pinta un encabezado con texto", (_nombre, ruta) => {
-    abrir(ruta);
-
-    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toBe("");
+describe("una sola direccion", () => {
+  it("la lectura es una ruta y ninguna vista anade otra", () => {
+    expect(RUTAS.lectura("T")).toBe("/l/T");
+    expect(Object.keys(RUTAS)).toEqual(["lectura", "entrevista"]);
   });
 
-  it("una ruta que no existe da pagina legible, no pantalla en blanco", () => {
+  it.each([VISTAS.leer, VISTAS.quienEsQuien])(
+    "la vista %s se alcanza sin cambiar de ruta",
+    (vista) => {
+      /**
+       * Las **de la lectura** son dos. La tercera pantalla —la entrevista— no
+       * es una pestaña de aquí: es del comprador y ocurre antes de que exista
+       * novela, así que tiene su propia dirección.
+       */
+      abrir(`/l/T?vista=${vista}`);
+
+      expect(window.location.pathname).toBe("/l/T");
+      expect(screen.getByRole("tab", { selected: true })).toBeInTheDocument();
+    },
+  );
+
+  it("sin `?vista=` se abre leyendo, que es para lo que se manda el enlace", () => {
+    expect(vistaDe("")).toBe(VISTAS.leer);
+  });
+
+  it("una vista inventada cae en leer y no en una pantalla vacia", () => {
+    expect(vistaDe("?vista=loquesea")).toBe(VISTAS.leer);
+  });
+
+  it("la aplicacion no escribe `?vista=` en ningun enlace", () => {
+    /**
+     * Sin este test, `?vista=` **es una ruta con otro nombre**: en cuanto un
+     * `href` lo escriba, alguien lo comparte y vuelve el problema que D-06
+     * quita. Es superficie de inspección para `RF-VAL-08`, no forma de
+     * compartir.
+     */
+    const { container } = abrir(`/l/T?vista=${VISTAS.quienEsQuien}`);
+    const enlaces = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? "");
+
+    expect(enlaces.filter((h) => h.includes("vista="))).toEqual([]);
+  });
+
+  it("la entrevista no cuelga del token", () => {
+    /**
+     * D-06 corregida: el token nace con la versión publicada y la entrevista
+     * ocurre **antes de que exista novela**. Bajo el token sería imposible
+     * cuando se usa, e indeseable cuando sería posible — el enlace del regalo
+     * llevaría al formulario donde está lo que el comprador pidió que **no**
+     * apareciera.
+     */
+    expect(RUTAS.entrevista()).toBe("/");
+    expect(RUTAS.entrevista()).not.toContain("l/");
+  });
+
+  it("una direccion que no existe da pagina legible, no pantalla en blanco", () => {
     abrir("/l/T/lo-que-sea");
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/no/i);
-  });
-
-  it("las novedades de una primera version dicen que no hay ninguna", () => {
-    /**
-     * No es un andamio: es el **estado vacío** del producto y es permanente.
-     * `RF-IND-03` dice que en la primera versión publicada no hay marca de
-     * cambio porque no hay anterior con la que comparar, así que esta página
-     * seguirá diciendo esto mismo cuando la Fase 3 la llene.
-     */
-    abrir(RUTAS.novedades("T"));
-
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/novedades/i);
-    expect(screen.getByText(/primera versión/i)).toBeInTheDocument();
   });
 });

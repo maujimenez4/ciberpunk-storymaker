@@ -209,3 +209,88 @@ body {
     gap: 0;
   }
 }
+
+/* --- la página de la lectura --------------------------------------------- */
+
+.pestanas {
+  display: flex;
+  gap: 0.5rem;
+  border-block-end: 1px solid var(--guarda);
+  margin-block-end: var(--aire);
+}
+
+.pestana {
+  font: inherit;
+  font-size: var(--nota);
+  background: none;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  padding: 0.5rem 0.25rem;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+
+.pestana--activa {
+  color: var(--tinta);
+  border-block-end-color: var(--acento);
+  font-weight: 600;
+}
+
+/**
+ * Doce mil palabras en una sola página.
+ *
+ * `content-visibility: auto` deja que el navegador **salte el renderizado** de
+ * lo que no se ve, y `contain-intrinsic-size` le da un alto estimado para que
+ * la barra de desplazamiento no dé saltos mientras se pinta.
+ *
+ * **No se virtualiza, y el motivo no es la dependencia: es Ctrl+F.** Una lista
+ * virtualizada solo tiene montado lo visible, así que buscar «el verano» en la
+ * novela encontraría lo que hay en pantalla y nada más. En un libro, buscar una
+ * frase es una función que el lector espera.
+ */
+.capitulo {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
+  margin-block-start: 3.5rem;
+  /* El fragmento ancla aquí: el título no puede quedar pegado al borde. */
+  scroll-margin-block-start: 1.5rem;
+}
+
+.capitulo__titulo {
+  font-size: var(--titulo);
+  font-weight: 600;
+  line-height: 1.25;
+  margin-block-end: var(--aire);
+  text-wrap: balance;
+}
+
+.capitulo__numero {
+  display: block;
+  font-size: var(--nota);
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.indice__marca {
+  color: var(--acento);
+  font-size: var(--nota);
+}
+
+/* --- quién es quién ------------------------------------------------------- */
+
+.ficha {
+  margin: 0;
+}
+
+.ficha__entrada + .ficha__entrada {
+  margin-block-start: 1.5rem;
+}
+
+.ficha__nombre {
+  font-weight: 600;
+}
+
+.ficha__descripcion {
+  margin-inline-start: 0;
+  color: var(--tinta);
+}
