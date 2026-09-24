@@ -389,6 +389,7 @@ Las skills instaladas viven en `.claude/skills/`, commiteadas. Procedencia, comm
 | `sqlite-vec` | Persistencia **con** extensión vectorial (opcional, §4) | `features/contexto/`, `commons/db/` |
 | `typescript-best-practices` | Frontend TypeScript estricto | `src/frontend/src/` |
 | `react-best-practices` | Frontend React 19 | `src/frontend/src/features/*/components/` |
+| `frontend-design` | Que la lectura **no parezca una plantilla**: dirección estética, tipografía, color | `src/frontend/src/` · spec 002 |
 | `brainstorming` | La puerta **Spec** de §3.2, escrita como skill | `specs/` |
 | `clarificar-spec` | Barrido de ambigüedad antes de aprobar una spec | `specs/` |
 | `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit | `specs/*/plan-*.md` |

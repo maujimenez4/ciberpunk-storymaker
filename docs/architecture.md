@@ -767,7 +767,7 @@ Los permisos de lectura y escritura de cada agente están en **§3.5**, junto al
 
 Instrucciones cargadas por el asistente de programación al trabajar en cada parte del repositorio.
 
-Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-22), copiadas y clavadas a un commit. Procedencia, SHA, licencia y conflictos anotados: `.claude/skills/SOURCES.md`.
+Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-22), las cinco de proceso (2026-09-23) y `frontend-design` (2026-09-24); copiadas y clavadas a un commit. Procedencia, SHA, licencia y conflictos anotados: `.claude/skills/SOURCES.md`.
 
 | Área del repo | Skill instalada | Qué aporta |
 | --- | --- | --- |
@@ -777,11 +777,12 @@ Instaladas en `.claude/skills/` el 2026-09-21, salvo `coherencia-docs` (2026-09-
 | `commons/db/`, `repository.py`, Alembic | `sqlite-ops` | WAL, `busy_timeout`, `EXPLAIN QUERY PLAN`, índices, tablas STRICT, `aiosqlite`, migraciones |
 | `src/frontend/src/` | `typescript-best-practices` | Type-first, uniones discriminadas, tipos marcados, estados ilegales irrepresentables |
 | `src/frontend/src/features/*/components/` | `react-best-practices` | React 19: los efectos como vía de escape, `useEffectEvent`, cuándo no usar `useEffect` |
+| `src/frontend/src/` (spec 002) | `frontend-design` | Dirección estética antes de codificar, tipografía, color y checklist de validación visual. **Trabaja por encima del suelo de accesibilidad** de `CLAUDE.md` §7, no lo sustituye |
 | — | `feature-sliced-design` | **Referencia de FSD para la migración de §6.5, no la norma vigente.** En decisiones de ubicación y fronteras manda `CLAUDE.md` §5.2 |
 | `docs/verification.md` | `verification-methods` | Metodologías de verificación y la clasificación T/A/I/D/U; origen del documento |
 | `specs/` | `brainstorming` | La puerta **Spec** de `CLAUDE.md` §3.2 escrita como skill: clasifica cuánto proceso pide el trabajo y su `<HARD-GATE>` impide implementar sin aprobación de spec y de plan **por separado** |
 | `specs/` | `clarificar-spec` | Barrido de ambigüedad por once categorías con umbral: no deja aprobar una spec hasta bajar de él. **Escrita en este repositorio**, porque ninguna descargable conocía `specs/NNN-slug/` ni los estados |
-| `specs/*/plan.md` | `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit verificable, cada uno con su test |
+| `specs/*/plan-*.md` | `writing-plans` | La puerta **Plan**: pasos del tamaño de un commit verificable, cada uno con su test |
 | Todo el código | `test-driven-development` | §3.4: rojo → verde → refactor, con el test visto fallar |
 | Todo | `verification-before-completion` | El checklist de §16: evidencia ejecutada antes de afirmar que algo pasa |
 | `docs/`, `CLAUDE.md` | `coherencia-docs` | Revisión de coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica, invariantes condicionales caducadas. Informe, plan y edición en pasos separados; **no edita sin aprobación explícita** |

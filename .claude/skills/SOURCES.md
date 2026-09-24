@@ -8,8 +8,9 @@ Criterio de selección: **una skill por requisito técnico no negociable de
 `CLAUDE.md` §4**, más `feature-sliced-design` y `coherencia-docs` por decisión
 explícita. Nada más.
 
-Fecha de instalación: **2026-09-21** para todas las filas salvo `coherencia-docs`,
-instalada el **2026-09-22**.
+Fecha de instalación: **2026-09-21** para todas las filas salvo `coherencia-docs`
+(**2026-09-22**), las cinco de proceso (**2026-09-23**) y `frontend-design`
+(**2026-09-24**).
 
 ## Instaladas
 
@@ -24,6 +25,7 @@ instalada el **2026-09-22**.
 | `feature-sliced-design` | `feature-sliced/skills` | `fd71da42a89e916f2ced63e5349fd865c87070a6` | **Sin licencia declarada** | Instalada por decisión explícita del equipo (2026-09-21). Ver el aviso de conflicto más abajo |
 | `verification-methods` | Propia de este repositorio | — | — | Metodologías de verificación; origen de `docs/verification.md` |
 | `coherencia-docs` | `maujimenez4/MyFactory` | `4ca2652f900a3d3586f3aa7980f5f3f5165bc899` | **Sin licencia declarada** | Instalada por decisión explícita (2026-09-22). Revisa la coherencia entre los cinco documentos de contexto: citas `§N` rotas, contradicciones factuales, deriva terminológica e invariantes condicionales caducadas. No es un requisito de §4 |
+| `frontend-design` | `anthropics/skills` (oficial de Anthropic) | `41bbe19d1a1a7eaab5e7bb9050a417e5c6cffc8f` | Apache-2.0 | Instalada por decisión explícita de `maujimenez4` (2026-09-24), para la spec 002. Dirección estética, tipografía y color, y un checklist de validación visual. **Agnóstica de framework y sin dependencias**: no pide Tailwind ni shadcn/ui, que es por lo que se eligió frente a las alternativas. No es un requisito de §4 |
 
 La licencia de cada origen se ha copiado como `LICENSE.upstream` dentro de la
 carpeta de la skill, salvo en `feature-sliced-design`, cuyo repositorio no publica
