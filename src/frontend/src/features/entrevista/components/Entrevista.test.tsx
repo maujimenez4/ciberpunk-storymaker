@@ -103,11 +103,72 @@ describe("lo que el comprador cuenta", () => {
     expect(await screen.findByRole("button", { name: /escribir la novela/i })).toBeEnabled();
   });
 
+  it("las respuestas llegan con las claves y las formas que el brief exige", async () => {
+    /**
+     * El contrato es `BriefEntrada` (`features/obra/schemas.py`), y `cerrar` lo
+     * lee plano por `_CAMPOS_DEL_DESTINATARIO` y `_CAMPOS_DE_LA_OBRA`: las
+     * listas son listas, `nivel_de_calor` es un entero, y el recuerdo se llama
+     * `recuerdos_aportados`. Mandar `rasgos` como cadena o `recuerdos` con
+     * otro nombre no falla en ningún sitio: la primera se cuenta como
+     * contradicción y el segundo se ignora. La primera corrida desde esta
+     * pantalla lo destapó: sin `genero`, `nivel_de_calor` ni
+     * `elementos_obligatorios` el botón de escribir no aparecía nunca.
+     */
+    const doble = dobleDeEntrevista();
+    const persona = userEvent.setup();
+    render(<Entrevista />, { wrapper: conDoble(doble) });
+
+    await persona.type(await screen.findByLabelText(/cómo se llama/i), "Marta");
+    await persona.type(screen.getByLabelText(/qué edad/i), "34");
+    await persona.type(screen.getByLabelText(/cómo es/i), "terca, curiosa");
+    await persona.type(screen.getByLabelText(/un recuerdo/i), "el verano en Cádiz");
+    await persona.type(screen.getByLabelText(/qué tipo de historia/i), "romance");
+    await persona.type(screen.getByLabelText(/cómo quieres que suene/i), "cálida");
+    await persona.selectOptions(screen.getByLabelText(/cuánto romance/i), "2");
+    await persona.type(screen.getByLabelText(/tiene que aparecer/i), "el perro Luna, la bufanda roja");
+    await persona.type(screen.getByLabelText(/prefieras que no aparezca/i), "sangre");
+    await persona.click(screen.getByRole("button", { name: /guardar/i }));
+
+    const cuerpo = doble.cuerpos.at(-1) as { respuestas: Record<string, unknown> };
+    expect(cuerpo.respuestas).toEqual({
+      nombre: "Marta",
+      edad: 34,
+      rasgos: ["terca", "curiosa"],
+      recuerdos_aportados: ["el verano en Cádiz"],
+      genero: "romance",
+      tono: "cálida",
+      nivel_de_calor: 2,
+      elementos_obligatorios: ["el perro Luna", "la bufanda roja"],
+      vetos: ["sangre"],
+    });
+  });
+
+  it("lo que el comprador deja en blanco no viaja: el backend cuenta lo que falta", async () => {
+    // `_brief_desde_respuestas` copia **solo las claves presentes**: una lista
+    // vacía o un `0` por defecto convertirían un faltante en un dato dado.
+    const doble = dobleDeEntrevista();
+    const persona = userEvent.setup();
+    render(<Entrevista />, { wrapper: conDoble(doble) });
+
+    await persona.type(await screen.findByLabelText(/cómo se llama/i), "Marta");
+    await persona.click(screen.getByRole("button", { name: /guardar/i }));
+
+    const cuerpo = doble.cuerpos.at(-1) as { respuestas: Record<string, unknown> };
+    expect(cuerpo.respuestas).toEqual({ nombre: "Marta" });
+  });
+
   it("cada campo tiene etiqueta, no un texto suelto encima", async () => {
     // `RF-ACC-03`: un `placeholder` no es una etiqueta y desaparece al escribir.
     render(<Entrevista />, { wrapper: conDoble(dobleDeEntrevista()) });
 
-    for (const campo of [/cómo se llama/i, /edad/i, /pega aquí/i]) {
+    for (const campo of [
+      /cómo se llama/i,
+      /qué edad/i,
+      /qué tipo de historia/i,
+      /cuánto romance/i,
+      /tiene que aparecer/i,
+      /pega aquí/i,
+    ]) {
       expect(await screen.findByLabelText(campo)).toBeInTheDocument();
     }
   });

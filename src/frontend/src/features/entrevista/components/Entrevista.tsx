@@ -7,14 +7,74 @@ import { Aviso, Boton, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type Evaluacion } from "../api/entrevista";
 
-const CAMPOS = [
-  { clave: "nombre", etiqueta: "¿Cómo se llama?", tipo: "text" },
-  { clave: "edad", etiqueta: "¿Qué edad tiene?", tipo: "text" },
-  { clave: "rasgos", etiqueta: "¿Cómo es? Tres o cuatro rasgos", tipo: "text" },
-  { clave: "recuerdos", etiqueta: "Un recuerdo que compartáis", tipo: "text" },
-  { clave: "tono", etiqueta: "¿Cómo quieres que suene? Divertida, seria, tierna…", tipo: "text" },
-  { clave: "vetos", etiqueta: "¿Hay algo que prefieras que no aparezca?", tipo: "text" },
-] as const;
+/**
+ * Las claves y las formas son las de `BriefEntrada` (`features/obra/schemas.py`),
+ * tal y como `cerrar` las lee planas: `nombre`, `edad`, `rasgos` y
+ * `recuerdos_aportados` del destinatario; `genero`, `tono`, `nivel_de_calor`,
+ * `elementos_obligatorios` y `vetos` de la obra. **No se traducen aquí**: un
+ * nombre distinto se ignora en silencio y una cadena donde va una lista se
+ * cuenta como contradicción, y ninguna de las dos cosas falla en ningún sitio.
+ */
+type Forma = "texto" | "entero" | "lista" | "calor";
+
+const CAMPOS: readonly { clave: string; etiqueta: string; forma: Forma }[] = [
+  { clave: "nombre", etiqueta: "¿Cómo se llama?", forma: "texto" },
+  { clave: "edad", etiqueta: "¿Qué edad tiene?", forma: "entero" },
+  { clave: "rasgos", etiqueta: "¿Cómo es? Tres o cuatro rasgos, separados por comas", forma: "lista" },
+  { clave: "recuerdos_aportados", etiqueta: "Un recuerdo que compartáis", forma: "lista" },
+  {
+    clave: "genero",
+    etiqueta: "¿Qué tipo de historia? Romance, aventura, misterio…",
+    forma: "texto",
+  },
+  { clave: "tono", etiqueta: "¿Cómo quieres que suene? Divertida, seria, tierna…", forma: "texto" },
+  { clave: "nivel_de_calor", etiqueta: "¿Cuánto romance o intimidad quieres?", forma: "calor" },
+  {
+    clave: "elementos_obligatorios",
+    etiqueta: "¿Qué tiene que aparecer sí o sí? Un lugar, una mascota, un objeto… separados por comas",
+    forma: "lista",
+  },
+  { clave: "vetos", etiqueta: "¿Hay algo que prefieras que no aparezca? Separado por comas", forma: "lista" },
+];
+
+const NIVELES_DE_CALOR = [
+  { valor: "0", etiqueta: "0 · Ninguno" },
+  { valor: "1", etiqueta: "1 · Un beso, como mucho" },
+  { valor: "2", etiqueta: "2 · Romántico, sin detalle" },
+  { valor: "3", etiqueta: "3 · Con escenas íntimas" },
+  { valor: "4", etiqueta: "4 · Explícito" },
+];
+
+/**
+ * De lo escrito a lo que el brief lee. **Solo viajan las claves con algo
+ * dentro**: `cerrar` copia las presentes y cuenta como faltante lo que no
+ * está, así que una lista vacía o un `0` por defecto le dirían que el
+ * comprador respondió cuando no lo hizo.
+ */
+function aRespuestas(valores: Record<string, string>): Record<string, unknown> {
+  const respuestas: Record<string, unknown> = {};
+  for (const campo of CAMPOS) {
+    const crudo = (valores[campo.clave] ?? "").trim();
+    if (crudo === "") continue;
+    respuestas[campo.clave] = convertir(crudo, campo.forma);
+  }
+  return respuestas;
+}
+
+function convertir(crudo: string, forma: Forma): unknown {
+  switch (forma) {
+    case "texto":
+      return crudo;
+    case "entero":
+    case "calor":
+      return Number(crudo);
+    case "lista":
+      return crudo
+        .split(",")
+        .map((parte) => parte.trim())
+        .filter((parte) => parte !== "");
+  }
+}
 
 /**
  * La primera pantalla: el comprador cuenta a quién va dirigida la novela.
@@ -54,7 +114,7 @@ export function Entrevista({
       // (`CLAUDE.md` §11); si viajara dentro de `respuestas` entraría en el
       // prompt como instrucción y no fallaría nada.
       return peticionario.enviar<Evaluacion>(API_ENTREVISTA.responder(id), {
-        respuestas: valores,
+        respuestas: aRespuestas(valores),
         texto_aportado: pegado,
       });
     },
@@ -119,15 +179,36 @@ export function Entrevista({
             <label className="campo__etiqueta" htmlFor={`campo-${campo.clave}`}>
               {campo.etiqueta}
             </label>
-            <input
-              id={`campo-${campo.clave}`}
-              className="campo__control"
-              type={campo.tipo}
-              value={valores[campo.clave] ?? ""}
-              onChange={(e) =>
-                setValores((previos) => ({ ...previos, [campo.clave]: e.target.value }))
-              }
-            />
+            {campo.forma === "calor" ? (
+              // Con una opción en blanco por defecto: si se abriera en «0»,
+              // viajaría un dato que el comprador no dio.
+              <select
+                id={`campo-${campo.clave}`}
+                className="campo__control"
+                value={valores[campo.clave] ?? ""}
+                onChange={(e) =>
+                  setValores((previos) => ({ ...previos, [campo.clave]: e.target.value }))
+                }
+              >
+                <option value="">Elige uno</option>
+                {NIVELES_DE_CALOR.map((nivel) => (
+                  <option key={nivel.valor} value={nivel.valor}>
+                    {nivel.etiqueta}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={`campo-${campo.clave}`}
+                className="campo__control"
+                type="text"
+                inputMode={campo.forma === "entero" ? "numeric" : undefined}
+                value={valores[campo.clave] ?? ""}
+                onChange={(e) =>
+                  setValores((previos) => ({ ...previos, [campo.clave]: e.target.value }))
+                }
+              />
+            )}
           </p>
         ))}
 
