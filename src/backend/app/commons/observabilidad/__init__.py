@@ -12,6 +12,7 @@ import logging
 
 from app.commons.config.ajustes import Ajustes
 from app.commons.observabilidad.blindaje import ObservadorBlindado, blindar
+from app.commons.observabilidad.cliente import ClienteObservado, Observacion
 from app.commons.observabilidad.dobles import (
     ObservadorEnMemoria,
     ObservadorNulo,
@@ -66,6 +67,8 @@ def obtener_observador() -> Observador:
 
 __all__ = [
     "SIN_CREDENCIALES",
+    "ClienteObservado",
+    "Observacion",
     "Observador",
     "ObservadorBlindado",
     "ObservadorEnMemoria",
