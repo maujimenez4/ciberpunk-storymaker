@@ -1,8 +1,24 @@
 """La UNICA puerta de entrada a la feature `escena` (`CLAUDE.md` §5.1).
 
-Vacia por ahora: la Tarea 2 trae la tabla, y el Planificador de escena con su
-`router.py` es de la Tarea 4. Las tablas no cruzan la frontera: las claves
-ajenas se declaran por nombre.
+Lo que sale de aqui es el Planificador de escena y su producto: la **ficha de
+escena**, que es la entrada del Ensamblador (T6) y, por el paquete, la del
+Escritor (T8). La tabla `Escena` **no se exporta**: las claves ajenas se
+declaran por nombre y quien necesite la ficha recibe la ficha, no la fila.
 """
 
-__all__: list[str] = []
+from app.features.escena.agents import Planificador, SalidaMalFormada
+from app.features.escena.schemas import (
+    DiscursoNoDeclarado,
+    FichaDeEscena,
+    RestriccionesDeDiscurso,
+)
+from app.features.escena.service import planificar_escena
+
+__all__ = [
+    "DiscursoNoDeclarado",
+    "FichaDeEscena",
+    "Planificador",
+    "RestriccionesDeDiscurso",
+    "SalidaMalFormada",
+    "planificar_escena",
+]
