@@ -4,8 +4,9 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.commons.llm.cliente import ClienteModelo
+from app.commons.llm.json_de_modelo import json_de_modelo
 
-PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "entrevistador.v1.md").read_text(
+PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "entrevistador.v2.md").read_text(
     encoding="utf-8"
 )
 _MARCA = "texto_aportado"
@@ -37,6 +38,24 @@ def render_entrevistador(plantilla: str, texto_aportado: str) -> str:
 
 class SalidaMalFormada(Exception):
     """Un agente que devuelve algo fuera de su esquema es un fallo (RF-ORQ-09)."""
+
+
+def _con_motivo(crudo: str, error: Exception) -> str:
+    """Lo que devolvio el modelo **y por que no valida**.
+
+    Guardar solo el crudo deja el diagnostico a ciegas: se ve el texto y no lo
+    que le sobra o le falta, y con un esquema de veinte campos eso es una hora
+    de leer JSON a mano. Paso en la corrida real del 2026-09-24.
+
+    El crudo se recorta y el motivo no: el motivo es la parte corta y util.
+    """
+    if isinstance(error, ValidationError):
+        fallos = "; ".join(
+            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}"
+            for e in error.errors()[:6]
+        )
+        return f"{fallos} | crudo: {crudo[:200]}"
+    return f"{type(error).__name__}: {error} | crudo: {crudo[:200]}"
 
 
 class Contradiccion(BaseModel):
@@ -76,6 +95,6 @@ class Entrevistador:
         prompt = render_entrevistador(PLANTILLA_V1, texto) + f"\nENTREVISTADOR\n{respuestas}"
         crudo = await self._cliente.completar(prompt, semilla=self._semilla)
         try:
-            return Evaluacion.model_validate(json.loads(crudo))
+            return Evaluacion.model_validate(json_de_modelo(crudo))
         except (json.JSONDecodeError, ValidationError) as error:
-            raise SalidaMalFormada(crudo[:200]) from error
+            raise SalidaMalFormada(_con_motivo(crudo, error)) from error

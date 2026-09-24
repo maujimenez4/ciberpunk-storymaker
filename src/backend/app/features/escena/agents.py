@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.commons.llm.cliente import ClienteModelo
+from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.escena.schemas import RestriccionesDeDiscurso, SalidaPlanificador
 
 PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "planificador.v1.md").read_text(
@@ -34,6 +35,24 @@ class SalidaMalFormada(Exception):
     (`CLAUDE.md` §5.1), y lo repetido sube a `commons/` **al tercer uso**, no al
     segundo (regla 4). Este es el segundo.
     """
+
+
+def _con_motivo(crudo: str, error: Exception) -> str:
+    """Lo que devolvio el modelo **y por que no valida**.
+
+    Guardar solo el crudo deja el diagnostico a ciegas: se ve el texto y no lo
+    que le sobra o le falta, y con un esquema de veinte campos eso es una hora
+    de leer JSON a mano. Paso en la corrida real del 2026-09-24.
+
+    El crudo se recorta y el motivo no: el motivo es la parte corta y util.
+    """
+    if isinstance(error, ValidationError):
+        fallos = "; ".join(
+            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}"
+            for e in error.errors()[:6]
+        )
+        return f"{fallos} | crudo: {crudo[:200]}"
+    return f"{type(error).__name__}: {error} | crudo: {crudo[:200]}"
 
 
 def _como_texto(datos: Mapping[str, Any]) -> str:
@@ -91,6 +110,6 @@ class Planificador:
         prompt = render_planificador(PLANTILLA_V1, capitulo, estado_en_t, restricciones)
         crudo = await self._cliente.completar(prompt, semilla=self._semilla)
         try:
-            return SalidaPlanificador.model_validate(json.loads(crudo))
+            return SalidaPlanificador.model_validate(json_de_modelo(crudo))
         except (json.JSONDecodeError, ValidationError) as error:
-            raise SalidaMalFormada(crudo[:200]) from error
+            raise SalidaMalFormada(_con_motivo(crudo, error)) from error

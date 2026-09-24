@@ -24,6 +24,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.commons.llm.cliente import ClienteModelo
+from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.canon.schemas import Extraccion, ExtraccionDelBrief
 from app.features.obra import HechoDelBrief
 
@@ -148,6 +149,6 @@ def _validar[T: (Extraccion, ExtraccionDelBrief)](esquema: type[T], crudo: str) 
     tomar la misma decision.
     """
     try:
-        return esquema.model_validate(json.loads(crudo))
+        return esquema.model_validate(json_de_modelo(crudo))
     except (json.JSONDecodeError, ValidationError) as error:
         raise SalidaMalFormada(crudo[:200]) from error
