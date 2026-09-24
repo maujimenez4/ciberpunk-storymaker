@@ -1024,6 +1024,13 @@ prompt renderizado, la salida y el consumo de cada llamada: ningún agente sabe 
 el Editor de línea y el Auditor —estos dos no existen como roles en producción—, y
 los validadores de la lectura publicada.
 
+**El Entrevistador no se cablea por un motivo que no es de código.** La sesión se deriva del
+`obra_id` (`sesion_de`), y el Entrevistador corre **antes de que la obra exista**: en
+`POST /entrevistas/{id}/respuestas` solo hay `entrevista_id`, y en `.../cerrar` la obra nace
+después de la llamada. Meterlo exige elegir entre una sesión propia de la entrevista —que rompe
+«una sesión por novela que abarca la entrevista» de la tabla de arriba— o retener sus spans hasta
+que la obra exista. Es una decisión de diseño sobre la sesión, y queda abierta.
+
 ### 9.3 Verificación formal: dos sujetos distintos
 
 Se verifican formalmente dos cosas que **no son la misma**, y confundirlas es el error típico:
