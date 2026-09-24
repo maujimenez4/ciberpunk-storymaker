@@ -1529,7 +1529,7 @@ uv run uvicorn --factory app.main:crear_app --app-dir src/backend &
 curl -s localhost:8000/openapi.json | python -c "import json,sys; d=json.load(sys.stdin); print(len(d['paths'])); [print(m.upper(), p) for p,v in d['paths'].items() for m in v]"
 ```
 
-**Anota las rutas que salen y escribe esas.** Cuando se escribió este plan eran ocho, y la Fase 4 está añadiendo las de publicación; **P-3 sigue abierto**. Un README que prometa endpoints que no existen es la primera cosa que alguien va a probar.
+**Anota las rutas que salen y escribe esas.** Cuando se escribió este plan eran ocho, y la Fase 4 está añadiendo las de publicación. La spec v3.3 **especifica dieciséis** (`CA-33`), y ese número es lo que el sistema tendrá, no lo que tiene: el README escribe lo que devuelve `openapi.json` el día que se escribe. Un README que prometa endpoints que no existen es la primera cosa que alguien va a probar.
 
 - [ ] **Paso 2: Escribir el `README.md` con el brief de ejemplo reproducible**
 
