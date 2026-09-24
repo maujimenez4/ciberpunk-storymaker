@@ -131,6 +131,29 @@ describe("la lectura continua", () => {
     expect(await screen.findByRole("button", { name: "Ajustes de lectura" })).toBeInTheDocument();
   });
 
+  it("el sello del margen es adorno, y el número sigue en el título accesible", async () => {
+    // Plan 4, enmienda 1: «capítulo / 3 / de 10» como sello. Un lector de
+    // pantalla no debe oír el número dos veces, pero tampoco perderlo.
+    const { container } = render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+
+    await waitFor(() => expect(container.querySelectorAll("section.capitulo")).toHaveLength(10));
+    const tercero = container.querySelector("#capitulo-3");
+    const sello = tercero?.querySelector(".sello");
+    expect(sello).toHaveAttribute("aria-hidden", "true");
+    expect(sello).toHaveTextContent(/cap[ií]tulo\s*3\s*de 10/i);
+    expect(
+      screen.getByRole("heading", { level: 2, name: /Cap[ií]tulo 3\b.*Capítulo sobre el mar 3/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("la prosa va en la columna del margen rojo, con el ritmo de libro", async () => {
+    render(<Leer token="T" />, { wrapper: conDoble(novela({ capitulos: 1 })) });
+
+    const parrafo = await screen.findByText("La casa olía a sal.");
+    expect(parrafo.closest(".margen-rojo")).not.toBeNull();
+    expect(parrafo).toHaveClass("prosa");
+  });
+
   it("el PDF se puede descargar", async () => {
     // RF-POR-03 conserva esta mitad aunque el indice deje de ser destino.
     render(<Leer token="T" />, { wrapper: conDoble(novela()) });
@@ -200,6 +223,25 @@ describe("el pie de lectura", () => {
 
     expect(await screen.findByText("Quedan 3 min en este capítulo")).toBeInTheDocument();
     expect(screen.getByText("25 %")).toBeInTheDocument();
+  });
+
+  it("el camino recorrido y el punto donde vas son la misma cifra, dibujada", async () => {
+    // Enmienda 1: línea de puntos, lo recorrido sólido y un punto en la
+    // posición. Todo `aria-hidden`: el porcentaje ya lo dice en texto.
+    const { container } = render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
+    await screen.findAllByText(/^ola ola/);
+
+    medidas({
+      "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 },
+      "capitulo-2": { arriba: ALTO_PANTALLA + 1000, alto: 2000 },
+    });
+    fireEvent.scroll(window);
+    await screen.findByText("25 %");
+
+    const camino = container.querySelector(".progreso__camino");
+    expect(camino).toHaveAttribute("aria-hidden", "true");
+    const punto = camino?.querySelector<HTMLElement>(".progreso__punto");
+    expect(punto?.style.left).toBe("25%");
   });
 
   it("al final de la novela, 100 % y el capítulo terminado", async () => {

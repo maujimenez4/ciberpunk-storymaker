@@ -1,5 +1,7 @@
 import { Aviso, Enlace, Texto } from "@/shared/ui/primitives";
 
+import "../lectura.css";
+
 import { API, useCapitulo, useVersion } from "../api/lectura";
 import { idDeCapitulo, usePosicion } from "../hooks/usePosicion";
 import { AjustesDeLectura } from "./AjustesDeLectura";
@@ -36,7 +38,13 @@ export function Leer({ token }: { token: string }) {
       <Sumario token={token} capitulos={capitulos} />
 
       {capitulos.map((capitulo) => (
-        <CapituloLeido key={capitulo.numero} token={token} numero={capitulo.numero} titulo={capitulo.titulo} />
+        <CapituloLeido
+          key={capitulo.numero}
+          token={token}
+          numero={capitulo.numero}
+          total={capitulos.length}
+          titulo={capitulo.titulo}
+        />
       ))}
 
       <p className="nota">
@@ -100,33 +108,72 @@ function Sumario({
  * renderizado** de lo que no se ve. No se virtualiza, y el motivo no es la
  * dependencia: **rompería Ctrl+F**, y en un libro buscar una frase es una
  * función que el lector espera.
+ *
+ * **El sello es adorno, el número no** (plan 4, enmienda 1). «capítulo 3 de 10»
+ * va estampado en el margen y se oculta al lector de pantalla; el número que se
+ * oye es el del título, que sigue ahí aunque no se vea. La línea «Tercera
+ * parada» es otra forma de decir lo mismo, y también se calla.
  */
 function CapituloLeido({
   token,
   numero,
+  total,
   titulo,
 }: {
   token: string;
   numero: number;
+  total: number;
   titulo?: string | null;
 }) {
   const capitulo = useCapitulo(token, numero);
+  const parada = nombreDeParada(numero);
 
   return (
     <section id={idDeCapitulo(numero)} className="capitulo">
-      <h2 className="capitulo__titulo">
-        <span className="capitulo__numero">Capítulo {numero}</span>
-        {titulo ?? ""}
-      </h2>
-      {capitulo.isPending ? (
-        <Texto>…</Texto>
-      ) : capitulo.isError || !capitulo.data ? (
-        <Aviso tono="error">Este capítulo no se pudo cargar. Vuelve a abrir el enlace.</Aviso>
-      ) : (
-        parrafos(capitulo.data.texto).map((parrafo, i) => <Texto key={i}>{parrafo}</Texto>)
-      )}
+      <div className="sello capitulo__sello" aria-hidden="true">
+        <span className="sello__linea">capítulo</span>
+        <span className="sello__cifra">{numero}</span>
+        <span className="sello__linea">de {total}</span>
+      </div>
+      <div className="margen-rojo capitulo__columna">
+        {parada ? (
+          <p className="capitulo__parada" aria-hidden="true">
+            {parada}
+          </p>
+        ) : null}
+        <h2 className="capitulo__titulo">
+          <span className="capitulo__numero">Capítulo {numero}. </span>
+          {titulo ?? ""}
+        </h2>
+        {capitulo.isPending ? (
+          <Texto>…</Texto>
+        ) : capitulo.isError || !capitulo.data ? (
+          <Aviso tono="error">Este capítulo no se pudo cargar. Vuelve a abrir el enlace.</Aviso>
+        ) : (
+          parrafos(capitulo.data.texto).map((parrafo, i) => <Texto key={i}>{parrafo}</Texto>)
+        )}
+      </div>
     </section>
   );
+}
+
+const PARADAS = [
+  "Primera",
+  "Segunda",
+  "Tercera",
+  "Cuarta",
+  "Quinta",
+  "Sexta",
+  "Séptima",
+  "Octava",
+  "Novena",
+  "Décima",
+] as const;
+
+/** «Tercera parada». Más allá de diez no se inventa ordinal: se omite. */
+function nombreDeParada(numero: number): string | null {
+  const ordinal = PARADAS[numero - 1];
+  return ordinal ? `${ordinal} parada` : null;
 }
 
 /** La prosa llega con saltos de línea; cada bloque es un párrafo. */

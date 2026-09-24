@@ -46,13 +46,6 @@ export function PieDeLectura({ token, numeros }: { token: string; numeros: reado
 
   return (
     <div className="progreso">
-      {porcentaje === null ? null : (
-        // El hilo es la misma cifra que el porcentaje, dibujada: se oculta al
-        // lector de pantalla para no decirla dos veces.
-        <span className="progreso__hilo" aria-hidden="true">
-          <span className="progreso__cosido" style={{ transform: `scaleX(${porcentaje / 100})` }} />
-        </span>
-      )}
       <span className="progreso__minutos">
         {minutos === null
           ? null
@@ -61,7 +54,20 @@ export function PieDeLectura({ token, numeros }: { token: string; numeros: reado
             : `Quedan ${minutos} min en este capítulo`}
       </span>
       {porcentaje === null ? null : (
-        <span className="progreso__porcentaje">{`${porcentaje}\u00a0%`}</span>
+        <span className="progreso__donde">
+          {/* El camino es la misma cifra que el porcentaje, dibujada: se oculta
+              al lector de pantalla para no decirla dos veces. Una línea de
+              puntos, lo recorrido en tinta de sello y un punto donde vas
+              (plan 4, enmienda 1). */}
+          <span className="progreso__camino" aria-hidden="true">
+            <span
+              className="progreso__recorrido"
+              style={{ transform: `scaleX(${porcentaje / 100})` }}
+            />
+            <span className="progreso__punto" style={{ left: `${porcentaje}%` }} />
+          </span>
+          <span className="progreso__porcentaje">{`${porcentaje}\u00a0%`}</span>
+        </span>
       )}
     </div>
   );
