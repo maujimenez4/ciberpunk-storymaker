@@ -7,10 +7,10 @@
  * último metro de la defensa de `CLAUDE.md` §11**.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DobleDeApi, enSecuencia } from "@/shared/api/doble";
 import { ProveedorDeApi } from "@/shared/api/contexto";
@@ -235,6 +235,21 @@ const TERMINADA = {
   motivo: null,
 };
 
+const CLAVE_EN_CURSO = "storymaker.novela-en-curso";
+
+function apuntada(): unknown {
+  const crudo = window.localStorage.getItem(CLAVE_EN_CURSO);
+  return crudo === null ? null : JSON.parse(crudo);
+}
+
+function apuntar(valor: { obraId: number; fase: "outline" | "novela"; desde: number }) {
+  window.localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(valor));
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 function dobleDeLaCadena(
   estados: unknown,
   opciones: { retraso?: number } = {},
@@ -298,7 +313,10 @@ describe("la cadena de escribir la novela", () => {
     expect(doble.metodos.filter((m) => m === "POST /obras/7/publicar")).toHaveLength(1);
   });
 
-  it("mientras siga escribiendo, no publica nunca y el botón sigue desactivado", async () => {
+  it("mientras siga escribiendo, no publica nunca y no se puede volver a lanzar", async () => {
+    // Antes el botón seguía ahí, desactivado. Con la entrevista cerrada el
+    // formulario ya no sirve y desaparece: lo que no se puede volver a
+    // lanzar, no se ofrece.
     const doble = dobleDeLaCadena(ESCRIBIENDO_3);
     const persona = userEvent.setup();
     render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
@@ -309,7 +327,8 @@ describe("la cadena de escribir la novela", () => {
       expect(doble.metodos.filter((m) => m === "GET /obras/7/novela").length).toBeGreaterThan(3),
     );
     expect(doble.metodos).not.toContain("POST /obras/7/publicar");
-    expect(screen.getByRole("button", { name: /escribir la novela/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /escribir la novela/i })).toBeNull();
+    expect(doble.metodos.filter((m) => m === "POST /entrevistas/1/cerrar")).toHaveLength(1);
   });
 
   it("dice por qué capítulo va", async () => {
@@ -321,6 +340,70 @@ describe("la cadena de escribir la novela", () => {
 
     expect(await screen.findByText(/escribiendo el capítulo 3 de 10/i)).toBeInTheDocument();
     expect(screen.getByText(/escribiendo el capítulo 3 de 10/i).closest("[role=status]")).not.toBeNull();
+  });
+
+  it("una barra con un tramo por capítulo dice cuántos van, también sin mirarla", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await pulsarEscribir(persona);
+
+    const barra = await screen.findByRole("progressbar", { name: /capítulos/i });
+    expect(barra).toHaveAttribute("aria-valuemin", "0");
+    expect(barra).toHaveAttribute("aria-valuemax", "10");
+    expect(barra).toHaveAttribute("aria-valuenow", "2");
+    expect(barra).toHaveAttribute("aria-valuetext", "2 de 10 capítulos terminados");
+    expect(barra.querySelectorAll("[data-tramo]")).toHaveLength(10);
+    expect(barra.querySelector("[data-tramo='en-curso']")).not.toBeNull();
+  });
+
+  it("dice cuánto lleva y cuánto falta, y que lo que falta es una estimación", async () => {
+    /** Hora y media delante de una pantalla que no dice cuánto queda se lee
+     * como un cuelgue. Ocho minutos por capítulo es lo medido, no una promesa:
+     * por eso se dice que es una estimación. */
+    let ahora = 1_000_000;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} ahora={() => ahora} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+    await screen.findByRole("progressbar");
+    ahora += 12 * 60_000;
+
+    expect(await screen.findByText(/empezó hace 12 min/i)).toBeInTheDocument();
+    // Faltan ocho capítulos: el 3, que va en curso, y los siete pendientes.
+    expect(screen.getByText(/1 h 4 min/)).toHaveTextContent(/estimación/i);
+  });
+
+  it("los pasos dicen dónde está el proceso: entrevista, historia, capítulos, publicación", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3, { retraso: 50 });
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    const actual = () =>
+      within(screen.getByRole("list", { name: /cómo va tu novela/i }))
+        .getAllByRole("listitem")
+        .find((item) => item.getAttribute("aria-current") === "step");
+
+    expect(await screen.findByRole("list", { name: /cómo va tu novela/i })).toBeInTheDocument();
+    expect(actual()).toHaveTextContent(/entrevista/i);
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() => expect(actual()).toHaveTextContent(/historia/i));
+    await waitFor(() => expect(actual()).toHaveTextContent(/capítulos/i));
+    const items = within(screen.getByRole("list", { name: /cómo va tu novela/i })).getAllByRole(
+      "listitem",
+    );
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringMatching(/entrevista.*hecho/i),
+      expect.stringMatching(/historia.*hecho/i),
+      expect.not.stringMatching(/hecho/i),
+      expect.stringMatching(/publicación/i),
+    ]);
   });
 
   it("mientras el Arquitecto trabaja, dice que se prepara la historia", async () => {
@@ -398,6 +481,42 @@ describe("la cadena de escribir la novela", () => {
     expect(doble.metodos).not.toContain("POST /obras/7/novela");
   });
 
+  it("al cerrar la entrevista apunta la obra en el navegador, y al publicar la olvida", async () => {
+    const doble = dobleDeLaCadena(enSecuencia(ESCRIBIENDO_3, ESCRIBIENDO_3, TERMINADA));
+    const publicada = vi.fn();
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() =>
+      expect(apuntada()).toMatchObject({ obraId: 7, fase: "novela" }),
+    );
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+    expect(apuntada()).toBeNull();
+  });
+
+  it("sin almacenamiento en el navegador, la novela se escribe y se publica igual", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("bloqueado", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("bloqueado", "SecurityError");
+    });
+    const doble = dobleDeLaCadena(TERMINADA);
+    const publicada = vi.fn();
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+  });
+
   it("si publicar falla, lo dice como fallo de publicar", async () => {
     const doble = dobleDeLaCadena(TERMINADA);
     doble.respuestas["POST /obras/7/publicar"] = undefined;
@@ -411,5 +530,240 @@ describe("la cadena de escribir la novela", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/publicar/i);
     expect(fallo).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * **El backend no tiene latido** (`avance_de_la_novela`): si el proceso muere,
+ * la novela sigue diciendo «escribiendo» para siempre. Lo único que la pantalla
+ * puede ver es que no avanza, y eso es lo que dice, sin bloquear nada.
+ */
+describe("una novela que no avanza", () => {
+  const CAPITULO_4 = { ...ESCRIBIENDO_3, integrados: 3, en_curso: 4 };
+
+  async function esperarTics(): Promise<void> {
+    // Unos cuantos intervalos del reloj de la pantalla (10 ms en estos tests).
+    await new Promise((seguir) => setTimeout(seguir, 80));
+  }
+
+  it("pasado el umbral sin cambios, avisa de que puede haberse detenido y sigue consultando", async () => {
+    let ahora = 0;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(
+      <Entrevista intervaloDeConsulta={10} ahora={() => ahora} umbralDeAtasco={20 * 60_000} />,
+      { wrapper: conDoble(doble) },
+    );
+
+    await pulsarEscribir(persona);
+    await screen.findByRole("progressbar");
+    ahora += 19 * 60_000;
+    await esperarTics();
+    expect(screen.queryByText(/puede que se haya detenido/i)).toBeNull();
+
+    ahora += 2 * 60_000;
+    expect(await screen.findByText(/lleva mucho en este capítulo/i)).toHaveTextContent(
+      /puede que se haya detenido/i,
+    );
+    // No bloquea: la barra sigue y se sigue preguntando.
+    const consultas = doble.metodos.filter((m) => m === "GET /obras/7/novela").length;
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(doble.metodos.filter((m) => m === "GET /obras/7/novela").length).toBeGreaterThan(
+        consultas,
+      ),
+    );
+  });
+
+  it("cualquier avance vuelve a contar desde cero", async () => {
+    let ahora = 0;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(
+      <Entrevista intervaloDeConsulta={10} ahora={() => ahora} umbralDeAtasco={1000} />,
+      { wrapper: conDoble(doble) },
+    );
+
+    await pulsarEscribir(persona);
+    await screen.findByText(/escribiendo el capítulo 3 de 10/i);
+    ahora += 600;
+    doble.respuestas["GET /obras/7/novela"] = CAPITULO_4;
+    await screen.findByText(/escribiendo el capítulo 4 de 10/i);
+
+    ahora += 600;
+    await esperarTics();
+    expect(screen.queryByText(/puede que se haya detenido/i)).toBeNull();
+
+    ahora += 600;
+    expect(await screen.findByText(/puede que se haya detenido/i)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **Reintentar es seguir, no volver a empezar.** Cerrar la entrevista crea la
+ * obra y el Arquitecto tarda minutos: repetirlos tras un fallo posterior abría
+ * una segunda obra y tiraba la historia ya hecha. Se reintenta el paso que
+ * falló, y `POST /novela` sigue por el primer capítulo sin integrar.
+ */
+describe("reintentar desde el paso que falló", () => {
+  function contar(doble: DobleDeApi, metodo: string): number {
+    return doble.metodos.filter((m) => m === metodo).length;
+  }
+
+  it("si falla el Arquitecto, reintentar lo repite a él y no cierra otra vez", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    doble.respuestas["POST /obras/7/outline"] = enSecuencia(undefined, {
+      obra_id: 7,
+      version_obra_id: 1,
+      version: 1,
+      capitulos: [],
+    });
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await pulsarEscribir(persona);
+    await persona.click(
+      await screen.findByRole("button", { name: /preparar la historia otra vez/i }),
+    );
+
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+    expect(contar(doble, "POST /entrevistas/1/cerrar")).toBe(1);
+    expect(contar(doble, "POST /obras/7/outline")).toBe(2);
+    expect(contar(doble, "POST /obras/7/novela")).toBe(1);
+  });
+
+  it("si falla lanzar la novela, reintentar solo la lanza: ni cierra ni rehace la historia", async () => {
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    doble.respuestas["POST /obras/7/novela"] = enSecuencia(undefined, {
+      obra_id: 7,
+      desde_el_capitulo: 1,
+      terminada: false,
+    });
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await pulsarEscribir(persona);
+    await persona.click(
+      await screen.findByRole("button", { name: /escribir la novela desde donde se quedó/i }),
+    );
+
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+    expect(contar(doble, "POST /entrevistas/1/cerrar")).toBe(1);
+    expect(contar(doble, "POST /obras/7/outline")).toBe(1);
+    expect(contar(doble, "POST /obras/7/novela")).toBe(2);
+  });
+
+  it("si la novela se detiene, se puede seguir desde donde se quedó", async () => {
+    const detenida = {
+      ...ESCRIBIENDO_3,
+      estado: "detenida",
+      en_curso: null,
+      motivo: "El capitulo 3 quedo en escalada",
+    };
+    const doble = dobleDeLaCadena(enSecuencia(detenida, ESCRIBIENDO_3));
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await pulsarEscribir(persona);
+    await persona.click(
+      await screen.findByRole("button", { name: /escribir la novela desde donde se quedó/i }),
+    );
+
+    expect(await screen.findByText(/escribiendo el capítulo 3 de 10/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(contar(doble, "POST /entrevistas/1/cerrar")).toBe(1);
+    expect(contar(doble, "POST /obras/7/outline")).toBe(1);
+    expect(contar(doble, "POST /obras/7/novela")).toBe(2);
+  });
+
+  it("si publicar falla, reintentar solo publica", async () => {
+    const doble = dobleDeLaCadena(TERMINADA);
+    doble.respuestas["POST /obras/7/publicar"] = enSecuencia(undefined, {
+      token: "tok-7",
+      ordinal: 1,
+    });
+    const publicada = vi.fn();
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+    await persona.click(await screen.findByRole("button", { name: /publicar la novela/i }));
+
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+    expect(contar(doble, "POST /obras/7/novela")).toBe(1);
+    expect(contar(doble, "POST /obras/7/publicar")).toBe(2);
+  });
+});
+
+/**
+ * **Hora y media es mucho para no recargar nunca.** Hasta aquí, una recarga a
+ * mitad de la novela devolvía el formulario en blanco y abría otra entrevista:
+ * la novela seguía escribiéndose en el servidor y nadie la publicaba.
+ */
+describe("volver a la página a mitad de la novela", () => {
+  it("con una obra apuntada, no pide la entrevista: sigue consultando esa novela", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    expect(await screen.findByRole("progressbar", { name: /capítulos/i })).toHaveAttribute(
+      "aria-valuenow",
+      "2",
+    );
+    expect(screen.queryByLabelText(/cómo se llama/i)).toBeNull();
+    expect(doble.metodos).not.toContain("POST /entrevistas");
+    expect(doble.metodos).not.toContain("POST /entrevistas/1/cerrar");
+    expect(doble.metodos).not.toContain("POST /obras/7/outline");
+    expect(doble.metodos).not.toContain("POST /obras/7/novela");
+  });
+
+  it("si al volver ya está terminada, la publica y la olvida", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(TERMINADA);
+    const publicada = vi.fn();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+    expect(apuntada()).toBeNull();
+  });
+
+  it("si al volver la historia no llegó a prepararse, ofrece prepararla sin repetir la entrevista", async () => {
+    apuntar({ obraId: 7, fase: "outline", desde: 1 });
+    const doble = dobleDeLaCadena(
+      enSecuencia(
+        { obra_id: 7, total: 0, integrados: 0, en_curso: null, estado: "sin_outline", motivo: null },
+        ESCRIBIENDO_3,
+      ),
+    );
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await persona.click(
+      await screen.findByRole("button", { name: /preparar la historia otra vez/i }),
+    );
+
+    await waitFor(() => expect(doble.metodos).toContain("POST /obras/7/novela"));
+    expect(doble.metodos.indexOf("POST /obras/7/outline")).toBeLessThan(
+      doble.metodos.indexOf("POST /obras/7/novela"),
+    );
+    expect(doble.metodos).not.toContain("POST /entrevistas/1/cerrar");
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("«empezar otra novela» la olvida y vuelve a la entrevista", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await persona.click(await screen.findByRole("button", { name: /empezar otra novela/i }));
+
+    expect(await screen.findByLabelText(/cómo se llama/i)).toBeInTheDocument();
+    expect(apuntada()).toBeNull();
+    await waitFor(() => expect(doble.metodos).toContain("POST /entrevistas"));
   });
 });

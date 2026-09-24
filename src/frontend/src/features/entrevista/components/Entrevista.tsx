@@ -3,29 +3,40 @@ import { useEffect, useState } from "react";
 
 import { usePeticionario } from "@/shared/api/contexto";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
-import { Aviso, Boton, Texto } from "@/shared/ui/primitives";
+import { Aviso, Boton, Pasos, Texto } from "@/shared/ui/primitives";
 
 import { API_ENTREVISTA, type EstadoDeLaNovela, type Evaluacion } from "../api/entrevista";
+import {
+  guardarNovelaEnCurso,
+  leerNovelaEnCurso,
+  olvidarNovelaEnCurso,
+  type NovelaEnCurso,
+} from "../lib/novelaEnCurso";
+import { Espera } from "./Espera";
 
 /** Un capitulo tarda unos ocho minutos: preguntar cada cinco segundos basta
  * para que el avance se vea y no carga al servidor. */
 const INTERVALO_DE_CONSULTA = 5000;
 
+/** Un capitulo tarda unos ocho minutos; veinte sin ningun cambio ya es mas del
+ * doble, y el backend no tiene latido que diga si el proceso sigue vivo. */
+const UMBRAL_DE_ATASCO = 20 * 60_000;
+
 /** El paso de la cadena en curso, para decir **cual** fallo. */
 type Paso = "cerrar" | "outline" | "novela";
+
+/** Por que la novela dejo de avanzar sin que fallara ninguna llamada. */
+type Parada = { tipo: "detenida"; motivo: string | null } | { tipo: "sin_outline" };
+
+/** Lo que ve quien encarga la novela: cuatro pasos y no los cinco de la
+ * cadena, porque cerrar la entrevista es parte de la entrevista. */
+const ETAPAS = ["Entrevista", "Historia", "Capítulos", "Publicación"] as const;
 
 const QUE_FALLO: Record<Paso, string> = {
   cerrar: "cerrar la entrevista",
   outline: "preparar la historia",
   novela: "empezar a escribir la novela",
 };
-
-function avance(datos: EstadoDeLaNovela): string {
-  if (datos.en_curso !== null) {
-    return `Escribiendo el capítulo ${datos.en_curso} de ${datos.total}.`;
-  }
-  return `Van ${datos.integrados} de ${datos.total} capítulos.`;
-}
 
 /**
  * Las claves y las formas son las de `BriefEntrada` (`features/obra/schemas.py`),
@@ -104,28 +115,89 @@ function convertir(crudo: string, forma: Forma): unknown {
  * regalo llevaría a lo que el comprador escribió sobre el destinatario —
  * incluido lo que pidió que **no** apareciera.
  */
-export function Entrevista({
-  onNovelaLanzada,
-  onNovelaPublicada,
-  onFallo,
-  deshabilitado = false,
-  intervaloDeConsulta = INTERVALO_DE_CONSULTA,
-}: {
+interface Props {
   onNovelaLanzada?: () => void;
   onNovelaPublicada?: (token: string) => void;
   onFallo?: () => void;
   deshabilitado?: boolean;
   /** Cada cuanto se pregunta como va la novela, en milisegundos. */
   intervaloDeConsulta?: number;
-} = {}) {
+  /** El reloj, inyectado como en el backend: sin el, probar «lleva doce
+   * minutos» obligaria a esperar doce minutos. */
+  ahora?: () => number;
+  /** Cuanto tiempo sin avance antes de avisar de que puede haberse detenido,
+   * en milisegundos. */
+  umbralDeAtasco?: number;
+}
+
+export function Entrevista(props: Props = {}) {
+  /**
+   * **Una ronda por novela.** «Empezar otra novela» no limpia campo a campo:
+   * remonta el recorrido entero con la `key`, y todo su estado —respuestas,
+   * evaluacion, paso, avisos— vuelve a cero sin que ninguno se quede atras.
+   */
+  const [ronda, setRonda] = useState(0);
+  return (
+    <Recorrido
+      key={ronda}
+      ronda={ronda}
+      {...props}
+      onEmpezarOtra={() => {
+        olvidarNovelaEnCurso();
+        setRonda((previa) => previa + 1);
+      }}
+    />
+  );
+}
+
+function Recorrido({
+  ronda,
+  onEmpezarOtra,
+  onNovelaLanzada,
+  onNovelaPublicada,
+  onFallo,
+  deshabilitado = false,
+  intervaloDeConsulta = INTERVALO_DE_CONSULTA,
+  ahora = Date.now,
+  umbralDeAtasco = UMBRAL_DE_ATASCO,
+}: Props & { ronda: number; onEmpezarOtra: () => void }) {
   const peticionario = usePeticionario();
   const [valores, setValores] = useState<Record<string, string>>({});
   const [pegado, setPegado] = useState("");
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null);
 
+  /**
+   * **La obra apuntada en el navegador**, si una recarga interrumpio una
+   * novela. Con ella no se abre otra entrevista ni se enseña el formulario: se
+   * sigue la que ya se esta escribiendo.
+   */
+  const [obra, setObra] = useState<NovelaEnCurso | null>(leerNovelaEnCurso);
+  const [reanudada] = useState(obra !== null);
+  const anotar = (novela: NovelaEnCurso) => {
+    setObra(novela);
+    guardarNovelaEnCurso(novela);
+  };
+
+  /**
+   * **Una entrevista por ronda, y solo una.** Abrirla es un `POST` que crea
+   * una fila, y una consulta de TanStack se repite sola por muchas razones:
+   * reintento tras un fallo, datos caducados al volver a montar, foco,
+   * reconexion o la cache recogida. Cada repeticion era otra entrevista
+   * huerfana en la base. Aqui se apagan **todas**, no solo la que se vio: un
+   * `POST` que fallo pudo haber guardado la fila, y reintentarlo a ciegas es
+   * otra forma de abrir dos. Si falla, se dice y la persona recarga.
+   */
   const entrevista = useQuery({
-    queryKey: ["entrevista"],
-    queryFn: () => peticionario.enviar<{ id: number }>(API_ENTREVISTA.abrir(), {}),
+    queryKey: ["entrevista", ronda],
+    queryFn: reanudada
+      ? skipToken
+      : () => peticionario.enviar<{ id: number }>(API_ENTREVISTA.abrir(), {}),
+    retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const guardar = useMutation({
@@ -153,31 +225,47 @@ export function Entrevista({
    * **Sin el outline no hay novela**: la obra se queda con cero capitulos y
    * `/novela` responde 202 sin escribir nada. La primera corrida real lo hizo
    * asi y ningun test lo veia.
+   *
+   * `desde` dice por cual empezar. Cada paso que termina se apunta en el
+   * navegador, que es lo que permite a una recarga seguir por el siguiente.
    */
   const [paso, setPaso] = useState<Paso | null>(null);
-  const [enMarcha, setEnMarcha] = useState<{ obraId: number; intento: number } | null>(null);
-  const [detenida, setDetenida] = useState<string | null>(null);
+  const [enMarcha, setEnMarcha] = useState<number | null>(obra?.obraId ?? null);
+  const [intento, setIntento] = useState(0);
+  const [parada, setParada] = useState<Parada | null>(null);
 
   const lanzar = useMutation({
-    mutationFn: async () => {
-      const id = entrevista.data?.id;
-      if (id === undefined) throw new Error("la entrevista no esta abierta");
-      setPaso("cerrar");
-      const obra = await peticionario.enviar<{ obra_id: number }>(
-        API_ENTREVISTA.cerrar(id),
-        {},
-      );
-      onNovelaLanzada?.();
-      setPaso("outline");
-      await peticionario.enviar(API_ENTREVISTA.outline(obra.obra_id), {});
+    mutationFn: async (desde: Paso) => {
+      let actual = obra;
+      if (desde === "cerrar") {
+        const id = entrevista.data?.id;
+        if (id === undefined) throw new Error("la entrevista no esta abierta");
+        setPaso("cerrar");
+        const cerrada = await peticionario.enviar<{ obra_id: number }>(
+          API_ENTREVISTA.cerrar(id),
+          {},
+        );
+        actual = { obraId: cerrada.obra_id, fase: "outline", desde: ahora() };
+        anotar(actual);
+        onNovelaLanzada?.();
+      }
+      if (actual === null) throw new Error("no hay obra que seguir");
+      if (desde !== "novela") {
+        setPaso("outline");
+        await peticionario.enviar(API_ENTREVISTA.outline(actual.obraId), {});
+        actual = { ...actual, fase: "novela" };
+        anotar(actual);
+      }
       setPaso("novela");
-      await peticionario.enviar(API_ENTREVISTA.novela(obra.obra_id), {});
-      return obra.obra_id;
+      await peticionario.enviar(API_ENTREVISTA.novela(actual.obraId), {});
+      return actual.obraId;
     },
     // El intento va en la clave de la consulta: sin el, un segundo intento
     // sobre la misma obra leeria de la cache el «detenida» del primero.
-    onSuccess: (obraId) =>
-      setEnMarcha((previo) => ({ obraId, intento: (previo?.intento ?? 0) + 1 })),
+    onSuccess: (obraId) => {
+      setIntento((previo) => previo + 1);
+      setEnMarcha(obraId);
+    },
     // Sin esto, un fallo deja la pantalla en «se esta escribiendo» **para
     // siempre**, que es la peor forma de fallar porque parece que funciona.
     onError: () => onFallo?.(),
@@ -190,11 +278,11 @@ export function Entrevista({
    * en cuanto el estado es final.
    */
   const progreso = useQuery({
-    queryKey: ["novela", enMarcha?.obraId, enMarcha?.intento],
+    queryKey: ["novela", enMarcha, intento],
     queryFn:
       enMarcha === null
         ? skipToken
-        : () => peticionario.pedir<EstadoDeLaNovela>(API_ENTREVISTA.novela(enMarcha.obraId)),
+        : () => peticionario.pedir<EstadoDeLaNovela>(API_ENTREVISTA.novela(enMarcha)),
     // Un fallo de red en mitad de hora y media no es un fallo de la novela:
     // se sigue preguntando.
     refetchInterval: (consulta) => {
@@ -205,11 +293,14 @@ export function Entrevista({
 
   // Publicar es lo que **da el token**, y sin token no hay nada que leer. Solo
   // cuando la novela esta terminada: si no, se activaria una pestana que no
-  // lleva a ningun sitio.
+  // lleva a ningun sitio. Publicada, ya no hay nada que reanudar.
   const publicar = useMutation({
     mutationFn: (obraId: number) =>
       peticionario.enviar<{ token: string }>(API_ENTREVISTA.publicar(obraId), {}),
-    onSuccess: (publicada) => onNovelaPublicada?.(publicada.token),
+    onSuccess: (publicada) => {
+      olvidarNovelaEnCurso();
+      onNovelaPublicada?.(publicada.token);
+    },
     onError: () => onFallo?.(),
   });
   const { mutate: publicarObra } = publicar;
@@ -222,34 +313,188 @@ export function Entrevista({
         return;
       case "terminada":
         setEnMarcha(null);
-        publicarObra(enMarcha.obraId);
+        publicarObra(enMarcha);
         return;
       case "detenida":
         setEnMarcha(null);
-        setDetenida(
-          `La novela se detuvo y no se ha publicado. Motivo: ${datos.motivo ?? "no consta"}`,
-        );
+        setParada({ tipo: "detenida", motivo: datos.motivo });
         onFallo?.();
         return;
       case "sin_outline":
         // El Arquitecto respondio bien y aun asi no hay capitulos: esperar no
         // lo arregla.
         setEnMarcha(null);
-        setDetenida("No se pudo escribir la novela: la historia se quedó sin capítulos.");
+        setParada({ tipo: "sin_outline" });
         onFallo?.();
         return;
     }
   }, [datos, enMarcha, publicarObra, onFallo]);
 
+  /**
+   * El reloj de la pantalla. Es un sistema externo y por eso va en un efecto:
+   * la consulta devuelve lo mismo durante ocho minutos y, sin esto, «empezó
+   * hace» se quedaria quieto ese rato.
+   */
+  const [instante, setInstante] = useState(ahora);
+  const escribiendo = enMarcha !== null;
+  useEffect(() => {
+    if (!escribiendo) return;
+    setInstante(ahora());
+    const reloj = setInterval(() => setInstante(ahora()), intervaloDeConsulta);
+    return () => clearInterval(reloj);
+  }, [escribiendo, ahora, intervaloDeConsulta]);
+
+  /**
+   * **Sin latido, lo unico visible es que no avanza.** Se apunta cuando cambio
+   * por ultima vez el par (integrados, en curso) y se avisa si pasa el umbral.
+   * Se ajusta durante el render, que es el patron de React para un estado que
+   * depende de otro, y con `instante` y no con el reloj: el render sigue puro.
+   *
+   * Tras una recarga cuenta desde que se abrio la pagina, no desde el ultimo
+   * avance real: el navegador no sabe cuando fue.
+   */
+  const huella =
+    datos !== undefined && enMarcha !== null ? `${datos.integrados}:${datos.en_curso}` : null;
+  const [ultimoAvance, setUltimoAvance] = useState<{ huella: string | null; en: number }>({
+    huella,
+    en: instante,
+  });
+  if (huella !== ultimoAvance.huella) {
+    setUltimoAvance({ huella, en: instante });
+  }
+  const atascada =
+    huella !== null &&
+    datos?.estado === "escribiendo" &&
+    instante - ultimoAvance.en > umbralDeAtasco;
+
   const ocupado = lanzar.isPending || enMarcha !== null || publicar.isPending;
+
+  // El paso de la cabecera sale del paso de la cadena: el ultimo que se
+  // intento, o hasta donde llego la obra apuntada. Tras un fallo se queda en
+  // ese, que es donde hay que volver.
+  const pasoVisible = paso ?? obra?.fase ?? null;
+  const etapa =
+    publicar.isPending || publicar.isError
+      ? 3
+      : enMarcha !== null || pasoVisible === "novela"
+        ? 2
+        : pasoVisible === "outline"
+          ? 1
+          : 0;
 
   const listo =
     evaluacion !== null &&
     evaluacion.faltantes.length === 0 &&
     evaluacion.contradicciones.length === 0;
 
+  const cadena = (
+    <>
+      {lanzar.isError ? (
+        <Aviso tono="error">
+          No se pudo {paso === null ? "empezar la novela" : QUE_FALLO[paso]}. Vuelve a pulsar
+          dentro de un momento.
+        </Aviso>
+      ) : null}
+
+      {publicar.isError ? (
+        <Aviso tono="error">
+          La novela está escrita, pero no se pudo publicar. Vuelve a pulsar dentro de un
+          momento.
+        </Aviso>
+      ) : null}
+
+      {parada?.tipo === "detenida" ? (
+        <Aviso tono="error">
+          La novela se detuvo y no se ha publicado. Motivo: {parada.motivo ?? "no consta"}
+        </Aviso>
+      ) : null}
+
+      {parada?.tipo === "sin_outline" ? (
+        <Aviso tono="error">
+          No se pudo escribir la novela: la historia se quedó sin capítulos.
+        </Aviso>
+      ) : null}
+
+      {lanzar.isPending && (paso === "cerrar" || paso === "outline") ? (
+        <div className="comprobacion" role="status">
+          <Texto>
+            Preparando la historia: la premisa, los personajes y los diez capítulos. Tarda un
+            poco.
+          </Texto>
+        </div>
+      ) : null}
+
+      {(lanzar.isPending && paso === "novela") || enMarcha !== null ? (
+        <Espera
+          datos={enMarcha !== null ? datos : undefined}
+          desde={obra?.desde ?? instante}
+          instante={instante}
+          atascada={atascada}
+        />
+      ) : null}
+
+      {publicar.isPending ? (
+        <div className="comprobacion" role="status">
+          <Texto>La novela está escrita. Publicándola…</Texto>
+        </div>
+      ) : null}
+    </>
+  );
+
+  /**
+   * **Con la entrevista cerrada, el formulario ya no sirve**: responder a una
+   * entrevista cerrada no llega a ningun sitio. Desde ahi la pantalla sigue a
+   * la obra, y cada fallo ofrece reintentar **su** paso y no la cadena entera:
+   * cerrar otra vez crearia una segunda obra, y rehacer la historia tiraria
+   * minutos del Arquitecto que ya estaban hechos.
+   */
+  if (obra !== null) {
+    const reintentar = (desde: "outline" | "novela") => {
+      setParada(null);
+      lanzar.mutate(desde);
+    };
+    const fallaLaHistoria =
+      parada?.tipo === "sin_outline" || (lanzar.isError && paso === "outline");
+    const fallaLaNovela =
+      parada?.tipo === "detenida" || (lanzar.isError && paso === "novela");
+
+    return (
+      <Pagina titulo={reanudada ? "Seguimos con tu novela" : "Tu novela está en marcha"}>
+        <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
+        {cadena}
+
+        {fallaLaHistoria && !ocupado ? (
+          <Boton onClick={() => reintentar("outline")}>Preparar la historia otra vez</Boton>
+        ) : null}
+
+        {fallaLaNovela && !ocupado ? (
+          // `POST /novela` sigue por el primer capitulo sin integrar: lo
+          // escrito no se pierde, y el nombre del boton lo dice.
+          <Boton onClick={() => reintentar("novela")}>
+            Escribir la novela desde donde se quedó
+          </Boton>
+        ) : null}
+
+        {publicar.isError && !ocupado ? (
+          <Boton onClick={() => publicar.mutate(obra.obraId)}>Publicar la novela</Boton>
+        ) : null}
+
+        <div className="otra">
+          <p className="nota">
+            Si prefieres encargar otra, esta seguirá escribiéndose, pero la página dejará de
+            seguirla.
+          </p>
+          <Boton variante="secundario" onClick={onEmpezarOtra}>
+            Empezar otra novela
+          </Boton>
+        </div>
+      </Pagina>
+    );
+  }
+
   return (
     <Pagina titulo="Cuéntanos sobre quien va a leerla">
+      <Pasos etiqueta="Cómo va tu novela" pasos={ETAPAS} actual={etapa} />
       <Texto>
         Con lo que escribas aquí se escribe la novela. No hace falta que sea
         largo: un par de recuerdos concretos valen más que una lista.
@@ -345,54 +590,14 @@ export function Entrevista({
 
       {evaluacion ? <Comprobacion evaluacion={evaluacion} /> : null}
 
-      {lanzar.isError ? (
-        <Aviso tono="error">
-          No se pudo {paso === null ? "empezar la novela" : QUE_FALLO[paso]}. Vuelve a pulsar
-          dentro de un momento.
-        </Aviso>
-      ) : null}
-
-      {publicar.isError ? (
-        <Aviso tono="error">
-          La novela está escrita, pero no se pudo publicar. Vuelve a pulsar dentro de un
-          momento.
-        </Aviso>
-      ) : null}
-
-      {detenida !== null ? <Aviso tono="error">{detenida}</Aviso> : null}
-
-      {lanzar.isPending && (paso === "cerrar" || paso === "outline") ? (
-        <div className="comprobacion" role="status">
-          <Texto>
-            Preparando la historia: la premisa, los personajes y los diez capítulos. Tarda un
-            poco.
-          </Texto>
-        </div>
-      ) : null}
-
-      {(lanzar.isPending && paso === "novela") || enMarcha !== null ? (
-        <div className="comprobacion" role="status">
-          <Texto>
-            Se está escribiendo tu novela. Son diez capítulos, así que tarda un rato.
-          </Texto>
-          {datos !== undefined && enMarcha !== null ? (
-            <p className="nota">{avance(datos)}</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {publicar.isPending ? (
-        <div className="comprobacion" role="status">
-          <Texto>La novela está escrita. Publicándola…</Texto>
-        </div>
-      ) : null}
+      {cadena}
 
       {listo ? (
         <Boton
           onClick={() => {
-            setDetenida(null);
+            setParada(null);
             publicar.reset();
-            lanzar.mutate();
+            lanzar.mutate("cerrar");
           }}
           // Desactivado durante **toda** la cadena, consulta incluida: un
           // segundo clic a mitad de la novela cerraria otra vez la entrevista.

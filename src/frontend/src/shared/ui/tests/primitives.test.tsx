@@ -7,11 +7,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
 
-import { Aviso, Boton, Enlace, Texto } from "@/shared/ui/primitives";
+import { Aviso, BarraDeProgreso, Boton, Enlace, Pasos, Texto } from "@/shared/ui/primitives";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
 
 describe("los primitivos", () => {
@@ -41,6 +41,58 @@ describe("los primitivos", () => {
 
     expect(container.querySelector("script")).toBeNull();
     expect(screen.getByText(/alert\("x"\)/)).toBeInTheDocument();
+  });
+
+  it("la barra de progreso dice su valor a un lector de pantalla, no solo con color", async () => {
+    const { container } = render(
+      <BarraDeProgreso
+        etiqueta="Capítulos escritos"
+        total={10}
+        hechos={2}
+        enCurso={3}
+        textoDelValor="2 de 10 capítulos terminados"
+      />,
+    );
+
+    const barra = screen.getByRole("progressbar", { name: "Capítulos escritos" });
+    expect(barra).toHaveAttribute("aria-valuemin", "0");
+    expect(barra).toHaveAttribute("aria-valuemax", "10");
+    expect(barra).toHaveAttribute("aria-valuenow", "2");
+    expect(barra).toHaveAttribute("aria-valuetext", "2 de 10 capítulos terminados");
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("la barra tiene un tramo por unidad: hechos, el que va en curso y pendientes", () => {
+    const { container } = render(
+      <BarraDeProgreso etiqueta="Capítulos" total={10} hechos={2} enCurso={3} textoDelValor="" />,
+    );
+
+    const tramos = [...container.querySelectorAll("[data-tramo]")].map((t) =>
+      t.getAttribute("data-tramo"),
+    );
+    expect(tramos).toEqual([
+      "hecho",
+      "hecho",
+      "en-curso",
+      ...Array<string>(7).fill("pendiente"),
+    ]);
+  });
+
+  it("los pasos marcan el actual con aria-current y dicen con texto cuáles están hechos", async () => {
+    const { container } = render(
+      <Pasos etiqueta="Cómo va tu novela" pasos={["Entrevista", "Historia", "Capítulos"]} actual={1} />,
+    );
+
+    const items = within(screen.getByRole("list", { name: "Cómo va tu novela" })).getAllByRole(
+      "listitem",
+    );
+    expect(items[1]).toHaveAttribute("aria-current", "step");
+    expect(items[0]).not.toHaveAttribute("aria-current");
+    expect(items[2]).not.toHaveAttribute("aria-current");
+    // «Hecho» se dice con texto, no solo con un color o una marca.
+    expect(items[0]).toHaveTextContent(/hecho/i);
+    expect(items[2]).not.toHaveTextContent(/hecho/i);
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it("una pagina entera con los tokens aplicados no tiene violaciones", async () => {
