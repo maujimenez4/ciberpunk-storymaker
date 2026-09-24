@@ -1,7 +1,7 @@
 ---
 id: 001-backend-v1 / plan-2-capitulo
 titulo: "Fase 2 — Escribir un capítulo: el motor"
-estado: borrador          # borrador | en-revision | aprobado | completado
+estado: en-revision       # borrador | en-revision | aprobado | completado
 aprobado_por:             # lo rellena una persona, nunca un agente
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
@@ -67,6 +67,7 @@ flowchart LR
   T9["T9 · Extractor<br/>y ledger"]
   T6["T6 · Ensamblador:<br/>las ocho capas"]
   T8["T8 · Escritor"]
+  T12["T12 · La puerta<br/>mecánica"]
   T11["T11 · El ciclo,<br/>de punta a punta"]
 
   T1 --> T3
@@ -77,11 +78,13 @@ flowchart LR
   T2 --> T4
   T2 --> T7
   T2 --> T9
+  T2 --> T12
   T2 --> T6
   T5 --> T6
   T7 --> T6
   T6 --> T8
   T8 --> T11
+  T12 --> T11
   T9 --> T11
   T10 --> T11
   T3 --> T11
@@ -90,13 +93,15 @@ flowchart LR
 
 | Ola | Tareas | Agentes a la vez |
 | --- | --- | --- |
-| 1 | T1 · T2 · T5 · T10 | **4** — el punto más ancho |
-| 2 | T3 · T4 · T7 · T9 | **4** |
+| 1 | T1 · T2 · T5 · T10 | 4 |
+| 2 | T3 · T4 · T7 · T9 · **T12** | **5** — el punto más ancho |
 | 3 | T6 | 1 — converge todo el contexto |
 | 4 | T8 | 1 |
 | 5 | T11 | 1 |
 
-Ruta crítica: `T2 → T7 → T6 → T8 → T11`. **Cinco eslabones para once tareas.** Dos olas anchas y tres cuellos: la ganancia realista vuelve a ser **del orden de 2×**, igual que en la Fase 1, donde se midió.
+Ruta crítica: `T2 → T7 → T6 → T8 → T11`. **Cinco eslabones para doce tareas.** Dos olas anchas y tres cuellos: la ganancia realista vuelve a ser **del orden de 2×**, igual que en la Fase 1, donde se midió.
+
+*T12 entra con la decisión **P-B** y no estaba en el corte original. Cabe en la ola 2 sin tocar a nadie: es la feature `calidad` entera, y ningún otro agente escribe ahí.*
 
 ### Las siete reglas, cinco de ellas aprendidas a golpes
 
@@ -119,6 +124,7 @@ Ruta crítica: `T2 → T7 → T6 → T8 → T11`. **Cinco eslabones para once ta
 | `app/conftest.py` | T2 añade `obra_con_outline` | T6 añade `paquete`; T8 añade `escritor` (olas 3 y 4, ambas de un solo agente) |
 | `commons/domain/errores.py` | T5 añade `ContextBudgetExceeded` (ola 1) | T10 añade `TiempoAgotado` (ola 1) — **dos en la misma ola: ver aviso** |
 | `features/contexto/service.py` | T6 (ola 3) | T11 (ola 5) |
+| `features/calidad/` | **T12, y solo T12** (ola 2) | T11 la consume en la ola 5, no la escribe |
 
 **El único cruce de la fase, y va dicho:** T5 y T10 añaden cada una una excepción a `commons/domain/errores.py` en la ola 1. Son dos líneas independientes al final de un fichero, del mismo tipo que los conflictos de Desviaciones que la Fase 1 resolvió sin incidentes. **El integrador lo espera.** La alternativa —serializarlas— costaría una ola entera por dos líneas.
 
@@ -168,33 +174,48 @@ Ocho clases de entrada que la spec implica y que **ninguna tarea probaría si no
 
 ---
 
-## Preguntas abiertas
+## Decisiones
 
-**Mientras quede una, este plan no se aprueba** (`CLAUDE.md` §3.2). Son tres, y las tres son de una persona.
+Las tres preguntas abiertas de este plan, cerradas por `maujimenez4` el 2026-09-24. Se conservan con su porqué, como hace la spec.
 
-### P-A · ¿Cómo se cuentan los tokens sin clave de API?
+### P-A · Dos contadores, y son dos momentos distintos
 
-**Es la más importante, y sale de cruzar dos decisiones ya firmadas.** P-02 dice «consumo de cuenta, **sin clave de API**». RF-CTX-02 dice «**nunca** se llama al modelo sin haber contado los tokens, y el contador es inyectado, **no una estimación por caracteres**».
+**La pregunta era falsa en su premisa, y la respuesta lo destapó.** Se preguntaba «cómo se cuentan los tokens sin clave», dando por hecho que había **un** contador. Hay dos, y sirven para cosas distintas:
 
-El problema: contar tokens de Anthropic **exactamente** requiere su endpoint `count_tokens`, que necesita una clave. Sin clave, las opciones son:
+| Momento | Requisito | Quién lo da |
+| --- | --- | --- |
+| **Antes** de llamar | **RF-CTX-02** — contar para decidir si el paquete cabe, y **fallar sin gastar** si no | Un **tokenizador local**, inyectado tras `ContadorDeTokens` |
+| **Después** de llamar | **RF-OBS-03** — tokens, coste y latencia por llamada, capítulo y novela | El **recuento real del proveedor**, persistido en `ejecucion` |
 
-| Opción | Qué cuesta |
-| --- | --- |
-| **a)** Un tokenizador local aproximado | Es una **estimación**, y RF-CTX-02 la prohíbe con esas palabras. Habría que relajar el requisito y volver a firmar la spec |
-| **b)** El SDK expone el recuento del *prompt* antes de generar | Si lo expone, cierra la pregunta sin tocar nada. **Hay que comprobarlo, no suponerlo** |
-| **c)** Una clave solo para contar, leída del entorno (RF-OBS-07) | Contradice P-02 en la letra, aunque no en el espíritu: no se gasta cuota de generación |
+**Langfuse mide el segundo, no el primero**, y esa es la parte que la pregunta no veía: para cuando el *tracing* ve una llamada, la llamada ya se hizo. RF-CTX-02 existe precisamente para que un paquete que no cabe **no llegue a gastarse**. Son requisitos distintos y ninguno sustituye al otro.
 
-**No lo decido yo.** Y no es un detalle: RF-CTX-02 es la primera línea de la restricción de diseño más importante del proyecto.
+**Y el primero no obliga a tocar la spec.** RF-CTX-02 prohíbe, con esas palabras, «una estimación **por caracteres**» — y un tokenizador BPE de verdad no es eso. Además **`tiktoken` ya está en las catorce dependencias que P-01 aprobó en bloque**: el proyecto había presupuestado el contador local desde el principio.
 
-### P-B · ¿Qué decide que un capítulo está terminado, si no hay juez?
+**Lo que sí hay que declarar, porque es un riesgo y no una comodidad:** un tokenizador local **aproxima** el de Anthropic, así que el recuento previo tiene deriva. Dos cosas la acotan, y las dos ya estaban:
 
-`CU-03` pasa por `VALIDANDO` con validadores mecánicos, guardarraíles **y juez**. El Crítico y el Continuista son de `calidad`, y esta fase no los construye. Sin ellos, un capítulo pasa de `ESCRIBIENDO` a `EXTRAYENDO` sin nada que lo pare salvo los guardarraíles de vetos y la longitud.
+- La **capa de reserva** de 10.000 tokens (`CLAUDE.md` §4.1), que existe para que el reintento quepa y absorbe también este margen.
+- **`ejecucion` guarda los dos números** —el previsto y el real— desde esta fase, porque RF-OBS-06 ya exige «tokens por capa» y «coste». Con eso, **la deriva del contador local deja de ser un riesgo declarado y pasa a ser una cifra medible**. Es lo que la idea de medir por *tracing* aporta de verdad: no resuelve el conteo previo, pero permite saber cuánto se equivoca.
 
-Dos lecturas, y hay que elegir: **(a)** la puerta de esta fase son solo los validadores mecánicos, y se declara; **(b)** entra el Continuista, y la fase crece con la feature `calidad`. La primera es coherente con el corte elegido; la segunda evita que el capítulo de la Fase 2 haya que reescribirlo.
+*Langfuse entero —sesión por novela, spans, scores, plantillas versionadas: RF-OBS-01 a 05— **no entra en esta fase**. Ver «Lo que esta fase NO hace».*
 
-### P-C · ¿Se escribe una escena o un capítulo?
+### P-B · La puerta de esta fase es mecánica, y el juez no entra
 
-`definitions.md` §4.1 dice que un `Capitulo` contiene **exactamente una** `Escena`, y que a esta escala coinciden. `CLAUDE.md` §1 dice que la unidad atómica de generación es la **escena**; el encargo cuenta capítulos. Las tablas y los nombres de esta fase dependen de cuál manda en el código, y el documento deja la cardinalidad en `1..*` «para cuando la extensión crezca».
+**Recomendación aplicada.** Esta fase no construye el Crítico ni el Continuista, y **sí** construye una puerta.
+
+**Por qué no entra el juez, y no es solo alcance.** RF-JUZ-06 dice que **el juez no bloquea** mientras su correlación con la revisión humana no se haya medido sobre un conjunto y firmado. Meterlo aquí sería construir un componente que, por regla del propio proyecto, **no puede parar nada** — y calibrarlo exige una novela entera y una revisión con rúbrica, que son de fases posteriores.
+
+**Por qué el Continuista tampoco.** Contrasta contra el grafo de canon (RF-VAL-06), y un capítulo suelto no tiene contra qué chocar: su trabajo empieza cuando el capítulo siete puede contradecir al cuatro. Es de la Fase 3, con la coherencia a escala.
+
+**Pero sin ninguna puerta, R-7 no se puede probar.** «Un capítulo rechazado no deja rastro» necesita algo que rechace; si nada rechaza nunca, el test es teatro. Por eso entra **T12**, con los validadores que **sí** funcionan sobre un capítulo solo y **sin llamar a ningún modelo**: longitud, persona y tiempo verbal, nombres contra el canon, y la forma del defecto.
+
+### P-C · Se escribe un **capítulo**, y la escena sigue siendo la unidad de generación
+
+Las dos cosas a la vez, que es lo que ya dicen los documentos y conviene no improvisar:
+
+- **Hacia fuera, capítulo.** El endpoint es `POST /capitulos/{id}/escribir` (RI-05, literal), el trabajo es de un capítulo y lo que se entrega es un capítulo. El encargo cuenta capítulos.
+- **Hacia dentro, escena.** `CLAUDE.md` §1 dice que la unidad atómica de generación es la escena, y `definitions.md` §4.1 que un `Capitulo` contiene **exactamente una** `Escena`. Hoy coinciden **1:1**.
+
+**Las dos tablas existen** (T2). No se colapsan en una, y el motivo lo da el propio documento: el capítulo es unidad de **lectura** y la escena de **generación**; si algún día la extensión crece, la cardinalidad vuelve a `1..*` **sin tocar nada más**. Colapsarlas ahora ahorra una tabla y cuesta una migración de datos después.
 
 ---
 
@@ -243,7 +264,7 @@ Cierra el hueco declarado: hoy `/respuestas` y `/cerrar` responden **500** contr
 
 **Y una corrida manual declarada, que no es un test.** Al terminar, se ejecuta `CU-01` contra la aplicación levantada y se comprueba que `/respuestas` y `/cerrar` dejan de responder 500. **Gasta cuota.** Se hace una vez, se copia la salida en el informe, y no entra en la suite.
 
-> **Esta tarea depende de P-A.** Si la respuesta es que no hay forma exacta de contar sin clave, cambia el contador y puede cambiar RF-CTX-02.
+> **P-A la cierra así:** `ContadorDeTokens` se implementa con un **tokenizador local** —`tiktoken` ya está entre las catorce dependencias que P-01 aprobó— y eso satisface RF-CTX-02, que prohíbe la estimación **por caracteres** y no un tokenizador de verdad. **La spec no cambia.** El recuento **real** del proveedor se guarda además en `ejecucion` junto al previsto, para que la deriva se pueda medir en vez de suponerse.
 
 ---
 
@@ -446,6 +467,28 @@ Cierra la fase. No añade comportamiento: **conecta** y demuestra.
 
 ---
 
+## Tarea 12 · La puerta mecánica del capítulo
+
+Entra con la decisión **P-B**. Cierra **RF-VAL-03**, **RF-VAL-04**, **RF-VAL-07**, la **regla de dominio 10**, y los criterios **CA-16**, **CA-17** y **CA-35**.
+
+**Ficheros:** `features/calidad/` (`validadores.py`, `puerta.py`, `defectos.py`, `schemas.py`, tests). Nadie más escribe en esa feature.
+
+**Lo que NO tiene, y es la mitad de la tarea:** ni `agents.py` ni `prompts/`. **Ningún validador de esta tarea llama a un modelo.** El Crítico y el Continuista son de fases posteriores; aquí solo hay código que mira texto y canon.
+
+**Qué debe ser cierto:**
+
+| | Por qué importa |
+| --- | --- |
+| La longitud está **dentro del rango declarado**; fuera, vuelve al escritor | `CA-35` · RF-VAL-04. Se prueba por los dos lados: corto, largo y dentro |
+| Los nombres aparecen **como el canon los declara**: forma canónica **o una variante declarada** | `CA-16`. «Maria» por «María» es defecto `PER-02`; «Mari» por «María» **no**, si el canon la declara. Un validador literal prohibiría por escrito que a María la llamen Mari, que en una novela de regalo es justo lo que uno espera |
+| La prosa usa la `persona` y el `tiempo_verbal` de la obra, **comprobado en el texto** | Regla de dominio 10. No basta con pedirlo en el prompt: eso ya se hacía y no lo comprobaba nadie |
+| Antes de la puerta se comprueba la **forma** de cada defecto | `CA-17` · RF-VAL-07: código de la taxonomía, y **cita que es subcadena exacta en su desplazamiento**. Un defecto mal formado **no bloquea, no gasta reintento y se cuenta aparte** |
+| Cada validador tiene **nombre** y un **punto de ejecución declarado** | RF-VAL-01. Lo que no se puede nombrar no se puede contar |
+
+**Y por qué esta tarea existe aunque el juez no:** sin una puerta que rechace de verdad, **R-7 no se puede probar**. «Un capítulo rechazado no deja rastro en canon, ledger ni índice» necesita algo que rechace; si nada rechaza nunca, el test pasa sin comprobar nada. Es el mismo defecto que la Fase 1 encontró dos veces —una restricción sobre la que ningún test podía caer— y aquí se evita antes.
+
+---
+
 ## Lo que esta fase deja cerrado
 
 | Criterio | Qué demuestra |
@@ -457,16 +500,19 @@ Cierra la fase. No añade comportamiento: **conecta** y demuestra.
 | **CA-12** | Desde `ejecucion` se reconstruye el paquete y se sabe qué hechos entraron |
 | **CA-32** | Cada beat obligatorio, en exactamente un capítulo |
 | **CA-36** | Dos paquetes que suman de más no corren a la vez; dos que suman de menos **sí** |
+| **CA-16** | «Maria» por «María» es defecto; «Mari» por «María» **no**, si el canon la declara variante |
+| **CA-17** | Un defecto con cita inventada no bloquea, no gasta intento y se cuenta aparte |
+| **CA-35** | Un capítulo fuera del rango vuelve al escritor; uno dentro pasa |
 | **CA-4** *(mantenido)* | La suite sigue pasando sin red y sin credenciales |
 
-**Requisitos:** RI-04, RI-05, RI-06, RI-07 · RF-PLA-01 a 04 · RF-CTX-01 a 09 · RF-ESC-01 a 03 · RF-MEM-01 a 08 · RF-ORQ-08, RF-ORQ-09 *(parcial)*, RF-ORQ-10 · RF-GUA-03 · RF-OBS-03, RF-OBS-06 · RF-ENT-06 *(la mitad que faltaba)* · RNF-SEG-03, RNF-FIA-02 · RD-03 *(parcial)*.
+**Requisitos:** RI-04, RI-05, RI-06, RI-07 · RF-PLA-01 a 04 · RF-CTX-01 a 09 · RF-ESC-01 a 03 · RF-MEM-01 a 08 · RF-ORQ-08, RF-ORQ-09 *(parcial)*, RF-ORQ-10 · RF-GUA-03 · RF-VAL-01, RF-VAL-03, RF-VAL-04, RF-VAL-07 · RF-OBS-03, RF-OBS-06 · RF-ENT-06 *(la mitad que faltaba)* · RNF-SEG-03, RNF-FIA-02 · RD-03 *(parcial)*.
 
 ## Lo que esta fase NO hace, y no es un olvido
 
 - **No escribe diez capítulos.** Uno. El orquestador con su máquina de estados, el checkpoint y la reanudación son de la Fase 3, y con ellos `CA-1` y `CA-5`.
 - **Y por tanto no demuestra la coherencia a escala**, que es el problema real del producto: el capítulo siete que contradice al cuatro. La maquinaria se construye aquí y se prueba por unidades; a escala, en la Fase 3.
-- **No hay juez.** El Crítico y el Continuista son de la feature `calidad`. Ver **P-B**: de la respuesta depende si la puerta de esta fase son solo los validadores mecánicos.
-- **No hay Langfuse.** La observabilidad entra con la fase que produce trazas que valga la pena mirar.
+- **No hay juez, y la puerta es mecánica** (decisión **P-B**). El Crítico no entra porque RF-JUZ-06 dice que **no bloquea** hasta que su correlación con la revisión humana esté medida y firmada: sería construir algo que por regla no puede parar nada. El Continuista tampoco, porque contrasta contra el grafo y **un capítulo solo no tiene contra qué chocar**. La feature `calidad` nace aquí con sus validadores mecánicos (T12) y sin un solo `agents.py`.
+- **No hay Langfuse** —sesión por novela, spans, scores, plantillas versionadas: RF-OBS-01 a 05—. Lo que **sí** hay desde esta fase es el dato: `ejecucion` guarda tokens por capa, coste, modelo y semilla (RF-OBS-06), incluidos **el recuento previsto y el real**, que es lo que hace medible la deriva del contador local (**P-A**). Langfuse es la capa que lo hace visible por novela, y entra con la fase que produce trazas que valga la pena mirar.
 - **No hay Lean ni TLA+.** Necesitan cronología completa y máquina de estados.
 - **No se publica nada.** `VersionPublicada`, ficha y petición del lector son de la Fase 4.
 
