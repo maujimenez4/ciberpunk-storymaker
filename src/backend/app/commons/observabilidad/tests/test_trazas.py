@@ -82,6 +82,9 @@ async def test_el_de_memoria_guarda_el_consumo_para_que_t7_lo_lea() -> None:
     assert consumo["coste_usd"] == Decimal("0.0015")
 
 
+_LAS_TRES = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST")
+
+
 def test_sin_credenciales_se_devuelve_el_nulo_y_el_sistema_arranca(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -90,7 +93,7 @@ def test_sin_credenciales_se_devuelve_el_nulo_y_el_sistema_arranca(
     Un arranque que falla por no tener telemetria deja al comprador sin novela
     por una credencial de un panel.
     """
-    for variable in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST"):
+    for variable in (*_LAS_TRES, "LANGFUSE_BASE_URL"):
         monkeypatch.delenv(variable, raising=False)
 
     assert isinstance(obtener_observador(), ObservadorNulo)
@@ -106,9 +109,12 @@ def test_con_una_credencial_a_medias_tambien_se_degrada(
     el host, y un cliente construido a medias falla en la primera llamada -- ya
     dentro de la generacion, no al arrancar.
     """
-    for variable in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST"):
+    for variable in _LAS_TRES:
         monkeypatch.setenv(variable, "puesta")
     monkeypatch.delenv(falta)
+    # Sin esto, un `LANGFUSE_BASE_URL` en el entorno de quien corre la suite
+    # rellenaria el host que falta y el caso dejaria de ser «a medias».
+    monkeypatch.delenv("LANGFUSE_BASE_URL", raising=False)
 
     assert isinstance(obtener_observador(), ObservadorNulo)
 
@@ -142,6 +148,45 @@ def test_los_ajustes_leen_las_tres_del_entorno_y_de_ningun_otro_sitio(
     assert ajustes.langfuse_clave_secreta == "sk-lf-y"
     assert ajustes.langfuse_host == "https://ejemplo.invalid"
     assert "LANGFUSE_SECRET_KEY" in os.environ
+
+
+def test_sin_host_el_host_sale_de_langfuse_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`LANGFUSE_BASE_URL` es el nombre del SDK v3, y es el que trae un `.env`
+    copiado del panel de Langfuse. Leyendo solo `LANGFUSE_HOST`, ese `.env`
+    dejaba el observador en el nulo **sin error**: arrancaba, avisaba de que
+    faltaba el host y no media nada."""
+    monkeypatch.delenv("LANGFUSE_HOST", raising=False)
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "https://base.invalid")
+
+    assert Ajustes.desde_entorno().langfuse_host == "https://base.invalid"
+
+
+def test_un_host_en_blanco_no_tapa_a_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`.env.example` trae `LANGFUSE_HOST=` vacio: quien lo copia y rellena solo
+    `LANGFUSE_BASE_URL` no puede volver a caer en el nulo."""
+    monkeypatch.setenv("LANGFUSE_HOST", "")
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "https://base.invalid")
+
+    assert Ajustes.desde_entorno().langfuse_host == "https://base.invalid"
+
+
+def test_con_los_dos_nombres_gana_langfuse_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFUSE_HOST", "https://host.invalid")
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "https://base.invalid")
+
+    assert Ajustes.desde_entorno().langfuse_host == "https://host.invalid"
+
+
+def test_con_base_url_en_vez_de_host_el_observador_no_se_degrada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El caso del `.env` del usuario, visto desde quien decide la degradacion."""
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-x")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-x")
+    monkeypatch.delenv("LANGFUSE_HOST", raising=False)
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "https://example.invalid")
+
+    assert not isinstance(obtener_observador(), ObservadorNulo)
 
 
 def test_el_observador_de_langfuse_traduce_la_obra_a_sesion() -> None:

@@ -70,6 +70,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
+from app.commons.observabilidad import Observador
 from app.features.calidad import (
     CATALOGO_DE_MANUSCRITO,
     Cobertura,
@@ -152,6 +153,7 @@ def ciclo_de_la_novela(
     vectorizar: Callable[[str], Vector] | None = None,
     modelo: str = "desconocido",
     semilla: int = 0,
+    observador: Observador | None = None,
 ) -> Ejecutar:
     """Compone el `ejecutar` que el bucle inyecta: **un capitulo, el del trabajo.**
 
@@ -180,6 +182,9 @@ def ciclo_de_la_novela(
             vectorizar=vectorizar,
             modelo=modelo,
             semilla=semilla,
+            # Uno para la novela entera: cada capitulo abre su traza en la
+            # misma sesion, que se deriva de la obra (`CLAUDE.md` §4.3).
+            observador=observador,
         )
 
     return ejecutar

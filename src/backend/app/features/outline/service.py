@@ -21,6 +21,12 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.domain.errores import ErrorDeDominio, RecursoDesconocido
+from app.commons.observabilidad import (
+    ClienteObservado,
+    Observacion,
+    Observador,
+    ObservadorNulo,
+)
 from app.features.outline.agents import Arquitecto, OutlineGenerado
 from app.features.outline.modelos import VersionObra
 from app.features.outline.repository import (
@@ -210,12 +216,21 @@ async def planificar_obra(
     sesion: AsyncSession,
     arquitecto: Arquitecto,
     obra_id: int,
+    *,
+    observador: Observador | None = None,
+    cliente: ClienteObservado | None = None,
 ) -> PlanDeObra:
     """CU-02 entero, y en este orden.
 
     **Se valida todo antes de escribir nada.** Media planificacion guardada es
     peor que ninguna: dejaria en la base unos capitulos que el comprador nunca
     aprobo y que el Planificador leeria como si fueran el outline.
+
+    **La llamada al Arquitecto abre la traza `outline`** en la sesion de la obra
+    (`CLAUDE.md` §4.3), con el span `arquitecto`. `cliente` es el mismo objeto
+    con el que se construyo el Arquitecto: es el que deja el prompt y la salida
+    en el span. La traza se abre **despues** de comprobar que la obra existe:
+    una sesion de una obra que no existe es ruido en el panel.
     """
     obra = await leer_obra(sesion, obra_id)
     if obra is None:
@@ -225,7 +240,12 @@ async def planificar_obra(
     if ya_planificados:
         raise ObraYaPlanificada(obra_id, ya_planificados)
 
-    outline = await arquitecto.planificar(obra.como_brief())
+    observador = observador if observador is not None else ObservadorNulo()
+    async with (
+        observador.traza(obra_id=obra_id, nombre="outline") as traza,
+        Observacion(traza=traza, cliente=cliente).span("arquitecto"),
+    ):
+        outline = await arquitecto.planificar(obra.como_brief())
     biblia = _biblia_con_discurso(outline, obra)
     _comprobar_numeracion(outline)
     _comprobar_beats(outline)

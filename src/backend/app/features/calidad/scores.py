@@ -27,6 +27,7 @@ from collections.abc import Iterable
 from typing import Protocol
 
 from app.commons.observabilidad import Puntuacion, Span
+from app.features.calidad.policy import ResultadoDePolicy
 from app.features.calidad.puerta import ResultadoDePuerta
 from app.features.calidad.validadores import CierreDelManuscrito
 
@@ -45,13 +46,20 @@ NOMBRE_DEL_JUEZ = "juez_con_rubrica"
 
 
 class _PuntuacionDelCritico(Protocol):
-    criterio: str
-    valor: int
-    justificacion: str
+    # Propiedades y no atributos: un atributo de protocolo es escribible y por
+    # tanto invariante, y el `Juicio` real -- `list[PuntuacionDelCritico]` --
+    # no encajaba. Nadie lo habia pasado por aqui hasta que se cableo.
+    @property
+    def criterio(self) -> str: ...
+    @property
+    def valor(self) -> int: ...
+    @property
+    def justificacion(self) -> str: ...
 
 
 class _Juicio(Protocol):
-    puntuaciones: Iterable[_PuntuacionDelCritico]
+    @property
+    def puntuaciones(self) -> Iterable[_PuntuacionDelCritico]: ...
 
 
 def puntuaciones_de_g1a(resultado: ResultadoDePuerta) -> tuple[Puntuacion, ...]:
@@ -66,6 +74,21 @@ def puntuaciones_de_g1a(resultado: ResultadoDePuerta) -> tuple[Puntuacion, ...]:
     return tuple(
         Puntuacion(nombre=nombre, valor=FALLA if hallazgos.get(nombre, 0) else PASA)
         for nombre in resultado.validadores_ejecutados
+    )
+
+
+def puntuaciones_de_policy(resultado: ResultadoDePolicy) -> tuple[Puntuacion, ...]:
+    """Una puntuacion por regla del *hook* de policy, con el nombre de la regla.
+
+    `palabras_vetadas` no pasa por `cruzar_g1a` como validador: su defecto entra
+    como recibido, y por eso no aparece en `validadores_ejecutados`. Sin esta
+    funcion, el guardarrail corria en cada capitulo y **no constaba en el panel**.
+    Cada decision es una regla que corrio, asi que aqui el censo es la lista de
+    decisiones: lo permitido tambien, no solo lo bloqueado (RF-GUA-04).
+    """
+    return tuple(
+        Puntuacion(nombre=d.regla, valor=FALLA if d.decision == "bloqueado" else PASA)
+        for d in resultado.decisiones
     )
 
 

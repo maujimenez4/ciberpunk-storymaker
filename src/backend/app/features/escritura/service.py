@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.commons.db.auditoria import registrar
 from app.commons.domain.errores import ContextBudgetExceeded
 from app.commons.llm.contador import ContadorDeTokens
+from app.commons.observabilidad import Observacion
 from app.features.calidad import (
     CODIGO_DE_PALABRA_PROHIBIDA,
     CapituloAContrastar,
@@ -54,6 +55,10 @@ from app.features.calidad import (
     TiempoVerbal,
     aplicar_policy,
     cruzar_g1a,
+    emitir,
+    puntuaciones_de_g1a,
+    puntuaciones_de_policy,
+    puntuaciones_del_juez,
 )
 
 NOMBRE_DEL_CONTINUISTA = "continuidad_y_canon"
@@ -282,25 +287,34 @@ def _coste_de_la_reparacion(
     return extra
 
 
-async def _juzgar(critico: Critico | None, version_texto_id: str, texto: str) -> Juicio | None:
+async def _juzgar(
+    critico: Critico | None, version_texto_id: str, texto: str, observacion: Observacion
+) -> Juicio | None:
     """Puntua, y lo que devuelve **no decide nada**.
 
     Que el juicio salga en `Escritura` y no en la puerta es la forma de que eso
     sea estructural y no disciplina: no hay ningun sitio donde una puntuacion
     pueda cambiar `aprobado`, asi que empezar a bloquear exigiria un cambio que
     se ve en una revision, no un descuido.
+
+    Sus *scores* van a Langfuse, uno por criterio y con su justificacion: es la
+    unica salida del juez **mientras no bloquee**, y lo que `RF-JUZ-05` compara
+    con la revision humana.
     """
     if critico is None:
         return None
-    return await critico.juzgar(
-        CapituloAJuzgar(
-            version_texto_id=version_texto_id,
-            texto=texto,
-            # La rubrica sale del propio juez y no se importa aqui: asi hay
-            # **una** en juego, que es lo que `CA-20` pide.
-            rubrica=critico.rubrica,
+    async with observacion.span("critico") as span:
+        juicio = await critico.juzgar(
+            CapituloAJuzgar(
+                version_texto_id=version_texto_id,
+                texto=texto,
+                # La rubrica sale del propio juez y no se importa aqui: asi hay
+                # **una** en juego, que es lo que `CA-20` pide.
+                rubrica=critico.rubrica,
+            )
         )
-    )
+        emitir(span, puntuaciones_del_juez(juicio))
+    return juicio
 
 
 async def escribir_capitulo(
@@ -322,6 +336,7 @@ async def escribir_capitulo(
     grafo: Sequence[HechoDeCanon] = (),
     conocimiento: Sequence[ConocimientoEnT] = (),
     orden_discurso: int = 0,
+    observacion: Observacion | None = None,
 ) -> Escritura:
     """Escribe el capitulo y lo repara dirigidamente hasta dos veces.
 
@@ -341,7 +356,13 @@ async def escribir_capitulo(
     asi: la fila de cada llamada necesita obra, escena, version de biblia,
     tokens por capa e IDs recuperados, y trocearlo aqui seria volver a montarlo
     alli. El paquete que se envia es `contexto.paquete` y ningun otro.
+
+    **Cada vuelta abre sus spans** en la traza del capitulo (`CLAUDE.md` §4.3):
+    `escritor`, `policy`, `continuista`, `puerta_g1a` y `critico`, y los
+    *scores* de cada validador van en el span del que los produjo. Sin
+    `observacion`, los spans son nulos: el mismo camino, sin efecto.
     """
+    observacion = observacion if observacion is not None else Observacion.nula()
     intentos: list[IntentoDeEscritura] = []
     reparaciones: tuple[Reparacion, ...] = ()
     texto_anterior: str | None = None
@@ -376,21 +397,24 @@ async def escribir_capitulo(
                 .values(tokens_previstos=contexto.paquete.tokens_previstos + extra)
             )
 
-        texto = await escritor.escribir(
-            contexto.paquete,
-            restricciones,
-            texto_anterior=texto_anterior,
-            reparaciones=reparaciones,
-        )
+        async with observacion.span("escritor"):
+            texto = await escritor.escribir(
+                contexto.paquete,
+                restricciones,
+                texto_anterior=texto_anterior,
+                reparaciones=reparaciones,
+            )
         version = await _guardar_version(sesion, contexto.escena_id, texto, run_id)
 
-        resultado_policy = aplicar_policy(
-            CapituloAPolicy(
-                version_texto_id=str(version.id),
-                texto=texto,
-                vetos=tuple(vetos),
+        async with observacion.span("policy") as span:
+            resultado_policy = aplicar_policy(
+                CapituloAPolicy(
+                    version_texto_id=str(version.id),
+                    texto=texto,
+                    vetos=tuple(vetos),
+                )
             )
-        )
+            emitir(span, puntuaciones_de_policy(resultado_policy))
         for decision in resultado_policy.decisiones:
             await registrar(
                 sesion,
@@ -411,30 +435,37 @@ async def escribir_capitulo(
         # tabla de los cinco briefs no distinguiria «limpio» de «no corrio».
         emisores: tuple[str, ...] = ()
         if continuista is not None:
-            revision = await continuista.revisar(
-                CapituloAContrastar(
-                    version_texto_id=str(version.id),
-                    texto=texto,
-                    grafo=tuple(grafo),
-                    conocimiento=tuple(conocimiento),
-                    orden_discurso=orden_discurso,
+            async with observacion.span("continuista"):
+                revision = await continuista.revisar(
+                    CapituloAContrastar(
+                        version_texto_id=str(version.id),
+                        texto=texto,
+                        grafo=tuple(grafo),
+                        conocimiento=tuple(conocimiento),
+                        orden_discurso=orden_discurso,
+                    )
                 )
-            )
             recibidos.extend(revision.defectos)
             emisores = (NOMBRE_DEL_CONTINUISTA,)
 
-        resultado = cruzar_g1a(
-            CapituloAValidar(
-                version_texto_id=str(version.id),
-                texto=texto,
-                rango_de_extension=rango_de_extension,
-                discurso=_discurso(restricciones),
-                nombres_del_canon=tuple(nombres_del_canon),
-            ),
-            hechos_de_canon,
-            recibidos,
-            emisores_externos=emisores,
-        )
+        # El *score* de `continuidad_y_canon` sale **de aqui** y no del span del
+        # Continuista: la puerta es quien decide si su defecto bloquea, y quien
+        # lo cuenta en `defectos_por_validador`.
+        async with observacion.span("puerta_g1a") as span:
+            resultado = cruzar_g1a(
+                CapituloAValidar(
+                    version_texto_id=str(version.id),
+                    texto=texto,
+                    rango_de_extension=rango_de_extension,
+                    discurso=_discurso(restricciones),
+                    nombres_del_canon=tuple(nombres_del_canon),
+                ),
+                hechos_de_canon,
+                recibidos,
+                emisores_externos=emisores,
+            )
+            emitir(span, puntuaciones_de_g1a(resultado))
+            span.salida(_veredicto_de_la_puerta(resultado))
         intentos.append(
             IntentoDeEscritura(
                 numero=len(intentos) + 1,
@@ -450,7 +481,7 @@ async def escribir_capitulo(
         # correlacion con la revision humana este medida y **firmada con el
         # numero delante**. Se le llama igualmente porque lo que no corre no
         # puede calibrarse, y sin calibrar no deja de bloquear nunca.
-        juicio = await _juzgar(critico, str(version.id), texto)
+        juicio = await _juzgar(critico, str(version.id), texto, observacion)
 
         if resultado.aprobado:
             await _completar_ejecucion(sesion, ejecucion_id, escritor, "aprobada")
@@ -489,6 +520,14 @@ async def escribir_capitulo(
             for defecto in resultado.bloqueantes
         )
         texto_anterior = texto
+
+
+def _veredicto_de_la_puerta(resultado: ResultadoDePuerta) -> str:
+    """Lo que la puerta decidio, en una linea para el span: sin prosa."""
+    if resultado.aprobado:
+        return "aprobado"
+    codigos = ", ".join(sorted({defecto.codigo for defecto in resultado.bloqueantes}))
+    return f"bloqueado: {codigos}" if codigos else "bloqueado"
 
 
 def _motivo(resultado: ResultadoDePuerta, termino_vetado: str | None) -> str:

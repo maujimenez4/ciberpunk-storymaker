@@ -35,6 +35,7 @@ from app.commons.db.sesion import obtener_motor, obtener_sesion
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.cliente import ClienteModelo, obtener_cliente_modelo
 from app.commons.llm.contador import ContadorDeTokens, ContadorTiktoken
+from app.commons.observabilidad import ClienteObservado, Observador, obtener_observador
 from app.features.calidad import Continuista, Critico, rubrica_vigente
 from app.features.canon import Extractor, Vector, vectorizador_de
 from app.features.escena import Planificador
@@ -120,16 +121,23 @@ def obtener_agentes(
     salia igual sin una sola comprobacion de continuidad: lo que decide si un rol
     corre no es que exista el campo, es que alguien lo rellene en el camino que
     usa la peticion.
+
+    **Y los cinco se construyen sobre el cliente observado**, el mismo objeto que
+    va en `observado`: es lo que lleva el prompt renderizado y la salida de cada
+    rol a su span (`CLAUDE.md` §4.3). La misma leccion que P-17: el observador
+    estaba escrito y probado, y en esta funcion no aparecia.
     """
+    observado = ClienteObservado(cliente)
     return Agentes(
-        planificador=Planificador(cliente),
-        escritor=Escritor(cliente),
-        extractor=Extractor(cliente),
-        continuista=Continuista(cliente),
+        planificador=Planificador(observado),
+        escritor=Escritor(observado),
+        extractor=Extractor(observado),
+        continuista=Continuista(observado),
         # `rubrica_vigente()` y no `RUBRICA_V1`: `CA-20` pide que la rubrica
         # del juez y la que se le presenta al Autor sean **la misma**, y dos
         # objetos iguales pero distintos midirian dos reglas.
-        critico=Critico(cliente, rubrica_vigente()),
+        critico=Critico(observado, rubrica_vigente()),
+        observado=observado,
     )
 
 
@@ -157,6 +165,9 @@ Portero = Annotated[PresupuestoConcurrente, Depends(obtener_presupuesto)]
 Cerrojo = Annotated[CerrojoDeEscena, Depends(obtener_cerrojo)]
 Roles = Annotated[Agentes, Depends(obtener_agentes)]
 Cliente = Annotated[ClienteModelo, Depends(obtener_cliente_modelo)]
+Observa = Annotated[Observador, Depends(obtener_observador)]
+"""Llega **blindado** o nulo (`obtener_observador`), y baja a la tarea de fondo
+como `cliente` y `contador`: por argumento, sin globales."""
 
 router = APIRouter(tags=["escritura"])
 
@@ -203,6 +214,7 @@ async def escribir(
     presupuesto: Portero,
     cerrojo: Cerrojo,
     cliente: Cliente,
+    observador: Observa,
 ) -> TrabajoLanzado:
     """RI-05. Crea el trabajo, lo devuelve, y el ciclo sigue por detras."""
     trabajo = await abrir_trabajo(sesion, capitulo_id=capitulo_id)
@@ -223,6 +235,7 @@ async def escribir(
         # alguno, y el sintoma seria un `embedding.modelo` equivocado que no
         # rompe nada hoy y hace incomparables los vectores manana.
         vectorizar=vectorizador_de(cliente),
+        observador=observador,
     )
     return TrabajoLanzado(id=trabajo.id, estado=trabajo.estado, run_id=trabajo.run_id)
 
@@ -272,6 +285,7 @@ async def escribir_la_novela(
     presupuesto: Portero,
     cerrojo: Cerrojo,
     cliente: Cliente,
+    observador: Observa,
 ) -> NovelaLanzada:
     """`CA-1`: arranca —o reanuda— la novela entera, y responde con por donde va.
 
@@ -297,6 +311,7 @@ async def escribir_la_novela(
         cerrojo=cerrojo,
         modelo=_nombre_del_modelo(cliente),
         vectorizar=vectorizador_de(cliente),
+        observador=observador,
     )
     return NovelaLanzada(
         obra_id=obra_id,
@@ -339,6 +354,7 @@ async def _correr_el_ciclo(
     cerrojo: CerrojoDeEscena,
     modelo: str,
     vectorizar: Callable[[str], Vector],
+    observador: Observador,
 ) -> None:
     """La tarea de fondo: abre sesion, relee el trabajo y ejecuta el ciclo.
 
@@ -359,6 +375,7 @@ async def _correr_el_ciclo(
             cerrojo=cerrojo,
             modelo=modelo,
             vectorizar=vectorizar,
+            observador=observador,
         )
 
 
@@ -372,6 +389,7 @@ async def _correr_la_novela(
     cerrojo: CerrojoDeEscena,
     modelo: str,
     vectorizar: Callable[[str], Vector],
+    observador: Observador,
 ) -> None:
     """La tarea de fondo de la novela: abre su sesion y recorre los capitulos.
 
@@ -391,5 +409,6 @@ async def _correr_la_novela(
                 cerrojo=cerrojo,
                 modelo=modelo,
                 vectorizar=vectorizar,
+                observador=observador,
             ),
         )

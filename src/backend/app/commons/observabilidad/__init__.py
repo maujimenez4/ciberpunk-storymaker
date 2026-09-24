@@ -12,6 +12,7 @@ import logging
 
 from app.commons.config.ajustes import Ajustes
 from app.commons.observabilidad.blindaje import ObservadorBlindado, blindar
+from app.commons.observabilidad.cliente import ClienteObservado, Observacion
 from app.commons.observabilidad.dobles import (
     ObservadorEnMemoria,
     ObservadorNulo,
@@ -31,7 +32,7 @@ _log = logging.getLogger(__name__)
 
 SIN_CREDENCIALES = (
     "Observabilidad desactivada: faltan LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY "
-    "o LANGFUSE_HOST. El sistema genera igual y no se mide nada."
+    "o LANGFUSE_HOST (o LANGFUSE_BASE_URL). El sistema genera igual y no se mide nada."
 )
 """El aviso sale **al arrancar**, no a mitad de escribir un capitulo.
 
@@ -66,6 +67,8 @@ def obtener_observador() -> Observador:
 
 __all__ = [
     "SIN_CREDENCIALES",
+    "ClienteObservado",
+    "Observacion",
     "Observador",
     "ObservadorBlindado",
     "ObservadorEnMemoria",

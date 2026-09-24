@@ -12,6 +12,7 @@ from app.commons.db.motor import crear_motor
 from app.commons.db.sesion import obtener_sesion
 from app.commons.llm.cliente import obtener_cliente_modelo
 from app.commons.llm.doble import DobleDeterminista
+from app.commons.observabilidad import ObservadorEnMemoria, obtener_observador
 from app.features.canon.modelos import Evento  # noqa: F401  (registra las tablas de `canon`)
 from app.features.contexto import Paquete, ensamblar_capitulo
 from app.features.escena.modelos import Escena
@@ -237,7 +238,22 @@ def escritor(respuestas_del_modelo: dict[str, str]) -> Escritor:
 
 
 @pytest.fixture
-def cliente(sesion: AsyncSession, respuestas_del_modelo: dict[str, str]) -> Iterator[TestClient]:
+def observador() -> ObservadorEnMemoria:
+    """El observador que la aplicacion de `cliente` recibe, para afirmar sobre el.
+
+    Sustituirlo no es solo comodidad: sin la sobrescritura, `obtener_observador`
+    lee el entorno de quien corre la suite, y con las credenciales de Langfuse
+    puestas **mandaria las trazas de los tests al panel real** (`CA-4`).
+    """
+    return ObservadorEnMemoria()
+
+
+@pytest.fixture
+def cliente(
+    sesion: AsyncSession,
+    respuestas_del_modelo: dict[str, str],
+    observador: ObservadorEnMemoria,
+) -> Iterator[TestClient]:
     """La aplicacion entera, sobre **la misma sesion** que el test.
 
     No es un detalle: los tests de los endpoints llaman y despues cuentan filas.
@@ -267,6 +283,7 @@ def cliente(sesion: AsyncSession, respuestas_del_modelo: dict[str, str]) -> Iter
     app.dependency_overrides[obtener_cliente_modelo] = lambda: DobleDeterminista(
         respuestas_del_modelo
     )
+    app.dependency_overrides[obtener_observador] = lambda: observador
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
