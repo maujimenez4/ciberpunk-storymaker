@@ -30,11 +30,14 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.domain.errores import ErrorDeDominio
+from app.commons.observabilidad import Observador, ObservadorNulo, Puntuacion, Span, Traza
 from app.features.calidad import (
     CATALOGO_DE_MANUSCRITO,
     HechoUsado,
     ManuscritoAValidar,
     cerrar_manuscrito,
+    emitir,
+    puntuaciones_de_g4,
 )
 from app.features.manuscrito.lean import correr_lean
 from app.features.manuscrito.modelos import (
@@ -58,6 +61,9 @@ SEPARADOR = "\n\n"
 decide quien maqueta, y aqui solo se concatena lo que hay que validar."""
 
 ESTADO_APROBADO = "INTEGRADA"
+
+NOMBRE_DE_LEAN = "cronologia_lean"
+"""El nombre de `verification.md` §8.3, sin traducir: es la llave de su *score*."""
 
 
 class CapituloSinPuerta(ErrorDeDominio):
@@ -197,7 +203,9 @@ def _lista(crudo: Any) -> list[str]:
     return [str(v) for v in crudo if str(v).strip()]
 
 
-async def _cuadro_de_defectos(sesion: AsyncSession, obra_id: int) -> list[dict[str, Any]]:
+async def _cuadro_de_defectos(
+    sesion: AsyncSession, obra_id: int, span: Span | None = None
+) -> list[dict[str, Any]]:
     """Lo que la tirada lleva encima, **incluida la cobertura** de §11.
 
     La juntura con `calidad`, y no es un extra: sin la cobertura, el regalo puede
@@ -237,6 +245,8 @@ async def _cuadro_de_defectos(sesion: AsyncSession, obra_id: int) -> list[dict[s
         ),
         CATALOGO_DE_MANUSCRITO,
     )
+    if span is not None:
+        emitir(span, puntuaciones_de_g4(cierre))
     cobertura = cierre.cobertura
     return [
         {
@@ -248,14 +258,27 @@ async def _cuadro_de_defectos(sesion: AsyncSession, obra_id: int) -> list[dict[s
     ]
 
 
-async def publicar(sesion: AsyncSession, obra_id: int) -> VersionPublicada:
+async def publicar(
+    sesion: AsyncSession, obra_id: int, *, observador: Observador | None = None
+) -> VersionPublicada:
     """Una tirada inmutable de la obra, o ninguna.
 
     **R-1: si nada cambio, se devuelve la tirada que ya hay.** Dos tiradas
     identicas son dos enlaces al mismo contenido y dos fichas, y ni el comprador
     sabria cual mandar. «Publicar de nuevo» sin cambios no es un error: es que no
     habia nada que publicar.
+
+    **Una traza `publicacion`** en la sesion de la obra (`CLAUDE.md` §4.3), con
+    un span por validador: `cronologia_lean` y `puerta_g4`, cada uno con su
+    *score*. El observador de produccion llega blindado: si Langfuse se cae, se
+    publica igual.
     """
+    observador = observador if observador is not None else ObservadorNulo()
+    async with observador.traza(obra_id=obra_id, nombre="publicacion") as traza:
+        return await _publicar(sesion, obra_id, traza)
+
+
+async def _publicar(sesion: AsyncSession, obra_id: int, traza: Traza) -> VersionPublicada:
     listos = await _capitulos_listos(sesion, obra_id)
 
     # `CA-21`. **Antes de escribir nada**: `publicar` ya es atomico por su
@@ -265,7 +288,16 @@ async def publicar(sesion: AsyncSession, obra_id: int) -> VersionPublicada:
     # Si falta la herramienta, `correr_lean` lanza `HerramientaNoDisponible` y
     # **tampoco se publica**: que no este instalado Lean no puede degradar a
     # «pues entregamos sin comprobar». La verificacion formal es eliminatoria.
-    veredicto = await correr_lean(sesion, obra_id)
+    # En ese caso **no hay score**: un validador que no llego a correr no
+    # produce un cero, que seria un numero inventado (`calidad/scores.py`).
+    async with traza.span("cronologia_lean") as span:
+        veredicto = await correr_lean(sesion, obra_id)
+        emitir(
+            span,
+            [Puntuacion(nombre=NOMBRE_DE_LEAN, valor=1.0 if veredicto.ok else 0.0)],
+        )
+        if not veredicto.ok:
+            span.salida(veredicto.mensaje)
     if not veredicto.ok:
         raise CronologiaIncoherente(veredicto.mensaje)
 
@@ -311,11 +343,9 @@ async def publicar(sesion: AsyncSession, obra_id: int) -> VersionPublicada:
         sesion.add(
             FichaDeLectura(version_id=version.id, entradas=await _ficha_de_lectura(sesion, obra_id))
         )
-        sesion.add(
-            CuadroDeDefectos(
-                version_id=version.id, defectos=await _cuadro_de_defectos(sesion, obra_id)
-            )
-        )
+        async with traza.span("puerta_g4") as span:
+            defectos = await _cuadro_de_defectos(sesion, obra_id, span)
+        sesion.add(CuadroDeDefectos(version_id=version.id, defectos=defectos))
 
     return version
 

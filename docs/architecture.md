@@ -1017,10 +1017,11 @@ prompt renderizado, la salida y el consumo de cada llamada: ningún agente sabe 
 | Unidad de trabajo | Traza | Spans, en orden | *Scores* |
 | --- | --- | --- | --- |
 | El ciclo de un capítulo (`POST /capitulos/{id}/escribir` y cada vuelta de `POST /obras/{id}/novela`) | `capitulo N · <run_id>` | `planificador` —solo si se planifica—, `ensamblador` —con el desglose por capa como salida—, y por cada intento `escritor`, `policy`, `continuista`, `puerta_g1a`, `critico`; al integrar, `extractor` | En `policy`: `palabras_vetadas`. En `puerta_g1a`: uno por validador que corrió, `continuidad_y_canon` incluido. En `critico`: `juez_con_rubrica`, uno por criterio con su justificación |
+| La publicación (`POST /obras/{id}/publicar`) | `publicacion` | `cronologia_lean` —con el motivo como salida si rechaza—; si hay algo nuevo que publicar, `puerta_g4` | En `cronologia_lean`: el suyo, 1 o 0. **Sin Lean instalado no hay *score***: no llegó a correr, y un cero sería inventado. En `puerta_g4`: uno por validador del catálogo del manuscrito |
 
 **Lo que todavía no emite**, para que la tabla de arriba no se lea como hecha: el Entrevistador,
-el Arquitecto, la publicación —G4 y `cronologia_lean`—, el Editor de línea y el Auditor, que no
-existen como roles en producción, y los validadores de la lectura publicada.
+el Arquitecto, el Editor de línea y el Auditor —estos dos no existen como roles en producción—, y
+los validadores de la lectura publicada.
 
 ### 9.3 Verificación formal: dos sujetos distintos
 

@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.sesion import obtener_sesion
+from app.commons.observabilidad import Observador, obtener_observador
 from app.features.manuscrito import modelos
 from app.features.manuscrito.repository import (
     capitulos_de,
@@ -60,7 +61,11 @@ publicacion = APIRouter(prefix="/obras", tags=["publicacion"])
 
 
 @publicacion.post("/{obra_id}/publicar")
-async def publicar_obra(obra_id: int, sesion: Sesion) -> dict[str, object]:
+async def publicar_obra(
+    obra_id: int,
+    sesion: Sesion,
+    observador: Annotated[Observador, Depends(obtener_observador)],
+) -> dict[str, object]:
     """Fija una tirada inmutable y **devuelve el token con el que se lee**.
 
     `publicar` existia en el servicio desde la Fase 4 y no tenia ruta, asi que
@@ -78,7 +83,7 @@ async def publicar_obra(obra_id: int, sesion: Sesion) -> dict[str, object]:
     (`CLAUDE.md` §6). Aqui no hay ni un `HTTPException`: un 500 dejaria al
     frontend sin nada que contarle a quien acaba de encargar la novela.
     """
-    version = await publicar(sesion, obra_id)
+    version = await publicar(sesion, obra_id, observador=observador)
     await sesion.commit()
     return {"token": version.identificador_publico, "ordinal": version.ordinal}
 
