@@ -36,9 +36,13 @@ from app.commons.domain.errores import ContextBudgetExceeded
 from app.commons.llm.contador import ContadorDeTokens
 from app.features.calidad import (
     CODIGO_DE_PALABRA_PROHIBIDA,
+    CapituloAContrastar,
     CapituloAPolicy,
     CapituloAValidar,
+    ConocimientoEnT,
+    Continuista,
     Defecto,
+    HechoDeCanon,
     NombreDeCanon,
     ParametrosDeDiscurso,
     Persona,
@@ -48,6 +52,10 @@ from app.features.calidad import (
     aplicar_policy,
     cruzar_g1a,
 )
+
+NOMBRE_DEL_CONTINUISTA = "continuidad_y_canon"
+"""El nombre de `verification.md` §8.1, sin traducir: es la llave por la que su
+*score* se cruza con la tabla de validadores (T5)."""
 from app.features.contexto import Capa, ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
 from app.features.escena import RestriccionesDeDiscurso
 from app.features.escritura.agents import (
@@ -279,6 +287,10 @@ async def escribir_capitulo(
     hechos_de_canon: Collection[str] = (),
     vetos: Sequence[str] = (),
     semilla: int = 0,
+    continuista: Continuista | None = None,
+    grafo: Sequence[HechoDeCanon] = (),
+    conocimiento: Sequence[ConocimientoEnT] = (),
+    orden_discurso: int = 0,
 ) -> Escritura:
     """Escribe el capitulo y lo repara dirigidamente hasta dos veces.
 
@@ -358,6 +370,28 @@ async def escribir_capitulo(
             )
         recibidos: list[Defecto] = list(resultado_policy.defectos)
 
+        # P-17. El Continuista corre **antes** de la puerta y entra por
+        # `defectos_recibidos`, que la Fase 2 dejo preparado exactamente para
+        # esto: «hoy ninguna, porque el Continuista es de la Fase 3». Estaba
+        # construido, probado y exportado, y no lo llamaba nadie.
+        #
+        # Se le nombra en `emisores_externos` aunque no encuentre nada: un
+        # validador que corre y no consta no emite *score*, y su casilla en la
+        # tabla de los cinco briefs no distinguiria «limpio» de «no corrio».
+        emisores: tuple[str, ...] = ()
+        if continuista is not None:
+            revision = await continuista.revisar(
+                CapituloAContrastar(
+                    version_texto_id=str(version.id),
+                    texto=texto,
+                    grafo=tuple(grafo),
+                    conocimiento=tuple(conocimiento),
+                    orden_discurso=orden_discurso,
+                )
+            )
+            recibidos.extend(revision.defectos)
+            emisores = (NOMBRE_DEL_CONTINUISTA,)
+
         resultado = cruzar_g1a(
             CapituloAValidar(
                 version_texto_id=str(version.id),
@@ -368,6 +402,7 @@ async def escribir_capitulo(
             ),
             hechos_de_canon,
             recibidos,
+            emisores_externos=emisores,
         )
         intentos.append(
             IntentoDeEscritura(

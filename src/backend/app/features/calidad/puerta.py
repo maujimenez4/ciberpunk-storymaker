@@ -67,11 +67,12 @@ def cruzar_g1a(
     hechos_de_canon: Collection[str],
     defectos_recibidos: Iterable[Defecto] = (),
     catalogo: Sequence[Validador] = CATALOGO,
+    emisores_externos: Sequence[str] = (),
 ) -> ResultadoDePuerta:
     """Corre el catalogo, comprueba la forma de todo, y decide.
 
     `defectos_recibidos` es la via por la que entran los defectos que **no**
-    produce esta feature: hoy ninguna, porque el Continuista es de la Fase 3.
+    produce esta feature: el veto de la policy y, desde P-17, el Continuista.
     Existe desde ahora porque la comprobacion de forma se escribio para **ellos**
     —los mecanicos citan del texto y no pueden equivocarse de cita—, y sin el
     parametro RF-VAL-07 quedaria implementado sobre el unico caso que no lo
@@ -92,7 +93,26 @@ def cruzar_g1a(
         por_validador.append((validador.nombre, len(suyos)))
         hallados.extend(suyos)
 
-    clasificados = clasificar([*hallados, *defectos_recibidos], capitulo.texto, hechos_de_canon)
+    # `emisores_externos` nombra a quien produjo `defectos_recibidos` desde
+    # fuera del catalogo -hoy el Continuista, que es `continuidad_y_canon` en
+    # `verification.md` §8.1-. Sin esto **corre y no consta**, y entonces no
+    # emite *score*: la casilla de la tabla de los cinco briefs quedaria vacia
+    # sin que nadie supiera si es que no encontro nada o que no corrio, que es
+    # exactamente la distincion que `validadores_ejecutados` existe para dar.
+    #
+    # Se le imputan **sus** defectos y no se reparten entre los mecanicos: la
+    # tabla dice **cual** fallo, y atribuirle a `discurso` un `CAN-01` ajeno la
+    # haria mentir.
+    recibidos = list(defectos_recibidos)
+    ejecutados.extend(emisores_externos)
+    if emisores_externos:
+        cuantos = len(recibidos)
+        primero = emisores_externos[0]
+        por_validador.extend(
+            (nombre, cuantos if nombre == primero else 0) for nombre in emisores_externos
+        )
+
+    clasificados = clasificar([*hallados, *recibidos], capitulo.texto, hechos_de_canon)
     return ResultadoDePuerta(
         aprobado=not clasificados.bien_formados and not rotos,
         bloqueantes=clasificados.bien_formados,

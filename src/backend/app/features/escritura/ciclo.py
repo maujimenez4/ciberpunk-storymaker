@@ -42,7 +42,7 @@ reanudacion (T8). Aqui se escribe **un** capitulo.
 """
 
 import json
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -52,7 +52,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.commons.domain.errores import ContextBudgetExceeded, ErrorDeDominio, RecursoDesconocido
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
-from app.features.calidad import NombreDeCanon, RangoDeExtension
+from app.features.calidad import (
+    ConocimientoEnT,
+    Continuista,
+    NombreDeCanon,
+    RangoDeExtension,
+)
 from app.features.canon import (
     Consolidacion,
     Extractor,
@@ -123,6 +128,46 @@ class Agentes:
     planificador: Planificador
     escritor: Escritor
     extractor: Extractor
+    continuista: Continuista | None = None
+    """P-17. Estaba construido, probado y exportado, y **no lo llamaba nadie**:
+    se escribia la novela entera sin una sola comprobacion de continuidad.
+
+    Opcional **mientras la ola 2 no cierre**, no por comodidad: el Critico entra
+    con T4 y todavia no existe, y exigir los dos aqui habria dejado el
+    Continuista fuera del ciclo hasta que se escribiera un rol distinto. Con la
+    corrida real en marcha, eso era otra novela sin continuidad.
+
+    Cuando el Critico entre, los dos dejan de tener valor por defecto: un rol
+    opcional en produccion es la forma de volver a tener P-17 sin que se note.
+    """
+
+
+def conocimiento_desde_filas(
+    filas: Iterable[tuple[str, str, str, int | None]],
+) -> tuple[ConocimientoEnT, ...]:
+    """La proyeccion de `estado_en_t` que el Continuista contrasta (T8).
+
+    Se lee de la **vista**, no de las tablas de `features/canon`: una vista es
+    del esquema y no un import, asi que la frontera de `CLAUDE.md` §5.1 sigue
+    entera. Es la misma via por la que `cobertura` mira los hechos.
+
+    **`sabe_desde` nulo no es cero, y aqui es donde se pierde.** Un evento sin
+    escena no esta situado en el discurso; rellenarlo con 0 «para que no moleste»
+    convertiria **todo** evento sin escena en anterior a cualquier capitulo, y el
+    contraste de la regla de dominio 2 diria que si a cualquier cosa. La vista lo
+    deja nulo con un `LEFT JOIN` y esta funcion lo conserva: sin `or 0`, sin
+    `coalesce`, sin valor por defecto. Lo aviso la sesion **Vane** al entregar
+    T8, y esta funcion existe para que ese aviso tenga donde caerse.
+    """
+    return tuple(
+        ConocimientoEnT(
+            personaje=personaje,
+            evento_id=evento_id,
+            tiempo_historia=tiempo_historia,
+            sabe_desde=sabe_desde,
+        )
+        for personaje, evento_id, tiempo_historia, sabe_desde in filas
+    )
 
 
 @dataclass(frozen=True, slots=True)
