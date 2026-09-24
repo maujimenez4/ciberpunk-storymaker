@@ -56,11 +56,13 @@ async function rellenarYPulsar(persona: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("una pagina, tres pestanas", () => {
-  it("las tres estan, y la entrevista abre primero", () => {
+  it("las tres estan, y la creacion abre primero", () => {
+    // Plan 4 · T3: «La entrevista» se llamaba como algo que ya terminó cuando
+    // dentro se enseñaba el progreso. «Creación» vale para las dos cosas.
     abrir("/", dobleCompleto());
 
     expect(screen.getAllByRole("tab")).toHaveLength(3);
-    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/entrevista/i);
+    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/creación/i);
   });
 
   it("sin novela, leer y quien es quien no se pueden pulsar", () => {
@@ -78,6 +80,116 @@ describe("una pagina, tres pestanas", () => {
 
     expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/leer/i);
     expect(screen.getByRole("tab", { name: /leer/i })).toBeEnabled();
+  });
+});
+
+/**
+ * Plan 4 · T3 · **Dónde miro si recargo.** El progreso aparecía dentro de una
+ * pestaña que se llamaba como algo terminado, y «Leer» y «Quién es quién»
+ * salían apagadas sin decir por qué ni cuándo se abren.
+ */
+describe("la pestana de creacion tras recargar", () => {
+  const CLAVE_EN_CURSO = "storymaker.novela-en-curso";
+  const ESCRIBIENDO_3 = {
+    obra_id: 7,
+    total: 10,
+    integrados: 2,
+    en_curso: 3,
+    estado: "escribiendo",
+    motivo: null,
+  };
+
+  it("con una novela apuntada, abre en creacion y las otras dicen por que estan apagadas", async () => {
+    window.localStorage.setItem(
+      CLAVE_EN_CURSO,
+      JSON.stringify({ obraId: 7, fase: "novela", desde: 1 }),
+    );
+    const doble = dobleCompleto({ "GET /obras/7/novela": ESCRIBIENDO_3 });
+    abrir("/", doble);
+
+    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/creación/i);
+    for (const nombre of [/leer/i, /quién es quién/i]) {
+      const pestana = screen.getByRole("tab", { name: nombre });
+      expect(pestana).toBeDisabled();
+      await waitFor(() =>
+        expect(pestana).toHaveAccessibleDescription(
+          /se abren? cuando termine la novela.*capítulo 3 de 10/i,
+        ),
+      );
+    }
+    // El motivo se ve, no solo se anuncia.
+    expect(screen.getByText(/cuando termine la novela/i)).toBeVisible();
+    // Sigue la novela apuntada: no abre otra entrevista ni enseña el formulario.
+    expect(screen.queryByLabelText(/cómo se llama/i)).toBeNull();
+    expect(doble.metodos).not.toContain("POST /entrevistas");
+  });
+
+  it("sin novela apuntada, la creacion enseña el formulario", async () => {
+    abrir("/", dobleCompleto());
+
+    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/creación/i);
+    expect(await screen.findByLabelText(/cómo se llama/i)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /leer/i })).toHaveAccessibleDescription(
+      /cuando la novela esté escrita/i,
+    );
+  });
+
+  it("con token, abre en leer aunque haya una novela apuntada", () => {
+    window.localStorage.setItem(
+      CLAVE_EN_CURSO,
+      JSON.stringify({ obraId: 7, fase: "novela", desde: 1 }),
+    );
+    abrir(`/?token=abc123&vista=${VISTAS.leer}`, dobleCompleto());
+
+    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName(/leer/i);
+    expect(screen.getByRole("tab", { name: /leer/i })).not.toHaveAttribute("aria-describedby");
+  });
+});
+
+/** RF-ACC-02 · El patrón de pestañas de WAI-ARIA: se entra con Tab a la activa
+ * y se cambia con las flechas, Inicio y Fin; las apagadas se saltan. */
+describe("las pestanas con teclado", () => {
+  it("las flechas pasan de una pestana a otra y vuelven por el otro extremo", async () => {
+    const persona = userEvent.setup();
+    abrir(`/?token=abc123&vista=${VISTAS.leer}`, dobleCompleto());
+
+    await persona.tab();
+    expect(screen.getByRole("tab", { name: /leer/i })).toHaveFocus();
+
+    await persona.keyboard("{ArrowRight}");
+    const quien = screen.getByRole("tab", { name: /quién es quién/i });
+    expect(quien).toHaveFocus();
+    expect(quien).toHaveAttribute("aria-selected", "true");
+
+    await persona.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: /creación/i })).toHaveFocus();
+
+    await persona.keyboard("{ArrowLeft}");
+    expect(quien).toHaveFocus();
+
+    await persona.keyboard("{Home}");
+    expect(screen.getByRole("tab", { name: /creación/i })).toHaveFocus();
+    await persona.keyboard("{End}");
+    expect(quien).toHaveFocus();
+  });
+
+  it("solo la pestana activa esta en el orden de tabulacion", () => {
+    abrir(`/?token=abc123&vista=${VISTAS.leer}`, dobleCompleto());
+
+    expect(screen.getByRole("tab", { name: /leer/i })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: /creación/i })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("sin novela, las flechas no se paran en las pestanas apagadas", async () => {
+    const persona = userEvent.setup();
+    abrir("/", dobleCompleto());
+
+    await persona.tab();
+    const creacion = screen.getByRole("tab", { name: /creación/i });
+    expect(creacion).toHaveFocus();
+    await persona.keyboard("{ArrowRight}");
+    expect(creacion).toHaveFocus();
+    expect(creacion).toHaveAttribute("aria-selected", "true");
   });
 });
 

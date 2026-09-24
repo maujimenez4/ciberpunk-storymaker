@@ -1,5 +1,5 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { usePeticionario } from "@/shared/api/contexto";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
@@ -115,8 +115,20 @@ function convertir(crudo: string, forma: Forma): unknown {
  * regalo llevaría a lo que el comprador escribió sobre el destinatario —
  * incluido lo que pidió que **no** apareciera.
  */
+/** Por dónde va la novela, para quien la enseña fuera de esta pantalla (la
+ * navegación dice «capítulo 3 de 10» junto a las pestañas apagadas). */
+export interface AvanceDeLaNovela {
+  total: number;
+  integrados: number;
+  enCurso: number | null;
+}
+
 interface Props {
   onNovelaLanzada?: () => void;
+  /** Cada respuesta de la consulta mientras la novela se escribe. */
+  onAvance?: (avance: AvanceDeLaNovela) => void;
+  /** «Empezar otra novela»: la que había deja de seguirse. */
+  onNovelaOlvidada?: () => void;
   onNovelaPublicada?: (token: string) => void;
   onFallo?: () => void;
   deshabilitado?: boolean;
@@ -144,6 +156,7 @@ export function Entrevista(props: Props = {}) {
       {...props}
       onEmpezarOtra={() => {
         olvidarNovelaEnCurso();
+        props.onNovelaOlvidada?.();
         setRonda((previa) => previa + 1);
       }}
     />
@@ -154,6 +167,7 @@ function Recorrido({
   ronda,
   onEmpezarOtra,
   onNovelaLanzada,
+  onAvance,
   onNovelaPublicada,
   onFallo,
   deshabilitado = false,
@@ -329,6 +343,22 @@ function Recorrido({
         return;
     }
   }, [datos, enMarcha, publicarObra, onFallo]);
+
+  /**
+   * **El avance, hacia fuera, solo cuando cambia.** La navegación lo enseña
+   * junto a las pestañas apagadas. Va aparte del efecto de arriba y con
+   * `useEffectEvent`: si dependiera de la función que pasa el padre, cada
+   * render del padre avisaría otra vez, y el aviso provoca un render del padre.
+   */
+  const escribiendoAhora = enMarcha !== null && datos?.estado === "escribiendo";
+  const total = datos?.total;
+  const integrados = datos?.integrados;
+  const enCurso = datos?.en_curso;
+  const avisarDelAvance = useEffectEvent((avance: AvanceDeLaNovela) => onAvance?.(avance));
+  useEffect(() => {
+    if (!escribiendoAhora || total === undefined || integrados === undefined) return;
+    avisarDelAvance({ total, integrados, enCurso: enCurso ?? null });
+  }, [escribiendoAhora, total, integrados, enCurso]);
 
   /**
    * El reloj de la pantalla. Es un sistema externo y por eso va en un efecto:

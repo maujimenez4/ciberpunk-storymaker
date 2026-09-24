@@ -1,0 +1,26 @@
+/*
+ * La navegación de la página: el control segmentado (`.pestanas`, cuya piel
+ * vive en `estilos.css`) y, debajo, **por qué** las pestañas apagadas lo están.
+ * El motivo es texto a la vista y no un `title`: un `title` no lo ve quien usa
+ * teclado ni quien toca la pantalla.
+ */
+.navegacion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-block-end: var(--aire, 1.5rem);
+}
+
+.navegacion > .pestanas {
+  margin-block-end: 0;
+}
+
+.navegacion__motivo {
+  margin: 0;
+  max-inline-size: 34rem;
+  font-family: var(--fuente-interfaz, inherit);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--tinta-suave);
+}
