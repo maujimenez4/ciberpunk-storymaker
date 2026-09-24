@@ -1,8 +1,8 @@
 ---
 id: 001-backend-v1 / plan-1-encargo
 titulo: "Fase 1 — Encargar una novela: cimientos y entrevista"
-estado: en-revision       # borrador | en-revision | aprobado | completado
-aprobado_por:             # lo rellena una persona, nunca un agente
+estado: aprobado          # borrador | en-revision | aprobado | completado
+aprobado_por: maujimenez4 # firmado el 2026-09-24, sobre la spec v3.2
 fecha: 2026-09-23
 revisado: 2026-09-24      # correcciones y reparto entre agentes; ver "Qué cambió"
 spec: specs/001-backend-v1/spec.md
