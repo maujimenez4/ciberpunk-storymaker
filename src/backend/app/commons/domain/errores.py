@@ -109,6 +109,8 @@ class ContextBudgetExceeded(ErrorDeDominio):
         self.tokens = tokens
         self.tope = tope
         super().__init__(f"La capa {self.capa} no cabe en su tope: {tokens} tokens sobre {tope}")
+
+
 class TiempoAgotado(ErrorDeDominio):
     """Un paso supero su plazo, o la espera de turno vencio (`architecture.md` §3.6).
 
