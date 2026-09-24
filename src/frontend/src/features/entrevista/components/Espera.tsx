@@ -1,4 +1,4 @@
-import { BarraDeProgreso, Texto } from "@/shared/ui/primitives";
+import { Aviso, BarraDeProgreso, Texto } from "@/shared/ui/primitives";
 
 import type { EstadoDeLaNovela } from "../api/entrevista";
 import { duracion, estimacionRestante } from "../lib/tiempo";
@@ -23,12 +23,16 @@ export function Espera({
   datos,
   desde,
   instante,
+  atascada = false,
 }: {
   datos: EstadoDeLaNovela | undefined;
   /** Cuando empezó la cadena, en milisegundos. */
   desde: number;
   /** El ahora con el que se pinta, en milisegundos. */
   instante: number;
+  /** Lleva demasiado sin avanzar. Se avisa y **no se para nada**: puede ser
+   * un capitulo largo, y quien decide si esperar es la persona. */
+  atascada?: boolean;
 }) {
   return (
     <section className="espera" aria-label="Tu novela se está escribiendo">
@@ -54,6 +58,13 @@ export function Espera({
             estimación: cada capítulo tarda unos ocho minutos.
           </p>
         </>
+      ) : null}
+
+      {atascada ? (
+        <Aviso>
+          Lleva mucho en este capítulo; puede que se haya detenido. Seguimos
+          comprobándolo. Si en un rato sigue igual, revisa que el servidor esté en marcha.
+        </Aviso>
       ) : null}
     </section>
   );

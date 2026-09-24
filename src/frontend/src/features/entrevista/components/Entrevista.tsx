@@ -18,6 +18,10 @@ import { Espera } from "./Espera";
  * para que el avance se vea y no carga al servidor. */
 const INTERVALO_DE_CONSULTA = 5000;
 
+/** Un capitulo tarda unos ocho minutos; veinte sin ningun cambio ya es mas del
+ * doble, y el backend no tiene latido que diga si el proceso sigue vivo. */
+const UMBRAL_DE_ATASCO = 20 * 60_000;
+
 /** El paso de la cadena en curso, para decir **cual** fallo. */
 type Paso = "cerrar" | "outline" | "novela";
 
@@ -121,6 +125,9 @@ interface Props {
   /** El reloj, inyectado como en el backend: sin el, probar «lleva doce
    * minutos» obligaria a esperar doce minutos. */
   ahora?: () => number;
+  /** Cuanto tiempo sin avance antes de avisar de que puede haberse detenido,
+   * en milisegundos. */
+  umbralDeAtasco?: number;
 }
 
 export function Entrevista(props: Props = {}) {
@@ -152,6 +159,7 @@ function Recorrido({
   deshabilitado = false,
   intervaloDeConsulta = INTERVALO_DE_CONSULTA,
   ahora = Date.now,
+  umbralDeAtasco = UMBRAL_DE_ATASCO,
 }: Props & { ronda: number; onEmpezarOtra: () => void }) {
   const peticionario = usePeticionario();
   const [valores, setValores] = useState<Record<string, string>>({});
@@ -336,6 +344,29 @@ function Recorrido({
     return () => clearInterval(reloj);
   }, [escribiendo, ahora, intervaloDeConsulta]);
 
+  /**
+   * **Sin latido, lo unico visible es que no avanza.** Se apunta cuando cambio
+   * por ultima vez el par (integrados, en curso) y se avisa si pasa el umbral.
+   * Se ajusta durante el render, que es el patron de React para un estado que
+   * depende de otro, y con `instante` y no con el reloj: el render sigue puro.
+   *
+   * Tras una recarga cuenta desde que se abrio la pagina, no desde el ultimo
+   * avance real: el navegador no sabe cuando fue.
+   */
+  const huella =
+    datos !== undefined && enMarcha !== null ? `${datos.integrados}:${datos.en_curso}` : null;
+  const [ultimoAvance, setUltimoAvance] = useState<{ huella: string | null; en: number }>({
+    huella,
+    en: instante,
+  });
+  if (huella !== ultimoAvance.huella) {
+    setUltimoAvance({ huella, en: instante });
+  }
+  const atascada =
+    huella !== null &&
+    datos?.estado === "escribiendo" &&
+    instante - ultimoAvance.en > umbralDeAtasco;
+
   const ocupado = lanzar.isPending || enMarcha !== null || publicar.isPending;
 
   // El paso de la cabecera sale del paso de la cadena: el ultimo que se
@@ -398,6 +429,7 @@ function Recorrido({
           datos={enMarcha !== null ? datos : undefined}
           desde={obra?.desde ?? instante}
           instante={instante}
+          atascada={atascada}
         />
       ) : null}
 

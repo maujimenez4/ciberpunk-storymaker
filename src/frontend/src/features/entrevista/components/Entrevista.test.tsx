@@ -534,6 +534,72 @@ describe("la cadena de escribir la novela", () => {
 });
 
 /**
+ * **El backend no tiene latido** (`avance_de_la_novela`): si el proceso muere,
+ * la novela sigue diciendo «escribiendo» para siempre. Lo único que la pantalla
+ * puede ver es que no avanza, y eso es lo que dice, sin bloquear nada.
+ */
+describe("una novela que no avanza", () => {
+  const CAPITULO_4 = { ...ESCRIBIENDO_3, integrados: 3, en_curso: 4 };
+
+  async function esperarTics(): Promise<void> {
+    // Unos cuantos intervalos del reloj de la pantalla (10 ms en estos tests).
+    await new Promise((seguir) => setTimeout(seguir, 80));
+  }
+
+  it("pasado el umbral sin cambios, avisa de que puede haberse detenido y sigue consultando", async () => {
+    let ahora = 0;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(
+      <Entrevista intervaloDeConsulta={10} ahora={() => ahora} umbralDeAtasco={20 * 60_000} />,
+      { wrapper: conDoble(doble) },
+    );
+
+    await pulsarEscribir(persona);
+    await screen.findByRole("progressbar");
+    ahora += 19 * 60_000;
+    await esperarTics();
+    expect(screen.queryByText(/puede que se haya detenido/i)).toBeNull();
+
+    ahora += 2 * 60_000;
+    expect(await screen.findByText(/lleva mucho en este capítulo/i)).toHaveTextContent(
+      /puede que se haya detenido/i,
+    );
+    // No bloquea: la barra sigue y se sigue preguntando.
+    const consultas = doble.metodos.filter((m) => m === "GET /obras/7/novela").length;
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(doble.metodos.filter((m) => m === "GET /obras/7/novela").length).toBeGreaterThan(
+        consultas,
+      ),
+    );
+  });
+
+  it("cualquier avance vuelve a contar desde cero", async () => {
+    let ahora = 0;
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(
+      <Entrevista intervaloDeConsulta={10} ahora={() => ahora} umbralDeAtasco={1000} />,
+      { wrapper: conDoble(doble) },
+    );
+
+    await pulsarEscribir(persona);
+    await screen.findByText(/escribiendo el capítulo 3 de 10/i);
+    ahora += 600;
+    doble.respuestas["GET /obras/7/novela"] = CAPITULO_4;
+    await screen.findByText(/escribiendo el capítulo 4 de 10/i);
+
+    ahora += 600;
+    await esperarTics();
+    expect(screen.queryByText(/puede que se haya detenido/i)).toBeNull();
+
+    ahora += 600;
+    expect(await screen.findByText(/puede que se haya detenido/i)).toBeInTheDocument();
+  });
+});
+
+/**
  * **Reintentar es seguir, no volver a empezar.** Cerrar la entrevista crea la
  * obra y el Arquitecto tarda minutos: repetirlos tras un fallo posterior abría
  * una segunda obra y tiraba la historia ya hecha. Se reintenta el paso que
