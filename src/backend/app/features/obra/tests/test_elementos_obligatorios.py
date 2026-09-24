@@ -64,9 +64,7 @@ async def test_una_obra_sin_elementos_no_puede_existir(sesion: AsyncSession):
         await sesion.flush()
 
 
-async def test_la_cobertura_lee_la_columna_y_no_el_brief_en_bruto(
-    sesion: AsyncSession, obra: Obra
-):
+async def test_la_cobertura_lee_la_columna_y_no_el_brief_en_bruto(sesion: AsyncSession, obra: Obra):
     """**El que cierra P-2.** Sin el brief en bruto, la cobertura sigue contando.
 
     Se borra la entrevista entera, que es de donde se leian hasta hoy. Si la

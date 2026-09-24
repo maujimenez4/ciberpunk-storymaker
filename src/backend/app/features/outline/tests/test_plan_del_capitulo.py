@@ -36,7 +36,13 @@ def _capitulo(obra_id: int, **cambios: object) -> Capitulo:
 
 
 async def test_el_capitulo_guarda_los_cinco_campos_de_rf_pla_04(sesion: AsyncSession):
-    obra = Obra(titulo="X", genero="romance", tono="calido", nivel_de_calor=2)
+    obra = Obra(
+        titulo="X",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(obra)
     await sesion.flush()
 
@@ -61,7 +67,13 @@ async def test_ninguno_de_los_cuatro_admite_quedarse_vacio(sesion: AsyncSession,
     la escena, y la razon por la que R-6 de la Fase 1 rechazaba el elemento
     obligatorio vacio: una cadena vacia pasa cualquier validador posterior.
     """
-    obra = Obra(titulo="X", genero="romance", tono="calido", nivel_de_calor=2)
+    obra = Obra(
+        titulo="X",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(obra)
     await sesion.flush()
 

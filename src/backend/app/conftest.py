@@ -57,7 +57,18 @@ async def obra(sesion: AsyncSession) -> Obra:
     Sin destinatario: la relacion es 0..1, y las tablas que la consumen solo
     necesitan un `obra_id` que exista de verdad, porque `foreign_keys=ON`.
     """
-    obra = Obra(titulo="De prueba", genero="romance", tono="calido", nivel_de_calor=2)
+    # `elementos_obligatorios` va aqui desde T3 porque la columna tiene un
+    # `CheckConstraint` que prohibe la lista vacia (P-2): una obra sin nada que
+    # cubrir es la que hace que `cobertura_de_personalizacion` apruebe de balde.
+    # La fixture la comparten todas las features, asi que el valor es generico a
+    # proposito; quien necesite elementos concretos los pone en su test.
+    obra = Obra(
+        titulo="De prueba",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(obra)
     await sesion.flush()
     return obra

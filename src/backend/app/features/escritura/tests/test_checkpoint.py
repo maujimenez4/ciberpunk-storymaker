@@ -137,7 +137,13 @@ async def test_el_checkpoint_es_el_ultimo_por_numero_y_no_el_ultimo_escrito(
 async def test_el_checkpoint_es_por_obra(sesion: AsyncSession, obra_con_outline: ObraConOutline):
     """§3.8: varias obras a la vez, y el avance de una no es el de la otra."""
     await _integrar(sesion, obra_con_outline, 1)
-    otra = Obra(titulo="Otra", genero="romance", tono="calido", nivel_de_calor=2)
+    otra = Obra(
+        titulo="Otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(otra)
     await sesion.flush()
 
@@ -302,7 +308,13 @@ async def test_un_escalado_de_otra_obra_no_detiene_esta(
     sesion: AsyncSession, obra_con_outline: ObraConOutline
 ):
     """§3.8: que una obra se detenga no para a las demas."""
-    otra = Obra(titulo="Otra", genero="romance", tono="calido", nivel_de_calor=2)
+    otra = Obra(
+        titulo="Otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(otra)
     await sesion.flush()
     await _trabajo(sesion, obra_id=otra.id, capitulo_id=None, estado=Estado.ESCALADA)
@@ -380,7 +392,13 @@ async def test_no_se_empieza_un_capitulo_de_otra_obra(
 ):
     """Sin el `obra_id` en el filtro, el capitulo de otra obra pasaria las tres
     comprobaciones contra un outline que no es el suyo."""
-    otra = Obra(titulo="Otra", genero="romance", tono="calido", nivel_de_calor=2)
+    otra = Obra(
+        titulo="Otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(otra)
     await sesion.flush()
 
@@ -427,7 +445,13 @@ async def test_el_siguiente_capitulo_no_es_el_de_otra_obra(
     sin filtro devolveria el capitulo 1 de la otra: el orquestador escribiria
     la novela equivocada, o se negaria a avanzar en la suya por un hueco ajeno.
     """
-    otra = Obra(titulo="Otra", genero="romance", tono="calido", nivel_de_calor=2)
+    otra = Obra(
+        titulo="Otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(otra)
     await sesion.flush()
     sesion.add(

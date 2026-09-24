@@ -237,7 +237,13 @@ def test_estado_de_traduce_lo_que_guarda_la_columna():
 
 
 async def _trabajo(sesion: AsyncSession, estado: str, *, intento: int = 0) -> Trabajo:
-    obra = Obra(titulo="De prueba", genero="romance", tono="calido", nivel_de_calor=2)
+    obra = Obra(
+        titulo="De prueba",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=2,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(obra)
     await sesion.flush()
     trabajo = Trabajo(

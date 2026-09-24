@@ -265,31 +265,33 @@ async def numero_de_capitulo(sesion: AsyncSession, *, capitulo_id: int | None) -
 async def elementos_obligatorios_de(sesion: AsyncSession, *, obra_id: int) -> tuple[str, ...]:
     """Lo que el comprador pidio que apareciera, tal y como lo escribio.
 
-    **Se leen de la entrevista y no de `obra`, y eso es una deuda declarada:**
-    `BriefEntrada.elementos_obligatorios` se valida al cerrar la entrevista y
-    **no se persiste en ninguna columna** —`crear_obra_desde_brief` guarda
-    destinatario, genero, tono, nivel de calor y vetos, y los elementos se
-    quedan por el camino—. Lo unico que sobrevive es el brief en bruto, dentro
-    de `entrevista.respuestas`, atado a la obra por `entrevista.obra_id`.
+    **Salen de `obra.elementos_obligatorios` desde T3, y esa es la mitad que
+    cierra P-2.** Hasta entonces se leian del brief en bruto —el JSON de
+    `entrevista.respuestas`— porque no se persistian en ninguna columna, y de
+    ahi salia la forma de aprobar de balde: una obra creada por cualquier ruta
+    que no fuera la entrevista no tenia elementos que cubrir, y
+    `cobertura_de_personalizacion` **decia que todo estaba bien sin haber
+    comprobado nada**.
 
-    Se lee de ahi porque es donde estan, y porque darles columna es esquema y
-    migracion sobre `features/obra`. Queda en Desviaciones.
+    Cambiar la columna no habria bastado por si sola: mientras la lectura
+    siguiera yendo a la entrevista, la columna seria un dato que nadie mira. Por
+    eso el test que cierra P-2 borra la entrevista entera y exige que esto siga
+    devolviendo los elementos.
 
-    Una obra sin entrevista devuelve `()`, que **no es lo mismo que cubierta**:
-    `cobertura_de_obligatorios` sobre cero elementos no encuentra ausencias
-    porque no se pidio ninguna, y quien lea el informe ve cero elementos.
+    La lista **nunca esta vacia**: lo garantiza el `CheckConstraint` de `obra`,
+    no una comprobacion de aqui. Y una obra que no existe devuelve `()`, que no
+    es «todo cubierto» sino «no se comprobo nada» — quien lea el informe ve cero
+    elementos y eso es lo que tiene que ver.
     """
-    respuestas = (
+    elementos = (
         await sesion.execute(
-            text("SELECT respuestas FROM entrevista WHERE obra_id = :obra_id ORDER BY id"),
+            text("SELECT elementos_obligatorios FROM obra WHERE id = :obra_id"),
             {"obra_id": obra_id},
         )
-    ).scalars()
-    for fila in respuestas:
-        elementos = _json(fila).get("elementos_obligatorios")
-        if elementos:
-            return tuple(str(e) for e in elementos)
-    return ()
+    ).scalar_one_or_none()
+    if elementos is None:
+        return ()
+    return tuple(str(e) for e in _json(elementos))
 
 
 async def hechos_usados(sesion: AsyncSession, *, obra_id: int) -> tuple[HechoUsado, ...]:

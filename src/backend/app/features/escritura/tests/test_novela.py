@@ -214,6 +214,10 @@ async def obra_lista(sesion: AsyncSession, obra_con_outline):
     # hay que anadirle la mencion a mano. De la segunda en adelante la pone el
     # Planificador con `FICHA`.
     obra_con_outline.escena.mencionados = ["Luna"]
+    # P-2: los elementos viven en `obra` desde T3. La entrevista se deja porque
+    # es por donde llegan de verdad, pero **ya no es de donde se leen**: el test
+    # de `features/obra` la borra y comprueba que la cobertura sigue contando.
+    obra_con_outline.obra.elementos_obligatorios = list(BRIEF_DE_EJEMPLO["elementos_obligatorios"])
     sesion.add(
         Entrevista(
             respuestas={"elementos_obligatorios": BRIEF_DE_EJEMPLO["elementos_obligatorios"]},
@@ -411,8 +415,12 @@ async def test_la_cobertura_dice_cual_falta_sobre_la_novela_entera(sesion, obra_
     assert cobertura.ausentes[0].codigo == CODIGO_DE_ELEMENTO_AUSENTE
 
 
-async def test_los_elementos_obligatorios_se_leen_del_brief_de_la_obra(sesion, obra_lista):
-    """Y de una obra sin entrevista salen cero, que no es lo mismo que cubiertos."""
+async def test_los_elementos_obligatorios_se_leen_de_la_columna_de_la_obra(sesion, obra_lista):
+    """P-2. **El nombre cambio con el comportamiento**: hasta T3 esto se llamaba
+    «se leen del brief de la obra» y era cierto — se sacaban del JSON en bruto de
+    la entrevista. Ahora salen de `obra.elementos_obligatorios`.
+
+    Y de una obra que no existe salen cero, que no es lo mismo que cubiertos."""
     assert await elementos_obligatorios_de(sesion, obra_id=obra_lista.obra.id) == (
         "el perro Luna",
         "la bufanda roja",
@@ -607,8 +615,13 @@ async def _otra_obra_con_capitulos(sesion: AsyncSession):
     obra_id = (
         await sesion.execute(
             text(
-                "INSERT INTO obra (titulo, genero, tono, nivel_de_calor) "
-                "VALUES ('Otra', 'romance', 'calido', 1) RETURNING id"
+                # `elementos_obligatorios` va aqui desde T3: la columna es
+                # obligatoria y no admite lista vacia (P-2). Este INSERT es SQL
+                # crudo a proposito —prueba que el numero no sale del id— y por
+                # eso no lo cubrio el arreglo del modelo.
+                "INSERT INTO obra (titulo, genero, tono, nivel_de_calor, "
+                "elementos_obligatorios) "
+                "VALUES ('Otra', 'romance', 'calido', 1, '[\"un elemento\"]') RETURNING id"
             )
         )
     ).scalar_one()

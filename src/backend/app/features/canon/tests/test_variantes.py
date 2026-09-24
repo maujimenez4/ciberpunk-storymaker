@@ -67,7 +67,13 @@ async def test_las_variantes_llegan_ordenadas_y_sin_repetir(sesion, obra):
 async def test_solo_llegan_los_nombres_de_esa_obra(sesion, obra):
     """Dos obras comparten base (P-07). Un nombre de la otra colado aqui haria
     que el validador aceptara una grafia que este canon no declara."""
-    otra = Obra(titulo="La otra", genero="romance", tono="calido", nivel_de_calor=1)
+    otra = Obra(
+        titulo="La otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=1,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(otra)
     await sesion.flush()
 

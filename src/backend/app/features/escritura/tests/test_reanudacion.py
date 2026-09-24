@@ -386,7 +386,13 @@ async def test_sin_obra_se_buscan_los_de_todas_y_con_obra_solo_los_suyas(
 async def _otra_obra(sesion: AsyncSession) -> int:
     from app.features.obra.modelos import Obra
 
-    obra = Obra(titulo="La otra", genero="romance", tono="calido", nivel_de_calor=1)
+    obra = Obra(
+        titulo="La otra",
+        genero="romance",
+        tono="calido",
+        nivel_de_calor=1,
+        elementos_obligatorios=["un elemento que el comprador pidio"],
+    )
     sesion.add(obra)
     await sesion.flush()
     return obra.id
