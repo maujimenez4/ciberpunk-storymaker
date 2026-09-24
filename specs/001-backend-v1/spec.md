@@ -475,6 +475,26 @@ Todos los términos existen en `docs/definitions.md` v2.1. Los que esta spec usa
 
 ## Decisiones
 
+**P-09 · Un capítulo que agota sus reintentos no detiene el regalo, pero un veto sí.** Decidido por `maujimenez4`, 2026-09-24.
+
+`CLAUDE.md` §9.1 fija **dos reintentos dirigidos** por capítulo y después escalado a revisión humana, y hasta hoy nadie había dicho qué ve el destinatario mientras tanto. Quedaban dos respuestas y ninguna estaba escrita: o no hay novela hasta que ese capítulo salga, o hay novela sin ese capítulo.
+
+**Se publica lo que pasó su puerta.** Una versión publicada puede llevar menos de diez capítulos. El destinatario abre su enlace, lee lo que hay, y los capítulos que faltan **se ven como huecos declarados**, no como una novela que acaba antes de tiempo.
+
+*Por qué, y contra qué:* la alternativa —no publicar nada hasta que los diez estén— convierte un capítulo atascado en **cero producto**, y el atasco no es raro: son dos reintentos y un escalado a una persona que puede tardar un día. Un regalo con nueve capítulos y un hueco honesto es un regalo; nueve capítulos que nadie puede leer no son nada. Y `CLAUDE.md` §8, regla 14 —ningún capítulo de una versión publicada puede haber quedado fuera de su puerta— **se sigue cumpliendo entera**: los que están, pasaron; el que no pasó, no está.
+
+**El veto es el caso contrario, y no se toca.** `CLAUDE.md` §11 dice, literal, que agotado el límite por una palabra vetada *«la generación se detiene y se informa: no se publica una novela con una palabra que el comprador pidió no leer, aunque el resto esté bien»*. Esa frase decide, y esta decisión **no la invierte**.
+
+*Y la distinción no es de grado:* un capítulo que puntúa bajo es calidad que no llegó, y el comprador puede decidir si le vale. Una palabra que el comprador pidió expresamente no leer es una **promesa rota**, y publicar los otros nueve no la repara — sigue habiendo un capítulo que no se le puede entregar por un motivo que él puso. Son dos fallos distintos y se tratan distinto: el primero se enseña, el segundo se para.
+
+**Lo que esto obliga:**
+
+- La portada y la ficha de lectura **dicen cuántos capítulos tiene la versión y cuáles faltan**. Una versión parcial que se presenta como completa es peor que no publicarla: el destinatario creería que la novela termina ahí.
+- El comprador se entera **antes** que el destinatario. Publicar parcial sin avisarle sería decidir por él sobre su propio regalo.
+- Esto es alcance de la **Fase 5** —petición de cambio y regeneración— y del frontend, que ya tiene el estado de espera en `plan-2-ficha.md` T5. No es una tarea nueva de la Fase 4.
+
+---
+
 **P-08 · El cliente de modelo invoca el Claude Agent SDK, no la API con clave.** Decidido por `maujimenez4`, 2026-09-24.
 
 P-02 dejó dicho **qué** —Anthropic, consumo de cuenta, sin clave de API— y ningún documento decía **cómo**. La Fase 1 lo destapó de la peor manera posible: sus tres endpoints existen, están en el OpenAPI y **responden 500 contra la aplicación levantada**, porque la única implementación de `ClienteModelo` al terminar es `DobleDeterminista`. Ninguna tarea tenía asignado el cliente real.
