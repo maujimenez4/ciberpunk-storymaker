@@ -23,13 +23,13 @@ promete, y cada tarea anade su linea al llegar:
 | `ultima_version`         | `repository`    | **T1**        |
 | `capitulos_de`           | `repository`    | **T1**        |
 | `dedicatoria_de`         | `repository`    | **T1**        |
+| `capitulos_cambiados`    | `repository`    | **T7**        |
 | `CapituloDelIndice`      | `schemas`       | **T1**        |
 | `EntradaDeFicha`         | `schemas`       | **T1**        |
 | `DefectoDelCuadro`       | `schemas`       | **T1**        |
 | `VersionPublicadaSalida` | `schemas`       | **T1**        |
 | `DedicatoriaEntrada`     | `schemas`       | **T2**        |
 | `publicar`               | `service`       | T6            |
-| `diferencia_de_texto`    | `service`       | T7            |
 | `generar_lean`           | `lean.generador`| T4            |
 | `router`                 | `router`        | T9            |
 
@@ -47,6 +47,7 @@ from app.features.manuscrito.modelos import (
     nuevo_identificador_publico,
 )
 from app.features.manuscrito.repository import (
+    capitulos_cambiados,
     capitulos_de,
     dedicatoria_de,
     ultima_version,
@@ -59,10 +60,17 @@ from app.features.manuscrito.schemas import (
     EntradaDeFicha,
     VersionPublicadaSalida,
 )
+from app.features.manuscrito.service import (
+    CapituloSinPuerta,
+    dedicatoria_o_nada,
+    ensamblar_manuscrito,
+    publicar,
+)
 
 __all__ = [
     "CapituloDelIndice",
     "CapituloPublicado",
+    "CapituloSinPuerta",
     "CuadroDeDefectos",
     "Dedicatoria",
     "DedicatoriaEntrada",
@@ -71,9 +79,13 @@ __all__ = [
     "FichaDeLectura",
     "VersionPublicada",
     "VersionPublicadaSalida",
+    "capitulos_cambiados",
     "capitulos_de",
     "dedicatoria_de",
+    "dedicatoria_o_nada",
+    "ensamblar_manuscrito",
     "nuevo_identificador_publico",
+    "publicar",
     "ultima_version",
     "version_por_token",
 ]
