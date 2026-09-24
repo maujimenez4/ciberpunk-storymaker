@@ -71,13 +71,18 @@ PERSONA_DE_LA_OBRA: dict[str, Persona] = {
     "3ª limitada": Persona.TERCERA_LIMITADA,
     "3ª omnisciente": Persona.TERCERA_OMNISCIENTE,
 }
-"""La obra dice `3ª limitada` y `calidad` dice `tercera_limitada`.
+"""De la cadena que declara la obra al enum con que juzga `calidad`.
 
-**Son dos grafias del mismo concepto y las dos existen hoy en el repositorio**
-(ver Desviaciones): `definitions.md` §5 fija la ordinal abreviada, que es la que
-usan `outline` y `escena`, y T12 escribio su enum con nombres deletreados. No se
-elige aqui cual gana —eso es §3.2 y no una tarea de implementacion—: se traduce
-en **un solo sitio**, con un test que cae si aparece una persona sin traducir.
+**Hoy es la identidad, y no siempre lo fue.** `calidad` nacio con `primera` y
+`tercera_limitada` mientras `outline` y `escena` usaban los literales de
+`definitions.md` §5; convivieron una ola entera y lo destapo esta tarea al
+tener que traducir. Se alinearon al cerrar la ola 4.
+
+El mapa se queda aunque sea la identidad, y no es ceremonia: es la frontera
+entre un texto que viene de la biblia --dato-- y un tipo cerrado, y lleva un
+test que cae si aparece una persona sin traducir. Si alguien vuelve a
+desalinear las dos grafias, ese test lo dice en vez de descubrirse tres olas
+despues.
 """
 
 TIEMPO_VERBAL_DE_LA_OBRA: dict[str, TiempoVerbal] = {

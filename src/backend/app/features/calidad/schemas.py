@@ -20,11 +20,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Persona(StrEnum):
-    """`definitions.md` §5. Se declara en la `Obra` y se hereda a cada escena."""
+    """`definitions.md` §5. Se declara en la `Obra` y se hereda a cada escena.
 
-    PRIMERA = "primera"
-    TERCERA_LIMITADA = "tercera_limitada"
-    TERCERA_OMNISCIENTE = "tercera_omnisciente"
+    Los valores son los **literales del documento**, no una version en ASCII.
+    `CLAUDE.md` §2: el mismo concepto se llama igual en el esquema de datos, en
+    los prompts y en la interfaz. Esta feature nacio con `primera` y
+    `tercera_limitada` mientras `outline` y `escena` usaban los del documento;
+    convivieron una ola entera y lo destapo T8 al tener que traducir entre las
+    dos. Se alinean al cerrar la ola 4.
+    """
+
+    PRIMERA = "1ª"
+    TERCERA_LIMITADA = "3ª limitada"
+    TERCERA_OMNISCIENTE = "3ª omnisciente"
 
 
 class TiempoVerbal(StrEnum):
