@@ -109,3 +109,21 @@ class ContextBudgetExceeded(ErrorDeDominio):
         self.tokens = tokens
         self.tope = tope
         super().__init__(f"La capa {self.capa} no cabe en su tope: {tokens} tokens sobre {tope}")
+class TiempoAgotado(ErrorDeDominio):
+    """Un paso supero su plazo, o la espera de turno vencio (`architecture.md` §3.6).
+
+    El trabajo pasa a `FALLIDA` con el paso anotado. Cuando la vence la espera
+    de turno del presupuesto concurrente (`commons/jobs/turnos.py`), **no se
+    llego a llamar al modelo**: es relanzable sin coste, y por eso el paso viene
+    nombrado y no se resume en «se agoto el tiempo».
+
+    Es una regla de negocio y no un fallo tecnico: el techo concurrente del
+    encargo §7 se hace cumplir **esperando**, asi que agotar la espera es el
+    desenlace previsto de esa regla, no una averia.
+    """
+
+    def __init__(self, paso: str, segundos: float | None = None) -> None:
+        self.paso = paso
+        self.segundos = segundos
+        plazo = "sin plazo" if segundos is None else f"su plazo de {segundos} s"
+        super().__init__(f"«{paso}» agoto {plazo}")
