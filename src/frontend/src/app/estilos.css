@@ -10,22 +10,90 @@
  * **La jerarquía la manda el texto.** No hay tarjetas, ni sombras, ni filetes
  * decorativos: lo único que se ve es la prosa y lo que se puede tocar.
  *
+ * **Dos voces** (plan 4): el libro habla en Literata; la interfaz —pestañas,
+ * botones, etiquetas, avisos, progreso— en Atkinson Hyperlegible Next, un
+ * escalón más pequeña. Así el libro no compite con los mandos.
+ *
  * `RF-ACC-04` exige contraste AA y **gana sobre cualquier elección estética**
- * (`architecture.md` §7.2). Las tres parejas de esta paleta se comprueban con
- * `axe`, no a ojo.
+ * (`architecture.md` §7.2). Cada pareja de cada tema se comprueba con la
+ * fórmula de la WCAG en `shared/ui/tests/contraste.test.ts`, no a ojo.
  */
 
-@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap");
 
-:root {
+/**
+ * **Los temas.** `data-tema` en `<html>` con `papel`, `sepia` o `noche`. Sin
+ * atributo se sigue al sistema: claro es Papel, oscuro es Noche. Sepia existe
+ * porque un lector de libros lo ofrece, **pero nunca es el de defecto**.
+ */
+:root,
+:root[data-tema="papel"] {
+  color-scheme: light;
+
   --papel: #f2f3ee;
   --tinta: #1b2a3a;
   --acento: #6b3a52;
+  /* El texto que va encima del acento: el botón principal. */
+  --acento-texto: #f2f3ee;
 
   /* La tinta aguada de los metadatos. Sigue siendo AA sobre el papel. */
   --tinta-suave: #4a5b68;
   /* La guarda: el fondo de un bloque que no es prosa. */
   --guarda: #e4e7de;
+  /* Donde se escribe: un punto más claro que el papel. */
+  --fondo-campo: #ffffff;
+}
+
+:root[data-tema="sepia"] {
+  color-scheme: light;
+
+  --papel: #efe6d4;
+  --tinta: #3b2f22;
+  --acento: #6b3a52;
+  --acento-texto: #efe6d4;
+  --tinta-suave: #6a5a47;
+  --guarda: #e3d8c3;
+  --fondo-campo: #f8f2e6;
+}
+
+/* Noche no es negro ni gris neutro: es pizarra, de la familia de la tinta. */
+:root[data-tema="noche"] {
+  color-scheme: dark;
+
+  --papel: #1c2024;
+  --tinta: #d9d6ce;
+  --acento: #c9a0b6;
+  --acento-texto: #1c2024;
+  --tinta-suave: #9aa3ab;
+  --guarda: #262b30;
+  --fondo-campo: #15191c;
+}
+
+/* El mismo Noche, cuando nadie ha elegido y el sistema está en oscuro. Lo
+   vigila un test: si los dos bloques divergen, falla. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    color-scheme: dark;
+
+    --papel: #1c2024;
+    --tinta: #d9d6ce;
+    --acento: #c9a0b6;
+    --acento-texto: #1c2024;
+    --tinta-suave: #9aa3ab;
+    --guarda: #262b30;
+    --fondo-campo: #15191c;
+  }
+}
+
+:root {
+  --fuente-libro: Literata, Georgia, "Times New Roman", serif;
+  --fuente-interfaz: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
+
+  /* El radio sigue la jerarquía: lo que se toca es lo más redondo; el bloque,
+     lo que menos. */
+  --radio-pildora: 999px;
+  --radio-campo: 12px;
+  --radio-bloque: 16px;
 
   /**
    * `RF-ACC-05`. Una novela a ancho completo de pantalla no se lee: el ojo
@@ -50,20 +118,42 @@
   box-sizing: border-box;
 }
 
-html {
-  color-scheme: light;
-}
-
 body {
   margin: 0;
   background: var(--papel);
   color: var(--tinta);
-  font-family: Literata, Georgia, "Times New Roman", serif;
+  font-family: var(--fuente-libro);
   font-size: var(--cuerpo);
   line-height: var(--ritmo);
   /* La lectura en móvil es vertical y estrecha: el aire lateral es del gesto
      del pulgar, no de una rejilla. */
   padding: var(--aire) 1.25rem 4rem;
+}
+
+/* --- la voz de la interfaz ------------------------------------------------ */
+
+/**
+ * Todo lo que no es el libro habla en la familia de interfaz, en caja normal y
+ * sin mayúsculas sostenidas. La prosa, los títulos de capítulo, el índice y la
+ * dedicatoria se quedan en `--fuente-libro`.
+ */
+:where(
+    .pestanas,
+    .pestana,
+    .boton,
+    .campo__etiqueta,
+    .campo__control,
+    .nota,
+    .aviso,
+    .comprobacion,
+    .espera,
+    .pasos,
+    button,
+    input,
+    select,
+    textarea
+  ) {
+  font-family: var(--fuente-interfaz);
 }
 
 /* --- lo que se puede tocar ------------------------------------------------ */
@@ -149,9 +239,10 @@ body {
 
 .boton {
   font: inherit;
+  font-family: var(--fuente-interfaz);
   font-size: var(--nota);
   font-weight: 600;
-  color: var(--papel);
+  color: var(--acento-texto);
   background: var(--acento);
   border: 0;
   padding: 0.625rem 1.25rem;
@@ -233,6 +324,7 @@ body {
 
 .pestana {
   font: inherit;
+  font-family: var(--fuente-interfaz);
   font-size: var(--nota);
   background: none;
   border: 0;
@@ -326,10 +418,11 @@ body {
 
 .campo__control {
   font: inherit;
+  font-family: var(--fuente-interfaz);
   inline-size: 100%;
   padding: 0.5rem 0.625rem;
   color: var(--tinta);
-  background: #fff;
+  background: var(--fondo-campo);
   border: 1px solid var(--tinta-suave);
   border-radius: 2px;
 }

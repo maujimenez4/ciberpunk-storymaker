@@ -1,15 +1,15 @@
 /**
- * T4 · paso 5 · `RF-ACC-04`: contraste **AA**, con herramienta y no a ojo.
+ * `RF-ACC-04`: contraste **AA**, con herramienta y no a ojo, **en los tres
+ * temas** (plan 4, T1).
  *
  * **`axe` bajo jsdom no comprueba contraste** y conviene saberlo: la regla
- * `color-contrast` necesita un motor que pinte, así que en la suite de
- * `primitives.test.tsx` esa comprobación **no corre** — pasa sin mirar. Es el
- * mismo modo de fallo que este proyecto lleva persiguiendo todo el día, y por
- * eso el ratio se calcula aquí con la fórmula de la WCAG sobre los tokens
- * reales, leídos de la hoja de estilos.
+ * `color-contrast` necesita un motor que pinte, y jsdom tampoco resuelve las
+ * propiedades personalizadas de una hoja de estilos. Con `axe` aquí, el test
+ * pasaría sin mirar. Por eso el ratio se calcula con la fórmula de la WCAG
+ * sobre los tokens reales, leídos **del bloque de cada tema** en la hoja.
  *
- * Sobre el navegador de verdad lo vuelve a mirar T8, que es donde `axe` sí
- * puede. Esto no lo sustituye: lo adelanta al sitio donde se elige el color.
+ * Sobre el navegador de verdad lo vuelve a mirar `axe` en las capturas; esto no
+ * lo sustituye: lo adelanta al sitio donde se elige el color.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,10 +18,19 @@ import { describe, expect, it } from "vitest";
 
 const ESTILOS = readFileSync(join(process.cwd(), "src", "app", "estilos.css"), "utf8");
 
-function token(nombre: string): string {
-  const encontrado = new RegExp(`${nombre}:\\s*(#[0-9a-f]{6})`, "i").exec(ESTILOS);
+/** El cuerpo `{ … }` de la primera regla cuyo selector contiene `selector`. */
+function bloque(selector: string): string {
+  const inicio = ESTILOS.indexOf(selector);
+  if (inicio === -1) throw new Error(`falta el bloque ${selector}`);
+  const abre = ESTILOS.indexOf("{", inicio);
+  const cierra = ESTILOS.indexOf("}", abre);
+  return ESTILOS.slice(abre + 1, cierra);
+}
+
+function token(cuerpo: string, nombre: string): string {
+  const encontrado = new RegExp(`${nombre}:\\s*(#[0-9a-f]{6})\\b`, "i").exec(cuerpo);
   if (!encontrado?.[1]) throw new Error(`falta el token ${nombre}`);
-  return encontrado[1];
+  return encontrado[1].toLowerCase();
 }
 
 /** Luminancia relativa de la WCAG 2.2. */
@@ -36,18 +45,80 @@ function ratio(uno: string, otro: string): number {
   return (claro! + 0.05) / (oscuro! + 0.05);
 }
 
-describe("el contraste de la paleta", () => {
-  const papel = token("--papel");
-  const guarda = token("--guarda");
+const TOKENS = [
+  "--papel",
+  "--tinta",
+  "--tinta-suave",
+  "--guarda",
+  "--acento",
+  "--acento-texto",
+  "--fondo-campo",
+] as const;
+
+function paleta(cuerpo: string): Record<(typeof TOKENS)[number], string> {
+  return Object.fromEntries(TOKENS.map((t) => [t, token(cuerpo, t)])) as Record<
+    (typeof TOKENS)[number],
+    string
+  >;
+}
+
+/**
+ * Papel es el `:root` sin atributo (y `[data-tema="papel"]` comparte bloque);
+ * Sepia y Noche tienen el suyo. Noche aparece dos veces —elegida a mano y
+ * seguida del sistema oscuro— y el test exige que digan lo mismo.
+ */
+const TEMAS = {
+  papel: bloque(':root[data-tema="papel"]'),
+  sepia: bloque(':root[data-tema="sepia"]'),
+  noche: bloque(':root[data-tema="noche"]'),
+} as const;
+
+describe.each(Object.entries(TEMAS))("el contraste del tema %s", (_tema, cuerpo) => {
+  const p = paleta(cuerpo);
 
   it.each([
-    ["la prosa sobre el papel", token("--tinta"), papel],
-    ["los metadatos sobre el papel", token("--tinta-suave"), papel],
-    ["los enlaces sobre el papel", token("--acento"), papel],
-    ["el texto del boton sobre el acento", papel, token("--acento")],
-    ["la prosa sobre la guarda de un aviso", token("--tinta"), guarda],
-    ["los metadatos sobre la guarda", token("--tinta-suave"), guarda],
-  ])("%s pasa AA", (_nombre, frente, fondo) => {
+    ["la prosa sobre el papel", p["--tinta"], p["--papel"]],
+    ["los metadatos y notas sobre el papel", p["--tinta-suave"], p["--papel"]],
+    ["los enlaces y el boton secundario sobre el papel", p["--acento"], p["--papel"]],
+    ["el texto del boton principal sobre el acento", p["--acento-texto"], p["--acento"]],
+    ["la prosa de un aviso sobre la guarda", p["--tinta"], p["--guarda"]],
+    ["los metadatos sobre la guarda", p["--tinta-suave"], p["--guarda"]],
+    ["un enlace dentro de un aviso", p["--acento"], p["--guarda"]],
+    ["lo que se escribe en un campo", p["--tinta"], p["--fondo-campo"]],
+  ])("%s pasa AA de texto (4.5:1)", (_nombre, frente, fondo) => {
     expect(ratio(frente, fondo)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each([
+    ["el anillo de foco sobre el papel", p["--acento"], p["--papel"]],
+    ["el anillo de foco sobre la guarda", p["--acento"], p["--guarda"]],
+    ["el borde de un campo sobre su fondo", p["--tinta-suave"], p["--fondo-campo"]],
+    ["el tramo de la barra sobre la guarda", p["--acento"], p["--guarda"]],
+  ])("%s pasa AA de componente (3:1)", (_nombre, frente, fondo) => {
+    expect(ratio(frente, fondo)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("los temas", () => {
+  it("sin atributo, el claro es Papel: comparten el mismo bloque", () => {
+    expect(ESTILOS).toMatch(/(^|\n):root,\s*:root\[data-tema="papel"\]\s*\{/);
+  });
+
+  it("sin atributo y con el sistema oscuro, se aplica Noche tal cual", () => {
+    const sistema = ESTILOS.slice(ESTILOS.indexOf("prefers-color-scheme: dark"));
+    expect(sistema).toContain(":root:not([data-tema])");
+    expect(paleta(bloque(":root:not([data-tema])"))).toEqual(paleta(TEMAS.noche));
+  });
+
+  it("Sepia no es nunca el tema por defecto", () => {
+    // Su bloque lleva un solo selector: solo se aplica si alguien lo elige.
+    expect(ESTILOS).toMatch(/(^|\n):root\[data-tema="sepia"\]\s*\{/);
+    expect(paleta(TEMAS.papel)).not.toEqual(paleta(TEMAS.sepia));
+    expect(paleta(bloque(":root:not([data-tema])"))).not.toEqual(paleta(TEMAS.sepia));
+  });
+
+  it("la interfaz y el libro tienen cada uno su familia", () => {
+    expect(ESTILOS).toMatch(/--fuente-libro:\s*Literata/);
+    expect(ESTILOS).toMatch(/--fuente-interfaz:\s*"Atkinson Hyperlegible Next"/);
   });
 });
