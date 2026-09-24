@@ -133,10 +133,63 @@ Escalar ==
   /\ UNCHANGED <<rondas, actual, integrados, validado, intento,
                  versiones, peticiones, porRehacer>>
 
+(* R-3. La caida y su reanudacion, en una accion:                           *)
+(*   - la prosa sin confirmar se retira      -> validado[actual] = FALSE    *)
+(*   - el paso interrumpido se repite entero -> vuelve a ESCRIBIENDO        *)
+(*   - las reparaciones gastadas SE HEREDAN  -> `intento` sin cambiar       *)
+(* Esa tercera linea es `reanudacion.reanudar`, y es la unica que impide    *)
+(* que matar el proceso sea una forma de conseguir reintentos.              *)
+(*                                                                          *)
+(* Una caida en ESCRIBIENDO_CAPITULO no cambia ninguna variable observable  *)
+(* —la prosa no llego a confirmarse—, asi que es stuttering y no una accion.*)
+Reanudar ==
+  /\ estado = "VALIDANDO_CAPITULO"
+  /\ actual \notin integrados
+  /\ estado' = "ESCRIBIENDO_CAPITULO"
+  /\ validado' = [validado EXCEPT ![actual] = FALSE]
+  /\ UNCHANGED <<rondas, actual, integrados, intento,
+                 versiones, peticiones, porRehacer>>
+
+(* §3.9: VALIDANDO_CAPITULO --> VERIFICANDO, «ultimo capitulo aprobado».    *)
+(* La condicion de `porRehacer` la usa T3; con la regeneracion sin escribir *)
+(* es siempre cierta, y ponerla ya evita que T3 tenga que tocar esta linea. *)
+Verificar ==
+  /\ estado \in {"VALIDANDO_CAPITULO", "REGENERANDO"}
+  /\ Pendientes = {}
+  /\ porRehacer = {}
+  /\ estado' = "VERIFICANDO"
+  /\ UNCHANGED <<rondas, actual, integrados, validado, intento,
+                 versiones, peticiones, porRehacer>>
+
+TodosValidados == \A c \in Numeros : validado[c]
+
+(* Publicar es AFIRMAR QUE PASO LAS PUERTAS, no que se escribio             *)
+(* (`CLAUDE.md` §8, regla 14). La guarda es el invariante S1 escrito como   *)
+(* precondicion; el invariante comprueba que no hay otro camino.            *)
+Publicar ==
+  /\ estado = "VERIFICANDO"
+  /\ Pendientes = {}
+  /\ TodosValidados
+  /\ versiones' = Append(versiones,
+                         [capitulos |-> integrados,
+                          validados |-> {c \in Numeros : validado[c]}])
+  /\ estado' = "PUBLICADA"
+  /\ UNCHANGED <<rondas, actual, integrados, validado, intento,
+                 peticiones, porRehacer>>
+
+(* §5c: si Lean falla, la version NO se publica y el fallo vuelve al editor.*)
+LeanFalla ==
+  /\ estado = "VERIFICANDO"
+  /\ estado' = "DETENIDA"
+  /\ UNCHANGED <<rondas, actual, integrados, validado, intento,
+                 versiones, peticiones, porRehacer>>
+
 (* Sin esto, TLC informa de `deadlock` en los estados terminales de §3.9,   *)
 (* que son finales y no averias.                                            *)
 Fin ==
-  /\ estado = "DETENIDA"
+  /\ \/ estado = "DETENIDA"
+     \/ /\ estado = "PUBLICADA"
+        /\ peticiones = MaxPeticiones
   /\ UNCHANGED vars
 
 Next ==
@@ -147,6 +200,10 @@ Next ==
   \/ Aprobar
   \/ Reparar
   \/ Escalar
+  \/ Reanudar
+  \/ Verificar
+  \/ Publicar
+  \/ LeanFalla
   \/ Fin
 
 Spec == Init /\ [][Next]_vars
