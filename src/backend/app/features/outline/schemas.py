@@ -7,9 +7,11 @@ endpoint devuelve son estos, y no las filas de `capitulo`. No es ceremonia —
 `escena`, y una respuesta construida desde la fila perderia justo eso.
 """
 
+import re
+import unicodedata
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EXTENSION_MINIMA = 1000
 EXTENSION_MAXIMA = 1500
@@ -67,6 +69,14 @@ class TiempoVerbal(StrEnum):
     PRESENTE = "presente"
 
 
+class TipoDeCorte(StrEnum):
+    """Los tres cortes de `definitions.md` §4.1 (`Capitulo`, criterio de cierre)."""
+
+    TENSION = "tensión"
+    PREGUNTA = "pregunta"
+    REVELACION = "revelación"
+
+
 class DiscursoDeLaObra(BaseModel):
     """Los parametros de discurso que la biblia declara (`definitions.md` §5).
 
@@ -113,9 +123,32 @@ class CapituloDelOutline(BaseModel):
     valor_entrada: str = Field(min_length=1, max_length=120)
     valor_salida: str = Field(min_length=1, max_length=120)
     gancho_de_apertura: str = Field(min_length=1, max_length=500)
-    tipo_de_corte_final: str = Field(min_length=1, max_length=60)
+    tipo_de_corte_final: TipoDeCorte
     extension_objetivo: int = Field(ge=EXTENSION_MINIMA, le=EXTENSION_MAXIMA)
     beat_de_genero: BeatDeGenero | None = None
+
+    @field_validator("tipo_de_corte_final", mode="before")
+    @classmethod
+    def el_corte_que_nombra(cls, valor: object) -> object:
+        """Una frase que nombra **uno solo** de los tres cortes dice cual es.
+
+        El modelo tiende a describir el corte en vez de nombrarlo -- «corta en
+        pregunta: quien escribio la carta» --, y la corrida del 2026-09-24 perdio
+        los diez capitulos por eso. Se toma el corte que la frase nombra, sin
+        acentos ni mayusculas; si nombra dos o ninguno, no se adivina y el
+        valor sigue tal cual para que el enum lo rechace.
+        """
+        if not isinstance(valor, str):
+            return valor
+        palabras = set(re.findall(r"\w+", _sin_acentos(valor.lower())))
+        nombrados = [corte for corte in TipoDeCorte if _sin_acentos(corte.value) in palabras]
+        return nombrados[0] if len(nombrados) == 1 else valor
+
+
+def _sin_acentos(texto: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
+    )
 
 
 class OutlineCreado(BaseModel):

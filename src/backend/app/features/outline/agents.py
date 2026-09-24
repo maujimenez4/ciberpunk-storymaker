@@ -17,7 +17,8 @@ from app.commons.llm.cliente import ClienteModelo
 from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.outline.schemas import CapituloDelOutline
 
-PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "arquitecto.v1.md").read_text(encoding="utf-8")
+PLANTILLA_V2 = (Path(__file__).parent / "prompts" / "arquitecto.v2.md").read_text(encoding="utf-8")
+MARCA_DE_REPARACION = "## Tu salida anterior no validó"
 _MARCA = "brief"
 
 
@@ -32,7 +33,14 @@ class SalidaMalFormada(Exception):
     `features/obra/agents.py`— y se duplica en vez de subir a `commons/`:
     `CLAUDE.md` §5.1 regla 4 dice que se duplica primero y se sube al **tercer**
     uso real. Queda anotado en Desviaciones para que el tercero la mueva.
+
+    `motivo` es lo que se le devuelve al modelo en el reintento: los fallos de
+    validacion, sin el crudo que los produjo.
     """
+
+    def __init__(self, mensaje: str, *, motivo: str = "") -> None:
+        super().__init__(mensaje)
+        self.motivo = motivo or mensaje
 
 
 def _con_motivo(crudo: str, error: Exception) -> str:
@@ -46,8 +54,7 @@ def _con_motivo(crudo: str, error: Exception) -> str:
     """
     if isinstance(error, ValidationError):
         fallos = "; ".join(
-            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}"
-            for e in error.errors()[:6]
+            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}" for e in error.errors()[:6]
         )
         return f"{fallos} | crudo: {crudo[:200]}"
     return f"{type(error).__name__}: {error} | crudo: {crudo[:200]}"
@@ -113,16 +120,52 @@ class Arquitecto:
         self._semilla = semilla
 
     async def planificar(self, brief: Mapping[str, Any]) -> OutlineGenerado:
-        """Una sola llamada al modelo, y su salida validada antes de creersela.
+        """Una llamada al modelo, y su salida validada antes de creersela.
 
         Una llamada y no dos —biblia primero, outline despues— porque el outline
         se apoya en la biblia que el propio Arquitecto acaba de decidir: en dos
         llamadas habria que volver a mandarsela entera y el coste de CU-02
         dejaria de ser previsible.
+
+        **Y un reintento dirigido si no valida**, con el motivo concreto
+        (`CLAUDE.md` §15: nada de «mejoralo»). Sin el, un campo de mas o una
+        frase donde iba un literal le costaba al comprador tres minutos y un
+        clic; paso dos veces seguidas en la corrida del 2026-09-24. Uno solo: el
+        coste sigue acotado a dos llamadas.
         """
-        prompt = render_arquitecto(PLANTILLA_V1, brief)
+        prompt = render_arquitecto(PLANTILLA_V2, brief)
+        try:
+            return await self._una_llamada(prompt)
+        except SalidaMalFormada as fallo:
+            return await self._una_llamada(_con_reparacion(prompt, fallo.motivo))
+
+    async def _una_llamada(self, prompt: str) -> OutlineGenerado:
         crudo = await self._cliente.completar(prompt, semilla=self._semilla)
         try:
             return OutlineGenerado.model_validate(json_de_modelo(crudo))
         except (json.JSONDecodeError, ValidationError) as error:
-            raise SalidaMalFormada(_con_motivo(crudo, error)) from error
+            raise SalidaMalFormada(_con_motivo(crudo, error), motivo=_motivo(error)) from error
+
+
+def _motivo(error: Exception) -> str:
+    """Lo que el modelo tiene que corregir, **sin su propio crudo**.
+
+    El crudo no se le devuelve: vuelve a leer su error como si fuera contenido,
+    y el motivo es lo unico que necesita. Todos los fallos, no los seis del
+    mensaje: en la corrida real fueron diez y el modelo tiene que ver los diez.
+    """
+    if isinstance(error, ValidationError):
+        return "\n".join(
+            f"- {'.'.join(str(parte) for parte in e['loc'])}: {e['msg']}" for e in error.errors()
+        )
+    return f"- la salida no es un objeto JSON ({type(error).__name__})"
+
+
+def _con_reparacion(prompt: str, motivo: str) -> str:
+    return (
+        f"{prompt}\n\n{MARCA_DE_REPARACION}\n\n"
+        "Tu respuesta anterior no cumple el formato de salida por esto:\n\n"
+        f"{motivo}\n\n"
+        "Devuelve el objeto JSON completo otra vez, corrigiendo exactamente eso y "
+        "respetando todas las restricciones duras."
+    )

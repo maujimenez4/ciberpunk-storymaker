@@ -30,7 +30,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.outline.agents import PLANTILLA_V1
+from app.features.outline.agents import PLANTILLA_V2
 from app.features.outline.repository import leer_obra
 
 BRIEF = {
@@ -146,7 +146,7 @@ async def test_lo_que_el_prompt_promete_usar_es_lo_que_el_brief_entrega(
     brief = (await leer_obra(sesion, obra_de_marta)).como_brief()
 
     # Lo que el prompt nombra entre llaves o como `campo`, en su bloque de brief.
-    citados = set(re.findall(r"`([a-z_]+)`", PLANTILLA_V1))
+    citados = set(re.findall(r"`([a-z_]+)`", PLANTILLA_V2))
     del_brief = citados & {
         "titulo",
         "genero",
