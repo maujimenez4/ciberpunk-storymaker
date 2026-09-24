@@ -20,6 +20,7 @@ from pathlib import Path
 from app.commons.observabilidad import Puntuacion, SpanEnMemoria
 from app.features.calidad import (
     CATALOGO,
+    CapituloAPolicy,
     CapituloAValidar,
     NombreDeCanon,
     ParametrosDeDiscurso,
@@ -28,6 +29,7 @@ from app.features.calidad import (
     RangoDeExtension,
     TiempoVerbal,
     Validador,
+    aplicar_policy,
     cruzar_g1a,
 )
 from app.features.calidad.cobertura import HechoUsado
@@ -35,6 +37,7 @@ from app.features.calidad.scores import (
     emitir,
     puntuaciones_de_g1a,
     puntuaciones_de_g4,
+    puntuaciones_de_policy,
     puntuaciones_del_juez,
 )
 from app.features.calidad.validadores import (
@@ -306,3 +309,45 @@ def test_emitir_sigue_con_las_demas_si_una_revienta() -> None:
 
     assert fallados == ["discurso"]
     assert [p.nombre for p in span.recibidas] == ["nombres_literales"]
+
+
+# --- El hook de policy: una puntuacion por regla -----------------------------
+
+
+def test_la_policy_puntua_una_vez_por_regla_y_se_mueve_con_el_veto() -> None:
+    """`palabras_vetadas` no pasa por G1a: sus defectos entran como recibidos,
+    y sin su propia puntuacion el validador corre y no consta en el panel."""
+    limpio = aplicar_policy(CapituloAPolicy(version_texto_id="1", texto=LIMPIO, vetos=("sangre",)))
+    vetado = aplicar_policy(
+        CapituloAPolicy(version_texto_id="2", texto="Habia sangre.", vetos=("sangre",))
+    )
+
+    assert [(p.nombre, p.valor) for p in puntuaciones_de_policy(limpio)] == [
+        ("palabras_vetadas", 1.0)
+    ]
+    assert [(p.nombre, p.valor) for p in puntuaciones_de_policy(vetado)] == [
+        ("palabras_vetadas", 0.0)
+    ]
+
+
+def test_la_policy_puntua_con_un_nombre_de_la_tabla_de_verification() -> None:
+    politica = aplicar_policy(CapituloAPolicy(version_texto_id="1", texto=LIMPIO, vetos=()))
+
+    assert {p.nombre for p in puntuaciones_de_policy(politica)} <= nombres_de_verification()
+
+
+def test_las_funciones_de_scores_salen_por_el_init() -> None:
+    """Quien las usa vive en `escritura` y `manuscrito`, y una feature solo
+    entra a otra por su `__init__` (`CLAUDE.md` §5.1). Tres agentes probados y
+    nadie podia llamarlos: fue uno de los diez verdes falsos de `RELEVO.md`."""
+    from app.features import calidad
+
+    for nombre in (
+        "emitir",
+        "puntuaciones_de_g1a",
+        "puntuaciones_de_g4",
+        "puntuaciones_de_policy",
+        "puntuaciones_del_juez",
+    ):
+        assert nombre in calidad.__all__, nombre
+        assert getattr(calidad, nombre) is not None

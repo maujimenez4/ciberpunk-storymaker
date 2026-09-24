@@ -77,6 +77,17 @@ from app.features.calidad.schemas import (
     RangoDeExtension,
     TiempoVerbal,
 )
+from app.features.calidad.scores import (
+    # Salen por aqui porque quien tiene el span es el orquestador, y vive en
+    # `escritura` y en `manuscrito`: traducir un resultado a *scores* es de
+    # `calidad`, emitirlos es de quien corre la puerta.
+    NOMBRE_DEL_JUEZ,
+    emitir,
+    puntuaciones_de_g1a,
+    puntuaciones_de_g4,
+    puntuaciones_de_policy,
+    puntuaciones_del_juez,
+)
 from app.features.calidad.validadores import (
     CATALOGO,
     CATALOGO_DE_MANUSCRITO,
@@ -99,6 +110,7 @@ __all__ = [
     "CODIGOS_DE_LA_TAXONOMIA",
     "CODIGO_DE_ELEMENTO_AUSENTE",
     "CODIGO_DE_PALABRA_PROHIBIDA",
+    "NOMBRE_DEL_JUEZ",
     "CapituloAContrastar",
     "CapituloAJuzgar",
     "CapituloAPolicy",
@@ -146,9 +158,14 @@ __all__ = [
     "comprobar_forma",
     "cruzar_g1a",
     "discurso",
+    "emitir",
     "extension_de_capitulo",
     "hash_de_rubrica",
     "localizar_veto",
     "nombres_literales",
+    "puntuaciones_de_g1a",
+    "puntuaciones_de_g4",
+    "puntuaciones_de_policy",
+    "puntuaciones_del_juez",
     "rubrica_vigente",
 ]
