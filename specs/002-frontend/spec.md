@@ -107,7 +107,7 @@ Los tres de `docs/definitions.md`, con el nombre que tienen allí y **solo ese**
 
 | Actor | Qué hace en esta spec |
 | --- | --- |
-| **Destinatario** | Abre el enlace, lee, consulta la ficha a medida que avanza, **pide correcciones** y descarga el PDF |
+| **Destinatario** | Abre el enlace, lee, consulta la ficha a medida que avanza —entradas **y** capítulos—, **pide correcciones** y descarga el PDF |
 | **Comprador** | Lo mismo. **Ante la lectura tienen las mismas capacidades** (D-01); se distinguen en la 001, no aquí |
 | **Autor** | **No aparece.** Su panel está fuera de alcance |
 
@@ -198,7 +198,7 @@ Los tres de `docs/definitions.md`, con el nombre que tienen allí y **solo ese**
 | ID | Requisito | Pr. | Verif. |
 | --- | --- | --- | --- |
 | RF-FIC-01 | La ficha lista personajes y lugares con su descripción, derivada de la *story bible* | M | Test |
-| RF-FIC-02 | Cada entrada **enlaza al capítulo donde aparece**. Es requisito literal del encargo §2 y la mitad que se olvida | M | Test |
+| RF-FIC-02 | Cada entrada enlaza a **los capítulos ya leídos** en que aparece, no a todos. El encargo §2 pide el enlace; listarlos todos contaría que el personaje **vuelve** —que es futuro, no ficha— | M | Test |
 | RF-FIC-03 | Una entrada **solo se muestra cuando quien lee ha leído** el capítulo más temprano en que aparece (D-04) | M | Test |
 | RF-FIC-04 | Lo aún no revelado **no se envía al navegador escondido con CSS**: se filtra antes de pintar. Un `display:none` no es una ocultación, es un spoiler a un «inspeccionar elemento» de distancia | M | Test (+Análisis) |
 | RF-FIC-05 | La ficha dice **cuántas entradas quedan por descubrir**, sin decir cuáles. Una ficha que parece vacía se lee como un fallo | S | Test |
@@ -300,7 +300,7 @@ Los tres de `docs/definitions.md`, con el nombre que tienen allí y **solo ese**
 - [ ] **CA-2** — La portada muestra la dedicatoria del comprador, y esa dedicatoria **no aparece en el índice ni cuenta como capítulo**. *(Test)* → RF-POR-01, RF-POR-02.
 - [ ] **CA-3** — El índice lista diez capítulos, enlaza a cada uno, y **marca los que cambiaron** con el dato del backend; en la primera versión no marca ninguno. *(Test)* → RF-IND-01, RF-IND-02, RF-IND-03.
 - [ ] **CA-4** — Un personaje que aparece por primera vez en el capítulo nueve **no está en la ficha** —ni en la respuesta que llega al navegador— hasta que el lector ha leído ese capítulo. *(Test)* → RF-FIC-03, RF-FIC-04.
-- [ ] **CA-5** — Cada entrada de la ficha **enlaza al capítulo donde aparece**, y el enlace lleva allí. *(Test)* → RF-FIC-01, RF-FIC-02.
+- [ ] **CA-5** — Una entrada que aparece en los capítulos **2, 5 y 9**, con el lector en el 3, enlaza **solo al 2**; al llegar al 5 aparece el 5. Los enlaces llevan donde dicen. *(Test)* → RF-FIC-01, RF-FIC-02.
 - [ ] **CA-6** — Saltando directamente al capítulo diez sin leer los anteriores, la ficha revela **lo de ese capítulo y no lo de los que no se han leído**. *(Test)* → RF-FIC-06, RF-LEC-04.
 - [ ] **CA-7** — Cuando la regeneración no se publica por un defecto introducido, entonces la lectura **sigue mostrando el texto de siempre** y se dice que la petición no se aplicó y por qué. *(Test)* → RF-PET-06, RF-LEC-05.
 - [ ] **CA-8** — La petición viaja con el **`hc_id`** de la entrada de la ficha; **cambiar el texto del formulario no cambia qué hecho se corrige**. *(Test)* → RF-PET-01, RF-PET-02.
@@ -325,6 +325,10 @@ Los tres de `docs/definitions.md`, con el nombre que tienen allí y **solo ese**
 - [ ] **CA-23** — Volver al índice lleva **al capítulo donde se dejó**, y el título de la pestaña cambia con la ruta. *(Test)* → RF-IND-04, RF-ACC-06.
 - [ ] **CA-24** — Antes de enviar la petición se dice **a cuántos capítulos afecta**, con el dato del backend y no con una cuenta hecha en el navegador. *(Test)* → RI-06, RF-PET-03.
 - [ ] **CA-25** — Las cuatro páginas que abre la validación visual de la 001 —portada, índice, capítulo y ficha— responden en **URLs estables** y se abren sin paso previo. Si una ruta cambia, RF-VAL-08 de la 001 deja de comprobar lo que cree. *(Demostración)* → RNF-REN-01.
+
+**Sobre CA-5, y el spoiler que abrió P-02.** La primera redacción decía «el capítulo donde aparece», en singular, porque se escribió **antes** de que P-02 metiera los capítulos en la ficha. Con el dato dentro, una entrada visible diría «aparece en 2, 5 y 9» — y a un lector que va por el 3 eso **le cuenta que el personaje vuelve dos veces más**. No se filtra el personaje: se filtra su futuro.
+
+Y no lo cazaba nada: CA-4 comprueba lo **no revelado**, y esa entrada sí lo está; CA-5 comprobaba que el enlace funciona, no **cuáles** se listan. La regla es la misma de D-04 un nivel más abajo — **se revela por lo leído**—, aplicada ahora también a los capítulos de cada entrada. Lo encontró Nubia, en la juntura entre una decisión de ayer y otra de anteayer.
 
 **Sobre CA-4, y por qué dice «ni en la respuesta que llega al navegador».** Un criterio que solo comprobara que la entrada no se *pinta* se cumple escondiéndola con CSS, y entonces el spoiler está a un «inspeccionar elemento» de distancia. La diferencia entre ocultar y no enviar no la ve el usuario: la ve quien mira. Por eso RF-FIC-04 es un requisito aparte.
 
