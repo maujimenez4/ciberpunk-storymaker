@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Entrevista } from "@/features/entrevista";
 import { Leer, QuienEsQuien } from "@/features/manuscrito";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
-import { Texto } from "@/shared/ui/primitives";
 
 import { VISTAS, type Vista, vistaDe } from "./router";
 
@@ -77,7 +76,9 @@ export function Paginas() {
               onFallo={() => setEscribiendo(false)}
               deshabilitado={escribiendo}
             />
-            {escribiendo ? <Escribiendo /> : null}
+            {/* El avance lo pinta la entrevista, que es quien lo consulta: un
+                aviso genérico aquí decía «se está escribiendo» mientras el
+                Arquitecto aún preparaba la historia. */}
           </>
         ) : vista === VISTAS.leer && token ? (
           <Leer token={token} />
@@ -87,15 +88,5 @@ export function Paginas() {
       </div>
 
     </Pagina>
-  );
-}
-
-function Escribiendo() {
-  return (
-    <div className="comprobacion" role="status">
-      <Texto>
-        Se está escribiendo tu novela. Son diez capítulos, así que tarda un rato.
-      </Texto>
-    </div>
   );
 }

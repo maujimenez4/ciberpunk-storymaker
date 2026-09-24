@@ -18,7 +18,18 @@ function dobleCompleto(extras: Record<string, unknown> = {}) {
     "/entrevistas": { id: 1 },
     "/entrevistas/1/respuestas": { faltantes: [], contradicciones: [] },
     "/entrevistas/1/cerrar": { obra_id: 7 },
-    "/obras/7/novela": { obra_id: 7, desde_el_capitulo: 1, terminada: true },
+    "POST /obras/7/outline": { obra_id: 7, version_obra_id: 1, version: 1, capitulos: [] },
+    "POST /obras/7/novela": { obra_id: 7, desde_el_capitulo: 1, terminada: false },
+    // `GET` de la misma ruta: la novela ya terminada en la primera consulta,
+    // para que el recorrido no espere el intervalo real de cinco segundos.
+    "GET /obras/7/novela": {
+      obra_id: 7,
+      total: 10,
+      integrados: 10,
+      en_curso: null,
+      estado: "terminada",
+      motivo: null,
+    },
     "/obras/7/publicar": { token: "tok-7", ordinal: 1 },
     "/lectura/tok-7": {
       titulo: "El verano del 98",
@@ -70,15 +81,20 @@ describe("una pagina, tres pestanas", () => {
 });
 
 describe("el puente", () => {
-  it("al pulsar se cierra la entrevista y se lanza la novela", async () => {
+  it("al pulsar se cierra la entrevista, se prepara la historia y se lanza la novela", async () => {
     const doble = dobleCompleto();
     const persona = userEvent.setup();
     abrir("/", doble);
 
     await rellenarYPulsar(persona);
 
-    await waitFor(() => expect(doble.llamadas).toContain("/entrevistas/1/cerrar"));
-    expect(doble.llamadas).toContain("/obras/7/novela");
+    await waitFor(() => expect(doble.metodos).toContain("POST /obras/7/novela"));
+    expect(doble.metodos.indexOf("POST /obras/7/outline")).toBeGreaterThan(
+      doble.metodos.indexOf("POST /entrevistas/1/cerrar"),
+    );
+    expect(doble.metodos.indexOf("POST /obras/7/novela")).toBeGreaterThan(
+      doble.metodos.indexOf("POST /obras/7/outline"),
+    );
   });
 
   it("mientras se escribe, lo dice en vez de dejar la pantalla quieta", async () => {
@@ -105,11 +121,15 @@ describe("el puente", () => {
     await persona.type(await screen.findByLabelText(/cómo se llama/i), "Marta");
     await persona.click(screen.getByRole("button", { name: /guardar/i }));
     // La novela no está en el doble: la llamada falla con 404.
-    doble.respuestas["/obras/7/novela"] = undefined;
+    doble.respuestas["POST /obras/7/novela"] = undefined;
 
     await persona.click(await screen.findByRole("button", { name: /escribir la novela/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/no se pudo/i);
+    // Dice **qué paso** falló: con el outline a medias este test pasaba igual
+    // leyendo «no se pudo» de otro fallo.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /no se pudo empezar a escribir la novela/i,
+    );
     expect(screen.getByRole("button", { name: /escribir la novela/i })).toBeEnabled();
   });
 });
