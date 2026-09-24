@@ -1820,4 +1820,4 @@ git commit -m "La novela de ejemplo y la presentacion, con sus anexos"
 
 | Fecha | Paso | Qué se desvió y por qué |
 | --- | --- | --- |
-| | | |
+| 2026-09-24 | T1, paso 5 | **El paso 5 no puede pasar como está escrito: la máquina de T1 hace *deadlock* por construcción.** Se espera «sin errores y miles de estados»; TLC da `Deadlock reached` a los 404 estados. El estado es el correcto y el diagnóstico no deja duda: los cinco capítulos integrados y validados, `estado = "VALIDANDO_CAPITULO"`. Ahí `SiguienteCapitulo` está desactivada porque `Pendientes = {}`, y `Aprobar`, `Reparar` y `Escalar` lo están porque las tres exigen `~validado[actual]`. **La acción que continúa es `Verificar`, y es de la Tarea 2.** No es un fallo del modelo: es que T1 entrega media máquina. Se corre con `-deadlock` hasta que T2 aterrice —**3.636 estados distintos, profundidad 39, `TypeOK` en verde, 2,7 s**, que es el «miles de estados» que el paso pedía— y **la bandera se retira en T2**, donde el *deadlock* vuelve a ser señal y no ruido. Anotado por la sesión `ciberpunk-storymaker-f6` (Mario). |

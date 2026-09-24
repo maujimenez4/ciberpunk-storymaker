@@ -426,9 +426,9 @@ pnpm test
 pnpm typecheck
 pnpm lint                            # incluye import/no-restricted-paths
 
-# verificación formal
-lake build                           # Lean: invariantes de la cronología
-tlc -config harness.cfg Harness.tla  # TLA+: invariantes del flujo
+# verificación formal (instalación y versiones: formal/README.md)
+cd formal/lean && lake build         # Lean: invariantes de la cronología
+cd formal/tla && java -cp tla2tools.jar tlc2.TLC -config harness.cfg Harness.tla  # TLA+: invariantes del flujo
 ```
 
 ## 15. Qué no hacer
