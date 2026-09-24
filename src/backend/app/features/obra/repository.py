@@ -18,16 +18,16 @@ from app.features.obra.modelos import (
     PalabraProhibida,
     TextoAportado,
 )
-from app.features.obra.schemas import BriefEntrada
+from app.features.obra.schemas import BriefEntrada, HechoDelBrief
 
 
 async def guardar_hechos_del_brief(
     sesion: AsyncSession,
     obra_id: int,
-    enunciados: list[str],
+    hechos: list[HechoDelBrief],
     origen: str = "brief",
 ) -> list[HechoCanon]:
-    """Un `HechoCanon` por enunciado, en el mismo orden, y sin escena de origen.
+    """Un `HechoCanon` por hecho, en el mismo orden, y sin escena de origen.
 
     `origen` es parametro y no constante porque la Fase 2 escribira por aqui los
     hechos que si nacen de una escena. **No se valida aqui:** de la coherencia
@@ -37,24 +37,27 @@ async def guardar_hechos_del_brief(
     pone esa restriccion en el camino de escritura en vez de dejarla para el
     `commit` de quien llame.
 
-    Un enunciado en blanco no es un hecho: no se escribe (R-2). Lo que si tiene
-    texto entra tal cual, sin recortar, porque es la palabra del comprador.
+    Un hecho en blanco no llega hasta aqui: `HechoDelBrief` exige texto en sus
+    tres campos (R-2), asi que lo que no dice nada no se construye siquiera. Lo
+    que si tiene texto entra tal cual, sin recortar: es la palabra del comprador.
     """
-    hechos = [
+    filas = [
         HechoCanon(
             obra_id=obra_id,
-            enunciado=enunciado,
+            entidad=hecho.entidad,
+            atributo=hecho.atributo,
+            valor=hecho.valor,
+            confianza=hecho.confianza,
             origen=origen,
             escena_de_origen=None,
         )
-        for enunciado in enunciados
-        if enunciado.strip()
+        for hecho in hechos
     ]
-    if not hechos:
+    if not filas:
         return []
-    sesion.add_all(hechos)
+    sesion.add_all(filas)
     await sesion.flush()
-    return hechos
+    return filas
 
 
 async def abrir_entrevista(sesion: AsyncSession) -> Entrevista:
@@ -141,7 +144,7 @@ async def crear_obra_desde_brief(sesion: AsyncSession, brief: BriefEntrada) -> O
         nombre=brief.destinatario.nombre,
         edad=brief.destinatario.edad,
         rasgos=list(brief.destinatario.rasgos),
-        recuerdos=list(brief.destinatario.recuerdos),
+        recuerdos_aportados=list(brief.destinatario.recuerdos_aportados),
         fecha_de_nacimiento=brief.destinatario.fecha_de_nacimiento,
     )
     sesion.add(destinatario)

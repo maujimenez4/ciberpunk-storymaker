@@ -625,6 +625,7 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | Lista negra de n-gramas | Tabla `ngrama_vetado` | Crece con el manuscrito; la escribe el Extractor, la lee el Editor de línea |
 | Versiones de obra | Tabla `version_obra` | Una por versión de biblia; cada escena apunta a la que estaba vigente cuando se escribió |
 | Serie | Tabla `serie`, opcional | Si existe, el canon se comparte entre sus obras **desde el primer día** |
+| Entrevista | `entrevista`, `texto_aportado` | Existe **antes** que la obra: es lo que la crea. Guarda el `obra_id` que produjo, y por eso cerrarla dos veces devuelve la misma obra |
 | Personalización | `destinatario`, `comprador`, `dedicatoria`, `texto_aportado` | El regalo tiene dueño. La dedicatoria **no** es una `version_texto` |
 | Uso de hechos | `hecho_usado_en` (`hc_id`, `capitulo_id`) | Qué regenerar cuando un hecho cambia |
 | Cronología | Vista derivada del ledger, materializada al verificar | Eventos con momento, lugar, presentes y fechas de nacimiento |

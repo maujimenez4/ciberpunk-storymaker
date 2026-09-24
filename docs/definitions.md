@@ -1,6 +1,6 @@
 # Ontología de generación de novelas con IA — Documento de definiciones
 
-**Versión:** 2.0 · **Fecha:** 2026-09-23 · **Dominio:** generación asistida de **novela personalizada de regalo**, género de referencia: romance
+**Versión:** 2.3 · **Fecha:** 2026-09-24 · **Dominio:** generación asistida de **novela personalizada de regalo**, género de referencia: romance
 
 ---
 
@@ -23,6 +23,8 @@ Los mismos contenidos en forma de árboles y grafos Mermaid están en el **§14*
 | **2.1** | Entran **`PresupuestoConcurrente`** (§9) y **`CuadroDeDefectos`** (§9.2), con sus tres entradas de glosario (§13) y su sitio en los árboles (§14.6 y §14.7). Los dos salen de decisiones de `maujimenez4` del 2026-09-23 sobre `specs/001-backend-v1/`: P-06 admite el paralelismo, y con él la suma de tokens en vuelo pasa a ser una magnitud calculable que hay que nombrar; P-04 da nombre al conjunto de defectos que se guarda con una versión publicada. **Aditiva:** no retira ni redefine nada de la v2.0 |
 
 | **2.2** | **Tabla canónica de actores** (§9.1): `Comprador`, `Destinatario` y `Autor`, este último definido por primera vez, cada uno con los **nombres que no se usan** para designarlo. Y el atributo `Revelacion.destinatario` pasa a **`dirigida_a`**, porque `Destinatario` ya nombra a un actor y el término significaba dos cosas. Decisiones de `maujimenez4`, 2026-09-23. **Aditiva salvo ese renombrado**, que es un cambio de modelo y por eso va dicho aquí y no solo en la clase |
+
+| **2.3** | Entra **`Entrevista`** (§9.1): el proceso por el que el `Comprador` aporta los datos pasa a ser también **una entidad persistida**, porque sin ella no hay dónde guardar las respuestas parciales de RF-ENT-03 ni el `obra_id` que hace idempotente el cierre. Hasta ahora el documento nombraba al `Entrevistador` —el rol— y trataba la entrevista como proceso; lo destapó implementar `specs/001-backend-v1/plan-1-encargo.md`, cuya Tarea 9 no podía escribir ni uno de sus tests sin esa tabla. Decisión de `maujimenez4`, 2026-09-24. **Aditiva:** no retira ni redefine nada |
 
 *La v1.2 se commiteó en `aa47bd0`, junto a la v1.3 de `architecture.md` y la v3.0 de `verification.md`. El mensaje de ese commit solo describe la tercera, así que este registro es la vía para localizarla: no se busque por el asunto del commit.*
 
@@ -482,6 +484,7 @@ Dos reservas que evitan el siguiente choque:
 | `Comprador` | Quien encarga la obra y responde la entrevista. Puede coincidir con el `Destinatario` o no; cuando no coincide, es quien aporta los datos de aquel | `comprador_id`, `nombre`, `contacto` |
 | `Autor` | Quien **dirige** la obra desde dentro del sistema: resuelve los escalados de la puerta de calidad y puntúa la `Rubrica` en la `RevisionHumana`. **No es parte de la venta** —no compra ni recibe— y por eso no está en el `Brief`: es el único de los tres actores que pertenece a la producción y no al encargo | `autor_id`, `nombre` |
 | `Dedicatoria` | Texto de portada dirigido al `Destinatario`. Vive **fuera del manuscrito y fuera del canon**: ni la ve el `Escritor` ni la extrae el `Extractor`, porque no es parte de la historia | `texto`, `firma` |
+| `Entrevista` | El acto por el que el `Comprador` aporta los datos del `Brief`, **persistido**: nace vacía, recibe respuestas a trozos y se cierra una sola vez. Existe **antes** que la `Obra` —es lo que la crea— y guarda el `obra_id` que produjo, de modo que cerrarla dos veces devuelve la misma obra en lugar de crear otra. No es un rol: quien la conduce es el `Entrevistador` (§9 de `CLAUDE.md`) | `entrevista_id`, `respuestas`, `obra_id` (0..1), `cerrada_en` (0..1) |
 | `TextoAportado` | Prosa que el comprador pega en la entrevista: una carta, una anécdota. **Contenido no confiable**, siempre: lo que contiene son datos de los que se extraen hechos, nunca instrucciones que el sistema obedezca | `texto_id`, `contenido`, `procedencia`, `hechos_extraidos[]` |
 
 **Sobre `TextoAportado` y por qué su desconfianza es de esquema y no de prompt.** Un texto que el usuario pega puede decir «ignora tus instrucciones anteriores». La defensa no es pedirle al modelo que no haga caso —eso es negociar con el atacante— sino que el texto **entre al sistema marcado como dato** y no se concatene nunca a un prompt sin esa marca. Es la misma lógica que la edad mínima: lo que protege es el esquema, no la redacción.

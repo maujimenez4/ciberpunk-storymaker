@@ -47,7 +47,7 @@ class BriefIncompleto(ErrorDeDominio):
     Los faltantes vienen nombrados a proposito: «falta algo» no deja volver a
     preguntar. Llegan de dos sitios distintos y se cuentan igual: los que
     nombra el Entrevistador —que ve datos que el esquema no exige, como los
-    recuerdos— y los campos que `BriefEntrada` marca como `missing`.
+    recuerdos_aportados— y los campos que `BriefEntrada` marca como `missing`.
     """
 
     def __init__(self, faltantes: list[str]) -> None:

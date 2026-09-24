@@ -15,7 +15,7 @@ class DestinatarioEntrada(BaseModel):
     nombre: str = Field(min_length=1, max_length=120)
     edad: int = Field(ge=0, le=120)
     rasgos: list[str] = Field(default_factory=list)
-    recuerdos: list[str] = Field(default_factory=list)
+    recuerdos_aportados: list[str] = Field(default_factory=list)
     fecha_de_nacimiento: date | None = None
 
 
@@ -125,3 +125,23 @@ class ObraCreada(BaseModel):
     """Salida de RI-03. La segunda llamada devuelve el mismo `obra_id` (R-5)."""
 
     obra_id: int
+
+
+class HechoDelBrief(BaseModel):
+    """Un hecho tal y como lo declara `definitions.md` §4.5: entidad, atributo y
+    valor, no una frase.
+
+    La forma no es cosmetica. La regla de arbitraje del §4.5 —si dos hechos
+    sobre el mismo `atributo` difieren, prevalece el de menor `orden_discurso`—
+    y el defecto `CAN-01` comparan **atributos**, y sobre una cadena libre no
+    hay nada que comparar. El codigo llevaba un `enunciado` de texto desde la
+    Tarea 4; se corrige al cerrar la fase, que es cuando nadie escribe encima.
+
+    `confianza` vale 1.0 por defecto porque un hecho del brief lo afirma el
+    comprador sobre una persona real: no hay nada que inferir.
+    """
+
+    entidad: TextoNoVacio
+    atributo: TextoNoVacio
+    valor: TextoNoVacio
+    confianza: float = Field(default=1.0, ge=0.0, le=1.0)

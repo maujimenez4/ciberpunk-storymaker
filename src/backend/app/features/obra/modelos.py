@@ -57,7 +57,7 @@ class Destinatario(Base):
     nombre: Mapped[str] = mapped_column(String(120))
     edad: Mapped[int]
     rasgos: Mapped[list[str]] = mapped_column(JSON, default=list)
-    recuerdos: Mapped[list[str]] = mapped_column(JSON, default=list)
+    recuerdos_aportados: Mapped[list[str]] = mapped_column(JSON, default=list)
     fecha_de_nacimiento: Mapped[date | None]
 
 
@@ -130,7 +130,10 @@ class HechoCanon(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     obra_id: Mapped[int] = mapped_column(ForeignKey("obra.id"))
-    enunciado: Mapped[str] = mapped_column(Text)
+    entidad: Mapped[str] = mapped_column(String(120))
+    atributo: Mapped[str] = mapped_column(String(120))
+    valor: Mapped[str] = mapped_column(Text)
+    confianza: Mapped[float] = mapped_column(default=1.0)
     origen: Mapped[str] = mapped_column(String(20))
     escena_de_origen: Mapped[str | None] = mapped_column(String(60))
 

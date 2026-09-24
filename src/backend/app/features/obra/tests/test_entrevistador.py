@@ -13,9 +13,11 @@ def _doble(carga: dict[str, object]) -> DobleDeterminista:
 
 async def test_devuelve_los_faltantes_nombrados_y_no_un_error_generico():
     """RF-ENT-03: 'falta algo' no sirve; hay que poder volver a preguntar."""
-    agente = Entrevistador(_doble({"faltantes": ["edad", "recuerdos"], "contradicciones": []}))
+    agente = Entrevistador(
+        _doble({"faltantes": ["edad", "recuerdos_aportados"], "contradicciones": []})
+    )
     evaluacion = await agente.evaluar({"nombre": "Marta"}, "")
-    assert evaluacion.faltantes == ["edad", "recuerdos"]
+    assert evaluacion.faltantes == ["edad", "recuerdos_aportados"]
     assert not evaluacion.completa
 
 
@@ -62,7 +64,7 @@ async def test_una_clave_de_mas_tambien_es_una_salida_fuera_de_esquema():
     la prosa. Sin `extra=forbid` esto valida.
     """
     agente = Entrevistador(
-        _doble({"faltantes": [], "contradicciones": [], "faltan": ["edad", "recuerdos"]})
+        _doble({"faltantes": [], "contradicciones": [], "faltan": ["edad", "recuerdos_aportados"]})
     )
     with pytest.raises(SalidaMalFormada):
         await agente.evaluar({"nombre": "Marta"}, "")

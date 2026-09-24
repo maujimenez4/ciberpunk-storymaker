@@ -33,9 +33,15 @@ from app.features.obra.repository import (
     leer_textos_aportados,
     obtener_entrevista,
 )
-from app.features.obra.schemas import BriefEntrada
+from app.features.obra.schemas import BriefEntrada, HechoDelBrief
 
-_CAMPOS_DEL_DESTINATARIO = ("nombre", "edad", "rasgos", "recuerdos", "fecha_de_nacimiento")
+_CAMPOS_DEL_DESTINATARIO = (
+    "nombre",
+    "edad",
+    "rasgos",
+    "recuerdos_aportados",
+    "fecha_de_nacimiento",
+)
 _CAMPOS_DE_LA_OBRA = ("genero", "tono", "nivel_de_calor", "vetos", "elementos_obligatorios")
 
 
@@ -72,7 +78,7 @@ async def evaluar_entrevista(
 async def registrar_hechos_del_brief(
     sesion: AsyncSession,
     obra_id: int,
-    enunciados: list[str],
+    hechos: list[HechoDelBrief],
 ) -> list[HechoCanon]:
     """Los hechos que el comprador trajo entran al canon (RF-ENT-06).
 
@@ -81,11 +87,11 @@ async def registrar_hechos_del_brief(
     hechos de escena, pero por la via de la entrevista no se puede pedir otra
     cosa que `brief`.
 
-    De donde salen los enunciados —el texto aportado, las respuestas— no es de
+    De donde salen los hechos —el texto aportado, las respuestas— no es de
     aqui: cuando exista el Extractor sera el quien los produzca. Este caso de
     uso recibe la lista ya hecha.
     """
-    return await guardar_hechos_del_brief(sesion, obra_id, enunciados)
+    return await guardar_hechos_del_brief(sesion, obra_id, hechos)
 
 
 def _brief_desde_respuestas(respuestas: dict[str, Any]) -> BriefEntrada:

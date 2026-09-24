@@ -53,7 +53,9 @@ def respuestas_del_modelo() -> dict[str, str]:
                 ],
             }
         ),
-        "'tono': 'sobrio'": json.dumps({"faltantes": ["recuerdos"], "contradicciones": []}),
+        "'tono': 'sobrio'": json.dumps(
+            {"faltantes": ["recuerdos_aportados"], "contradicciones": []}
+        ),
         "'tono': 'calido'": _COMPLETA,
         "'tono': 'melancolico'": _COMPLETA,
         "ENTREVISTADOR": json.dumps(
@@ -96,7 +98,7 @@ async def test_cerrar_con_contradiccion_no_crea_obra(cliente, sesion):
 async def test_cerrar_con_un_faltante_que_el_esquema_no_ve_no_crea_obra(cliente, sesion):
     """CA-2, la otra mitad, y la unica guarda que puede caer sola.
 
-    `recuerdos` tiene valor por defecto en `BriefEntrada`, asi que el esquema da
+    `recuerdos_aportados` tiene valor por defecto en `BriefEntrada`, asi que el esquema da
     este brief por bueno. Si la decision se dejara solo en el esquema, un dato
     que el Entrevistador dijo que faltaba crearia la obra igual.
     """
@@ -107,7 +109,7 @@ async def test_cerrar_con_un_faltante_que_el_esquema_no_ve_no_crea_obra(cliente,
     )
     r = cliente.post(f"/entrevistas/{entrevista['id']}/cerrar")
     assert r.status_code == 409
-    assert r.json()["faltantes"] == ["recuerdos"]
+    assert r.json()["faltantes"] == ["recuerdos_aportados"]
     assert await cuenta_obras(sesion) == 0
 
 

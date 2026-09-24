@@ -10,7 +10,7 @@ def _brief(**cambios: object) -> dict[str, object]:
             "nombre": "Marta",
             "edad": 34,
             "rasgos": ["terca"],
-            "recuerdos": ["el verano del 98"],
+            "recuerdos_aportados": ["el verano del 98"],
         },
         "genero": "romance",
         "tono": "calido",
@@ -33,7 +33,7 @@ def test_menor_de_edad_con_calor_se_rechaza_en_el_esquema():
     with pytest.raises(ValidationError, match="menor"):
         BriefEntrada.model_validate(
             _brief(
-                destinatario={"nombre": "Ana", "edad": 15, "rasgos": [], "recuerdos": []},
+                destinatario={"nombre": "Ana", "edad": 15, "rasgos": [], "recuerdos_aportados": []},
                 nivel_de_calor=3,
             )
         )
@@ -47,7 +47,7 @@ def test_dieciocho_anos_no_es_menor_de_edad():
     """
     brief = BriefEntrada.model_validate(
         _brief(
-            destinatario={"nombre": "Ana", "edad": 18, "rasgos": [], "recuerdos": []},
+            destinatario={"nombre": "Ana", "edad": 18, "rasgos": [], "recuerdos_aportados": []},
             nivel_de_calor=3,
         )
     )
@@ -58,7 +58,7 @@ def test_dieciocho_anos_no_es_menor_de_edad():
 def test_el_nombre_se_guarda_tal_cual(nombre: str):
     """R-4. La normalizacion de vetos no toca los nombres del canon."""
     brief = BriefEntrada.model_validate(
-        _brief(destinatario={"nombre": nombre, "edad": 30, "rasgos": [], "recuerdos": []})
+        _brief(destinatario={"nombre": nombre, "edad": 30, "rasgos": [], "recuerdos_aportados": []})
     )
     assert brief.destinatario.nombre == nombre
 
@@ -85,7 +85,7 @@ def test_edad_que_no_concuerda_con_la_fecha_de_nacimiento_no_valida():
                     "nombre": "Marta",
                     "edad": 34,
                     "rasgos": [],
-                    "recuerdos": [],
+                    "recuerdos_aportados": [],
                     "fecha_de_nacimiento": "1950-04-02",
                 }
             )
@@ -122,7 +122,12 @@ def test_un_veto_que_choca_con_el_nombre_del_destinatario_no_valida(veto: str, n
     with pytest.raises(ValidationError, match="veto"):
         BriefEntrada.model_validate(
             _brief(
-                destinatario={"nombre": nombre, "edad": 30, "rasgos": [], "recuerdos": []},
+                destinatario={
+                    "nombre": nombre,
+                    "edad": 30,
+                    "rasgos": [],
+                    "recuerdos_aportados": [],
+                },
                 vetos=[veto],
             )
         )
@@ -137,7 +142,7 @@ def test_el_choque_dice_que_veto_y_con_que_nombre():
                     "nombre": "García-Ortiz",
                     "edad": 30,
                     "rasgos": [],
-                    "recuerdos": [],
+                    "recuerdos_aportados": [],
                 },
                 vetos=["sangre", "Ortiz"],
             )
@@ -157,7 +162,12 @@ def test_un_veto_que_no_es_el_nombre_del_destinatario_si_valida(veto: str):
     """
     brief = BriefEntrada.model_validate(
         _brief(
-            destinatario={"nombre": "García-Ortiz", "edad": 30, "rasgos": [], "recuerdos": []},
+            destinatario={
+                "nombre": "García-Ortiz",
+                "edad": 30,
+                "rasgos": [],
+                "recuerdos_aportados": [],
+            },
             vetos=[veto],
         )
     )

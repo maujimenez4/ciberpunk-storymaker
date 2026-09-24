@@ -22,14 +22,32 @@ async def test_un_ambito_que_no_existe_no_se_puede_guardar(sesion, obra):
 
 async def test_un_hecho_de_escena_sin_escena_no_se_puede_guardar(sesion, obra):
     """Regla de dominio 4, la mitad que vive en la base de datos."""
-    sesion.add(HechoCanon(obra_id=obra.id, enunciado="x", origen="escena", escena_de_origen=None))
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Luna",
+            origen="escena",
+            escena_de_origen=None,
+        )
+    )
     with pytest.raises(IntegrityError):
         await sesion.flush()
 
 
 async def test_un_hecho_del_brief_con_escena_tampoco(sesion, obra):
     """La otra mitad: lo que nacio antes del texto no inventa una escena."""
-    sesion.add(HechoCanon(obra_id=obra.id, enunciado="x", origen="brief", escena_de_origen="esc-1"))
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Luna",
+            origen="brief",
+            escena_de_origen="esc-1",
+        )
+    )
     with pytest.raises(IntegrityError):
         await sesion.flush()
 
@@ -70,14 +88,30 @@ async def test_una_obra_sin_serie_sigue_siendo_legitima(sesion):
 async def test_los_tres_origenes_declarados_se_guardan(sesion, obra, origen: str):
     """`definitions.md` §4.5 declara el conjunto, y es cerrado."""
     escena = "esc-1" if origen == "escena" else None
-    sesion.add(HechoCanon(obra_id=obra.id, enunciado="x", origen=origen, escena_de_origen=escena))
+    sesion.add(
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Luna",
+            origen=origen,
+            escena_de_origen=escena,
+        )
+    )
     await sesion.flush()
 
 
 async def test_un_origen_que_no_existe_no_se_puede_guardar(sesion, obra):
     """Sin esto, `origen='cualquier_cosa'` entra y nadie lo para."""
     sesion.add(
-        HechoCanon(obra_id=obra.id, enunciado="x", origen="inventado", escena_de_origen=None)
+        HechoCanon(
+            obra_id=obra.id,
+            entidad="perro",
+            atributo="nombre",
+            valor="Luna",
+            origen="inventado",
+            escena_de_origen=None,
+        )
     )
     with pytest.raises(IntegrityError):
         await sesion.flush()
