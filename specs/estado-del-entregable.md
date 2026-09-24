@@ -174,6 +174,15 @@ Langfuse no está en el código. Lo que sí hay es **el dato que alimentaría la
 
 ---
 
+## Dónde sigue esto
+
+Este fichero dice **dónde estamos**. Los otros dos dicen qué viene:
+
+- [`hoja-de-ruta.md`](hoja-de-ruta.md) — lo que falta, **partido en planes**: cuatro de backend y dos de frontend, con sus dependencias y las dos únicas ataduras entre tracks.
+- [`problemas-abiertos.md`](problemas-abiertos.md) — lo que ya está construido y **no está bien**: dieciséis entradas, con quién cierra cada una y qué cuesta dejarla.
+
+---
+
 ## Lo que yo haría, y en este orden
 
 **No es el orden de lo que falta: es el orden de lo que decide si esto aprueba.**
