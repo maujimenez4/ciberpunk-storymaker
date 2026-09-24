@@ -15,6 +15,14 @@ from app.features.calidad.agents import (
     RevisionDeContinuidad,
     SalidaMalFormada,
 )
+from app.features.calidad.cobertura import (
+    CODIGO_DE_ELEMENTO_AUSENTE,
+    Cobertura,
+    ElementoAusente,
+    ElementoCubierto,
+    HechoUsado,
+    cobertura_de_obligatorios,
+)
 from app.features.calidad.defectos import (
     CODIGOS_DE_LA_TAXONOMIA,
     DefectoMalFormado,
@@ -45,13 +53,18 @@ from app.features.calidad.validadores import (
 __all__ = [
     "CATALOGO",
     "CODIGOS_DE_LA_TAXONOMIA",
+    "CODIGO_DE_ELEMENTO_AUSENTE",
     "CapituloAContrastar",
     "CapituloAValidar",
+    "Cobertura",
     "Continuista",
     "Defecto",
     "DefectoMalFormado",
     "DefectosClasificados",
+    "ElementoAusente",
+    "ElementoCubierto",
     "HechoDeCanon",
+    "HechoUsado",
     "MotivoMalFormado",
     "NombreDeCanon",
     "OrigenDeHecho",
@@ -65,6 +78,7 @@ __all__ = [
     "TiempoVerbal",
     "Validador",
     "clasificar",
+    "cobertura_de_obligatorios",
     "comprobar_forma",
     "cruzar_g1a",
     "discurso",
