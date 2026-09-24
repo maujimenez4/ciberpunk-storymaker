@@ -13,13 +13,18 @@
  * no apareciera. Imposible cuando se usa, indeseable cuando seria posible.
  */
 export const RUTAS = {
-  lectura: (t: string) => `/l/${t}`,
+  /**
+   * **Una sola direccion** (D-07, que sustituye a D-06 en su parte de rutas).
+   * El token **deja de ser ruta y pasa a ser parametro**: sigue protegiendo la
+   * lectura y sigue siendo lo que se manda de regalo, pero abrirlo no lleva a
+   * otra pagina, sino a esta con la pestana de leer ya puesta.
+   */
+  lectura: (token: string) => `/?token=${encodeURIComponent(token)}`,
   entrevista: () => "/",
 } as const;
 
 export const PATRONES = {
-  lectura: "/l/:token",
-  entrevista: "/",
+  pagina: "/",
 } as const;
 
 /**

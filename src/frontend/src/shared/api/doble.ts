@@ -12,7 +12,7 @@ export class DobleDeApi implements Peticionario {
   readonly cuerpos: unknown[] = [];
 
   constructor(
-    private readonly respuestas: Record<string, unknown>,
+    readonly respuestas: Record<string, unknown>,
     private readonly opciones: { retraso?: number; fallo?: number } = {},
   ) {}
 

@@ -1,20 +1,12 @@
-import { BrowserRouter, Route, Routes, useParams, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import { Entrevista as PantallaDeEntrevista } from "@/features/entrevista";
-import { Lectura } from "@/features/manuscrito";
-import { ProveedorDeApi } from "@/shared/api/contexto";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
 import { Texto } from "@/shared/ui/primitives";
 import type { Peticionario } from "@/shared/api/cliente";
+import { ProveedorDeApi } from "@/shared/api/contexto";
 
-import { PATRONES, vistaDe } from "./router";
+import { Paginas } from "./Paginas";
 import { Proveedores } from "./providers";
-
-function PaginaDeLectura() {
-  const { token = "" } = useParams();
-  const { search } = useLocation();
-  return <Lectura token={token} vistaInicial={vistaDe(search) === "quien-es-quien" ? "quien-es-quien" : "leer"} />;
-}
 
 function NoEncontrada() {
   return (
@@ -27,12 +19,15 @@ function NoEncontrada() {
   );
 }
 
+/**
+ * **Una sola dirección** (D-07). Las tres pantallas son pestañas de la misma
+ * página: se rellena, se pulsa y se lee sin navegar a ningún sitio.
+ */
 export function Aplicacion({ peticionario }: { peticionario?: Peticionario }) {
   const arbol = (
     <BrowserRouter>
       <Routes>
-        <Route path={PATRONES.entrevista} element={<PantallaDeEntrevista />} />
-        <Route path={PATRONES.lectura} element={<PaginaDeLectura />} />
+        <Route path="/" element={<Paginas />} />
         <Route path="*" element={<NoEncontrada />} />
       </Routes>
     </BrowserRouter>

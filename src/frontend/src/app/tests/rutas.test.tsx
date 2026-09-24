@@ -18,22 +18,20 @@ function abrir(ruta: string) {
 }
 
 describe("una sola direccion", () => {
-  it("la lectura es una ruta y ninguna vista anade otra", () => {
-    expect(RUTAS.lectura("T")).toBe("/l/T");
-    expect(Object.keys(RUTAS)).toEqual(["lectura", "entrevista"]);
+  it("hay una direccion, y el token es parametro", () => {
+    /** D-07: el token deja de ser ruta. Sigue siendo lo que protege la lectura
+     * y lo que se manda de regalo; lo que cambia es que abrirlo no lleva a otra
+     * pagina. */
+    expect(RUTAS.lectura("T")).toBe("/?token=T");
+    expect(RUTAS.entrevista()).toBe("/");
   });
 
   it.each([VISTAS.leer, VISTAS.quienEsQuien])(
-    "la vista %s se alcanza sin cambiar de ruta",
+    "la vista %s se alcanza sin cambiar de direccion",
     (vista) => {
-      /**
-       * Las **de la lectura** son dos. La tercera pantalla —la entrevista— no
-       * es una pestaña de aquí: es del comprador y ocurre antes de que exista
-       * novela, así que tiene su propia dirección.
-       */
-      abrir(`/l/T?vista=${vista}`);
+      abrir(`/?token=T&vista=${vista}`);
 
-      expect(window.location.pathname).toBe("/l/T");
+      expect(window.location.pathname).toBe("/");
       expect(screen.getByRole("tab", { selected: true })).toBeInTheDocument();
     },
   );
@@ -53,26 +51,26 @@ describe("una sola direccion", () => {
      * quita. Es superficie de inspección para `RF-VAL-08`, no forma de
      * compartir.
      */
-    const { container } = abrir(`/l/T?vista=${VISTAS.quienEsQuien}`);
+    const { container } = abrir(`/?token=T&vista=${VISTAS.quienEsQuien}`);
     const enlaces = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? "");
 
     expect(enlaces.filter((h) => h.includes("vista="))).toEqual([]);
   });
 
-  it("la entrevista no cuelga del token", () => {
+  it("la entrevista no necesita token", () => {
     /**
-     * D-06 corregida: el token nace con la versión publicada y la entrevista
-     * ocurre **antes de que exista novela**. Bajo el token sería imposible
-     * cuando se usa, e indeseable cuando sería posible — el enlace del regalo
-     * llevaría al formulario donde está lo que el comprador pidió que **no**
-     * apareciera.
+     * Ocurre **antes de que exista novela**, asi que no puede pedir un token
+     * que todavia no existe. Lo que protege el brief no es esconderla: es que
+     * **ninguna ruta de lectura del backend sirve la entrevista** —comprobado
+     * sobre el OpenAPI: las cinco devuelven version, capitulo, ficha, PDF y
+     * versiones—. Una separacion de interfaz no es una frontera de seguridad.
      */
     expect(RUTAS.entrevista()).toBe("/");
-    expect(RUTAS.entrevista()).not.toContain("l/");
+    expect(RUTAS.entrevista()).not.toContain("token");
   });
 
   it("una direccion que no existe da pagina legible, no pantalla en blanco", () => {
-    abrir("/l/T/lo-que-sea");
+    abrir("/lo-que-sea");
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/no/i);
   });

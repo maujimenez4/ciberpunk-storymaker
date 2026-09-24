@@ -105,7 +105,7 @@ describe("la lectura continua", () => {
     // R-2, CA-16: la prosa viene de un modelo y pasa por una base de datos.
     const veneno = 'Marta dijo: <script>alert("x")</script> y salio.';
     const doble = novela({ capitulos: 1 });
-    // @ts-expect-error -- se sustituye la respuesta del doble a proposito
+    // `respuestas` es publico desde que el puente necesito mutarlo en un test.
     doble.respuestas["/lectura/T/capitulos/1"] = { numero: 1, titulo: "T", texto: veneno };
 
     const { container } = render(<Leer token="T" />, { wrapper: conDoble(doble) });

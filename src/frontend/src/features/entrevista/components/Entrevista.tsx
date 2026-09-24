@@ -24,7 +24,13 @@ const CAMPOS = [
  * regalo llevaría a lo que el comprador escribió sobre el destinatario —
  * incluido lo que pidió que **no** apareciera.
  */
-export function Entrevista() {
+export function Entrevista({
+  onNovelaLanzada,
+  deshabilitado = false,
+}: {
+  onNovelaLanzada?: () => void;
+  deshabilitado?: boolean;
+} = {}) {
   const peticionario = usePeticionario();
   const [valores, setValores] = useState<Record<string, string>>({});
   const [pegado, setPegado] = useState("");
@@ -49,6 +55,25 @@ export function Entrevista() {
       });
     },
     onSuccess: setEvaluacion,
+  });
+
+  /**
+   * El puente: cerrar la entrevista da el `obra_id`, y con el se lanza la
+   * novela. Son dos llamadas y **no una**: cerrar valida y crea la obra; lanzar
+   * arranca el trabajo. Juntarlas dejaria sin saber cual de las dos fallo.
+   */
+  const escribir = useMutation({
+    mutationFn: async () => {
+      const id = entrevista.data?.id;
+      if (id === undefined) throw new Error("la entrevista no esta abierta");
+      const obra = await peticionario.enviar<{ obra_id: number }>(
+        API_ENTREVISTA.cerrar(id),
+        {},
+      );
+      await peticionario.enviar(`/obras/${obra.obra_id}/novela`, {});
+      return obra;
+    },
+    onSuccess: () => onNovelaLanzada?.(),
   });
 
   const listo =
@@ -112,7 +137,17 @@ export function Entrevista() {
 
       {evaluacion ? <Comprobacion evaluacion={evaluacion} /> : null}
 
-      {listo ? <Boton>Escribir la novela</Boton> : null}
+      {escribir.isError ? (
+        <Aviso tono="error">
+          No se pudo empezar la novela. Vuelve a pulsar dentro de un momento.
+        </Aviso>
+      ) : null}
+
+      {listo ? (
+        <Boton onClick={() => escribir.mutate()} disabled={deshabilitado || escribir.isPending}>
+          Escribir la novela
+        </Boton>
+      ) : null}
     </Pagina>
   );
 }
