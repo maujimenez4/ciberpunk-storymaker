@@ -15,3 +15,6 @@ __pycache__/
 manuscritos/
 manuscrito-*.txt
 corrida-*.log
+
+# Los worktrees de los agentes viven dentro del repositorio y no son del repositorio.
+.claude/worktrees/
