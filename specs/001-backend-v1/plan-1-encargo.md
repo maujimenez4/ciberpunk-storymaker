@@ -1,10 +1,11 @@
 ---
 id: 001-backend-v1 / plan-1-encargo
 titulo: "Fase 1 — Encargar una novela: cimientos y entrevista"
-estado: aprobado          # borrador | en-revision | aprobado | completado
+estado: completado        # borrador | en-revision | aprobado | completado
 aprobado_por: maujimenez4 # firmado el 2026-09-24, sobre la spec v3.2
 fecha: 2026-09-23
 revisado: 2026-09-24      # correcciones y reparto entre agentes; ver "Qué cambió"
+completado: 2026-09-24    # 4716705..2cfd8a8 · las diez tareas · 88 tests · las cinco puertas
 spec: specs/001-backend-v1/spec.md
 ---
 
