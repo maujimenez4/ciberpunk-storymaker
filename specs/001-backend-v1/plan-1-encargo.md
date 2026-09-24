@@ -203,6 +203,7 @@ La regla es **un solo autor por fichero dentro de una misma ola**. Estos son los
 | --- | --- | --- |
 | `features/obra/modelos.py` | **T4, y solo T4** | Nadie más. Las cuatro tablas entran juntas |
 | `alembic/versions/` | T2 (`0001`) | T4 (`0002`, ola 3) · T10 (`0003`, ola 4). **Nunca dos en la misma ola** |
+| `alembic/env.py` | T2 crea | **Quien añade una tabla añade aquí su `import` del módulo que la declara**, en el mismo commit. T4 lo hizo en la ola 3; a T10 le toca en la ola 4 |
 | `app/conftest.py` | T2 crea `motor` y `sesion` | T4 añade `obra` (ola 3) · T9 añade `cliente` (ola 5) |
 | `commons/domain/errores.py` | T4 crea (ola 3) | T10 añade `OperacionNoPermitida` (ola 4) · T9 añade `BriefIncompleto` y `BriefContradictorio` (ola 5) |
 | `features/obra/agents.py` | T6 crea (ola 2) | T7 añade el `Entrevistador` (ola 3) |
