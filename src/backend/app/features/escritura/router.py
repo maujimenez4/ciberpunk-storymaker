@@ -35,7 +35,7 @@ from app.commons.db.sesion import obtener_motor, obtener_sesion
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.cliente import ClienteModelo, obtener_cliente_modelo
 from app.commons.llm.contador import ContadorDeTokens, ContadorTiktoken
-from app.features.canon import Extractor
+from app.features.canon import Extractor, Vector, vectorizador_de
 from app.features.escena import Planificador
 from app.features.escritura.agents import Escritor
 from app.features.escritura.ciclo import Agentes, abrir_trabajo, ejecutar_ciclo, leer_trabajo
@@ -187,6 +187,12 @@ async def escribir(
         presupuesto=presupuesto,
         cerrojo=cerrojo,
         modelo=_nombre_del_modelo(cliente),
+        # El vector del capitulo integrado, para que el indice se llene en
+        # produccion. `vectorizador_de` vive en `canon` a proposito: repetir la
+        # traduccion en cada sitio que ejecute un ciclo la escribiria mal en
+        # alguno, y el sintoma seria un `embedding.modelo` equivocado que no
+        # rompe nada hoy y hace incomparables los vectores manana.
+        vectorizar=vectorizador_de(cliente),
     )
     return TrabajoLanzado(id=trabajo.id, estado=trabajo.estado, run_id=trabajo.run_id)
 
@@ -217,6 +223,7 @@ async def _correr_el_ciclo(
     presupuesto: PresupuestoConcurrente,
     cerrojo: CerrojoDeEscena,
     modelo: str,
+    vectorizar: Callable[[str], Vector],
 ) -> None:
     """La tarea de fondo: abre sesion, relee el trabajo y ejecuta el ciclo.
 
@@ -236,4 +243,5 @@ async def _correr_el_ciclo(
             presupuesto=presupuesto,
             cerrojo=cerrojo,
             modelo=modelo,
+            vectorizar=vectorizar,
         )

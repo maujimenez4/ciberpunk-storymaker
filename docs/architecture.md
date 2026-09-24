@@ -477,7 +477,7 @@ La memoria de largo plazo crece con la obra; el presupuesto de §2.1 no. La casc
 Para construir la capa de memoria recuperada, en este orden:
 
 1. **Filtro estructural**: presentes, lugar, hilos abiertos, rango de capítulos.
-2. **Similitud semántica** sobre el conjunto ya filtrado.
+2. **Afinidad de vectores** sobre el conjunto ya filtrado.
 3. **Fusión con recencia**.
 
 El orden no es negociable: la búsqueda puramente vectorial trae escenas parecidas, no escenas pertinentes. Una escena de hace veinte capítulos con un beso puede parecerse mucho a la actual y no tener nada que ver con ella.

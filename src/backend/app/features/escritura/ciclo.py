@@ -58,6 +58,7 @@ from app.features.canon import (
     Extractor,
     Vector,
     consolidar_escena,
+    leer_nombres_del_canon,
     registrar_uso_de_hechos,
 )
 from app.features.contexto import (
@@ -156,6 +157,10 @@ async def abrir_trabajo(sesion: AsyncSession, *, capitulo_id: int) -> Trabajo:
     capitulo = await _capitulo(sesion, capitulo_id)
     trabajo = Trabajo(
         obra_id=int(capitulo["obra_id"]),
+        # `capitulo_id` lo anadio T1 justo para esto y nadie lo rellenaba: sin
+        # el, el checkpoint de T5 no sabe de que capitulo es cada trabajo y la
+        # reanudacion de T8 no tiene de donde leer por donde iba la novela.
+        capitulo_id=capitulo_id,
         escena_id=None,
         tipo=TIPO_DE_TRABAJO,
         estado=Estado.PLANIFICANDO.value,
@@ -624,24 +629,19 @@ async def _estado_en_t(sesion: AsyncSession, obra_id: int) -> Mapping[str, Any]:
 
 
 async def _nombres_del_canon(sesion: AsyncSession, obra_id: int) -> tuple[NombreDeCanon, ...]:
-    """Las entidades que el canon declara, para `nombres_literales` (CA-16).
+    """Las entidades que el canon declara, **con sus variantes** (CA-16, RF-VAL-03).
 
-    **Sin variantes, y no es un descuido:** `hecho_canon` no tiene columna donde
-    guardarlas y su `modelos.py` tiene un solo dueno en esta fase. Queda anotado
-    en Desviaciones; el efecto de hoy es que el validador solo acepta la forma
-    canonica, que es estricto pero nunca inventa un apodo que nadie declaro.
+    Antes iba sin ellas porque `hecho_canon` no tenia donde guardarlas. T1 de la
+    Fase 3 creo `variante_de_nombre` y `leer_nombres_del_canon`, asi que el
+    validador deja de ser estricto: «Mari» por «Maria» **no** es defecto si el
+    canon la declara, y «Maria» por «Maria» lo sigue siendo. Es la diferencia
+    que `CA-16` pide, y que un validador literal no puede dar por listo que sea.
+
+    Cerrado al integrar la ola 2: la funcion vive aqui, en `escritura`, y quien
+    la surte vive en `canon`, asi que ninguna de las dos tareas podia hacerlo
+    sola sin saltarse la regla 1 del reparto.
     """
-    entidades = (
-        (
-            await sesion.execute(
-                text("SELECT DISTINCT entidad FROM hecho_canon WHERE obra_id = :obra_id"),
-                {"obra_id": obra_id},
-            )
-        )
-        .scalars()
-        .all()
-    )
-    return tuple(NombreDeCanon(forma_canonica=str(e)) for e in entidades)
+    return await leer_nombres_del_canon(sesion, obra_id=obra_id)
 
 
 async def _vetos(sesion: AsyncSession, obra_id: int) -> tuple[str, ...]:
