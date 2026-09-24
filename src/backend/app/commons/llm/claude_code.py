@@ -39,8 +39,27 @@ from app.commons.llm.cliente import ClienteModelo, Vectorizacion, vectorizar_tex
 MODELO_ESCRITOR = "claude-haiku-4-5"
 """Escribe y edita, que es el volumen (P-02)."""
 
-MODELO_JUEZ = "claude-opus-5"
-"""Juzga —Critico y Continuista—. Separarlo del escritor es deliberado (P-02)."""
+MODELO_JUEZ = MODELO_ESCRITOR
+"""Juzga --Critico y Continuista--. **Hoy es el mismo modelo que el escritor.**
+
+P-02 lo separo a proposito -- Opus juzgaba, Haiku escribia -- porque **un juez que
+comparte modelo con quien escribio tiende a aprobar su propio estilo**, y ese
+punto ciego esta declarado en `specs/001-backend-v1/spec.md`.
+
+**Se unifica el 2026-09-24 por coste, con la cifra medida delante:** la corrida
+real da ~8,8 USD por novela con el reparto y ~1,5 USD toda en haiku, y la
+diferencia es entera del cambio de modelo -- el juez cuesta 5x la entrada y 5x la
+salida-. Decision de `maujimenez4`.
+
+**Lo que se pierde, para que no se descubra al medir la correlacion:** la
+distancia entre el juicio automatico y la revision humana (`RF-JUZ-05`) se va a
+medir con un juez que comparte modelo, familia y entrenamiento con el autor. Esa
+distancia saldra **mejor de lo que el sistema merece**, y no porque el juez
+acierte.
+
+La constante se mantiene **separada y no se borra** justamente por eso: el dia que
+el coste deje de mandar, cambiar esta linea vuelve a separarlos sin tocar ningun
+rol."""
 
 
 @dataclass(frozen=True)
@@ -56,8 +75,16 @@ class Tarifa:
 
 
 TARIFAS: dict[str, Tarifa] = {
-    MODELO_ESCRITOR: Tarifa(Decimal("1.00"), Decimal("5.00")),
-    MODELO_JUEZ: Tarifa(Decimal("5.00"), Decimal("25.00")),
+    # Indexadas por el **nombre literal del modelo** y no por las constantes de
+    # rol. Desde que `MODELO_JUEZ` es `MODELO_ESCRITOR`, usar las constantes
+    # dejaba **una sola entrada** -- la ultima gana -- y todo el coste se habria
+    # imputado a la tarifa de Opus: cinco veces lo real, en silencio y en la
+    # cifra que RF-OBS-03 usa para comparar plantillas.
+    #
+    # Opus se queda aunque hoy no lo pida nadie: el dia que el juez vuelva a
+    # separarse, su tarifa tiene que estar aqui o el coste saldria a cero.
+    "claude-haiku-4-5": Tarifa(Decimal("1.00"), Decimal("5.00")),
+    "claude-opus-5": Tarifa(Decimal("5.00"), Decimal("25.00")),
 }
 """Tarifa publica de Anthropic por modelo. **No cubre la cache de prompt**, que
 se factura a otro precio.

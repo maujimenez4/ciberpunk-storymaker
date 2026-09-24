@@ -30,6 +30,18 @@ from app.commons.llm.claude_code import (
 )
 from app.commons.llm.cliente import ClienteModelo, obtener_cliente_modelo
 
+# Un modelo **distinto** al del escritor y con tarifa propia. Existe porque
+# varios tests de aqui comprueban que el modelo que pide quien llama es el que
+# viaja y el que paga, y eso solo se puede comprobar contrastando dos modelos
+# **que de verdad se diferencien**. Desde que `MODELO_JUEZ` es `MODELO_ESCRITOR`
+# (P-02 revisado el 2026-09-24, todo en Haiku), usar la constante de rol dejaba
+# esos tests comparando un valor consigo mismo: verdes y sin comprobar nada, que
+# es la familia de fallo que mas veces ha aparecido en este repositorio.
+#
+# No se escribe `MODELO_JUEZ` aqui a proposito: el dia que el juez vuelva a
+# separarse, estos tests ya estaran comprobando lo que dicen comprobar.
+OTRO_MODELO = "claude-opus-5"
+
 
 class ConsultaFalsa:
     """El SDK sustituido. Registra las opciones y devuelve lo preparado.
@@ -80,11 +92,18 @@ async def test_el_cliente_real_satisface_el_protocolo_y_devuelve_la_prosa():
 
 
 def test_el_modelo_por_defecto_del_escritor_es_haiku():
-    """P-02: Haiku 4.5 escribe, Opus 5 juzga. Y el modelo es **parametro**."""
+    """P-02 revisado el 2026-09-24: **Haiku 4.5 en todos los roles**. Y el
+    modelo sigue siendo **parametro**, que es lo que de verdad se prueba aqui.
+
+    `MODELO_JUEZ` no se borra al unificarse: se queda apuntando al del escritor
+    para que volver a separar al juez sea **una linea**. Este test afirma esa
+    igualdad en vez de darla por supuesta, porque si alguien cambia una de las
+    dos constantes sin querer, el reparto de coste de `TARIFAS` cambia con ella.
+    """
     assert ClienteClaudeCode().modelo == "claude-haiku-4-5"
     assert MODELO_ESCRITOR == "claude-haiku-4-5"
-    assert MODELO_JUEZ == "claude-opus-5"
-    assert ClienteClaudeCode(MODELO_JUEZ).modelo == MODELO_JUEZ
+    assert MODELO_JUEZ == MODELO_ESCRITOR
+    assert ClienteClaudeCode(OTRO_MODELO).modelo == OTRO_MODELO
 
 
 async def test_el_modelo_y_las_restricciones_viajan_en_las_opciones():
@@ -96,10 +115,10 @@ async def test_el_modelo_y_las_restricciones_viajan_en_las_opciones():
     `@ruta` y despacha barras dentro de ese texto.
     """
     consulta = ConsultaFalsa(["x"])
-    await ClienteClaudeCode(MODELO_JUEZ, consulta=consulta).completar("p", semilla=1)
+    await ClienteClaudeCode(OTRO_MODELO, consulta=consulta).completar("p", semilla=1)
 
     opciones = consulta.opciones[0]
-    assert opciones.model == MODELO_JUEZ
+    assert opciones.model == OTRO_MODELO
     assert opciones.tools == []
     assert opciones.allowed_tools == []
     assert opciones.setting_sources == []
@@ -141,7 +160,7 @@ async def test_los_ajustes_del_repositorio_no_se_cargan_nunca():
     [
         (MODELO_ESCRITOR, 1_000_000, 0, "1.00"),
         (MODELO_ESCRITOR, 0, 1_000_000, "5.00"),
-        (MODELO_JUEZ, 1_000_000, 1_000_000, "30.00"),
+        (OTRO_MODELO, 1_000_000, 1_000_000, "30.00"),
         (MODELO_ESCRITOR, 0, 0, "0.00"),
     ],
 )
@@ -216,7 +235,7 @@ def test_el_protocolo_deja_pedir_el_modelo_en_cada_llamada():
     assert "modelo" in inspect.signature(ClienteModelo.completar).parameters
 
 
-@pytest.mark.parametrize("modelo", [MODELO_ESCRITOR, MODELO_JUEZ])
+@pytest.mark.parametrize("modelo", [MODELO_ESCRITOR, OTRO_MODELO])
 async def test_el_modelo_que_pide_quien_llama_es_el_que_viaja(modelo):
     """Y este es el test que cae si alguien vuelve a fijarlo dentro del cliente."""
     consulta = ConsultaFalsa(["x"])
@@ -242,11 +261,11 @@ async def test_el_coste_se_imputa_a_la_tarifa_del_modelo_que_de_verdad_se_uso():
     consulta = ConsultaFalsa(["x"], uso={"input_tokens": 1_000_000, "output_tokens": 1_000_000})
     cliente = ClienteClaudeCode(consulta=consulta)
 
-    await cliente.completar("p", semilla=1, modelo=MODELO_JUEZ)
+    await cliente.completar("p", semilla=1, modelo=OTRO_MODELO)
 
     consumo = cliente.ultimo_consumo
     assert consumo is not None
-    assert consumo.modelo == MODELO_JUEZ
+    assert consumo.modelo == OTRO_MODELO
     assert consumo.coste_usd == Decimal("30.00")
 
 

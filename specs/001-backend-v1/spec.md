@@ -82,7 +82,7 @@ Y hoy no hay nada que lo evite: `src/backend/` está vacío. Cinco documentos de
 | **React 19 + TypeScript + Vite** en el frontend | **Nuestro.** El encargo §2 dice «web o PDF» y no nombra tecnología | `CLAUDE.md` §5.2 · es de la 002 |
 | **Techo de 100.000 tokens por llamada** | **Nuestro**, derivado del presupuesto por capas | `CLAUDE.md` §4.1 · RF-CTX-02, RF-CTX-03 |
 | **Techo de 100.000 tokens concurrentes** —el **presupuesto concurrente**: la suma de lo que está en vuelo— | **Encargo §7, literal** | `architecture.md` §2.2 · RF-ORQ-10 |
-| **Anthropic** por consumo de cuenta, **sin clave de API**. Haiku 4.5 escribe; **Opus 5 juzga** | **Nuestro** (P-02) | `CLAUDE.md` §4 · RF-OBS-03 |
+| **Anthropic** por consumo de cuenta, **sin clave de API**. **Haiku 4.5 en todos los roles** | **Nuestro** (P-02, revisado el 2026-09-24) | `CLAUDE.md` §4 · RF-OBS-03 |
 
 **Los dos techos no son el mismo, y hasta hoy los docs los confundían.** Decían que el de 100.000 era «por llamada» y «el único techo de tokens». El encargo §7 dice «concurrentes», que es una **suma**. Mientras la concurrencia fue 1 los dos números coincidían y el sistema cumplía **por consecuencia, no por regla**. Con el paralelismo admitido (P-06), dejan de coincidir: **RF-ORQ-10 es desde el primer día el único requisito que comprueba lo que el encargo pide.**
 
@@ -513,7 +513,21 @@ Lo destapó escribir el plan de la fase 1: **la entrevista existe antes que la o
 
 **P-02 · Claude, por consumo de cuenta, y Haiku para generar.** Decidido por `maujimenez4`, 2026-09-23.
 
-Proveedor **Anthropic**, y **sin clave de API**: el consumo va contra la cuenta. **Haiku 4.5** escribe y edita, que es el volumen; **Opus 5 juzga** —Crítico y Continuista—.
+Proveedor **Anthropic**, y **sin clave de API**: el consumo va contra la cuenta. **Haiku 4.5 en todos los roles.**
+
+**Revisado el 2026-09-24, y la revision invierte la mitad de esta decision.** La version original separaba al juez —Opus 5 para Critico y Continuista— con el argumento que sigue abajo y que **sigue siendo correcto**. Se unifica **por coste, con la cifra medida delante**:
+
+| | Diez capitulos |
+| --- | --- |
+| Todo en Haiku | **~1,5 USD** |
+| Haiku escribe, Opus juzga | **~8,8 USD** |
+| Con reintentos | **12–15 USD** |
+
+La diferencia es **entera del cambio de modelo**: el juez cuesta 5x la entrada y 5x la salida. Y pesa porque el PDF de la novela de ejemplo —«la evidencia de que el sistema funciona de principio a fin»— depende de **una corrida real de la que solo hay una oportunidad**.
+
+**Lo que se pierde, dicho aqui para que no se descubra al medir:** la distancia de `RF-JUZ-05` se medira con un juez que comparte modelo, familia y entrenamiento con el autor, asi que **saldra mejor de lo que el sistema merece**, y no porque el juez acierte. `verification.md` §6.1 ya lo tenia declarado como punto ciego y vuelve a estar abierto.
+
+La constante `MODELO_JUEZ` **se mantiene separada y no se borra**: el dia que el coste deje de mandar, una linea vuelve a separarlos sin tocar ningun rol.
 
 **Que el juez no comparta modelo con el escritor es lo que más gana aquí.** Esta spec ya declaraba como punto ciego que «la naturalidad la juzga un juez que comparte modelo con quien escribió»: un modelo tiende a aprobar su propio estilo. Separarlos lo rompe antes de que RF-JUZ-05 mida nada, y cuesta poco, porque el juez corre una o dos veces por capítulo y el escritor muchas más.
 
