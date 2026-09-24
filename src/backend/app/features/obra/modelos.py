@@ -1,12 +1,18 @@
-"""Las cinco tablas de la Fase 1, y solo ellas.
+"""Las tablas de la feature `obra`.
 
-Entran juntas y en una sola migracion porque la spec lo pide en Impacto
-tecnico —«Esquema: toda la base de datos. Es la migracion inicial»— y porque
-`alembic revision --autogenerate` lee `Base.metadata` **entera**: dos agentes
-generando a la vez producen dos *heads* y la cadena deja de ser lineal.
+Las cinco primeras entraron juntas y en una sola migracion porque la spec lo
+pide en Impacto tecnico —«Esquema: toda la base de datos. Es la migracion
+inicial»— y porque `alembic revision --autogenerate` lee `Base.metadata`
+**entera**: dos agentes generando a la vez producen dos *heads* y la cadena
+deja de ser lineal.
+
+`Entrevista` y `TextoAportado` entran despues, con la Tarea 9, y el plan no se
+las habia dado a nadie: ver Desviaciones. No rompen la regla de arriba porque
+T9 va sola en su ola, asi que no hay un segundo autor generando a la vez.
 """
 
 from datetime import date
+from typing import Any
 
 from sqlalchemy import JSON, CheckConstraint, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -127,3 +133,58 @@ class HechoCanon(Base):
     enunciado: Mapped[str] = mapped_column(Text)
     origen: Mapped[str] = mapped_column(String(20))
     escena_de_origen: Mapped[str | None] = mapped_column(String(60))
+
+
+class Entrevista(Base):
+    """La conversacion con el comprador mientras aun no hay obra (RI-01 a RI-03).
+
+    **No es una clase de `definitions.md` §9**, y eso esta anotado en
+    Desviaciones: el documento nombra al `Entrevistador` (el rol) y describe la
+    entrevista como proceso, pero no como entidad persistida. La tabla existe
+    porque los tres endpoints la necesitan: el comprador responde en varias
+    llamadas y lo respondido tiene que sobrevivir entre una y otra.
+
+    `obra_id` es nulo hasta que la entrevista se cierra, y **es la clave de
+    R-5**: si ya lo tiene, cerrar otra vez devuelve esa obra en vez de crear
+    una segunda. La idempotencia vive en el dato, no en la memoria del proceso,
+    porque el doble clic puede llegar a otro trabajador.
+
+    `respuestas` se reasigna entera al actualizarla, nunca se muta en sitio:
+    SQLAlchemy no vigila el interior de una columna `JSON` y una mutacion
+    dentro del `dict` no llegaria a la base.
+    """
+
+    __tablename__ = "entrevista"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    respuestas: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    obra_id: Mapped[int | None] = mapped_column(ForeignKey("obra.id", name="fk_entrevista_obra_id"))
+
+
+class TextoAportado(Base):
+    """La carta o la anecdota que el comprador pega (`definitions.md` §9.1).
+
+    RF-ENT-05 dice que el texto libre **se guarda**, y hasta ahora solo se
+    marcaba como dato dentro del prompt (Tarea 6): nadie lo persistia. Que sea
+    contenido no confiable no lo exime de guardarse; al reves, guardarlo aparte
+    y en su propia tabla es lo que permite que se lea siempre como dato.
+
+    `hechos_extraidos` **no esta**, y no es olvido: producir enunciados a partir
+    de prosa es del Extractor, que es de la Fase 2 («Lo que esta fase NO hace»).
+    Los hechos que hoy entran al canon los pone quien llame a
+    `registrar_hechos_del_brief`.
+
+    El `CheckConstraint` es R-2 escrito donde no se puede rodear: un texto en
+    blanco no es un texto aportado, y si entrara crearia mas adelante un hecho
+    de canon vacio.
+    """
+
+    __tablename__ = "texto_aportado"
+    __table_args__ = (CheckConstraint("trim(contenido) <> ''", name="ck_texto_aportado_no_vacio"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entrevista_id: Mapped[int] = mapped_column(
+        ForeignKey("entrevista.id", name="fk_texto_aportado_entrevista_id")
+    )
+    contenido: Mapped[str] = mapped_column(Text)
+    procedencia: Mapped[str] = mapped_column(String(60), default="entrevista")

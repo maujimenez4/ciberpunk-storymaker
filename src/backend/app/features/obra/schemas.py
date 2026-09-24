@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
@@ -86,3 +86,42 @@ class BriefEntrada(BaseModel):
                 f"{self.destinatario.nombre!r}: elige otro veto o corrige el nombre"
             )
         return self
+
+
+class RespuestasEntrada(BaseModel):
+    """Lo que el comprador manda a RI-02. Entrada, y solo entrada.
+
+    `respuestas` es un diccionario abierto a proposito: la entrevista se
+    responde a trozos y un esquema cerrado obligaria a mandarla entera de una
+    vez, que es justo lo que RF-ENT-03 existe para evitar. La forma se exige
+    **al cerrar**, contra `BriefEntrada`; aqui solo se acumula.
+    """
+
+    respuestas: dict[str, Any] = Field(default_factory=dict)
+    texto_aportado: str = ""
+
+
+class EntrevistaAbierta(BaseModel):
+    """Salida de RI-01. Nunca se expone el modelo de base de datos."""
+
+    id: int
+
+
+class ContradiccionSalida(BaseModel):
+    """Los mismos dos campos que devuelve el Entrevistador, ni uno mas."""
+
+    campos: list[str]
+    explicacion: str
+
+
+class EvaluacionSalida(BaseModel):
+    """Salida de RI-02: que falta y que se contradice, nombrado (CA-2)."""
+
+    faltantes: list[str]
+    contradicciones: list[ContradiccionSalida]
+
+
+class ObraCreada(BaseModel):
+    """Salida de RI-03. La segunda llamada devuelve el mismo `obra_id` (R-5)."""
+
+    obra_id: int
