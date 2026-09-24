@@ -1,13 +1,17 @@
 """Casos de uso de la feature `obra`.
 
-Hoy solo el de la entrevista, y a proposito nada mas. Cerrar la entrevista
-—crear la obra, guardar destinatario y vetos, no crear dos al doble clic— necesita
-el esquema de la Tarea 4 y los errores de dominio que anade la Tarea 9, que no
+Hoy la entrevista y los hechos que el brief trae consigo, y a proposito nada
+mas. Cerrar la entrevista —crear la obra, guardar destinatario y vetos, no crear
+dos al doble clic— necesita los errores de dominio que anade la Tarea 9, que no
 existen cuando se escribe esto. Adivinar esas interfaces habria sido escribir
 codigo contra una firma que aun nadie ha fijado: ver Desviaciones del plan.
 """
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.features.obra.agents import Entrevistador, Evaluacion
+from app.features.obra.modelos import HechoCanon
+from app.features.obra.repository import guardar_hechos_del_brief
 
 
 async def evaluar_entrevista(
@@ -25,3 +29,23 @@ async def evaluar_entrevista(
     texto en blanco no debe generar seccion en el prompt (R-2).
     """
     return await entrevistador.evaluar(respuestas, texto_aportado)
+
+
+async def registrar_hechos_del_brief(
+    sesion: AsyncSession,
+    obra_id: int,
+    enunciados: list[str],
+) -> list[HechoCanon]:
+    """Los hechos que el comprador trajo entran al canon (RF-ENT-06).
+
+    El caso de uso **no tiene parametro `origen`**, y esa ausencia es su unico
+    contenido: el repositorio lo acepta porque la Fase 2 escribira por ahi
+    hechos de escena, pero por la via de la entrevista no se puede pedir otra
+    cosa que `brief`. Es la frontera que el router de la Tarea 9 va a cruzar,
+    y `CLAUDE.md` §6 no le deja llamar al repositorio por su cuenta.
+
+    De donde salen los enunciados —el texto aportado, las respuestas— no es de
+    aqui: cuando exista el Extractor sera el quien los produzca. Este caso de
+    uso recibe la lista ya hecha.
+    """
+    return await guardar_hechos_del_brief(sesion, obra_id, enunciados)
