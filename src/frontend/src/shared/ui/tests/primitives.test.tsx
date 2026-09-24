@@ -8,7 +8,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 
 import { Aviso, BarraDeProgreso, Boton, Enlace, Pasos, Texto } from "@/shared/ui/primitives";
@@ -20,6 +21,39 @@ describe("los primitivos", () => {
 
     expect(await axe(container)).toHaveNoViolations();
     expect(screen.getByRole("button")).toHaveTextContent("Seguir leyendo");
+  });
+
+  it.each([
+    [undefined, "boton boton--principal"],
+    ["principal", "boton boton--principal"],
+    ["secundario", "boton boton--secundario"],
+    ["discreto", "boton boton--discreto"],
+  ] as const)("el boton con variante %s lleva la clase %s", async (variante, clase) => {
+    const { container } = render(<Boton variante={variante}>Empezar otra novela</Boton>);
+
+    const boton = screen.getByRole("button", { name: "Empezar otra novela" });
+    expect(boton).toHaveAttribute("class", clase);
+    expect(boton).toHaveAttribute("type", "button");
+    // Sigue siendo un botón de verdad: llega el foco con el teclado.
+    boton.focus();
+    expect(boton).toHaveFocus();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("un boton deshabilitado no recibe el foco ni el clic, en cualquier variante", async () => {
+    const pulsado = vi.fn();
+    render(
+      <Boton variante="discreto" disabled onClick={pulsado}>
+        Publicar la novela
+      </Boton>,
+    );
+
+    const boton = screen.getByRole("button", { name: "Publicar la novela" });
+    expect(boton).toBeDisabled();
+    await userEvent.click(boton);
+    expect(pulsado).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(boton).not.toHaveFocus();
   });
 
   it("el aviso se anuncia a un lector de pantalla", () => {
@@ -119,6 +153,18 @@ describe("los tokens", () => {
      */
     expect(ESTILOS).toContain(":focus-visible");
     expect(ESTILOS).not.toMatch(/outline:\s*(none|0)/);
+  });
+
+  it("las tres variantes del boton tienen estilo, y todo lo que se toca tiene foco visible", () => {
+    for (const variante of ["principal", "secundario", "discreto"]) {
+      expect(ESTILOS).toMatch(new RegExp(`\\.boton--${variante}\\s*[,{]`));
+    }
+    // El foco del campo es el anillo ciruela de 3 px (RF-ACC-01), no el del navegador.
+    expect(ESTILOS).toMatch(/\.campo__control:focus-visible\s*\{[^}]*outline:\s*3px solid var\(--acento\)/);
+    // Los radios siguen la jerarquía y se usan: píldora, campo, bloque.
+    for (const radio of ["--radio-pildora", "--radio-campo", "--radio-bloque"]) {
+      expect(ESTILOS).toContain(`border-radius: var(${radio})`);
+    }
   });
 
   it("la medida de linea existe y no es el ancho de la pantalla: `RF-ACC-05`", () => {

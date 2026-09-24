@@ -1,10 +1,17 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
+type Variante = "principal" | "secundario" | "discreto";
+
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
-  /** `secundario` para la acción que no es la de la pantalla: se ve, pero no
-   * compite con la principal. */
-  variante?: "principal" | "secundario";
+  /**
+   * Tres pesos, y uno solo principal por pantalla:
+   * - `principal`: la acción de la pantalla, rellena de acento.
+   * - `secundario`: se ve, pero no compite con la principal (contorno).
+   * - `discreto`: una salida, no el siguiente paso («Empezar otra novela»):
+   *   solo texto.
+   */
+  variante?: Variante;
 };
 
 /**
@@ -14,11 +21,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
  */
 export function Boton({ children, type = "button", variante = "principal", ...resto }: Props) {
   return (
-    <button
-      className={variante === "secundario" ? "boton boton--secundario" : "boton"}
-      type={type}
-      {...resto}
-    >
+    <button className={`boton boton--${variante}`} type={type} {...resto}>
       {children}
     </button>
   );
