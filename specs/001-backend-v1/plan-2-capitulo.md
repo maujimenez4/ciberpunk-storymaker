@@ -1,8 +1,9 @@
 ---
 id: 001-backend-v1 / plan-2-capitulo
 titulo: "Fase 2 — Escribir un capítulo: el motor"
-estado: aprobado          # borrador | en-revision | aprobado | completado
+estado: completado        # borrador | en-revision | aprobado | completado
 aprobado_por: maujimenez4 # firmado el 2026-09-24, con P-A, P-B y P-C cerradas
+completado: 2026-09-24    # 14b0384..cba1984 · las doce tareas · 428 tests · las cinco puertas
 fecha: 2026-09-24
 spec: specs/001-backend-v1/spec.md
 hereda_de: specs/001-backend-v1/plan-1-encargo.md
