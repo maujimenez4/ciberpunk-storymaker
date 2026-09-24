@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DobleDeApi, enSecuencia } from "@/shared/api/doble";
 import { ProveedorDeApi } from "@/shared/api/contexto";
@@ -234,6 +234,21 @@ const TERMINADA = {
   estado: "terminada",
   motivo: null,
 };
+
+const CLAVE_EN_CURSO = "storymaker.novela-en-curso";
+
+function apuntada(): unknown {
+  const crudo = window.localStorage.getItem(CLAVE_EN_CURSO);
+  return crudo === null ? null : JSON.parse(crudo);
+}
+
+function apuntar(valor: { obraId: number; fase: "outline" | "novela"; desde: number }) {
+  window.localStorage.setItem(CLAVE_EN_CURSO, JSON.stringify(valor));
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function dobleDeLaCadena(
   estados: unknown,
@@ -462,6 +477,42 @@ describe("la cadena de escribir la novela", () => {
     expect(doble.metodos).not.toContain("POST /obras/7/novela");
   });
 
+  it("al cerrar la entrevista apunta la obra en el navegador, y al publicar la olvida", async () => {
+    const doble = dobleDeLaCadena(enSecuencia(ESCRIBIENDO_3, ESCRIBIENDO_3, TERMINADA));
+    const publicada = vi.fn();
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() =>
+      expect(apuntada()).toMatchObject({ obraId: 7, fase: "novela" }),
+    );
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+    expect(apuntada()).toBeNull();
+  });
+
+  it("sin almacenamiento en el navegador, la novela se escribe y se publica igual", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("bloqueado", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("bloqueado", "SecurityError");
+    });
+    const doble = dobleDeLaCadena(TERMINADA);
+    const publicada = vi.fn();
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await pulsarEscribir(persona);
+
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+  });
+
   it("si publicar falla, lo dice como fallo de publicar", async () => {
     const doble = dobleDeLaCadena(TERMINADA);
     doble.respuestas["POST /obras/7/publicar"] = undefined;
@@ -475,5 +526,76 @@ describe("la cadena de escribir la novela", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/publicar/i);
     expect(fallo).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * **Hora y media es mucho para no recargar nunca.** Hasta aquí, una recarga a
+ * mitad de la novela devolvía el formulario en blanco y abría otra entrevista:
+ * la novela seguía escribiéndose en el servidor y nadie la publicaba.
+ */
+describe("volver a la página a mitad de la novela", () => {
+  it("con una obra apuntada, no pide la entrevista: sigue consultando esa novela", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    expect(await screen.findByRole("progressbar", { name: /capítulos/i })).toHaveAttribute(
+      "aria-valuenow",
+      "2",
+    );
+    expect(screen.queryByLabelText(/cómo se llama/i)).toBeNull();
+    expect(doble.metodos).not.toContain("POST /entrevistas");
+    expect(doble.metodos).not.toContain("POST /entrevistas/1/cerrar");
+    expect(doble.metodos).not.toContain("POST /obras/7/outline");
+    expect(doble.metodos).not.toContain("POST /obras/7/novela");
+  });
+
+  it("si al volver ya está terminada, la publica y la olvida", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(TERMINADA);
+    const publicada = vi.fn();
+    render(<Entrevista intervaloDeConsulta={10} onNovelaPublicada={publicada} />, {
+      wrapper: conDoble(doble),
+    });
+
+    await waitFor(() => expect(publicada).toHaveBeenCalledWith("tok-7"));
+    expect(apuntada()).toBeNull();
+  });
+
+  it("si al volver la historia no llegó a prepararse, ofrece prepararla sin repetir la entrevista", async () => {
+    apuntar({ obraId: 7, fase: "outline", desde: 1 });
+    const doble = dobleDeLaCadena(
+      enSecuencia(
+        { obra_id: 7, total: 0, integrados: 0, en_curso: null, estado: "sin_outline", motivo: null },
+        ESCRIBIENDO_3,
+      ),
+    );
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await persona.click(
+      await screen.findByRole("button", { name: /preparar la historia otra vez/i }),
+    );
+
+    await waitFor(() => expect(doble.metodos).toContain("POST /obras/7/novela"));
+    expect(doble.metodos.indexOf("POST /obras/7/outline")).toBeLessThan(
+      doble.metodos.indexOf("POST /obras/7/novela"),
+    );
+    expect(doble.metodos).not.toContain("POST /entrevistas/1/cerrar");
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("«empezar otra novela» la olvida y vuelve a la entrevista", async () => {
+    apuntar({ obraId: 7, fase: "novela", desde: 1 });
+    const doble = dobleDeLaCadena(ESCRIBIENDO_3);
+    const persona = userEvent.setup();
+    render(<Entrevista intervaloDeConsulta={10} />, { wrapper: conDoble(doble) });
+
+    await persona.click(await screen.findByRole("button", { name: /empezar otra novela/i }));
+
+    expect(await screen.findByLabelText(/cómo se llama/i)).toBeInTheDocument();
+    expect(apuntada()).toBeNull();
+    await waitFor(() => expect(doble.metodos).toContain("POST /entrevistas"));
   });
 });
