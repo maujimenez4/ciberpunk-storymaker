@@ -29,6 +29,17 @@ dependencies = [
   # no cargar en la maquina de destino; NumPy es una dependencia de Python como
   # las otras trece.
   "numpy>=2.0",
+  # La de la Fase 6, Tarea 1, y tambien de las catorce que P-01 aprobo en
+  # bloque. El encargo §6 pide Langfuse por su nombre, asi que aqui no hay
+  # eleccion que justificar; lo que si conviene decir es **como se depende de
+  # ella**: el `import` es perezoso, dentro de `ObservadorLangfuse._abrir`, y
+  # ningun test la toca. `CA-4` pide que la suite corra sin red y sin
+  # credenciales, y sin las tres variables de entorno el sistema devuelve
+  # `ObservadorNulo`, avisa al arrancar y genera igual (R-1).
+  #
+  # Es decir: se declara porque la corrida real la necesita, no porque la
+  # importacion del paquete dependa de ella.
+  "langfuse>=3.0",
 ]
 
 [dependency-groups]
