@@ -1,6 +1,7 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useState } from "react";
 
+import { ErrorDeLectura } from "@/shared/api/cliente";
 import { usePeticionario } from "@/shared/api/contexto";
 import { Aviso, Boton, Pasos, Texto } from "@/shared/ui/primitives";
 
@@ -489,8 +490,9 @@ function Recorrido({
 
       {publicar.isError ? (
         <Aviso tono="error">
-          La novela está escrita, pero no se pudo publicar. Vuelve a pulsar dentro de un
-          momento.
+          {publicar.error instanceof ErrorDeLectura && publicar.error.detalle
+            ? `La novela está escrita, pero no se publicó: ${publicar.error.detalle}`
+            : "La novela está escrita, pero no se pudo publicar. Vuelve a pulsar dentro de un momento."}
         </Aviso>
       ) : null}
 

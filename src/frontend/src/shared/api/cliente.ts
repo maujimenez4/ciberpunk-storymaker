@@ -12,9 +12,25 @@ export class ErrorDeLectura extends Error {
   constructor(
     readonly estado: number,
     mensaje: string,
+    /** El `detail` que manda el backend en un error de dominio (409): el motivo
+     * concreto —«falta el elemento…», la incoherencia que vio Lean—. */
+    readonly detalle: string | null = null,
   ) {
     super(mensaje);
   }
+}
+
+async function detalleDe(respuesta: Response): Promise<string | null> {
+  try {
+    const cuerpo: unknown = await respuesta.json();
+    if (typeof cuerpo === "object" && cuerpo !== null && "detail" in cuerpo) {
+      const detalle = (cuerpo as { detail: unknown }).detail;
+      return typeof detalle === "string" ? detalle : null;
+    }
+  } catch {
+    // Sin cuerpo JSON: queda el mensaje genérico.
+  }
+  return null;
 }
 
 export interface Peticionario {
@@ -45,7 +61,11 @@ export const clienteHttp: Peticionario = {
       body: JSON.stringify(cuerpo),
     });
     if (!respuesta.ok) {
-      throw new ErrorDeLectura(respuesta.status, "No se pudo guardar lo que escribiste.");
+      throw new ErrorDeLectura(
+        respuesta.status,
+        "No se pudo guardar lo que escribiste.",
+        await detalleDe(respuesta),
+      );
     }
     return (await respuesta.json()) as T;
   },
