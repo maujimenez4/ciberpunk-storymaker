@@ -113,7 +113,7 @@ describe("quién viaja contigo", () => {
         hecho_canon_id: null,
         hechos: [
           { hecho_canon_id: 7, atributo: "ojos", valor: "grises" },
-          { hecho_canon_id: 9, atributo: "oficio", valor: "cerrajera" },
+          { hecho_canon_id: 9, atributo: "oficio_de_antes", valor: "cerrajera" },
         ],
       },
     ];
@@ -122,7 +122,9 @@ describe("quién viaja contigo", () => {
     const olvido = (await screen.findByRole("heading", { name: "Olvido" })).closest(".etiqueta");
     const etiqueta = within(olvido as HTMLElement);
     expect(etiqueta.getByText("ojos: grises")).toBeInTheDocument();
-    expect(etiqueta.getByText("oficio: cerrajera")).toBeInTheDocument();
+    // El nombre del campo se lee sin guiones bajos: es de la base, no del lector.
+    expect(etiqueta.getByText("oficio de antes: cerrajera")).toBeInTheDocument();
+    expect(etiqueta.getByRole("button", { name: "Corregir este hecho: Olvido, oficio de antes" })).toBeInTheDocument();
     expect(etiqueta.getAllByRole("button", { name: /^Corregir este hecho/ })).toHaveLength(2);
     expect(etiqueta.getByRole("button", { name: "Corregir este hecho: Olvido, ojos" })).toBeInTheDocument();
   });

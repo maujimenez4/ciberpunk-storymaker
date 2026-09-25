@@ -131,11 +131,11 @@ function Etiqueta({
           <ul className="etiqueta__hechos">
             {hechos.map((hecho) => (
               <li key={hecho.hecho_canon_id} className="etiqueta__hecho">
-                <span>{`${hecho.atributo}: ${hecho.valor}`}</span>
+                <span>{`${legible(hecho.atributo)}: ${hecho.valor}`}</span>
                 <PedirCorreccion
                   token={token}
                   hechoId={hecho.hecho_canon_id}
-                  nombre={`${entrada.nombre}, ${hecho.atributo}`}
+                  nombre={`${entrada.nombre}, ${legible(hecho.atributo)}`}
                   onEnviada={onPeticionEnviada}
                 />
               </li>
@@ -152,6 +152,11 @@ function Etiqueta({
       </div>
     </article>
   );
+}
+
+/** El nombre del campo como se lee: «lugar_habitual» es de la base, no de quien lee. */
+function legible(atributo: string): string {
+  return atributo.replaceAll("_", " ").trim();
 }
 
 /** «1, 2 y 3»: coma entre los primeros, «y» antes del último. */
