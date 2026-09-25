@@ -357,10 +357,13 @@ estaba escrita: que Escritor, Continuista, Crítico y Extractor fallan de forma
 **independiente**. La separación por rol (`architecture.md` §12, decisión 6) compra parte
 de esa independencia —quien escribe no se juzga a sí mismo— y no compra el resto:
 
-- **Comparten proveedor, y desde el 2026-09-23 ya no el modelo.** P-02 fija **Haiku 4.5
-  para escribir y Opus 5 para juzgar**, así que el Escritor y el Crítico dejan de tener el
-  mismo sesgo por la vía más directa. **Es la primera mitigación real de este apartado** y
-  conviene medir lo que compra y lo que no: rompe la correlación por *modelo*, no por
+- **Comparten proveedor y, desde el 2026-09-24, también el modelo.** P-02 separó al juez
+  —Opus juzgaba, Haiku escribía— el 2026-09-23, y **se revirtió al día siguiente por coste**
+  (`CLAUDE.md` §4: ~8,8 USD por novela con el reparto frente a ~1,5 todo en Haiku). Hoy
+  **Haiku 4.5 escribe y juzga**, y la distancia de `RF-JUZ-05` saldrá **mejor de lo que el
+  sistema merece**; `MODELO_JUEZ` sigue separado para revertirlo con una línea. Lo que
+  sigue de este apartado describe la mitigación mientras estuvo activa: rompía la
+  correlación por *modelo*, no por
   *proveedor* —siguen siendo el mismo entrenamiento y la misma familia—, y no toca las tres
   causas de abajo. Un sesgo del proveedor lo siguen teniendo los cuatro a la vez.
 - **Comparten la redacción de las restricciones.** Las restricciones duras se enuncian con
@@ -557,7 +560,7 @@ todavía no emiten: o no corren en una generación o corren sin span.
 
 | Nombre | Dónde corre | Qué bloquea | Qué no detecta |
 | --- | --- | --- | --- |
-| `juez_con_rubrica` | Puerta G1b, por capítulo | **Hoy no bloquea** — sin correlación medida ni firmada (§6.3) | La calidad que nadie supo enunciar en la rúbrica. Ya **no** comparte modelo con quien escribe —Opus 5 juzga, Haiku 4.5 escribe (P-02)—, pero sí proveedor y familia: la correlación baja, no desaparece (§6.1) |
+| `juez_con_rubrica` | Puerta G1b, por capítulo | **Hoy no bloquea** — sin correlación medida ni firmada (§6.3) | La calidad que nadie supo enunciar en la rúbrica. **Comparte modelo con quien escribe**: Haiku 4.5 en los dos roles desde el 2026-09-24, por coste (`CLAUDE.md` §4), así que la correlación es la máxima posible (§6.1) |
 | `revision_humana` | El **Autor**, fuera del bucle, sobre una novela completa | No bloquea: **produce el patrón** contra el que se mide el juez | Si alguno de los dos jueces acierta. Mide la distancia entre ellos, y una rúbrica común empuja a que compartan sesgo |
 
 ### 8.3 Formales

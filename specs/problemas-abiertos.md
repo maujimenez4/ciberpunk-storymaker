@@ -112,6 +112,14 @@ La primera mitad está cerrada: `Consumo` guarda `cache_read_input_tokens` y `ca
 
 **Coste:** falsea el coste y los tokens por capítulo que usan las evals. **Quién:** la sesión de evals (plan 6), antes de medir: tomar la foto del consumo justo después de `escritor.escribir`.
 
+### P-33 · La cobertura de los elementos obligatorios se mide al publicar, pero no lo impide
+
+**Severidad: incumple la regla de dominio 11 de `CLAUDE.md` §8** («todo elemento obligatorio del brief aparece en al menos un capítulo… un dato que el comprador pidió y no está es el producto sin entregar»).
+
+`manuscrito/service.py` · `publicar` corre `cobertura_de_personalizacion` en G4 y **emite su *score***, pero el resultado solo va a `cuadro_de_defectos`: una novela sin «el perro Luna» **se publica igual**. Lo vio el agente de `docs/proceso/diagramas.md` el 2026-09-24.
+
+**Quién:** después de la sesión del PDF, que está en ese fichero. Arreglo pequeño: si hay `faltantes`, `publicar` lanza un error de dominio (como `ObraSinCapitulos`) antes de crear la versión, con su test.
+
 ### P-32 · Las respuestas de la entrevista entran al prompt sin marcar como dato
 
 `obra/agents.py:95`: `render_entrevistador(PLANTILLA_V1, texto) + f"\nENTREVISTADOR\n{respuestas}"`. El texto aportado sí va dentro de `<texto_aportado>`, pero el `repr` de las respuestas —que también escribe el comprador— se pega **al final del prompt y sin etiqueta**, que es la posición donde una instrucción se obedece. `CLAUDE.md` §11: «la defensa es que ese texto no llegue nunca a la posición donde una instrucción se obedece». Lo vio el agente del *red-team log* el 2026-09-24.
