@@ -632,3 +632,22 @@ def test_una_plantilla_que_falta_da_un_fallo_local_y_no_tumba_el_import(tmp_path
             agents.plantilla_v2()
     finally:
         agents._leer.cache_clear()
+
+
+@pytest.mark.parametrize("campo", ["hecho_canon_id", "evento_id"])
+def test_un_id_numerico_se_lee_como_texto_y_no_tumba_el_informe(campo: str) -> None:
+    """Corrida real, obra 3 capitulo 10: el Continuista devolvio
+    `"hecho_canon_id": 142` cuatro veces seguidas y la novela se detuvo con
+    nueve capitulos integrados. El id es el mismo; lo que cambia es la forma.
+    Que exista en el grafo lo sigue comprobando `defectos.py`, no el esquema."""
+    defecto = DefectoDelContinuista.model_validate(
+        {
+            "codigo": "CAN-01",
+            "cita": CITA_QUE_CHOCA,
+            "desplazamiento_inicio": INICIO,
+            "desplazamiento_fin": FIN,
+            campo: 142,
+        }
+    )
+
+    assert getattr(defecto, campo) == "142"

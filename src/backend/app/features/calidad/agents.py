@@ -84,6 +84,7 @@ from pydantic import (
     ConfigDict,
     Field,
     ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -276,6 +277,16 @@ class DefectoDelContinuista(BaseModel):
     desplazamiento_fin: int
     hecho_canon_id: str | None = None
     evento_id: str | None = None
+
+    @field_validator("hecho_canon_id", "evento_id", mode="before")
+    @classmethod
+    def _id_numerico_como_texto(cls, valor: object) -> object:
+        """Corrida real, capitulo 10: `142` en vez de `"142"`, cuatro veces, y la
+        novela detenida. Es el mismo id; si existe en el grafo lo decide
+        `defectos.py`, no esta conversion. Un `bool` no es un id."""
+        if isinstance(valor, int) and not isinstance(valor, bool):
+            return str(valor)
+        return valor
 
 
 class InformeDeContinuidad(BaseModel):
