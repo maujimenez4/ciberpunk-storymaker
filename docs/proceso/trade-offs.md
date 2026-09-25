@@ -2,14 +2,20 @@
 
 **Qué es este documento.** Las decisiones de diseño del proyecto escritas con la forma que
 pide el encargo: **opciones, criterio y elección**, más lo que cada una cuesta. No es un
-catálogo de aciertos: tres de ellas invierten una decisión anterior que estaba razonada, y en
-esos casos se escribe por qué dejó de valer el motivo original (`CLAUDE.md` §3.3).
+catálogo de aciertos: varias invierten una decisión anterior que estaba razonada —P-07, P-02,
+los invariantes de Lean, la apariencia de la lectura—, y en esos casos se escribe por qué dejó
+de valer el motivo original (`CLAUDE.md` §3.3).
 
-**De dónde sale cada una.** P-01 a P-08 son de `specs/001-backend-v1/spec.md`; D-01 a D-05 y
-las tres «decisiones de la 002» son de `specs/002-frontend/spec.md`; P-A a P-C son de
-`specs/001-backend-v1/plan-2-capitulo.md`; las numeradas 1 a 20 son la tabla de
-`docs/architecture.md` §12. Se citan con su identificador para que cualquiera pueda ir a
-leer el original.
+**De dónde sale cada una.** P-01 a P-09 son de `specs/001-backend-v1/spec.md`; D-01 a D-07
+son de `specs/002-frontend/spec.md`; P-A a P-C son de `specs/001-backend-v1/plan-2-capitulo.md`;
+D-1 a D-5 del plan 8 son de `specs/001-backend-v1/plan-8-corrida-real.md`; las «decisiones 1 y
+2» de la apariencia son de `specs/002-frontend/plan-4-apariencia-de-lectura.md`; las numeradas
+1 a 20 son la tabla de `docs/architecture.md` §12. Se citan con su identificador para que
+cualquiera pueda ir a leer el original.
+
+**Puesto al día el 2026-09-24 por la tarde.** La primera versión (`63363e8`) se escribió antes
+de las Fases 4 a 8 del backend y del frontend, y daba por ausentes Lean, TLA+, el Crítico, el
+hook de policy y `src/frontend/`, que hoy existen. Las decisiones T-26 a T-33 son posteriores.
 
 **Cómo se lee la columna de estado:** una decisión puede estar **firmada y no implementada**.
 Eso no la hace menos decisión; lo contrario —dar por hecho que lo firmado existe— es
@@ -40,8 +46,9 @@ y, sobre todo, **comparten la entrada**: lo que faltó en el paquete le falta al
 Continuista a la vez. `verification.md` §6.1 fija la regla de lectura — dos validadores
 correlacionados cuentan como uno.
 
-**Y una cosa que la refuerza de verdad:** P-02 separa los modelos —Haiku 4.5 escribe, Opus 5
-juzga—, lo que rompe la correlación por modelo. No por proveedor.
+**Y lo que la reforzaba ya no está:** la P-02 original separaba los modelos —Haiku 4.5
+escribía, Opus 5 juzgaba— y eso rompía la correlación por modelo. **Desde el 2026-09-24 todos
+los roles corren en Haiku** (T-16), así que escritor y jueces comparten también modelo.
 
 ---
 
@@ -83,7 +90,7 @@ entrevista anterior a la obra.*
 ### T-3 · Modelo de lectura: **web, con revelado progresivo y petición desde la ficha**
 
 El encargo §2 dice «web o PDF» y **no nombra tecnología**. Elegir web, y elegir React, fue
-decisión de `maujimenez4`. Dentro de esa elección hay cuatro decisiones de producto, todas
+decisión de `maujimenez4`. Dentro de esa elección hay siete decisiones de producto, todas
 con su alternativa descartada:
 
 | | Decisión | Se descartó | Criterio |
@@ -93,6 +100,8 @@ con su alternativa descartada:
 | **D-03** | **Distintivo en el índice y página de novedades** | Resaltar las diferencias dentro del capítulo | Un capítulo regenerado **se reescribe entero**: el resaltado sería casi todo el texto. Ruido, no información |
 | **D-04** | **La ficha se revela al avanzar** | Enseñar el canon entero, que es lo que el encargo pide literalmente | En una novela de diez capítulos que se lee de una sentada, la ficha completa **es un índice de spoilers**. Se cumple el requisito —la ficha existe y enlaza al capítulo— sin cumplirlo de la forma que estropea el producto |
 | **D-05** | **Mientras se regenera, la lectura se detiene y se muestra el progreso** | Seguir leyendo la vigente con un aviso | Que nadie lea un capítulo que está a punto de cambiar |
+| **D-06** | **La lectura deja de tener cinco rutas**: la novela entera y continua, «tipo Kindle», y la entrevista fuera del token | Cinco direcciones (portada, índice, capítulo, ficha, novedades) | El enlace del regalo se reenvía y se pega; cada URL de más es una forma de recibir la página tres sin saber que hay una uno. Y la entrevista bajo el token es imposible cuando se usa y llevaría al Destinatario a lo que el Comprador escribió sobre él |
+| **D-07** | **Una sola dirección y tres pestañas**; la de leer se activa sola al publicar | Las dos entradas de D-06 | Nadie navega. El token pasa de ruta a parámetro y sigue siendo lo único que protege la lectura. **Coste declarado:** `RF-VAL-08` ya no puede llegar navegando a cuatro rutas que no existen |
 
 **El argumento que sostenía D-01 al revés sigue siendo bueno y por eso queda escrito:**
 enseñarle al Destinatario un botón de «pedir un cambio» le revela que la novela la escribió
@@ -112,7 +121,7 @@ durante minutos** sin haber pedido nada. Es el coste conocido y se acepta.
 | **Opciones** | (a) TLA+ en cada generación, como Lean. (b) **TLC solo en desarrollo**. (c) No modelar el harness: los tests cubren la máquina |
 | **Criterio** | Qué gana un *model checker* sobre los tests, y cuándo |
 | **Elección** | (b), decisión 18 de §12. Y (c) **era la decisión anterior y caducó** |
-| **Estado** | **No existe ningún `.tla`.** Es la Fase 7 |
+| **Estado** | **Existe.** `formal/tla/Harness.tla` con `harness.cfg`, TLC en verde (65.601 estados distintos) y la correspondencia con el código comprobada por test (`test_correspondencia_tla.py`, `e76ab85`). **Ningún contraejemplo real**, y `formal/tla/README.md` lo dice |
 
 **Por qué (c) dejó de valer, que es la parte interesante.** `verification.md` v3.1 descartó
 la comprobación de modelos con un argumento correcto —la máquina es pequeña y la cubren los
@@ -134,44 +143,56 @@ encargo §6 lo dice: «TLC se ejecuta en desarrollo, no en cada generación».
 
 1. La máquina de la novela —`CONFIGURANDO → PLANIFICADA → ESCRIBIENDO_CAPITULO →
    VALIDANDO_CAPITULO → VERIFICANDO → PUBLICADA`, con `REGENERANDO` y `DETENIDA`— está
-   descrita en `architecture.md` §3.9 **y el `.tla` se escribirá contra ella**.
-2. La máquina del **capítulo** ya está en código y cerrada: `features/escritura/maquina.py`,
-   con tabla de transiciones explícita y 64 tests. Quien escriba el `.tla` no parte de una
-   pizarra.
+   descrita en `architecture.md` §3.9, y `Harness.tla` se escribió contra ella.
+2. La máquina del **capítulo** estaba en código antes que la especificación
+   (`features/escritura/maquina.py`, con tabla de transiciones explícita), así que el `.tla`
+   no partió de una pizarra.
 3. `RF-FOR-07` exige que el README empareje **cada acción de la especificación con el estado
-   o transición del código** que la implementa.
+   o transición del código** que la implementa: está en `formal/tla/README.md`.
 
-**El riesgo que esta decisión abre, y está declarado sin suavizar:** que la especificación
-deje de corresponder al código. Es una **inspección** que nadie repite cuando el orquestador
-cambia, y `verification.md` §7 la marca **Descubierta**. Una especificación verde sobre un
-código que ya no implementa esa máquina **no es cobertura ausente, es cobertura falsa**:
-afirma la seguridad de otro sistema.
+**El riesgo que esta decisión abre:** que la especificación deje de corresponder al código.
+Una especificación verde sobre un código que ya no implementa esa máquina **no es cobertura
+ausente, es cobertura falsa**: afirma la seguridad de otro sistema. Se diseñó como inspección,
+y **se mecanizó con un test, que además tuvo que corregirse**: el primero leía la tabla
+`_TRANSICIONES` —11 transiciones— en vez de llamar a `transitar`, que produce 31, y siguió en
+verde cuando se añadió `PROCESO_INTERRUMPIDO` (`e76ab85`). Hoy mide el código. Lo que sigue
+siendo inspección es que el `.tla` modele **lo que importa** de la máquina, no solo lo que el
+test compara.
 
 ---
 
-### T-5 · Invariantes de Lean priorizados: **las dos que el encargo nombra primero**
+### T-5 · Invariantes de Lean priorizados: **los dos que el esquema permite probar de verdad**
 
-El encargo §5c ofrece cuatro candidatas y pide «al menos dos». La elección:
+El encargo §5c ofrece cuatro candidatas y pide «al menos dos». **La priorización se escribió
+dos veces**, y la segunda invierte la primera:
 
-| Invariante | Prioridad | Por qué |
-| --- | --- | --- |
-| Los eventos respetan el **orden temporal declarado** | **Entra** | Es la propiedad del conjunto por excelencia: no es comprobable sobre un capítulo, hay que mirar **todos** los pares de eventos |
-| La **edad** de un personaje concuerda con su **fecha de nacimiento** | **Entra** | `RF-FOR-02` la nombra, es la regla de dominio 13, y el dato ya está en el esquema |
-| Nadie está en **dos lugares** en el mismo momento | **Entra como caso de prueba**, vía `CA-21` | Es la cronología imposible con la que se demuestra que la puerta bloquea de verdad |
-| Nadie aparece **después de un evento que lo excluye** | Aplazada | Exige modelar la exclusión —muerte, partida definitiva— y hoy el ledger no la tipifica |
+| Invariante | Primera prioridad (antes del código) | Lo que entró | Por qué cambió |
+| --- | --- | --- | --- |
+| Los eventos respetan el **orden temporal declarado** | Entra | **No entra** | `evento.tiempo_historia` es texto libre —«el verano del 98»— y **no hay en el esquema ninguna magnitud ordenable de tiempo de historia**. Lo único ordenable es el orden de discurso, que avanza aunque la historia retroceda: el invariante sería verde por construcción (`b6b1463`) |
+| La **edad** concuerda con la **fecha de nacimiento** | Entra | **No entra** | La regla 13 es condicional —«cuando ambas existen»—, y hoy solo el Destinatario tiene fecha y no es un `Personaje`. Sería un verde permanente que parecería una garantía (`plantilla.lean`, cabecera) |
+| Nadie está en **dos lugares** en el mismo momento | Caso de prueba | **Invariante 1, `sinUbicuidad`** | Es literalmente lo que `CA-21` exige probar, y solo necesita igualdad de momento, que cualquier índice respeta |
+| Nadie aparece **después de un evento que lo excluye** | Aplazada | **Invariante 2, `sinReaparecidos`** | `evento.excluye[]` existía desde la Fase 2 y no lo miraba nadie. Estricto (`<`, no `≤`): quien muere está en la escena de su muerte (`4c6ff5c`) |
 
-**El criterio de priorización, dicho en una frase:** entran primero las invariantes cuya
-**entrada ya existe**. La vista `cronologia` se deriva del ledger desde la Fase 2 con
-eventos, momento, lugar y presentes, que es exactamente lo que §5c pide como entrada del
-fichero Lean. Una invariante que necesita una columna nueva se paga dos veces.
+**El criterio no cambió; cambió lo que se sabía.** Se decía «entran primero las invariantes
+cuya entrada ya existe», y resultó que la entrada de las dos primeras **no existía como se
+creía**: el tiempo es texto y la fecha de nacimiento no la tiene ningún personaje. Mantenerlas
+habría dado dos invariantes que no pueden fallar, y esa es la cobertura falsa de T-4.
 
-**Y lo que Lean no ve, que conviene no olvidar al leer un `lake build` en verde:** demuestra
-sobre el **fichero generado desde la biblia**, no sobre la prosa. Si el capítulo dice algo
-que nunca llegó a la biblia, Lean no lo ve. Verifica el modelo de la historia, no la
-historia.
+**Lo que cuesta, y está abierto:** §5c pide que el fichero Lean incluya **fechas de
+nacimiento**, y no las incluye (P-27). Y el brief de evaluación diseñado para la trampa
+temporal contaba con el invariante de edad, así que tal como está no fallaría donde el plan 6
+dice. Cerrarlo pide una de dos: rediseñar ese brief contra los invariantes que existen, o dar
+fecha a los personajes y añadir el invariante. Las dos son decisión de `maujimenez4`.
 
-**Estado: no existe.** Lean 4 está aprobado en bloque por P-01 y **sin instalar**. `CA-21`
-—uno de los cinco criterios que deciden si el sistema existe— sigue abierto.
+**Y lo que Lean no ve, que conviene no olvidar al leer un verde:** demuestra sobre el
+**fichero generado desde la biblia**, no sobre la prosa. Si el capítulo dice algo que nunca
+llegó a la biblia, Lean no lo ve. Verifica el modelo de la historia, no la historia.
+
+**Estado:** `CronologiaIncoherente` detiene `publicar` y se ha visto detenerla: quitando la
+llamada caen cuatro de los cinco tests de la puerta (`4c6ff5c`, `CA-21` cerrado). En la
+publicación se llama a `lean` sobre un fichero autocontenido y no a `lake build`: medido,
+2,4 s con cuarenta eventos frente a 13,1 s de `lake` en frío. **Lo que falta:** que el fallo
+vuelva a un rol como *feedback* (P-28) —hoy termina en un `409`— y un caso real, no provocado.
 
 ---
 
@@ -191,11 +212,14 @@ el OpenAPI y **respondían 500 contra la aplicación levantada**, porque la úni
 implementación de `ClienteModelo` al terminar era el doble determinista. Ninguna tarea tenía
 asignado el cliente real.
 
-**Lo que se descubrió después de firmarla, y hoy son problemas abiertos:**
+**Lo que se descubrió después de firmarla:**
 
-1. El SDK **no habla HTTP: lanza el binario `claude`**, que `pyproject.toml` no declara y
-   ninguna puerta comprueba. Sin él la corrida real falla **y la suite sigue verde**.
-2. «Ya autenticado» **no está definido fuera de la máquina del autor**.
+1. El SDK **no habla HTTP: lanza el binario `claude`**. Se creyó que había que instalarlo
+   aparte; **no hace falta**, porque `claude_agent_sdk` trae el suyo y `uv sync` lo instala
+   (P-15, reformulado). `README.md` y `.env.example` todavía piden instalarlo.
+2. «Ya autenticado» **no lo comprueba ninguna puerta al arrancar**: sin cuenta autenticada,
+   el fallo aparece a mitad de una corrida y la suite sigue verde. Y la cuenta **importa más
+   de lo que parecía**: la de trabajo anonimiza los nombres de persona (T-26).
 3. **La semilla no la admite el proveedor.** Se registra en `Consumo` por `RF-OBS-06` y **no
    hace reproducible la llamada**: lo reproducible es el paquete, no la prosa.
 
@@ -245,10 +269,10 @@ que la concurrencia suba, el que falle sea el sistema y no la entrega.
 **Y hay que decir qué NO acelera, porque la pregunta se planteó sugiriendo lo contrario.** Los
 diez capítulos siguen siendo **estrictamente secuenciales**, y no por el límite de
 concurrencia sino por `CU-03`: cada capítulo necesita integrado el anterior. Lo que se solapa
-son **obras distintas**, el **Continuista con el Crítico** sobre el mismo capítulo y los
-cinco briefs de evaluación. Sobre una novela sola, el paralelismo **le quita una espera de
-validación por capítulo** — diez en total. Quien espere que una novela salga en la mitad de
-tiempo se va a llevar una sorpresa.
+son **obras distintas**, el **Continuista con el Crítico** sobre el mismo capítulo —hecho
+desde `92d2da7`, T-27— y las novelas de evaluación. Sobre una novela sola, el paralelismo
+**le quita una espera de validación por intento**. Quien espere que una novela salga en la
+mitad de tiempo se va a llevar una sorpresa.
 
 **El techo concurrente se hace cumplir esperando, nunca recortando:** si admitir una llamada
 pasaría del techo, esa llamada **espera**. Recortar obedece al presupuesto de contexto, no a
@@ -378,20 +402,37 @@ Un guardarraíl que vive dentro del código que vigila se puede saltar cambiando
 que nada lo note. **Un hook es un punto de enganche declarado, y su ausencia se ve.** Son dos:
 validación de capítulo y policy.
 
-**Estado honesto:** existe `HOOK_DE_CAPITULO` y existe `PUERTA_G4`; **el hook de policy no**.
-El registro de auditoría está; las decisiones del motor de policy, no.
+**Estado:** existen los dos. `HOOK_DE_CAPITULO` y el **hook de policy declarado**, que sacó el
+veto de un `if` dentro del ciclo (`168461a`); `registro_auditoria` recibe cada decisión suya,
+permitida o bloqueada.
+
+**Lo que no está razonado todavía (P-31):** el encargo §3 nombra los hooks junto a
+`CLAUDE.md` y la skill, que son artefactos de Claude Code, y cabe leer que pide hooks **de
+Claude Code** en `.claude/settings.json`. El proyecto los implementa como puntos de enganche
+del sistema. Es defendible —vigilan la novela, no al agente que programa—, pero la otra lectura
+no se ha descartado por escrito y no hay `.claude/settings.json` con hooks.
 
 ---
 
 ## Las decisiones sobre la calidad y quién la juzga
 
-### T-16 · P-02 · Anthropic por consumo de cuenta, **Haiku escribe y Opus juzga**
+### T-16 · P-02 · Anthropic por consumo de cuenta, **Haiku 4.5 en todos los roles**
 
 | | |
 | --- | --- |
-| **Opciones** | (a) Un solo modelo para todo. (b) **Modelo barato para el volumen, modelo caro para el juicio** |
-| **Criterio** | Un juez que comparte modelo con quien escribió **tiende a aprobar su propio estilo** |
-| **Elección** | (b). Cuesta poco: el juez corre una o dos veces por capítulo y el escritor muchas más |
+| **Opciones** | (a) **Un solo modelo para todo.** (b) Modelo barato para el volumen, modelo caro para el juicio |
+| **Criterio** | Primero, que un juez que comparte modelo con quien escribió **tiende a aprobar su propio estilo**. Después, el coste medido |
+| **Elección** | (b) el 2026-09-23 —Haiku escribía, Opus 5 juzgaba—, **invertida a (a) el 2026-09-24** (`b80e911`) |
+| **Coste** | La distancia de `RF-JUZ-05` se medirá con un juez que comparte modelo, familia y entrenamiento con el autor: **saldrá mejor de lo que el sistema merece** |
+
+**Por qué se invirtió, con la cifra delante.** Diez capítulos todo en Haiku salen a **~1,5 USD**;
+con Opus juzgando, **~8,8 USD**, y con reintentos 12–15 USD. La diferencia es entera del cambio de
+modelo —el juez cuesta cinco veces la entrada y la salida—, y pesa porque la novela de ejemplo
+depende de una corrida real que no se puede repetir muchas veces.
+
+*El argumento original no dejó de ser cierto: se decidió pagarlo.* Por eso el punto ciego vuelve
+a estar abierto en `verification.md` §6.1, y la constante `MODELO_JUEZ` **se mantiene separada**:
+una línea vuelve a separarlos sin tocar ningún rol.
 
 **Dos consecuencias que cambian requisitos y por eso se escriben aquí:** no hay **coste por
 llamada** que leer, así que `RF-OBS-03` lo **deriva** de los tokens y la tarifa declarada —es
@@ -531,16 +572,215 @@ código, cambiarlos no exige migración, y **el hash basta para reproducir una e
 
 ---
 
+## Las decisiones de la primera corrida real y del cierre
+
+Salen del 2026-09-24: de intentar la primera novela contra el modelo real, del plan 8
+—firmado con D-1 a D-5 como recomendadas— y de la revisión visual de la lectura.
+
+### T-26 · El nombre del Destinatario: **cuenta sin anonimizado**, no marcador
+
+| | |
+| --- | --- |
+| **Opciones** | (a) **Marcador**: los agentes escriben con un nombre inventado y el código pone el real al servir (plan 8 T2–T3). (b) **Generar con una cuenta cuya organización no obligue a anonimizar** —una cuenta personal— |
+| **Criterio** | Que el nombre llegue a la página. Y D-1: **medir antes de construir** |
+| **Elección** | (b). T2 y T3 **no se ejecutan** |
+| **Coste** | Una restricción de entorno: *el sistema no puede escribir nombres propios con una cuenta cuya organización obliga a anonimizarlos* |
+
+**Lo destapó la primera corrida:** el outline salía personalizado —el perro, el verano— y el
+protagonista como `[NOMBRE_ANONIMIZADO]`. La solución acordada era el marcador, y D-1 pidió
+sondear primero. La sonda (`src/backend/scripts/sonda_nombre.py`, `38924c3`), una llamada real
+al Arquitecto con el brief de ejemplo y la cuenta de trabajo:
+
+| Nombre que recibe el modelo | Apariciones en la salida | Marcas `ANONIMIZADO` |
+| --- | --- | --- |
+| El real del brief de ejemplo | 0 | sí |
+| Uno inventado, el que el marcador habría usado | 0 | 13 |
+
+**La cuenta anonimiza cualquier nombre de persona, también uno inventado.** No es el modelo ni
+el código: son instrucciones de la organización de esa cuenta, que se aplican a toda llamada.
+El marcador habría costado un campo nuevo en el brief (`trato`), una migración, un prompt v3 del
+Entrevistador, un campo en el formulario y dos términos de vocabulario, **para salir anonimizado
+igual**.
+
+**Lo que queda escrito y sin hacer, para no confundirlo con hecho:** T2–T3 siguen en el plan por
+si una cuenta futura anonimizara solo nombres reales. **La enmienda de spec `trato` y los
+términos *marcador del destinatario* y *trato* están firmados con el plan 8 y no han entrado**:
+ni la spec, ni el esquema, ni `docs/definitions.md` los tienen. Y P-19 **sigue abierto** hasta
+repetir la sonda con la cuenta de la corrida y ver salir el nombre.
+
+---
+
+### T-27 · Continuista ‖ Crítico: **en paralelo dentro del techo, y en serie si no cabe**
+
+| | |
+| --- | --- |
+| **Opciones** | (a) En serie, como estaba. (b) En paralelo, reservando turno por la sobrecarga de **33.000–49.000 tokens** por llamada que citaba el relevo. (c) **Medir la sobrecarga primero**, y en paralelo con retirada a serie |
+| **Criterio** | El techo concurrente del encargo §7 se cuenta en tokens (T-8); **qué cuenta una llamada** tiene que ser una cifra medida, no heredada |
+| **Elección** | (c): `092e319` mide, `92d2da7` paraleliza |
+| **Coste** | Una novela más rápida a cambio de que el orden de los *spans* deje de ser secuencial |
+
+**La medida decidió.** Había dos cifras que diferían en un orden de magnitud: ~1.800 y
+33.000–49.000. Con la segunda, dos jueces en vuelo rozan el techo y había que cambiar
+`CLAUDE.md` §4.1 para decir que el techo pasaba a ser la restricción real. Medido con
+`src/backend/scripts/medir_sobrecarga.py` —tres tamaños, dos rondas—: **~1.200 tokens fijos**
+(1.200, 1.152, 1.002), con y sin caché. Los 33.000–49.000 **no se reproducen**; la hipótesis
+más probable, no comprobada, es que se midieron cuando el CLI cargaba el `CLAUDE.md` del
+repositorio en cada prompt (P-1). `SOBRECARGA_POR_LLAMADA = 2_000`, por encima del máximo y de
+la medida anterior, y §4.1 no cambió.
+
+**Cómo es seguro:** el Crítico **no usa** la salida del Continuista y **no decide** nada
+(`RF-JUZ-06`); la puerta G1a sigue esperando al Continuista. El turno se pide con
+`espera_maxima=0`: si no cabe, o hay alguien antes en la cola, `TiempoAgotado` significa **«en
+serie, como hasta hoy»**. Así nadie espera turno reteniendo el suyo, y no hay interbloqueo con
+dos obras a la vez. Un `SalidaMalFormada` del Crítico ya no tumba el intento **ni en paralelo ni
+en serie**: si dependiera del camino, que el capítulo cayera dependería del hueco que tuviera el
+techo en ese instante.
+
+**Lo que sigue abierto:** la sobrecarga se midió con la **cuenta de trabajo**, que inyecta
+instrucciones de organización en cada llamada; hay que remedirla con la de la corrida
+(`5a6baa3`). Y el ahorro —estimado en 10–15 minutos sobre ~80–90 por novela— **no está medido**.
+
+---
+
+### T-28 · La evidencia de una escalada: **tabla aparte**, no dejar de borrar
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Dejar de borrar la `version_texto` de los intentos rechazados. (b) **Guardarlos en otra tabla, `intento_descartado`** |
+| **Criterio** | Tras escalar, poder distinguir «el modelo escribió mal tres veces» de «un validador rechaza siempre», **sin romper R-7** |
+| **Elección** | (b): `d3b0d88`, `7e44901`, `cda23f1`, `c8ecb22` (P-20 cerrado) |
+| **Coste** | Una tabla que ningún paquete lee, y la palabra «rastro» que hay que matizar |
+
+**Por qué no (a), que era lo directo.** `_retirar_lo_descartado` borra por **R-7**: la prosa
+descartada no puede contaminar el paquete del capítulo siguiente a través de `vigente = 1`. Tres
+lectores dependen de esa semántica —`contexto/service.py`, `canon/resumenes.py`,
+`manuscrito/repository.py`—, y dejar de borrar habría obligado a cambiar los tres, con el riesgo
+de que uno se olvidara y un intento rechazado acabara en la memoria de la novela.
+
+**Lo que entrega:** cada intento con su texto, el código y la cita de cada bloqueante y el
+término vetado, escrito **antes** de retirar lo descartado, y también cuando se aprueba tras
+reparar, porque el *tuning* necesita esa misma evidencia. Se lee en `GET
+/trabajos/{id}/intentos`. El capítulo escalado conserva además el juicio del Crítico, y
+`causa_fallo` pasó de `String(60)` a `String(200)` porque el motivo medía ~63 y la columna
+mentía.
+
+**El test viejo «un capítulo rechazado no deja rastro» sigue verde sin tocarlo**, y es correcto:
+la evidencia no es un almacén de lectura. Su docstring dice ahora por qué.
+
+---
+
+### T-29 · Langfuse: **un observador por proceso, el criterio en el nombre, el Entrevistador fuera**
+
+Cuatro decisiones pequeñas, las cuatro del plan 8 T7 y D-5, y el estado de lo que corre está en
+`docs/architecture.md` §9.2.1:
+
+| Decisión | Se descartó | Por qué | Evidencia |
+| --- | --- | --- | --- |
+| **Un observador por proceso** y `flush` al apagar, por el blindaje | Un cliente por petición, que es lo que había | El SDK manda por lotes y en segundo plano: sin un punto donde vaciar, lo último de una corrida se pierde. Con Langfuse caído al apagar, el proceso se para igual y el fallo se cuenta | `dced524` |
+| **El criterio en el nombre del *score***: `juez_con_rubrica.<criterio>` | Un solo nombre, con el criterio en el comentario | Las seis puntuaciones del juez llegaban con el mismo nombre y se mezclaban en una serie; `RF-JUZ-05` compara **por criterio** | `057eea4` |
+| **La plantilla por referencia**: `prompt_id`, `prompt_version` y `prompt_hash` en los metadatos del *span* de cada rol con modelo | El gestor de prompts de Langfuse | La plantilla vive versionada en el repositorio (`CLAUDE.md` §10, T-25); lo que sube es **con cuál** se hizo cada llamada, con el hash de la que de verdad se envió | `bfb5396` |
+| **El Entrevistador no tiene traza** (D-5) | Abrirle una sesión propia | La sesión se deriva de `obra_id`, que no existe mientras dura la entrevista; y no aporta al *tuning* | plan 8, D-5 |
+
+**Lo que cuesta, sin suavizar:** `CLAUDE.md` §4.3 dice que la sesión de una novela **abarca la
+entrevista**, y hoy no la abarca: es un incumplimiento declarado, no un olvido. Y **nada de esto
+se ha visto contra un Langfuse real**: los tres cierres están probados contra un cliente falso que
+imita la forma del SDK v3. La primera corrida es la que lo confirma.
+
+---
+
+### T-30 · La apariencia de la lectura: **«Cuaderno de viaje», siempre en claro, interfaz en serif**
+
+| | |
+| --- | --- |
+| **Opciones** | Cuatro direcciones exploradas en un lienzo de diseño —**Imprenta, Fichero, Tela y oro, Cuaderno de viaje**— después de implementar una primera (papel frío, ciruela, Atkinson) |
+| **Criterio** | Revisión visual de `maujimenez4`, que es **U** y no la juzga ningún test. El contraste AA en los tres temas **sí es test**, y gana a la estética |
+| **Elección** | La cuarta (`d5207bd`, enmienda 1 del plan 4; `dbf2bda` … `00cf126`). Plan 4 `completado` con la revisión visual (`1b1cb45`) |
+
+**Dos decisiones del mismo plan se invirtieron el mismo día, y conviene decir qué se pierde:**
+
+1. **La interfaz pasa a serif (Spectral)**, igual que la prosa. El plan 4 había separado la voz
+   de la interfaz —Atkinson Hyperlegible Next— de la del libro, precisamente porque «la
+   interfaz y el libro hablan con la misma voz, y el libro pierde protagonismo». En el cuaderno
+   una sans rompía el conjunto. Lo que distingue ahora las dos voces es el tamaño, la cursiva de
+   las leyendas y los títulos en Sorts Mill Goudy; **el problema que motivó la separación vuelve
+   a estar ahí**, amortiguado.
+2. **Siempre en claro** (`cd2f38c`). El plan 4 seguía la preferencia del sistema; vista la
+   dirección en un sistema en modo oscuro, `maujimenez4` decidió *«solo que usa el modo claro»*.
+   Sin elegir, el tema es Papel; Noche y Sepia solo si se eligen en «Aa», y «Automático»
+   desaparece. **Lo que se pierde es el motivo por el que Noche existía:** de noche, en un móvil,
+   el claro deslumbra, y ahora hay que saber que se puede cambiar.
+
+*Por qué se escribe como decisión y no como gusto:* se descartaron tres direcciones y dos
+decisiones razonadas, y quien retome el frontend necesita saber que la tipografía única y el tema
+fijo **fueron a propósito**, no un descuido que arreglar.
+
+---
+
+### T-31 · Las evals: **dos o tres novelas completas**, no cinco briefs
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Los cinco briefs de plan 6 T10, con la iteración de *tuning* sobre todos: **diez novelas**, unas 15 horas de reloj en serie y diez veces la cuota. (b) **Dos o tres novelas completas** |
+| **Criterio** | El plazo. Una novela son **~80–90 minutos medidos**, y la novela de ejemplo sale de la misma cuota |
+| **Elección** | (b). Decisión de `maujimenez4`, 2026-09-24, por tiempo |
+| **Coste** | **Queda por debajo de la letra de una condición eliminatoria** |
+
+**El coste, dicho entero porque es el más caro de este documento:** el encargo §5 pide **cinco
+briefs**, con al menos uno adversarial y uno que provoque una incoherencia temporal, una tabla por
+brief y una iteración de *tuning* con antes y después. Con dos o tres novelas, la tabla tiene dos
+o tres filas y el antes/después se mide sobre muy poco — lo mismo que T-17 ya dice de una sola
+revisión humana. Lo que la entrega tiene que decir es **qué briefs se corrieron, cuáles no y por
+qué**, no dejar que se descubra.
+
+**Lo que esta decisión todavía no ha arrastrado:** `plan-6-medir.md` sigue diciendo cinco, y
+qué briefs entran no está escrito. El brief temporal, además, necesita antes su rediseño (T-5,
+P-27): tal como está no fallaría donde el plan dice.
+
+---
+
+### T-32 · La petición de cambio (`CA-25`): **obligatoria, y la última**
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Recortarla si aprieta el plazo, que es lo que la hoja de ruta dejaba abierto. (b) Hacerla antes de la corrida real. (c) **Obligatoria, y programada al final** |
+| **Criterio** | El encargo §2 la exige para la lectura web, y `CA-25` es uno de los cinco criterios que deciden si el sistema existe. Pero **sin una novela real no hay nada que regenerar**, y cada regeneración cuesta un capítulo por capítulo afectado |
+| **Elección** | (c), 2026-09-24. Backend `plan-5-peticion.md` y frontend `plan-2-ficha.md` T4–T7, aprobados y sin empezar; no comparten fichero |
+| **Coste** | Lo último es lo que se queda sin tiempo. Si pasa, la entrega **incumple §2**, y eso ya no se podrá presentar como un recorte decidido |
+
+**Por qué no (a):** la petición es lo único que distingue la lectura web del PDF (spec 002,
+Alcance). Recortarla deja una web que es un PDF con pestañas. **Por qué no (b):** se probaría
+contra novelas de los dobles, y la primera corrida real ya enseñó que los dobles no ven lo que
+ve el modelo (`26efa68`). El plan 5 paga además tres deudas que vencen al regenerar —P-6, P-7 y
+P-8— y reabre `CA-33`.
+
+---
+
+### T-33 · El `.env` **no se carga solo**: se lanza con un script fuera del repositorio
+
+| | |
+| --- | --- |
+| **Opciones** | (a) `python-dotenv`, para que el backend lea el `.env` al arrancar. (b) **No cargarlo**: las variables tienen que estar en el entorno del proceso que lanza `uvicorn` |
+| **Criterio** | Una dependencia nueva **se pregunta** (`CLAUDE.md` §3, punto 7); las catorce de P-01 se aprobaron en bloque y esta no está entre ellas. El plan 8 la dejó fuera por eso, explícitamente |
+| **Elección** | (b). Hoy se lanza con un script **fuera del repositorio** que exporta las variables del `.env`, entre ellas las claves de Langfuse, que no entran al repositorio (`CLAUDE.md` §16) |
+| **Coste** | Un clon limpio con su `.env` relleno arranca **sin medir nada** y solo lo dice un aviso. Y el arranque real no es reproducible desde el repositorio |
+
+**Lo que lo mitiga:** `.env.example` lo dice en su última línea —«el backend NO carga este
+fichero por sí solo»— y, con alguna de las tres variables de Langfuse vacía, el sistema arranca,
+avisa y sigue con el observador nulo. No es una defensa: es que el fallo **se ve**. Cambiarlo es
+una pregunta de una línea a `maujimenez4`, no una tarea.
+
+---
+
 ## Resumen: qué está firmado y qué está construido
 
 | Decisión | Firmada | Implementada |
 | --- | --- | --- |
-| T-1 roles separados y orquestador en código | Sí | **Sí**, seis de los diez roles |
-| T-2 SQLite única, ledger *append-only* | Sí | **Sí**: 21 tablas, 2 vistas, 3 disparadores |
-| T-3 lectura web con revelado progresivo | Sí | **No.** `src/frontend/` no existe |
-| T-4 TLA+ / TLC en desarrollo | Sí | **No.** No hay `.tla` |
-| T-5 dos invariantes de Lean | Sí | **No.** Lean sin instalar |
-| T-6 Claude Agent SDK sin clave | Sí | Sí, con tres deudas abiertas |
+| T-1 roles separados y orquestador en código | Sí | **Sí**, ocho de los diez roles: faltan el Editor de línea y el Auditor de manuscrito |
+| T-2 SQLite única, ledger *append-only* | Sí | **Sí**, una sola base con sus migraciones de Alembic |
+| T-3 lectura web con revelado progresivo | Sí | **A medias:** una dirección, tres pestañas y revelado; faltan la petición (T-32), el enlace de la ficha al capítulo (P-24) y el PDF (`501`) |
+| T-4 TLA+ / TLC en desarrollo | Sí | **Sí**, con la correspondencia por test; ningún contraejemplo real |
+| T-5 dos invariantes de Lean | Sí, **repriorizados** | **Sí**: `sinUbicuidad` y `sinReaparecidos` bloquean la publicación. Faltan fechas de nacimiento (P-27) y el *feedback* a un rol (P-28) |
+| T-6 Claude Agent SDK sin clave | Sí | Sí; la autenticación de la cuenta no la comprueba nadie al arrancar |
 | T-7 dos contadores de tokens | Sí | Sí |
 | T-8 paralelismo dentro del techo sumado | Sí | Sí, y **contando tokens, no llamadas** |
 | T-9 presupuesto por capa con fallo explícito | Sí | Sí |
@@ -549,14 +789,22 @@ código, cambiarlos no exige migración, y **el hash basta para reproducir una e
 | T-12 extensión vectorial opcional | Sí | Sí, con la suite en dos modos |
 | T-13 ningún agente con herramientas | Sí | Sí, por ausencia |
 | T-14 vetos normalizados por palabra | Sí | Sí |
-| T-15 dos hooks | Sí | **A medias:** falta el de policy |
-| T-16 Haiku escribe, Opus juzga | Sí | La capacidad está; **el Crítico no existe** |
-| T-17 Comprador acepta, Autor calibra | Sí | **No** |
-| T-18 G1b no bloquea | Sí | Trivialmente: el juez no existe |
-| T-19 cobertura bloqueante, naturalidad umbral | Sí | La cobertura sí; la naturalidad no |
+| T-15 dos hooks | Sí | **Sí**, los dos en código; la lectura «hooks de Claude Code» sin razonar (P-31) |
+| T-16 Haiku 4.5 en todos los roles | Sí, **invertida** el 2026-09-24 | Sí (`b80e911`); `MODELO_JUEZ` sigue separado |
+| T-17 Comprador acepta, Autor calibra | Sí | **No:** las tablas existen; el servicio y las rutas no (plan 6 T9) |
+| T-18 G1b no bloquea | Sí | Sí: el Crítico puntúa en producción y no bloquea (`0d0f4df`, `4f35669`) |
+| T-19 cobertura bloqueante, naturalidad umbral | Sí | La cobertura sí; la naturalidad la puntúa el Crítico como criterio, sin umbral que pare nada |
 | T-20 puerta mecánica sin juez | Sí | Sí |
 | T-21 comprobación de forma del defecto | Sí | Sí |
-| T-22 features + commons / feature-first | Sí | Backend sí; frontend no |
+| T-22 features + commons / feature-first | Sí | Sí, en los dos lados, con `lint-imports` y ESLint; `SalidaMalFormada` sigue en cinco copias (P-10) |
 | T-23 capítulo fuera, escena dentro | Sí | Sí |
-| T-24 varios planes por spec | Sí | Sí: tres planes de backend **completados** |
-| T-25 prompts como ficheros con hash | Sí | Sí |
+| T-24 varios planes por spec | Sí | Sí: ocho planes de backend y cuatro de frontend; el 3 del frontend implementado **sin firma** (P-29) |
+| T-25 prompts como ficheros con hash | Sí | Sí, y el hash sube al *span* (T-29) |
+| T-26 cuenta sin anonimizado, no marcador | Sí (D-1) | Sonda hecha; **falta repetirla con la cuenta de la corrida**. T2–T3 y la enmienda `trato`, firmadas y sin ejecutar |
+| T-27 Continuista ‖ Crítico dentro del techo | Sí | Sí (`92d2da7`); sobrecarga por remedir con la cuenta de la corrida |
+| T-28 evidencia de la escalada en tabla aparte | Sí | Sí (`d3b0d88`, `7e44901`, `cda23f1`, `c8ecb22`) |
+| T-29 Langfuse: observador único, criterio, plantilla | Sí | Sí contra un cliente falso; **nunca visto contra un Langfuse real**; el Entrevistador sin traza |
+| T-30 «Cuaderno de viaje», claro, serif | Sí | Sí; plan 4 del frontend `completado` |
+| T-31 evals con dos o tres novelas | Sí | **No:** no existe `evals/`, y `plan-6-medir.md` sigue diciendo cinco |
+| T-32 petición de cambio, obligatoria y última | Sí | **No:** plan 5 y plan 2 T4–T7 sin empezar |
+| T-33 `.env` sin cargar | Sí | Sí, por ausencia |

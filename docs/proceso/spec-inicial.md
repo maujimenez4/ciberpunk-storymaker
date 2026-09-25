@@ -6,6 +6,10 @@ No las sustituye: las fuentes son [`specs/001-backend-v1/spec.md`](../../specs/0
 y [`specs/002-frontend/spec.md`](../../specs/002-frontend/spec.md), y si algo discrepa, gana
 la spec.
 
+**Es historia, y se deja como historia.** Lo que se enmendó después de firmar no se reescribe
+aquí encima: va en [§7, «Qué cambió desde la spec inicial»](#7-qué-cambió-desde-la-spec-inicial).
+Solo se han corregido las frases que afirmaban algo falso **sobre hoy**.
+
 **Por qué hay spec, y por qué solo dos.** `CLAUDE.md` §3.2 pone cuatro puertas —Spec, Plan,
 Código, Cierre— y la tercera dice literalmente que no se escribe código hasta que el plan
 **de esa fase** esté aprobado por una persona en un commit suyo. La decisión de
@@ -46,8 +50,9 @@ validadores que se miden por separado y ninguna rescata a la otra.
 
 ## 2. La 001 — el backend: de la entrevista a la novela publicada
 
-**Estado:** `aprobada`, v3.2 firmada por `maujimenez4` el 2026-09-24. **125 requisitos** —14
-de interfaz, 99 funcionales, 6 de datos, 6 no funcionales— y **37 criterios de aceptación**.
+**Estado al firmarse:** `aprobada`, v3.2 firmada por `maujimenez4` el 2026-09-24. **125
+requisitos** —14 de interfaz, 99 funcionales, 6 de datos, 6 no funcionales— y **37 criterios de
+aceptación**. Hoy rige la v3.3, que añade `RI-15` (§7).
 
 ### 2.1 Es una spec única y grande a propósito
 
@@ -96,11 +101,11 @@ De los treinta y siete, cinco son el producto y los otros treinta protegen parte
 
 | | Qué afirma | Estado hoy |
 | --- | --- | --- |
-| **CA-1** | Sale una novela entera de diez capítulos, de principio a fin | **Cerrado** (Fase 3) |
+| **CA-1** | Sale una novela entera de diez capítulos, de principio a fin | **Cerrado con dobles** (Fase 3). **Contra el modelo real no ha salido ninguna todavía** |
 | **CA-5** | Se mata el proceso y se reanuda sin duplicar ni perder capítulos | **Cerrado** (Fase 3) |
 | **CA-7** | El presupuesto falla **antes** de llamar, nunca trunca en silencio | **Cerrado** (Fase 1–2) |
-| **CA-21** | Lean detiene una publicación con una cronología imposible | **Falta entero** |
-| **CA-25** | Una petición del lector no rompe lo que ya estaba | **Falta entero** |
+| **CA-21** | Lean detiene una publicación con una cronología imposible | **Cerrado** (`4c6ff5c`), con una cronología provocada en test |
+| **CA-25** | Una petición del lector no rompe lo que ya estaba | **Falta entero.** Obligatorio y programado al final ([`trade-offs.md`](trade-offs.md) T-32) |
 
 ### 2.4 Lo que la spec declaró que **no** verifica
 
@@ -113,7 +118,9 @@ Se escribió en la propia spec, antes de implementar nada, y sigue siendo cierto
 - Que el juez **acierte** — la revisión humana mide la distancia entre dos jueces.
 - El **coste total** de una novela — el techo es por llamada; nada acota la suma.
 - Que la especificación **TLA+ siga correspondiendo al código** — es una inspección que
-  nadie repite cuando el orquestador cambia.
+  nadie repite cuando el orquestador cambia. *Hoy un test compara las transiciones del código
+  con las reclamadas por la especificación (`e76ab85`); que el modelo capture lo que importa
+  sigue siendo inspección.*
 - Que «fuera de Langfuse no sale nada» **se cumpla** — es una promesa que ningún método
   vigila.
 
@@ -121,8 +128,8 @@ Se escribió en la propia spec, antes de implementar nada, y sigue siendo cierto
 
 ## 3. La 002 — el frontend: la lectura del regalo
 
-**Estado:** `aprobada`, firmada por `maujimenez4` el 2026-09-24. **Su plan sigue en
-`borrador`, y `src/frontend/` no existe.**
+**Estado:** `aprobada`, firmada por `maujimenez4` el 2026-09-24. Cuando se firmó,
+`src/frontend/` no existía; hoy existe, con cuatro planes (§6).
 
 **El problema que resuelve, dicho en una frase:** *un regalo deja de serlo cuando se le ve la
 máquina.* Si la página parece un panel de administración —con versiones, estados y botones de
@@ -156,7 +163,7 @@ puede cambiar—. Confundir las dos cosas produjo el error que corrigió P-06.
 | FastAPI + Pydantic v2 | **Nuestro**, presupuesto por el encargo |
 | React 19 + TypeScript + Vite | **Nuestro.** El encargo dice «web o PDF» y no nombra tecnología |
 | Techo de 100.000 tokens **por llamada** | **Nuestro**, derivado del presupuesto por capas |
-| Anthropic por consumo de cuenta, **sin clave de API**; Haiku escribe, Opus juzga | **Nuestro** (P-02) |
+| Anthropic por consumo de cuenta, **sin clave de API**; Haiku escribía y Opus juzgaba. **Hoy, Haiku 4.5 en todos los roles** (§7) | **Nuestro** (P-02) |
 | `sqlite-vec` **opcional** | **Nuestro.** El encargo no menciona vectores en ninguna parte |
 
 ---
@@ -189,17 +196,30 @@ El razonamiento completo de las tres, con sus alternativas, está en
 
 ## 6. Qué se ha construido de esta spec, y qué no
 
-A 2026-09-24, tres fases del backend cerradas y **ninguna del frontend**:
+**El estado vive en un solo sitio**, [`specs/estado-del-entregable.md`](../../specs/estado-del-entregable.md),
+y no se copia aquí: la primera versión de esta sección copió cifras (`63363e8`) y pocas horas
+después ya eran falsas. En grueso, a 2026-09-24 por la tarde:
 
-| | |
-| --- | --- |
-| **670 tests** | `pytest`, y 669 + 1 *skipped* sin la extensión vectorial |
-| **21 tablas, 2 vistas derivadas, 3 disparadores** | migradas, con `upgrade → downgrade base → upgrade` en limpio |
-| **8 rutas** de las quince previstas | el servidor levanta y las publica |
-| `CA-1`, `CA-5`, `CA-7` | tres de los cinco criterios que deciden si el sistema existe |
-| `mypy` estricto, `ruff`, `lint-imports` | en verde sobre 78 ficheros de producción |
+- **Construido:** los planes 1 a 3 del backend completos y la mayor parte de los 4, 6, 7 y 8
+  —publicación, Lean, TLA+, hook de policy, Crítico y Continuista en el ciclo, Langfuse en
+  código—; el frontend con una dirección, tres pestañas y la apariencia del plan 4.
+- **Falta:** la petición de cambio (`CA-25`), el PDF, la revisión humana, las evals, la
+  validación visual y **una novela entera contra el modelo real**, que es de lo que cuelga casi
+  todo lo demás.
 
-**Lo que falta entero:** la lectura web, Lean, TLA+, Langfuse, el juez con rúbrica, la
-revisión humana y las cinco evals. El cruce completo, sección a sección del encargo, está en
-[`specs/estado-del-entregable.md`](../../specs/estado-del-entregable.md), y no se duplica
-aquí porque dos copias de un estado divergen.
+---
+
+## 7. Qué cambió desde la spec inicial
+
+Lo que se enmendó o se decidió **después** de firmar, en orden. Cada entrada apunta a donde
+está razonada; aquí solo se dice qué dejó de ser cierto de lo de arriba.
+
+| Qué | Cuándo y dónde | Qué cambia de este documento |
+| --- | --- | --- |
+| **v3.3 de la 001:** entra `RI-15` (`POST /obras/{id}/novela`) y `CA-33` pasa de catorce a **dieciséis** endpoints | Spec 001, §Cierre, firmada | «14 de interfaz» pasa a 15. **`CA-33` sigue sin cumplirse (P-3, reabierto):** `openapi.json` publica hoy dieciséis operaciones, pero no las de la spec —faltan `RI-09`, `RI-10` y `RI-12`, `RI-11` se sirve como `/lectura/{token}/…` y hay dos que la spec no nombra, `GET /obras/{id}/novela` y `GET /trabajos/{id}/intentos`—. Cerrarlo es cambio de requisito y vuelve a firma |
+| **P-02 revisada:** Haiku 4.5 en todos los roles, por coste medido | Spec 001, P-02; `b80e911` | La fila de §4. El juez comparte modelo con el Escritor ([`trade-offs.md`](trade-offs.md) T-16) |
+| **P-09:** una versión publicada puede llevar menos de diez capítulos, salvo por veto | Spec 001, P-09; `fc596a7` | Matiza `CA-1`: publicar no exige diez capítulos si uno escaló |
+| **D-06 y D-07 de la 002:** la lectura deja de tener cinco rutas; una dirección y tres pestañas | Spec 002 | Lo que §3 separa entre Comprador y Destinatario se separa **por estado dentro de una sola página**, no por rutas: la entrevista no se muestra a quien llega con un enlace que no generó ([`trade-offs.md`](trade-offs.md) T-3) |
+| **Enmienda 1 del plan 4 del frontend:** «Cuaderno de viaje», interfaz en serif y siempre en claro | `plan-4-apariencia-de-lectura.md`; `d5207bd`, `cd2f38c` | Nada de la spec: cambia la piel, no los requisitos ([`trade-offs.md`](trade-offs.md) T-30) |
+| **Enmienda `trato` del plan 8:** el brief gana `trato ∈ {ella, el, neutro}` | `plan-8-corrida-real.md` T2, **firmada y no ejecutada** | Ninguno: la sonda (`38924c3`) mostró que el marcador no resolvía el anonimizado, y T2–T3 no se hicieron. **La spec no tiene hoy ese campo** ([`trade-offs.md`](trade-offs.md) T-26) |
+| **Las evals, en dos o tres novelas completas** en vez de cinco briefs | `maujimenez4`, 2026-09-24 | §2.2 y la lista de §6: el encargo §5 pide cinco, y la entrega quedará por debajo de esa letra ([`trade-offs.md`](trade-offs.md) T-31) |
