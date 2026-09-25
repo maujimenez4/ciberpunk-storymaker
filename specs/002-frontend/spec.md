@@ -99,6 +99,8 @@ Tomadas por `maujimenez4` el 2026-09-23. Van aquí y no en Preguntas abiertas po
 
 **Y hay que decir qué es esto y qué no.** Es una separación de interfaz, **no una frontera de seguridad**: quien sepa manipular la dirección puede pedir la pestaña. Lo que de verdad protege sigue siendo que **el backend no publica la entrevista de una obra por su token** — ninguna ruta de lectura la sirve, así que la pestaña no tendría nada que enseñar. La comprobación está donde debe; la interfaz solo evita el accidente.
 
+**D-08 · La lectura va página a página, no bajando.** Decidido por `maujimenez4` el 2026-09-25, **e invierte la parte de `D-06` que decía «se lee bajando»**. Con la novela real, el scroll continuo de diez capítulos no se leía como un libro. Ahora hay una portada —dedicatoria, novedades, sumario y PDF— y un capítulo por página, que se pasa con los botones, con ← → y deslizando. **Lo que no cambia:** el sumario y los enlaces `#capitulo-N` llevan a su capítulo, se reabre donde ibas (`usePosicion`) y el pie de progreso sigue midiendo el capítulo en pantalla. **Lo que se pierde:** Ctrl+F ya no busca en la novela entera, solo en la página abierta, que era el motivo de no virtualizar.
+
 ---
 
 **D-06 · Dos entradas, una aplicación: la entrevista en la raíz, la lectura bajo el token.** Decidido por `maujimenez4` el 2026-09-24, **e invierte la forma que esta spec tenía aprobada**.

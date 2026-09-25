@@ -1,4 +1,6 @@
-import { Aviso, Enlace, Texto } from "@/shared/ui/primitives";
+import { type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { Aviso, Boton, Enlace, Texto } from "@/shared/ui/primitives";
 
 import "../lectura.css";
 
@@ -8,10 +10,13 @@ import { AjustesDeLectura } from "./AjustesDeLectura";
 import { PieDeLectura } from "./PieDeLectura";
 
 /**
- * La novela entera, continua. Dedicatoria, sumario y los capítulos encadenados.
+ * La novela **página a página**, como un lector electrónico: la portada
+ * —dedicatoria, novedades, sumario— y después un capítulo por página.
  *
- * **Se lee bajando, no saltando entre páginas** (D-06): el sumario lleva a un
- * fragmento de esta misma página, no a otra dirección.
+ * Invierte D-06 («se lee bajando»), decisión de `maujimenez4` del 2026-09-25:
+ * el scroll infinito no se leía como un libro. Se pasa de página con los
+ * botones, con ← → y deslizando; el sumario y los enlaces `#capitulo-N` siguen
+ * llevando al capítulo, y se reabre donde ibas (`usePosicion`).
  */
 export function Leer({ token }: { token: string }) {
   const version = useVersion(token);
@@ -27,37 +32,147 @@ export function Leer({ token }: { token: string }) {
     );
   }
 
-  const capitulos = version.data.capitulos ?? [];
+  return (
+    <Libro
+      token={token}
+      dedicatoria={version.data.dedicatoria ?? null}
+      capitulos={version.data.capitulos ?? []}
+    />
+  );
+}
+
+type CapituloDelIndice = { numero: number; titulo?: string | null; cambiado?: boolean | null };
+
+/** Cuánto hay que deslizar, en píxeles, para que cuente como pasar página. */
+const DESLIZAMIENTO_MINIMO = 60;
+
+/** La página 0 es la portada; la N, el capítulo N del índice. */
+function Libro({
+  token,
+  dedicatoria,
+  capitulos,
+}: {
+  token: string;
+  dedicatoria: string | null;
+  capitulos: CapituloDelIndice[];
+}) {
+  // Memorizado: `usePosicion` y `ir` dependen de la lista, no de su identidad.
+  const numeros = useMemo(() => capitulos.map((c) => c.numero), [capitulos]);
+  const { inicial, recordar } = usePosicion(token, numeros);
+  const [pagina, setPagina] = useState<number>(() =>
+    inicial === null ? 0 : numeros.indexOf(inicial) + 1,
+  );
+  const toque = useRef<{ x: number; y: number } | null>(null);
+  const ultima = capitulos.length;
+
+  const ir = useCallback(
+    (destino: number) => {
+      const nueva = Math.max(0, Math.min(ultima, destino));
+      setPagina(nueva);
+      const numero = numeros[nueva - 1];
+      if (numero === undefined) {
+        window.history.replaceState({}, "", window.location.pathname + window.location.search);
+      } else {
+        recordar(numero);
+      }
+      // Una página nueva empieza arriba, como al pasar la hoja.
+      document.documentElement.scrollTop = 0;
+    },
+    [ultima, recordar, numeros],
+  );
+
+  const irAlCapitulo = (numero: number) => ir(numeros.indexOf(numero) + 1);
+
+  useEffect(() => {
+    function alPulsar(evento: KeyboardEvent) {
+      if (evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) return;
+      const destino = evento.target;
+      // Escribir una corrección o mover un deslizador no pasa página.
+      if (
+        destino instanceof Element &&
+        destino.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
+      if (evento.key === "ArrowRight") ir(pagina + 1);
+      if (evento.key === "ArrowLeft") ir(pagina - 1);
+    }
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, [ir, pagina]);
+
+  const alEmpezarAToca = (evento: TouchEvent) => {
+    const t = evento.touches[0];
+    toque.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const alSoltar = (evento: TouchEvent) => {
+    const inicio = toque.current;
+    const fin = evento.changedTouches[0];
+    toque.current = null;
+    if (!inicio || !fin) return;
+    const dx = fin.clientX - inicio.x;
+    const dy = fin.clientY - inicio.y;
+    // Solo un gesto claramente horizontal: bajar leyendo no pasa página.
+    if (Math.abs(dx) < DESLIZAMIENTO_MINIMO || Math.abs(dy) > Math.abs(dx) / 2) return;
+    ir(dx < 0 ? pagina + 1 : pagina - 1);
+  };
+
+  const actual = capitulos[pagina - 1];
 
   return (
-    <article className="lectura">
-      {version.data.dedicatoria ? (
-        <p className="dedicatoria">{version.data.dedicatoria}</p>
-      ) : null}
+    <article className="lectura" onTouchStart={alEmpezarAToca} onTouchEnd={alSoltar}>
+      {actual === undefined ? (
+        <div className="lectura__portada">
+          {dedicatoria ? <p className="dedicatoria">{dedicatoria}</p> : null}
 
-      <Novedades numeros={capitulos.filter((c) => c.cambiado).map((c) => c.numero)} />
+          <Novedades
+            numeros={capitulos.filter((c) => c.cambiado).map((c) => c.numero)}
+            onIr={irAlCapitulo}
+          />
 
-      <Sumario token={token} capitulos={capitulos} />
+          <Sumario capitulos={capitulos} onIr={irAlCapitulo} />
 
-      {capitulos.map((capitulo) => (
+          <p className="nota">
+            <Enlace href={`/api${API.pdf(token)}`}>Descargar la novela en PDF</Enlace>
+          </p>
+        </div>
+      ) : (
         <CapituloLeido
-          key={capitulo.numero}
+          key={actual.numero}
           token={token}
-          numero={capitulo.numero}
+          numero={actual.numero}
           total={capitulos.length}
-          titulo={capitulo.titulo}
+          titulo={actual.titulo}
         />
-      ))}
+      )}
 
-      <p className="nota">
-        <Enlace href={`/api${API.pdf(token)}`}>Descargar la novela en PDF</Enlace>
-      </p>
+      <nav className="paso" aria-label="Pasar página">
+        {pagina === 0 ? (
+          <Boton className="boton boton--principal paso__siguiente" onClick={() => ir(1)} disabled={ultima === 0}>
+            Empezar a leer ›
+          </Boton>
+        ) : (
+          <>
+            <Boton variante="discreto" className="boton boton--discreto paso__anterior" onClick={() => ir(pagina - 1)}>
+              ‹ Anterior
+            </Boton>
+            <span className="paso__donde">{`Capítulo ${pagina} de ${ultima}`}</span>
+            <Boton
+              className="boton boton--principal paso__siguiente"
+              onClick={() => ir(pagina + 1)}
+              disabled={pagina === ultima}
+            >
+              Siguiente ›
+            </Boton>
+          </>
+        )}
+      </nav>
 
       {/* Los mandos van abajo y fijos, no arriba: a mitad del capítulo siete,
           cambiar la letra no puede exigir volver al principio. */}
       <div className="lectura__pie">
         <div className="lectura__pie-medida">
-          <PieDeLectura token={token} numeros={capitulos.map((c) => c.numero)} />
+          <PieDeLectura token={token} numeros={numeros} />
           <AjustesDeLectura />
         </div>
       </div>
@@ -71,7 +186,7 @@ export function Leer({ token }: { token: string }) {
  * no se pinta (RF-IND-03): «nada ha cambiado» en un regalo recién abierto no
  * informa de nada.
  */
-function Novedades({ numeros }: { numeros: number[] }) {
+function Novedades({ numeros, onIr }: { numeros: number[]; onIr: (numero: number) => void }) {
   if (numeros.length === 0) return null;
   return (
     <aside className="hoja novedades" aria-labelledby="novedades-titulo">
@@ -83,7 +198,15 @@ function Novedades({ numeros }: { numeros: number[] }) {
         {numeros.map((numero, i) => (
           <span key={numero}>
             {i === 0 ? "" : i === numeros.length - 1 ? " y " : ", "}
-            <a className="enlace" href={`#${idDeCapitulo(numero)}`} aria-label={`Capítulo ${numero}`}>
+            <a
+              className="enlace"
+              href={`#${idDeCapitulo(numero)}`}
+              aria-label={`Capítulo ${numero}`}
+              onClick={(evento) => {
+                evento.preventDefault();
+                onIr(numero);
+              }}
+            >
               {numero}
             </a>
           </span>
@@ -94,18 +217,14 @@ function Novedades({ numeros }: { numeros: number[] }) {
   );
 }
 
+/** El índice de la portada. Cada entrada abre la página de su capítulo. */
 function Sumario({
-  token,
   capitulos,
+  onIr,
 }: {
-  token: string;
-  capitulos: { numero: number; titulo?: string | null; cambiado?: boolean | null }[];
+  capitulos: CapituloDelIndice[];
+  onIr: (numero: number) => void;
 }) {
-  const { recordar } = usePosicion(
-    token,
-    capitulos.map((c) => c.numero),
-  );
-
   return (
     <nav aria-label="Capítulos">
       <ol className="indice">
@@ -116,7 +235,11 @@ function Sumario({
               href={`#${idDeCapitulo(capitulo.numero)}`}
               data-testid={`sumario-${capitulo.numero}`}
               data-cambiado={String(Boolean(capitulo.cambiado))}
-              onClick={() => recordar(capitulo.numero)}
+              onClick={(evento) => {
+                // El `href` se queda para copiar el enlace; el clic pasa página.
+                evento.preventDefault();
+                onIr(capitulo.numero);
+              }}
             >
               <span className="indice__numero">Capítulo {capitulo.numero}</span>
               <span className="indice__titulo">{capitulo.titulo ?? ""}</span>
