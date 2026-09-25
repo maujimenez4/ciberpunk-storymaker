@@ -48,6 +48,7 @@ from app.features.escritura.novela import (
     numero_de_capitulo,
 )
 from app.features.escritura.reanudacion import planificar_reanudacion
+from app.features.escritura.service import intentos_descartados
 
 FabricaDeSesion = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
@@ -256,6 +257,37 @@ async def consultar(trabajo_id: int, sesion: Sesion) -> EstadoDelTrabajo:
         run_id=trabajo.run_id,
         causa_fallo=trabajo.causa_fallo,
     )
+
+
+class DefectoCitado(BaseModel):
+    """Un bloqueante de un intento descartado: su codigo y el pasaje citado."""
+
+    codigo: str
+    cita: str
+
+
+class IntentoDescartadoSalida(BaseModel):
+    """P-20: un intento que la puerta rechazo, con lo necesario para decidir.
+
+    Distingue «el modelo escribio mal tres veces» de «un validador rechaza
+    siempre»: si los tres llevan el mismo codigo sobre textos distintos, el
+    sospechoso es el validador.
+    """
+
+    numero: int
+    texto: str
+    defectos: list[DefectoCitado]
+    termino_vetado: str | None
+
+
+@router.get("/trabajos/{trabajo_id}/intentos")
+async def consultar_intentos(trabajo_id: int, sesion: Sesion) -> list[IntentoDescartadoSalida]:
+    """P-20. Los intentos rechazados del trabajo, escale o no. 404 si no existe."""
+    await leer_trabajo(sesion, trabajo_id)
+    return [
+        IntentoDescartadoSalida.model_validate(fila, from_attributes=True)
+        for fila in await intentos_descartados(sesion, trabajo_id)
+    ]
 
 
 class NovelaLanzada(BaseModel):

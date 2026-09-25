@@ -12,6 +12,7 @@ paso la puerta, y la evidencia no es un almacen de lectura.
 Ninguna prueba llama al proveedor (CA-4): el cliente es `DobleDeterminista`.
 """
 
+import pytest
 from sqlalchemy import func, select
 
 from app.features.escritura.agents import MARCA_DE_REPARACION
@@ -24,6 +25,13 @@ from app.features.escritura.tests.test_ciclo import (
     _respuestas,
     obra_lista,  # noqa: F401  (fixture)
 )
+from app.features.outline.modelos import Capitulo
+
+
+@pytest.fixture
+def respuestas_del_modelo() -> dict[str, str]:
+    """El Escritor devuelve siempre trece palabras: `EST-02` en cada vuelta."""
+    return _respuestas(PROSA_CORTA)
 
 
 async def _contar(sesion, modelo, **filtro) -> int:
@@ -31,6 +39,35 @@ async def _contar(sesion, modelo, **filtro) -> int:
     for columna, valor in filtro.items():
         consulta = consulta.where(getattr(modelo, columna) == valor)
     return int((await sesion.execute(consulta)).scalar_one())
+
+
+async def test_un_capitulo_escalado_deja_sus_tres_intentos_con_sus_defectos(cliente, sesion, obra):
+    """Por HTTP y con los cinco roles, que es el camino de la corrida real."""
+    assert cliente.post(f"/obras/{obra.id}/outline").status_code == 201
+    capitulo_id = (
+        await sesion.execute(
+            select(Capitulo.id).where(Capitulo.obra_id == obra.id, Capitulo.numero == 1)
+        )
+    ).scalar_one()
+    trabajo_id = cliente.post(f"/capitulos/{capitulo_id}/escribir").json()["id"]
+    assert cliente.get(f"/trabajos/{trabajo_id}").json()["estado"] == "ESCALADA"
+
+    respuesta = cliente.get(f"/trabajos/{trabajo_id}/intentos")
+
+    assert respuesta.status_code == 200
+    intentos = respuesta.json()
+    assert [i["numero"] for i in intentos] == [1, 2, 3]
+    assert all(i["texto"] == PROSA_CORTA for i in intentos)
+    assert all("EST-02" in [d["codigo"] for d in i["defectos"]] for i in intentos)
+    assert all(d["cita"] for i in intentos for d in i["defectos"])
+    assert all(i["termino_vetado"] is None for i in intentos)
+
+
+async def test_los_intentos_de_un_trabajo_inexistente_responden_404(cliente):
+    respuesta = cliente.get("/trabajos/9999/intentos")
+
+    assert respuesta.status_code == 404
+    assert respuesta.json()["detail"] == "No existe el trabajo 9999"
 
 
 async def test_la_evidencia_no_es_vigente_y_no_contamina_el_capitulo_siguiente(

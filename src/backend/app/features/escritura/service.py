@@ -75,7 +75,12 @@ from app.features.escritura.agents import (
     Reparacion,
     render_escritor,
 )
-from app.features.escritura.modelos import INTENTOS_MAXIMOS, Ejecucion, VersionTexto
+from app.features.escritura.modelos import (
+    INTENTOS_MAXIMOS,
+    Ejecucion,
+    IntentoDescartado,
+    VersionTexto,
+)
 
 PERSONA_DE_LA_OBRA: dict[str, Persona] = {
     "1ª": Persona.PRIMERA,
@@ -544,3 +549,20 @@ def _motivo(resultado: ResultadoDePuerta, termino_vetado: str | None) -> str:
     if termino_vetado is not None:
         motivo += f"; palabra vetada: {termino_vetado}"
     return motivo
+
+
+async def intentos_descartados(
+    sesion: AsyncSession, trabajo_id: int
+) -> Sequence[IntentoDescartado]:
+    """P-20: la evidencia de un trabajo, **en el orden en que se escribio**.
+
+    Solo lee. Que el trabajo exista lo comprueba quien llama (`leer_trabajo`),
+    para que un id desconocido responda 404 y no una lista vacia que se
+    confundiria con «no hubo rechazos».
+    """
+    filas = await sesion.execute(
+        select(IntentoDescartado)
+        .where(IntentoDescartado.trabajo_id == trabajo_id)
+        .order_by(IntentoDescartado.numero, IntentoDescartado.id)
+    )
+    return filas.scalars().all()

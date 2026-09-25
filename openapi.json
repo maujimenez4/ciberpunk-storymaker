@@ -298,6 +298,53 @@
     }
    }
   },
+  "/trabajos/{trabajo_id}/intentos": {
+   "get": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Consultar Intentos",
+    "description": "P-20. Los intentos rechazados del trabajo, escale o no. 404 si no existe.",
+    "operationId": "consultar_intentos_trabajos__trabajo_id__intentos_get",
+    "parameters": [
+     {
+      "name": "trabajo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Trabajo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/IntentoDescartadoSalida"
+         },
+         "title": "Response Consultar Intentos Trabajos  Trabajo Id  Intentos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/obras/{obra_id}/novela": {
    "post": {
     "tags": [
@@ -736,10 +783,7 @@
       "title": "Gancho De Apertura"
      },
      "tipo_de_corte_final": {
-      "type": "string",
-      "maxLength": 60,
-      "minLength": 1,
-      "title": "Tipo De Corte Final"
+      "$ref": "#/components/schemas/TipoDeCorte"
      },
      "extension_objetivo": {
       "type": "integer",
@@ -827,6 +871,25 @@
     ],
     "title": "ContradiccionSalida",
     "description": "Los mismos dos campos que devuelve el Entrevistador, ni uno mas."
+   },
+   "DefectoCitado": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "cita": {
+      "type": "string",
+      "title": "Cita"
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo",
+     "cita"
+    ],
+    "title": "DefectoCitado",
+    "description": "Un bloqueante de un intento descartado: su codigo y el pasaje citado."
    },
    "EntradaDeFicha": {
     "properties": {
@@ -1071,6 +1134,45 @@
     "type": "object",
     "title": "HTTPValidationError"
    },
+   "IntentoDescartadoSalida": {
+    "properties": {
+     "numero": {
+      "type": "integer",
+      "title": "Numero"
+     },
+     "texto": {
+      "type": "string",
+      "title": "Texto"
+     },
+     "defectos": {
+      "items": {
+       "$ref": "#/components/schemas/DefectoCitado"
+      },
+      "type": "array",
+      "title": "Defectos"
+     },
+     "termino_vetado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Termino Vetado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "numero",
+     "texto",
+     "defectos",
+     "termino_vetado"
+    ],
+    "title": "IntentoDescartadoSalida",
+    "description": "P-20: un intento que la puerta rechazo, con lo necesario para decidir.\n\nDistingue «el modelo escribio mal tres veces» de «un validador rechaza\nsiempre»: si los tres llevan el mismo codigo sobre textos distintos, el\nsospechoso es el validador."
+   },
    "LineaDelDesglose": {
     "properties": {
      "capa": {
@@ -1253,6 +1355,16 @@
     "type": "object",
     "title": "RespuestasEntrada",
     "description": "Lo que el comprador manda a RI-02. Entrada, y solo entrada.\n\n`respuestas` es un diccionario abierto a proposito: la entrevista se\nresponde a trozos y un esquema cerrado obligaria a mandarla entera de una\nvez, que es justo lo que RF-ENT-03 existe para evitar. La forma se exige\n**al cerrar**, contra `BriefEntrada`; aqui solo se acumula."
+   },
+   "TipoDeCorte": {
+    "type": "string",
+    "enum": [
+     "tensión",
+     "pregunta",
+     "revelación"
+    ],
+    "title": "TipoDeCorte",
+    "description": "Los tres cortes de `definitions.md` §4.1 (`Capitulo`, criterio de cierre)."
    },
    "TrabajoLanzado": {
     "properties": {
