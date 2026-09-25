@@ -771,6 +771,51 @@ una pregunta de una línea a `maujimenez4`, no una tarea.
 
 ---
 
+### T-34 · Lean sin fechas de nacimiento y sin *feedback*: **§5c cumplido a medias, declarado**
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Dar fecha de nacimiento a los `Personaje`, añadir el invariante de edad y devolver `CronologiaIncoherente` al rol que la produjo. (b) **Entregar con los dos invariantes que el esquema decide y el fallo acabando en `409`** |
+| **Criterio** | El plazo, y no fabricar garantías: con solo el Destinatario fechado y fuera de `Personaje`, el invariante de edad sería verde por construcción (T-5). Y no existe el Editor de línea al que el encargo dice que vuelve el fallo |
+| **Elección** | (b), por tiempo, el 2026-09-24 |
+| **Coste** | §5c pide que el fichero Lean **incluya fechas de nacimiento** (P-27) y que el fallo **vuelva al editor como *feedback*** (P-28). Ninguna de las dos se cumple |
+
+**Lo que sí hay:** `sinUbicuidad` y `sinReaparecidos` detienen la publicación (`CA-21`), y eso
+se ha visto caer quitando la llamada. **Lo que no:** el brief de trampa temporal no fallaría en
+Lean, porque contaba con el invariante de edad; y un fallo de cronología hoy **lo lee una
+persona en un `409`**, no un rol que reescriba. Cerrarlo es (a) entero: un cambio de esquema,
+un invariante y un camino de reparación, que es una fase y no un parche.
+
+---
+
+### T-35 · El Entrevistador fuera de la sesión de Langfuse: **§6 cumplido a medias, declarado**
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Abrir la sesión al empezar la entrevista, con un identificador provisional que se enlace luego a la obra. (b) **Dejar la entrevista sin traza** (plan 8, D-5) |
+| **Criterio** | La sesión se deriva de `obra_id` (`sesion_de`), y la obra no existe mientras dura la entrevista. Un identificador provisional es una segunda llave que alguien tiene que acordarse de casar. Y la entrevista no es lo que se afina en el *tuning* |
+| **Elección** | (b), firmada con el plan 8 |
+| **Coste** | El encargo §6 y `CLAUDE.md` §4.3 dicen **una sesión por novela que abarca la entrevista**. Hoy la sesión empieza en el Arquitecto: el prompt del Entrevistador, su coste y su latencia **no se ven en Langfuse** |
+
+Es un incumplimiento declarado, no un olvido (T-29). Lo que se pierde es concreto: si el
+Entrevistador dejó pasar una contradicción del brief, la traza de la novela no enseña de dónde
+vino.
+
+---
+
+### T-36 · La validación visual **no devuelve el fallo al Escritor** y no corre dentro de G4
+
+| | |
+| --- | --- |
+| **Opciones** | (a) Meter `inspeccion_visual` en `CATALOGO_DE_MANUSCRITO` y mandar el `REN-01` al Escritor, como dice §5a. (b) **Un validador que se corre tras publicar, contra la lectura levantada, y que registra el fallo sin devolverlo** |
+| **Criterio** | G4 corre dentro de `publicar`, en proceso, sin frontend levantado: engancharlo ahí haría depender la puerta de un servidor de Vite. Y un `REN-01` es un fallo **de la interfaz**: reescribir un capítulo no arregla un índice que no pinta |
+| **Elección** | (b), 2026-09-24 (`2b4e3fa`). Emite `rutas_estables` e `inspeccion_visual` a la sesión de la novela con `--obra-id` |
+| **Coste** | §5a dice «lo devuelve al writer», y no lo hace. Y como no es puerta, **una versión con la lectura rota se puede publicar**: lo que lo impide es que alguien lo corra |
+
+Procedimiento y resultados en [`../validacion-visual.md`](../validacion-visual.md).
+
+---
+
 ## Resumen: qué está firmado y qué está construido
 
 | Decisión | Firmada | Implementada |
@@ -808,3 +853,6 @@ una pregunta de una línea a `maujimenez4`, no una tarea.
 | T-31 evals con dos o tres novelas | Sí | **No:** no existe `evals/`, y `plan-6-medir.md` sigue diciendo cinco |
 | T-32 petición de cambio, obligatoria y última | Sí | **No:** plan 5 y plan 2 T4–T7 sin empezar |
 | T-33 `.env` sin cargar | Sí | Sí, por ausencia |
+| T-34 Lean sin fechas ni *feedback* (§5c parcial) | Declarada, por tiempo | Por ausencia: P-27 y P-28 siguen abiertos |
+| T-35 Entrevistador sin traza (§6 parcial) | Sí (plan 8, D-5) | Por ausencia |
+| T-36 validación visual fuera de G4, sin devolver al Escritor | Declarada | Sí (`2b4e3fa`); **sin corrida real todavía** |

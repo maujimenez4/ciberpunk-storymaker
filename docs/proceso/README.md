@@ -41,6 +41,11 @@ jueces a la vez y por qué salía el nombre borrado—; y
 [`registro-de-iteraciones.md`](registro-de-iteraciones.md) enseña qué se cambió cuando algo
 falló.
 
+**Cómo se usó Claude Code** —skills, subagentes en olas y lo que falló al repartir, el
+servidor MCP de navegador— está fuera de esta carpeta, en
+[`../claude-code.md`](../claude-code.md), y la validación visual en
+[`../validacion-visual.md`](../validacion-visual.md).
+
 Dónde mirar el estado del sistema, que **no** se duplica aquí:
 [`specs/estado-del-entregable.md`](../../specs/estado-del-entregable.md) —el cruce contra el
 encargo, sección a sección— y
