@@ -120,7 +120,9 @@ La primera mitad está cerrada: `Consumo` guarda `cache_read_input_tokens` y `ca
 
 **Quién:** después de la sesión del PDF, que está en ese fichero. Arreglo pequeño: si hay `faltantes`, `publicar` lanza un error de dominio (como `ObraSinCapitulos`) antes de crear la versión, con su test.
 
-### P-32 · Las respuestas de la entrevista entran al prompt sin marcar como dato
+### P-32 · Las respuestas de la entrevista entran al prompt sin marcar como dato — **cerrado el 2026-09-24**
+
+*Cerrado:* `Entrevistador.evaluar` envuelve las respuestas en `<respuestas>…</respuestas>` con la misma poda de etiquetas que el texto aportado; test `test_las_respuestas_del_formulario_tambien_van_marcadas_y_no_se_pueden_cerrar`, visto en rojo. Lo de abajo queda como historia.
 
 `obra/agents.py:95`: `render_entrevistador(PLANTILLA_V1, texto) + f"\nENTREVISTADOR\n{respuestas}"`. El texto aportado sí va dentro de `<texto_aportado>`, pero el `repr` de las respuestas —que también escribe el comprador— se pega **al final del prompt y sin etiqueta**, que es la posición donde una instrucción se obedece. `CLAUDE.md` §11: «la defensa es que ese texto no llegue nunca a la posición donde una instrucción se obedece». Lo vio el agente del *red-team log* el 2026-09-24.
 

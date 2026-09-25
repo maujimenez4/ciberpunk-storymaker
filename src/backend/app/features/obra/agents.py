@@ -10,9 +10,10 @@ PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "entrevistador.v2.md").read_
     encoding="utf-8"
 )
 _MARCA = "texto_aportado"
+_MARCA_RESPUESTAS = "respuestas"
 
 
-def _sin_etiquetas(texto: str) -> str:
+def _sin_etiquetas(texto: str, marca: str = _MARCA) -> str:
     """Quita la etiqueta hasta que quitarla ya no cambie nada.
 
     Una pasada sola no basta: al borrar el cierre de `</texto</texto_aportado>_aportado>`
@@ -22,7 +23,7 @@ def _sin_etiquetas(texto: str) -> str:
     """
     sano = texto
     while True:
-        podado = sano.replace(f"</{_MARCA}>", "").replace(f"<{_MARCA}>", "")
+        podado = sano.replace(f"</{marca}>", "").replace(f"<{marca}>", "")
         if podado == sano:
             return sano
         sano = podado
@@ -51,8 +52,7 @@ def _con_motivo(crudo: str, error: Exception) -> str:
     """
     if isinstance(error, ValidationError):
         fallos = "; ".join(
-            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}"
-            for e in error.errors()[:6]
+            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}" for e in error.errors()[:6]
         )
         return f"{fallos} | crudo: {crudo[:200]}"
     return f"{type(error).__name__}: {error} | crudo: {crudo[:200]}"
@@ -92,7 +92,14 @@ class Entrevistador:
         self._semilla = semilla
 
     async def evaluar(self, respuestas: dict[str, object], texto: str) -> Evaluacion:
-        prompt = render_entrevistador(PLANTILLA_V1, texto) + f"\nENTREVISTADOR\n{respuestas}"
+        # P-32: las respuestas tambien las escribe el comprador, asi que van
+        # marcadas como dato igual que el texto aportado (`CLAUDE.md` §11).
+        marca = _MARCA_RESPUESTAS
+        cuerpo = _sin_etiquetas(repr(respuestas), marca)
+        prompt = (
+            render_entrevistador(PLANTILLA_V1, texto)
+            + f"\nENTREVISTADOR\n<{marca}>\n{cuerpo}\n</{marca}>"
+        )
         crudo = await self._cliente.completar(prompt, semilla=self._semilla)
         try:
             return Evaluacion.model_validate(json_de_modelo(crudo))
