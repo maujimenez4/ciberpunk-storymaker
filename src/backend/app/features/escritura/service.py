@@ -23,7 +23,10 @@ turno del presupuesto concurrente y la consolidacion en canon son del ciclo de
 punta a punta (T11). Esto devuelve un resultado y no toca ninguna de las tres.
 """
 
+import asyncio
+import contextlib
 from collections.abc import Collection, Sequence
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
@@ -32,7 +35,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.auditoria import registrar
-from app.commons.domain.errores import ContextBudgetExceeded
+from app.commons.domain.errores import ContextBudgetExceeded, TiempoAgotado
+from app.commons.jobs.turnos import SOBRECARGA_POR_LLAMADA, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
 from app.commons.observabilidad import Observacion
 from app.features.calidad import (
@@ -52,13 +56,16 @@ from app.features.calidad import (
     Persona,
     RangoDeExtension,
     ResultadoDePuerta,
+    SalidaMalFormada,
     TiempoVerbal,
     aplicar_policy,
     cruzar_g1a,
     emitir,
+    plantilla_critico_v1,
     puntuaciones_de_g1a,
     puntuaciones_de_policy,
     puntuaciones_del_juez,
+    render_critico,
 )
 
 NOMBRE_DEL_CONTINUISTA = "continuidad_y_canon"
@@ -309,17 +316,84 @@ async def _juzgar(
     if critico is None:
         return None
     async with observacion.span("critico") as span:
-        juicio = await critico.juzgar(
-            CapituloAJuzgar(
-                version_texto_id=version_texto_id,
-                texto=texto,
-                # La rubrica sale del propio juez y no se importa aqui: asi hay
-                # **una** en juego, que es lo que `CA-20` pide.
-                rubrica=critico.rubrica,
+        try:
+            juicio = await critico.juzgar(
+                CapituloAJuzgar(
+                    version_texto_id=version_texto_id,
+                    texto=texto,
+                    # La rubrica sale del propio juez y no se importa aqui: asi hay
+                    # **una** en juego, que es lo que `CA-20` pide.
+                    rubrica=critico.rubrica,
+                )
             )
-        )
+        except SalidaMalFormada as error:
+            # Plan 8 T6, paso 5: el juez no decide, asi que su fallo tampoco. Y
+            # vale igual en serie que en paralelo: si no, que el capitulo cayera
+            # dependeria de si el techo tenia hueco en ese instante. Queda en el
+            # span, que es donde se mira; `juicio=None` dice «no hubo juicio».
+            span.salida(f"juicio descartado: {type(error).__name__}: {error}")
+            return None
         emitir(span, puntuaciones_del_juez(juicio))
     return juicio
+
+
+async def _critico_en_paralelo(
+    pila: AsyncExitStack,
+    presupuesto: PresupuestoConcurrente | None,
+    critico: Critico | None,
+    contador: ContadorDeTokens,
+    version_texto_id: str,
+    texto: str,
+    observacion: Observacion,
+) -> asyncio.Task[Juicio | None] | None:
+    """Lanza al Critico **a la vez** que el Continuista, si cabe (plan 8, T6).
+
+    Es seguro porque el Critico no usa lo que dice el Continuista y no decide
+    nada (`RF-JUZ-06`). Pero no sale gratis: su prompt mas la sobrecarga del
+    CLI se piden al portero (`CLAUDE.md` §4.1), y el turno queda en `pila`
+    hasta que la tarea termina o se cancela.
+
+    **`espera_maxima=0`, y es lo que evita el interbloqueo** (Review Focus 4):
+    quien llama ya retiene el turno del capitulo, asi que esperar aqui otro
+    turno es como dos obras se bloquean la una a la otra. Si no cabe ahora
+    --o hay alguien antes en la cola, que el reparto es FIFO estricto--,
+    `TiempoAgotado` significa «en serie» y se devuelve `None`: se juzga despues,
+    como hasta el plan 8, sin esperar a nadie.
+    """
+    if critico is None or presupuesto is None:
+        return None
+    tokens = (
+        contador.contar(render_critico(plantilla_critico_v1(), texto, critico.rubrica))
+        + SOBRECARGA_POR_LLAMADA
+    )
+    try:
+        await pila.enter_async_context(
+            presupuesto.turno(tokens, espera_maxima=0, paso="critico en paralelo")
+        )
+    except TiempoAgotado:
+        return None
+    tarea = asyncio.create_task(_juzgar(critico, version_texto_id, texto, observacion))
+    # La pila deshace en orden inverso: primero la tarea, despues el turno. Si
+    # el Continuista o la puerta lanzan, el juez no queda huerfano gastando
+    # cuota con un turno ya devuelto.
+    pila.push_async_callback(_cancelar, tarea)
+    return tarea
+
+
+async def _cancelar(tarea: asyncio.Task[Juicio | None]) -> None:
+    """Solo trabaja cuando el intento se cae antes de esperar al juez.
+
+    En el camino normal la tarea ya se espero y esto no hace nada. Si el
+    intento se cae, lo que importa es la excepcion que lo tumbo, y la del juez
+    --que no decide-- no puede taparla: por eso aqui se descarta.
+    """
+    if tarea.done():
+        if not tarea.cancelled():
+            tarea.exception()  # marca la excepcion como vista: no hay huerfanas
+        return
+    tarea.cancel()
+    with contextlib.suppress(asyncio.CancelledError, Exception):
+        await tarea
 
 
 async def escribir_capitulo(
@@ -342,6 +416,7 @@ async def escribir_capitulo(
     conocimiento: Sequence[ConocimientoEnT] = (),
     orden_discurso: int = 0,
     observacion: Observacion | None = None,
+    presupuesto: PresupuestoConcurrente | None = None,
 ) -> Escritura:
     """Escribe el capitulo y lo repara dirigidamente hasta dos veces.
 
@@ -439,54 +514,65 @@ async def escribir_capitulo(
         # validador que corre y no consta no emite *score*, y su casilla en la
         # tabla de los cinco briefs no distinguiria «limpio» de «no corrio».
         emisores: tuple[str, ...] = ()
-        if continuista is not None:
-            async with observacion.span("continuista"):
-                revision = await continuista.revisar(
-                    CapituloAContrastar(
+        # Plan 8 T6: el Critico arranca aqui, a la vez que el Continuista, si su
+        # turno cabe en el techo concurrente; si no, `None` y se juzga abajo, en
+        # serie. La pila devuelve su turno y, si algo se cae, lo cancela.
+        async with AsyncExitStack() as pila:
+            tarea_critico = await _critico_en_paralelo(
+                pila, presupuesto, critico, contador, str(version.id), texto, observacion
+            )
+            if continuista is not None:
+                async with observacion.span("continuista"):
+                    revision = await continuista.revisar(
+                        CapituloAContrastar(
+                            version_texto_id=str(version.id),
+                            texto=texto,
+                            grafo=tuple(grafo),
+                            conocimiento=tuple(conocimiento),
+                            orden_discurso=orden_discurso,
+                        )
+                    )
+                recibidos.extend(revision.defectos)
+                emisores = (NOMBRE_DEL_CONTINUISTA,)
+
+            # El *score* de `continuidad_y_canon` sale **de aqui** y no del span
+            # del Continuista: la puerta es quien decide si su defecto bloquea, y
+            # quien lo cuenta en `defectos_por_validador`.
+            async with observacion.span("puerta_g1a") as span:
+                resultado = cruzar_g1a(
+                    CapituloAValidar(
                         version_texto_id=str(version.id),
                         texto=texto,
-                        grafo=tuple(grafo),
-                        conocimiento=tuple(conocimiento),
-                        orden_discurso=orden_discurso,
-                    )
+                        rango_de_extension=rango_de_extension,
+                        discurso=_discurso(restricciones),
+                        nombres_del_canon=tuple(nombres_del_canon),
+                    ),
+                    hechos_de_canon,
+                    recibidos,
+                    emisores_externos=emisores,
                 )
-            recibidos.extend(revision.defectos)
-            emisores = (NOMBRE_DEL_CONTINUISTA,)
-
-        # El *score* de `continuidad_y_canon` sale **de aqui** y no del span del
-        # Continuista: la puerta es quien decide si su defecto bloquea, y quien
-        # lo cuenta en `defectos_por_validador`.
-        async with observacion.span("puerta_g1a") as span:
-            resultado = cruzar_g1a(
-                CapituloAValidar(
-                    version_texto_id=str(version.id),
+                emitir(span, puntuaciones_de_g1a(resultado))
+                span.salida(_veredicto_de_la_puerta(resultado))
+            intentos.append(
+                IntentoDeEscritura(
+                    numero=len(intentos) + 1,
+                    version_texto_id=version.id,
                     texto=texto,
-                    rango_de_extension=rango_de_extension,
-                    discurso=_discurso(restricciones),
-                    nombres_del_canon=tuple(nombres_del_canon),
-                ),
-                hechos_de_canon,
-                recibidos,
-                emisores_externos=emisores,
+                    resultado=resultado,
+                    termino_vetado=resultado_policy.termino_vetado,
+                )
             )
-            emitir(span, puntuaciones_de_g1a(resultado))
-            span.salida(_veredicto_de_la_puerta(resultado))
-        intentos.append(
-            IntentoDeEscritura(
-                numero=len(intentos) + 1,
-                version_texto_id=version.id,
-                texto=texto,
-                resultado=resultado,
-                termino_vetado=resultado_policy.termino_vetado,
-            )
-        )
 
-        # El juez corre **despues** de la puerta y su resultado no entra en
-        # ninguna decision: `RF-JUZ-06` dice que no bloquea hasta que su
-        # correlacion con la revision humana este medida y **firmada con el
-        # numero delante**. Se le llama igualmente porque lo que no corre no
-        # puede calibrarse, y sin calibrar no deja de bloquear nunca.
-        juicio = await _juzgar(critico, str(version.id), texto, observacion)
+            # El resultado del juez no entra en ninguna decision: `RF-JUZ-06`
+            # dice que no bloquea hasta que su correlacion con la revision humana
+            # este medida y **firmada con el numero delante**. Se le llama
+            # igualmente porque lo que no corre no puede calibrarse, y sin
+            # calibrar no deja de bloquear nunca.
+            juicio = (
+                await tarea_critico
+                if tarea_critico is not None
+                else await _juzgar(critico, str(version.id), texto, observacion)
+            )
 
         if resultado.aprobado:
             await _completar_ejecucion(sesion, ejecucion_id, escritor, "aprobada")

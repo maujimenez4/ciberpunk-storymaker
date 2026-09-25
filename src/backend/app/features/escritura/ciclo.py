@@ -514,6 +514,9 @@ async def _escribir(
             conocimiento=await _conocimiento(sesion, trabajo.obra_id),
             orden_discurso=await _orden_discurso(sesion, contexto.escena_id),
             observacion=observacion,
+            # Plan 8 T6: con el portero, el Critico pide su propio turno y
+            # corre a la vez que el Continuista si cabe en el techo.
+            presupuesto=presupuesto,
         )
 
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)

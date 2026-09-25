@@ -106,7 +106,17 @@ async def test_cada_rol_que_se_llama_tiene_su_span_en_orden(sesion, obra_lista):
     resultado = await _ciclo(sesion, obra_lista.capitulos[1].id, observador)
 
     assert resultado.estado == "INTEGRADA"
-    assert [s.nombre for s in observador.trazas[0].spans] == ROLES_DE_UN_CAPITULO_LIMPIO
+    # Se compara el orden de **inicio** (la traza en memoria anota cada span al
+    # abrirse), y el Critico aparte. Desde el plan 8 T6 el Critico corre a la vez
+    # que el Continuista si su turno cabe: con un modelo de verdad su span se
+    # abre despues del del Continuista y antes de que acabe la puerta; con un
+    # doble que no suspende, al esperarlo. Los dos ordenes son correctos, asi que
+    # exigir uno de ellos probaria la temporizacion, no el ciclo.
+    nombres = [s.nombre for s in observador.trazas[0].spans]
+    sin_critico = [n for n in ROLES_DE_UN_CAPITULO_LIMPIO if n != "critico"]
+    assert [n for n in nombres if n != "critico"] == sin_critico
+    assert nombres.count("critico") == 1
+    assert nombres.index("continuista") < nombres.index("critico") < nombres.index("extractor")
 
 
 async def test_el_span_de_cada_rol_lleva_su_prompt_y_su_salida(sesion, obra_lista):  # noqa: F811

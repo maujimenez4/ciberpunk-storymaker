@@ -30,6 +30,11 @@ from app.features.calidad.agents import (
     RevisionDeContinuidad,
     RubricaDiscordante,
     SalidaMalFormada,
+    # Plan 8 T6: `escritura` cuenta el prompt del Critico para pedirle turno al
+    # portero cuando lo lanza en paralelo. Contar otra cosa que lo que se envia
+    # seria reservar de menos.
+    plantilla_critico_v1,
+    render_critico,
 )
 from app.features.calidad.cobertura import (
     CODIGO_DE_ELEMENTO_AUSENTE,
@@ -163,9 +168,11 @@ __all__ = [
     "hash_de_rubrica",
     "localizar_veto",
     "nombres_literales",
+    "plantilla_critico_v1",
     "puntuaciones_de_g1a",
     "puntuaciones_de_g4",
     "puntuaciones_de_policy",
     "puntuaciones_del_juez",
+    "render_critico",
     "rubrica_vigente",
 ]
