@@ -1,6 +1,6 @@
 # Presentación · StoryMaker
 
-Propuesta formal de **Qaracter** a **Regalos con Historia S.L.** (cliente ficticio): un sistema
+Propuesta formal de **Qaracter** a **Regalos con Historia S.A. de C.V.** (cliente ficticio, mercado México): un sistema
 agéntico que escribe novelas de regalo de diez capítulos, personalizadas y verificadas.
 
 **Idioma:** español, con los términos técnicos en inglés (*harness*, *guardrails*, *evals*,
@@ -12,7 +12,7 @@ agéntico que escribe novelas de regalo de diez capítulos, personalizadas y ver
 
 | Fichero | Qué es |
 | --- | --- |
-| `storymaker-deck.pdf` | El deck principal: 15 slides |
+| `storymaker-deck.pdf` | El deck principal: 16 slides |
 | `storymaker-deck.pptx` | El mismo deck en formato editable (PowerPoint) |
 | `anexo-arquitectura-codigo.pdf` | A1 · Arquitectura del código: features, fronteras y tests |
 | `anexo-tla-spec.pdf` | A2 · TLA+ del harness: invariantes, liveness y resultado de TLC |
@@ -25,7 +25,7 @@ agéntico que escribe novelas de regalo de diez capítulos, personalizadas y ver
 ## Estructura del deck
 
 1. Portada
-2. El problema y el cliente
+2. El problema y el cliente: matriz de posicionamiento
 3. Configuración: la entrevista
 4. Lectura y corrección
 5. Arquitectura del harness
@@ -37,13 +37,17 @@ agéntico que escribe novelas de regalo de diez capítulos, personalizadas y ver
 11. Guardrails
 12. Presupuesto y coste
 13. Escenarios de volumen y sensibilidad
-14. Demo y cierre
-15. Contraportada
+14. Riesgos y siguientes pasos
+15. Demo y cierre
+16. Contraportada
 
 ## De dónde salen las cifras
 
 - **Coste por novela**: medido en Langfuse sobre la novela de ejemplo (capítulos 4 a 10, con
   reintentos): 3,45 USD en 79 llamadas, unos 4,9 USD por novela.
+- **Resto del coste, en USD y para México** (1 USD ≈ 17,6 MXN): tarifa de Stripe México, soporte
+  tercerizado, planes de Langfuse y DigitalOcean y tarifas de desarrollo en México. Fuentes en las
+  notas de cada slide.
 - **Evals**: `evals/resultados/corridas.json` y [`evals/tuning.md`](../evals/tuning.md).
 - **TLC**: `formal/tla/`. **Lean**: `formal/lean/` y la puerta de publicación.
 - **Hallazgos de la corrida real**: `docs/proceso/`.
