@@ -320,6 +320,8 @@ al modelo llega algo más: el CLI del Claude Agent SDK envuelve el prompt. Esa d
 se **midió**, no se supuso, el **2026-09-24** con `src/backend/scripts/medir_sobrecarga.py`
 (plan 8, T5): `claude-haiku-4-5`, tres prompts contados con `ContadorTiktoken`, dos rondas
 seguidas, salida «ok». `sobrecarga = (input + cache_read + cache_creation) − contados`.
+**Cuenta medida: la de trabajo, con instrucciones de organización** que se inyectan en cada
+llamada, así que la cifra puede ser **mayor** que en la cuenta de la corrida.
 
 | Ronda | Contados | `input_tokens` | `cache_read` | `cache_creation` | Sobrecarga |
 | --- | --- | --- | --- | --- | --- |
@@ -336,7 +338,9 @@ prompt; la caché cambia **dónde** se contabilizan los tokens —el prompt larg
 tamaño es la deriva entre `cl100k_base` y el vocabulario de Anthropic (`contador.py`), que
 en este texto cuenta a favor. **Lo que no mide:** otro tipo de texto puede derivar en
 contra, y por eso `SOBRECARGA_POR_LLAMADA` (`commons/jobs/turnos.py`) se fija en **2.000**,
-por encima del máximo de esta tabla y de los ~1.800 que P-21 registraba de antes.
+por encima del máximo de esta tabla y de los ~1.800 que P-21 registraba de antes. Pasarse
+es seguro para el techo; quedarse corto, no. **Hay que volver a medirla con la cuenta con la
+que se haga la corrida real**: `uv run python src/backend/scripts/medir_sobrecarga.py`.
 
 ## 6. El conjunto de validadores
 

@@ -66,6 +66,11 @@ T5); la tabla esta en `docs/verification.md` §5.2 y en P-21. Maximo observado:
 hacia arriba a 2.000 porque la deriva entre `cl100k_base` y el vocabulario de
 Anthropic cambia de signo con el texto, y porque una medida anterior dio ~1.800.
 
+**Se midio con la cuenta de trabajo**, que inyecta instrucciones de organizacion
+en cada llamada: en otra cuenta puede ser menor, y pasarse es seguro para el
+techo. **Hay que volver a medirla con la cuenta de la corrida real**
+(`uv run python src/backend/scripts/medir_sobrecarga.py`) y subir esto si sale mas.
+
 Quien pide turno por una llamada al modelo reserva `contados + esto`: sin ello,
 la suma en vuelo que ve este portero seria menor que la que llega al proveedor.
 """
