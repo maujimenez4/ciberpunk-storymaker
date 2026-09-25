@@ -8,6 +8,7 @@ regla de seguridad ni de dominio depende solo del prompt (`CLAUDE.md` §10).
 
 import json
 from collections.abc import Mapping
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,13 @@ from app.features.escena.schemas import RestriccionesDeDiscurso, SalidaPlanifica
 PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "planificador.v1.md").read_text(
     encoding="utf-8"
 )
+
+PROMPT_ID = "planificador"
+PROMPT_VERSION = "v1"
+HASH_DE_PLANTILLA_V1 = sha256(PLANTILLA_V1.encode("utf-8")).hexdigest()
+"""Lo que ata el span del rol a la plantilla que de verdad se envio (plan 8 T7,
+P-22.3), como el Escritor y el Continuista. Una version nueva es un fichero
+nuevo con su hash (`CLAUDE.md` §10), y estas tres lineas cambian con ella."""
 
 # El titulo de la plantilla. Los dobles de test eligen respuesta por subcadena
 # del prompt, y una constante evita que el test se apoye en una frase de la
@@ -48,8 +56,7 @@ def _con_motivo(crudo: str, error: Exception) -> str:
     """
     if isinstance(error, ValidationError):
         fallos = "; ".join(
-            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}"
-            for e in error.errors()[:6]
+            f"{'.'.join(str(parte) for parte in e['loc'])}: {e['type']}" for e in error.errors()[:6]
         )
         return f"{fallos} | crudo: {crudo[:200]}"
     return f"{type(error).__name__}: {error} | crudo: {crudo[:200]}"

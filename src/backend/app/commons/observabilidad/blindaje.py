@@ -50,7 +50,7 @@ def _a_salvo(contador: _Contador, operacion: Callable[[], Any]) -> None:
 
 
 class _SpanBlindado:
-    """Las cuatro operaciones del contrato, cada una a salvo por separado.
+    """Las operaciones del contrato, cada una a salvo por separado.
 
     Por separado y no en bloque: si `salida` falla y `puntuar` no, se pierde una
     y llega la otra. Abortar el span entero al primer fallo perderia datos que
@@ -99,6 +99,15 @@ class _SpanBlindado:
             self._contador.anotar()
             return
         _a_salvo(self._contador, lambda: self._dentro.puntuar(puntuacion))  # type: ignore[union-attr]
+
+    def prompt(self, prompt_id: str, prompt_version: str, prompt_hash: str) -> None:
+        if self._dentro is None:
+            self._contador.anotar()
+            return
+        _a_salvo(
+            self._contador,
+            lambda: self._dentro.prompt(prompt_id, prompt_version, prompt_hash),  # type: ignore[union-attr]
+        )
 
 
 class _TrazaBlindada:

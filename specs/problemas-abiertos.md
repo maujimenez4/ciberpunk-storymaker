@@ -75,7 +75,15 @@ Cuatro cosas, comprobadas en `commons/observabilidad/`:
 
 Y el conjunto **nunca se ha ejercitado contra un Langfuse real**: la suite corre con dobles, por diseño (`CA-4`).
 
-**Quién:** 1–3, el plan del tramo 1, **antes de la corrida**; 4 lo decide `maujimenez4`. **Coste de dejarlo:** una corrida cuyas trazas no sirven para el *tuning*, y hay que repetirla.
+**1–3 cerrados el 2026-09-24 por el plan 8 T7**, cada uno con su test visto en rojo:
+
+1. `057eea4` — el criterio sube en el nombre: `juez_con_rubrica.<criterio>` (`test_langfuse.py`).
+2. `dced524` — `obtener_observador` es uno por proceso y el *lifespan* lo cierra con `flush`; con un `flush` que lanza, el apagado termina y el fallo se cuenta (`test_ciclo_de_vida.py`, `test_blindaje.py`).
+3. El commit de esta línea — `Span.prompt(id, version, hash)`, en metadatos del span, en los seis roles con modelo, con el hash de la plantilla que se envía (`test_observabilidad_del_ciclo.py`, `test_observabilidad_del_outline.py`; ablación hecha en el Escritor).
+
+**Lo que sigue abierto:** el 4 (D-5 del plan 8: fuera de esa fase) y que **nada de esto se ha visto contra un Langfuse real**: los tres cierres están probados contra un cliente falso que imita la forma del SDK v3 (`start_as_current_span`, `update`, `score`, `flush`). La primera corrida es la que lo confirma.
+
+**Quién:** 4 lo decide `maujimenez4`. **Coste de dejarlo:** una sesión sin la entrevista.
 
 ### P-18 · El coste imputado se queda corto cuando la caché acierta — **a medias**
 

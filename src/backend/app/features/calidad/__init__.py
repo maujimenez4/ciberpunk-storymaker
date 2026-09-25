@@ -16,6 +16,10 @@ prueba sin catalogo.
 """
 
 from app.features.calidad.agents import (
+    PROMPT_ID,
+    PROMPT_ID_CRITICO,
+    PROMPT_VERSION,
+    PROMPT_VERSION_CRITICO,
     CapituloAContrastar,
     CapituloAJuzgar,
     ConocimientoEnT,
@@ -30,10 +34,17 @@ from app.features.calidad.agents import (
     RevisionDeContinuidad,
     RubricaDiscordante,
     SalidaMalFormada,
+    # Plan 8 T7 (P-22.3): quien abre el span del Continuista y del Critico es
+    # `escritura`, y el span lleva la plantilla que se envio. Salen funciones y
+    # no hashes ya calculados porque las plantillas se leen al usarlas, nunca al
+    # importar (ver `_leer`).
+    hash_de_critico_v1,
+    hash_de_plantilla,
     # Plan 8 T6: `escritura` cuenta el prompt del Critico para pedirle turno al
     # portero cuando lo lanza en paralelo. Contar otra cosa que lo que se envia
     # seria reservar de menos.
     plantilla_critico_v1,
+    plantilla_v2,
     render_critico,
 )
 from app.features.calidad.cobertura import (
@@ -116,6 +127,10 @@ __all__ = [
     "CODIGO_DE_ELEMENTO_AUSENTE",
     "CODIGO_DE_PALABRA_PROHIBIDA",
     "NOMBRE_DEL_JUEZ",
+    "PROMPT_ID",
+    "PROMPT_ID_CRITICO",
+    "PROMPT_VERSION",
+    "PROMPT_VERSION_CRITICO",
     "CapituloAContrastar",
     "CapituloAJuzgar",
     "CapituloAPolicy",
@@ -165,10 +180,13 @@ __all__ = [
     "discurso",
     "emitir",
     "extension_de_capitulo",
+    "hash_de_critico_v1",
+    "hash_de_plantilla",
     "hash_de_rubrica",
     "localizar_veto",
     "nombres_literales",
     "plantilla_critico_v1",
+    "plantilla_v2",
     "puntuaciones_de_g1a",
     "puntuaciones_de_g4",
     "puntuaciones_de_policy",

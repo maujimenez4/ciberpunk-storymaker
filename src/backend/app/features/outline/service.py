@@ -27,7 +27,13 @@ from app.commons.observabilidad import (
     Observador,
     ObservadorNulo,
 )
-from app.features.outline.agents import Arquitecto, OutlineGenerado
+from app.features.outline.agents import (
+    HASH_DE_PLANTILLA_V2,
+    PROMPT_ID,
+    PROMPT_VERSION,
+    Arquitecto,
+    OutlineGenerado,
+)
 from app.features.outline.modelos import VersionObra
 from app.features.outline.repository import (
     DatosDeObra,
@@ -243,8 +249,9 @@ async def planificar_obra(
     observador = observador if observador is not None else ObservadorNulo()
     async with (
         observador.traza(obra_id=obra_id, nombre="outline") as traza,
-        Observacion(traza=traza, cliente=cliente).span("arquitecto"),
+        Observacion(traza=traza, cliente=cliente).span("arquitecto") as span,
     ):
+        span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V2)
         outline = await arquitecto.planificar(obra.como_brief())
     biblia = _biblia_con_discurso(outline, obra)
     _comprobar_numeracion(outline)

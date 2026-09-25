@@ -24,7 +24,7 @@ from app.commons.observabilidad.trazas import Puntuacion, sesion_de
 
 
 class _SpanLangfuse:
-    """Un span del proveedor, con las cuatro operaciones del contrato."""
+    """Un span del proveedor, con las operaciones del contrato."""
 
     def __init__(self, interno: Any) -> None:
         self._interno = interno
@@ -65,6 +65,19 @@ class _SpanLangfuse:
             name=nombre,
             value=puntuacion.valor,
             comment=puntuacion.justificacion,
+        )
+
+    def prompt(self, prompt_id: str, prompt_version: str, prompt_hash: str) -> None:
+        # Como metadatos del span y no con el objeto `prompt` del SDK: ese exige
+        # que la plantilla este registrada en el gestor de prompts de Langfuse, y
+        # aqui la plantilla vive versionada en el repositorio (`CLAUDE.md` §10).
+        # Los nombres son los de la fila de `ejecucion`, para cruzar sin traducir.
+        self._interno.update(
+            metadata={
+                "prompt_id": prompt_id,
+                "prompt_version": prompt_version,
+                "prompt_hash": prompt_hash,
+            }
         )
 
 

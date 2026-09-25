@@ -39,6 +39,10 @@ from app.commons.domain.errores import ContextBudgetExceeded, TiempoAgotado
 from app.commons.jobs.turnos import SOBRECARGA_POR_LLAMADA, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
 from app.commons.observabilidad import Observacion
+
+# Plan 8 T7 (P-22.3): la plantilla de cada juez va a su span como
+# `calidad.PROMPT_ID...`: `PROMPT_ID` a secas ya es el del Escritor aqui.
+from app.features import calidad
 from app.features.calidad import (
     CODIGO_DE_PALABRA_PROHIBIDA,
     CapituloAContrastar,
@@ -316,6 +320,9 @@ async def _juzgar(
     if critico is None:
         return None
     async with observacion.span("critico") as span:
+        span.prompt(
+            calidad.PROMPT_ID_CRITICO, calidad.PROMPT_VERSION_CRITICO, calidad.hash_de_critico_v1()
+        )
         try:
             juicio = await critico.juzgar(
                 CapituloAJuzgar(
@@ -477,7 +484,8 @@ async def escribir_capitulo(
                 .values(tokens_previstos=contexto.paquete.tokens_previstos + extra)
             )
 
-        async with observacion.span("escritor"):
+        async with observacion.span("escritor") as span:
+            span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V1)
             texto = await escritor.escribir(
                 contexto.paquete,
                 restricciones,
@@ -522,7 +530,14 @@ async def escribir_capitulo(
                 pila, presupuesto, critico, contador, str(version.id), texto, observacion
             )
             if continuista is not None:
-                async with observacion.span("continuista"):
+                async with observacion.span("continuista") as span:
+                    # La v2: es la que el Continuista usa si no se le da otra, y
+                    # el ciclo no se la da (plan 8 T7).
+                    span.prompt(
+                        calidad.PROMPT_ID,
+                        calidad.PROMPT_VERSION,
+                        calidad.hash_de_plantilla(calidad.plantilla_v2()),
+                    )
                     revision = await continuista.revisar(
                         CapituloAContrastar(
                             version_texto_id=str(version.id),

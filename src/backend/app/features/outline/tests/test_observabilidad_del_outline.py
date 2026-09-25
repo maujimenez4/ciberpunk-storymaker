@@ -17,6 +17,7 @@ from app.commons.observabilidad import (
     sesion_de,
 )
 from app.features.escritura.tests.test_ciclo import _respuestas
+from app.features.escritura.tests.test_observabilidad_del_ciclo import prompt_del_fichero
 from app.features.outline.agents import Arquitecto
 from app.features.outline.service import planificar_obra
 
@@ -38,6 +39,9 @@ async def test_el_outline_por_http_deja_su_traza_con_el_prompt_del_arquitecto(
     assert span.nombre == "arquitecto"
     assert "# Arquitecto" in span.entradas[0]
     assert '"capitulos"' in span.salidas[0]
+    # P-22.3 (plan 8 T7): la plantilla que produjo el outline, sacada del
+    # fichero y no de la constante del agente.
+    assert span.prompts == [prompt_del_fichero("outline", "arquitecto.v2.md")]
 
 
 async def test_una_obra_que_no_existe_no_abre_traza(

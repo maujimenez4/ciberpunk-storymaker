@@ -8,6 +8,7 @@ distintos —uno del agente, otro de la obra— que merecen dos errores distinto
 
 import json
 from collections.abc import Mapping
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,11 @@ from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.outline.schemas import CapituloDelOutline
 
 PLANTILLA_V2 = (Path(__file__).parent / "prompts" / "arquitecto.v2.md").read_text(encoding="utf-8")
+PROMPT_ID = "arquitecto"
+PROMPT_VERSION = "v2"
+HASH_DE_PLANTILLA_V2 = sha256(PLANTILLA_V2.encode("utf-8")).hexdigest()
+"""Lo que ata el span `arquitecto` a la plantilla que de verdad se envio (plan 8
+T7, P-22.3). Una version nueva es un fichero nuevo con su hash (`CLAUDE.md` §10)."""
 MARCA_DE_REPARACION = "## Tu salida anterior no validó"
 _MARCA = "brief"
 

@@ -53,6 +53,10 @@ from app.commons.domain.errores import ContextBudgetExceeded, ErrorDeDominio, Re
 from app.commons.jobs.turnos import CerrojoDeEscena, PresupuestoConcurrente
 from app.commons.llm.contador import ContadorDeTokens
 from app.commons.observabilidad import ClienteObservado, Observacion, Observador, ObservadorNulo
+
+# Plan 8 T7 (P-22.3): la plantilla de cada rol va a su span como
+# `escena.PROMPT_ID...` y `canon.PROMPT_ID...`: los dos exportan los mismos nombres.
+from app.features import canon, escena
 from app.features.calidad import (
     ConocimientoEnT,
     Continuista,
@@ -376,7 +380,8 @@ async def _ciclo_observado(
         )
 
     await avanzar(sesion, trabajo, Senal.APROBADA)
-    async with observacion.span("extractor"):
+    async with observacion.span("extractor") as span:
+        span.prompt(canon.PROMPT_ID, canon.PROMPT_VERSION, canon.HASH_DE_PLANTILLA_V1)
         extraccion = await agentes.extractor.extraer(escritura.texto)
     consolidacion = await consolidar_escena(
         sesion,
@@ -429,7 +434,8 @@ async def _planificar_y_ensamblar(
     """
     capitulo = await _capitulo(sesion, capitulo_id)
     if await _ficha_del_capitulo(sesion, capitulo_id) is None:
-        async with observacion.span("planificador"):
+        async with observacion.span("planificador") as span:
+            span.prompt(escena.PROMPT_ID, escena.PROMPT_VERSION, escena.HASH_DE_PLANTILLA_V1)
             await _planificar(sesion, planificador, capitulo)
 
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)

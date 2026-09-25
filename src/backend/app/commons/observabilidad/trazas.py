@@ -69,6 +69,12 @@ class Span(Protocol):
 
     def puntuar(self, puntuacion: Puntuacion) -> None: ...
 
+    def prompt(self, prompt_id: str, prompt_version: str, prompt_hash: str) -> None:
+        """La plantilla que produjo el prompt de este span (P-22.3): los mismos
+        tres campos que la fila de `ejecucion` (regla de dominio 7), para que
+        el *tuning* diga **que version produjo que resultado**."""
+        ...
+
 
 class Traza(Protocol):
     """Una unidad de trabajo dentro de la sesion de una novela."""

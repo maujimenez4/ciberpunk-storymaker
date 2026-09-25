@@ -135,3 +135,24 @@ def test_cerrar_sin_haber_abierto_no_construye_el_cliente(monkeypatch: pytest.Mo
     )
 
     observador.cerrar()
+
+
+# --- P-22.3: la plantilla que produjo el prompt ---------------------------------
+
+
+async def test_el_prompt_versionado_sube_como_metadatos_del_span() -> None:
+    """Tres campos y con estos nombres, los mismos de la fila de `ejecucion`:
+    es lo que permite filtrar en el panel por version de plantilla y cruzar
+    con la base propia sin traducir."""
+    langfuse = LangfuseFalso()
+    observador = _observador(langfuse)
+
+    async with (
+        observador.traza(obra_id=1, nombre="capitulo 1") as traza,
+        traza.span("escritor") as span,
+    ):
+        span.prompt("escritor", "v1", "a" * 64)
+
+    assert langfuse.trazas[0].hijos[0].actualizaciones == [
+        {"metadata": {"prompt_id": "escritor", "prompt_version": "v1", "prompt_hash": "a" * 64}}
+    ]

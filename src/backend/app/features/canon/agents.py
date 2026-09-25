@@ -19,6 +19,7 @@ los dos roles cuya entrada no controla el sistema.
 """
 
 import json
+from hashlib import sha256
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -32,6 +33,13 @@ _PROMPTS = Path(__file__).parent / "prompts"
 
 PLANTILLA_V1 = (_PROMPTS / "extractor.v1.md").read_text(encoding="utf-8")
 PLANTILLA_BRIEF_V1 = (_PROMPTS / "extractor-brief.v1.md").read_text(encoding="utf-8")
+
+PROMPT_ID = "extractor"
+PROMPT_VERSION = "v1"
+HASH_DE_PLANTILLA_V1 = sha256(PLANTILLA_V1.encode("utf-8")).hexdigest()
+"""La plantilla **de la escena**, que es la que corre en el ciclo del capitulo
+y la que lleva span (plan 8 T7, P-22.3). La del brief corre al cerrar la
+entrevista, sin obra y sin sesion todavia (D-5), y por eso no tiene constante."""
 
 MARCA_PROSA = "prosa"
 MARCA_TEXTO_APORTADO = "texto_aportado"

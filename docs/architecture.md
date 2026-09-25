@@ -1020,6 +1020,14 @@ aviso sale ahí— y lo **cierra al apagar** con un `flush`, para que los últim
 El cierre va por el blindaje: con Langfuse caído al apagar, el proceso se para igual y el fallo se
 cuenta.
 
+**La plantilla va en el span de cada rol con modelo** —`arquitecto`, `planificador`, `escritor`,
+`continuista`, `critico`, `extractor`—, como metadatos `prompt_id`, `prompt_version` y
+`prompt_hash`: los mismos tres campos que la fila de `ejecucion`, y el hash es el de la plantilla
+que de verdad se envió (la v2 en el Continuista). **No** usa el gestor de prompts de Langfuse: la
+plantilla vive versionada en el repositorio (`CLAUDE.md` §10), y lo que sube es con cuál se hizo
+cada llamada. Así que la fila «Plantilla de prompt» de §9.2 se cumple por referencia, no subiendo
+el texto de la plantilla con sus huecos.
+
 | Unidad de trabajo | Traza | Spans, en orden | *Scores* |
 | --- | --- | --- | --- |
 | El ciclo de un capítulo (`POST /capitulos/{id}/escribir` y cada vuelta de `POST /obras/{id}/novela`) | `capitulo N · <run_id>` | `planificador` —solo si se planifica—, `ensamblador` —con el desglose por capa como salida—, y por cada intento `escritor`, `policy`, `continuista`, `puerta_g1a`, `critico`; al integrar, `extractor` | En `policy`: `palabras_vetadas`. En `puerta_g1a`: uno por validador que corrió, `continuidad_y_canon` incluido. En `critico`: `juez_con_rubrica`, uno por criterio con su justificación, que sube como `juez_con_rubrica.<criterio>` para que cada criterio sea su propia serie en el panel |

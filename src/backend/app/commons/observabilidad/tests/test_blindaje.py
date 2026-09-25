@@ -36,11 +36,11 @@ class ObservadorQueSiempreLanza:
 
 
 async def test_un_observador_que_revienta_no_rompe_la_generacion() -> None:
-    """Las cuatro operaciones fallan y **ninguna sale del blindaje**.
+    """Las operaciones fallan y **ninguna sale del blindaje**.
 
-    Cuatro fallos: abrir la traza, abrir el span, `salida` y `puntuar`. Se
-    cuentan uno a uno en vez de marcar «hubo un fallo» porque la tasa es lo que
-    dice si el observador esta medio caido o del todo.
+    Cinco fallos: abrir la traza, abrir el span, `salida`, `puntuar` y `prompt`.
+    Se cuentan uno a uno en vez de marcar «hubo un fallo» porque la tasa es lo
+    que dice si el observador esta medio caido o del todo.
     """
     observador = blindar(ObservadorQueSiempreLanza())
 
@@ -50,8 +50,9 @@ async def test_un_observador_que_revienta_no_rompe_la_generacion() -> None:
     ):
         span.salida("texto")
         span.puntuar(Puntuacion(nombre="extension_de_capitulo", valor=1.0))
+        span.prompt("escritor", "v1", "a" * 64)
 
-    assert observador.fallos == 4
+    assert observador.fallos == 5
 
 
 async def test_un_observador_sano_no_cuenta_fallos_y_deja_pasar_todo() -> None:
@@ -72,9 +73,11 @@ async def test_un_observador_sano_no_cuenta_fallos_y_deja_pasar_todo() -> None:
             coste_usd=Decimal("0.001"),
         )
         span.puntuar(Puntuacion(nombre="extension_de_capitulo", valor=1.0))
+        span.prompt("escritor", "v1", "a" * 64)
 
     assert observador.fallos == 0
     (registro,) = dentro.trazas
+    assert registro.spans[0].prompts == [("escritor", "v1", "a" * 64)]
     assert registro.sesion_id == "obra-3"
     assert registro.spans[0].salidas == ["la prosa"]
     assert registro.spans[0].puntuaciones[0].nombre == "extension_de_capitulo"

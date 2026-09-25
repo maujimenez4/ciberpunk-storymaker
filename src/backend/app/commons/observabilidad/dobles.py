@@ -26,6 +26,9 @@ class SpanEnMemoria:
     salidas: list[str] = field(default_factory=list)
     consumos: list[dict[str, Any]] = field(default_factory=list)
     puntuaciones: list[Puntuacion] = field(default_factory=list)
+    prompts: list[tuple[str, str, str]] = field(default_factory=list)
+    """`(id, version, hash)` de cada `prompt(...)`. Lista y no campo unico para
+    que un span que lo recibiera dos veces se vea, en vez de pisarse."""
 
     def entrada(self, texto: str) -> None:
         self.entradas.append(texto)
@@ -52,6 +55,9 @@ class SpanEnMemoria:
 
     def puntuar(self, puntuacion: Puntuacion) -> None:
         self.puntuaciones.append(puntuacion)
+
+    def prompt(self, prompt_id: str, prompt_version: str, prompt_hash: str) -> None:
+        self.prompts.append((prompt_id, prompt_version, prompt_hash))
 
 
 @dataclass
@@ -92,7 +98,7 @@ class ObservadorEnMemoria:
 
 
 class _SpanNulo:
-    """Recibe y olvida. Las cuatro operaciones del contrato, sin efecto."""
+    """Recibe y olvida. Las operaciones del contrato, sin efecto."""
 
     def entrada(self, texto: str) -> None: ...
 
@@ -108,6 +114,8 @@ class _SpanNulo:
     ) -> None: ...
 
     def puntuar(self, puntuacion: Puntuacion) -> None: ...
+
+    def prompt(self, prompt_id: str, prompt_version: str, prompt_hash: str) -> None: ...
 
 
 class _TrazaNula:

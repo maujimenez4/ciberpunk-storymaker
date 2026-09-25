@@ -36,7 +36,13 @@ fichero interno de otra feature, que es lo que §5.1 prohibe de verdad.
 
 """
 
-from app.features.canon.agents import Extractor, SalidaMalFormada
+from app.features.canon.agents import (
+    HASH_DE_PLANTILLA_V1,
+    PROMPT_ID,
+    PROMPT_VERSION,
+    Extractor,
+    SalidaMalFormada,
+)
 from app.features.canon.modelos import Embedding
 from app.features.canon.repository import (
     declarar_variantes,
@@ -58,6 +64,9 @@ from app.features.canon.service import (
 from app.features.canon.vectorizacion import vectorizador_de
 
 __all__ = [
+    "HASH_DE_PLANTILLA_V1",
+    "PROMPT_ID",
+    "PROMPT_VERSION",
     "Consolidacion",
     "Embedding",
     "Extraccion",

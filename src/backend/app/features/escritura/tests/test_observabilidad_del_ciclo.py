@@ -15,6 +15,8 @@ Sin red y sin modelo (`CA-4`): el cliente es `DobleDeterminista` y el
 observador, `ObservadorEnMemoria`.
 """
 
+from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -87,6 +89,29 @@ def _span(traza: TrazaEnMemoria, nombre: str) -> Any:
     return span
 
 
+_FEATURES = Path(__file__).resolve().parents[2]
+
+
+def prompt_del_fichero(feature: str, fichero: str) -> tuple[str, str, str]:
+    """`(id, version, hash)` sacado **del fichero de la plantilla**, no de las
+    constantes del agente: si una constante apunta a otra version que la que
+    se envia, este test lo ve. El hash es el de `read_text`, que es lo que los
+    agentes cargan y mandan."""
+    rol, version, _ = fichero.split(".")
+    texto = (_FEATURES / feature / "prompts" / fichero).read_text(encoding="utf-8")
+    return rol, version, sha256(texto.encode("utf-8")).hexdigest()
+
+
+PROMPTS_DE_LOS_ROLES_CON_MODELO = {
+    "planificador": prompt_del_fichero("escena", "planificador.v1.md"),
+    "escritor": prompt_del_fichero("escritura", "escritor.v1.md"),
+    "continuista": prompt_del_fichero("calidad", "continuista.v2.md"),
+    "critico": prompt_del_fichero("calidad", "critico.v1.md"),
+    "extractor": prompt_del_fichero("canon", "extractor.v1.md"),
+}
+"""Plan 8 T7, P-22.3. La v2 del Continuista porque es la que corre en el ciclo."""
+
+
 # --- Una traza por capitulo, en la sesion de la obra --------------------------
 
 
@@ -141,6 +166,34 @@ async def test_el_span_de_cada_rol_lleva_su_prompt_y_su_salida(sesion, obra_list
         assert span.entradas, rol
         assert marca in span.entradas[0], rol
         assert span.salidas, rol
+
+
+async def test_cada_span_de_rol_con_modelo_lleva_su_prompt_versionado(sesion, obra_lista):  # noqa: F811
+    """P-22.3. Sin `(id, version, hash)` en el span, el panel muestra el prompt
+    renderizado pero no **que plantilla** lo produjo, y comparar dos versiones
+    en el *tuning* obliga a adivinarlo por el texto. El Ensamblador, la policy y
+    la puerta no llevan: son codigo, no plantilla."""
+    observador = ObservadorEnMemoria()
+
+    await _ciclo(sesion, obra_lista.capitulos[1].id, observador)
+
+    traza = observador.trazas[0]
+    for rol, esperado in PROMPTS_DE_LOS_ROLES_CON_MODELO.items():
+        assert _span(traza, rol).prompts == [esperado], rol
+    for rol in ("ensamblador", "policy", "puerta_g1a"):
+        assert _span(traza, rol).prompts == [], rol
+
+
+async def test_cada_vuelta_del_escritor_lleva_su_prompt_versionado(sesion, obra_lista):  # noqa: F811
+    """Las reparaciones tambien: son la misma plantilla, y un intento sin prompt
+    en el panel no se puede atribuir a ninguna version."""
+    observador = ObservadorEnMemoria()
+
+    await _ciclo(sesion, obra_lista.capitulos[0].id, observador, prosa=PROSA_CORTA)
+
+    escritores = [s for s in observador.trazas[0].spans if s.nombre == "escritor"]
+    assert len(escritores) == 3
+    assert all(s.prompts == [PROMPTS_DE_LOS_ROLES_CON_MODELO["escritor"]] for s in escritores)
 
 
 async def test_el_ensamblador_deja_el_desglose_por_capa(sesion, obra_lista):  # noqa: F811
