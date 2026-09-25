@@ -292,7 +292,7 @@ async def test_el_peor_juicio_posible_no_bloquea_el_capitulo(sesion, obra_con_ou
     from app.features.escritura.service import escribir_capitulo
 
     respuestas = {
-        "ESCRITOR · v1": PROSA,
+        "ESCRITOR · v2": PROSA,
         "# Continuista": '{"defectos": []}',
         "# Crítico": _juicio_pesimo(),
     }

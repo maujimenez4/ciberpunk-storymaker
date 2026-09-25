@@ -399,7 +399,7 @@ async def test_la_ejecucion_nace_con_el_recuento_previo_y_se_completa(sesion, ob
     assert fila.coste == pytest.approx(0.0015)
     assert fila.veredicto == "aprobada"
     assert fila.prompt_id == "escritor"
-    assert fila.prompt_version == "v1"
+    assert fila.prompt_version == "v2"
     assert escritura.aprobado
 
 

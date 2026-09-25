@@ -78,8 +78,8 @@ NOMBRE_DEL_CONTINUISTA = "continuidad_y_canon"
 from app.features.contexto import Capa, ContextoDelCapitulo, DatosDeLlamada, registrar_ejecucion
 from app.features.escena import RestriccionesDeDiscurso
 from app.features.escritura.agents import (
-    HASH_DE_PLANTILLA_V1,
-    PLANTILLA_V1,
+    HASH_DE_PLANTILLA_V2,
+    PLANTILLA_V2,
     PROMPT_ID,
     PROMPT_VERSION,
     Escritor,
@@ -295,10 +295,10 @@ def _coste_de_la_reparacion(
     if not reparaciones:
         return 0
 
-    base = contador.contar(render_escritor(PLANTILLA_V1, contexto.paquete.texto, restricciones))
+    base = contador.contar(render_escritor(PLANTILLA_V2, contexto.paquete.texto, restricciones))
     entero = contador.contar(
         render_escritor(
-            PLANTILLA_V1,
+            PLANTILLA_V2,
             contexto.paquete.texto,
             restricciones,
             texto_anterior=texto_anterior,
@@ -478,7 +478,7 @@ async def escribir_capitulo(
                 run_id=run_id,
                 prompt_id=PROMPT_ID,
                 prompt_version=PROMPT_VERSION,
-                prompt_hash=HASH_DE_PLANTILLA_V1,
+                prompt_hash=HASH_DE_PLANTILLA_V2,
                 modelo=modelo,
                 semilla=semilla,
             ),
@@ -494,7 +494,7 @@ async def escribir_capitulo(
             )
 
         async with observacion.span("escritor") as span:
-            span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V1)
+            span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V2)
             texto = await escritor.escribir(
                 contexto.paquete,
                 restricciones,

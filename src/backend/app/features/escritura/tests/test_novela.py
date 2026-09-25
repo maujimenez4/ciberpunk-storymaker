@@ -158,7 +158,7 @@ def _respuestas(prosa: str = PROSA_BUENA) -> dict[str, str]:
         "# Arquitecto": json.dumps({"biblia": BIBLIA, "capitulos": _capitulos_del_outline()}),
         "PLANIFICADOR DE ESCENA": FICHA,
         "# Extractor · v1": EXTRACCION,
-        "ESCRITOR · v1": prosa,
+        "ESCRITOR · v2": prosa,
         # P-17: el Continuista **corre de verdad** desde que `Agentes` lo lleva.
         # Sin esta clave el doble lanza `RespuestaNoPreparada`, y eso es una
         # buena noticia: significa que el rol dejo de estar escrito y sin llamar.

@@ -33,11 +33,11 @@ from app.features.calidad import Defecto
 from app.features.contexto import Paquete
 from app.features.escena import RestriccionesDeDiscurso
 
-PLANTILLA_V1 = (Path(__file__).parent / "prompts" / "escritor.v1.md").read_text(encoding="utf-8")
+PLANTILLA_V2 = (Path(__file__).parent / "prompts" / "escritor.v2.md").read_text(encoding="utf-8")
 
 PROMPT_ID = "escritor"
-PROMPT_VERSION = "v1"
-HASH_DE_PLANTILLA_V1 = sha256(PLANTILLA_V1.encode("utf-8")).hexdigest()
+PROMPT_VERSION = "v2"
+HASH_DE_PLANTILLA_V2 = sha256(PLANTILLA_V2.encode("utf-8")).hexdigest()
 """Lo que ata la fila de `ejecucion` al fichero sin duplicarlo en cada llamada
 (regla de dominio 7). La plantilla **no se edita en sitio**: una version nueva
 es `escritor.v2.md` con su propio hash (`CLAUDE.md` §10)."""
@@ -97,7 +97,25 @@ class Reparacion:
         El desplazamiento va escrito y no solo la cita porque una cita que
         aparece dos veces en el capitulo senala un pasaje, no dos: es la misma
         razon por la que la comprobacion de forma lo exige (regla de dominio 8).
+
+        **EST-02 (extension) es la excepcion:** su pasaje es el capitulo entero,
+        y citarlo lo repetia dos veces en el prompt junto a la orden de «dejar
+        intacto todo lo demas», que es lo contrario de lo que hace falta. En la
+        primera corrida real el reintento paso de 812 a 141 palabras.
         """
+        if self.codigo == "EST-02":
+            palabras = len(self.cita.split())
+            return (
+                f"- **EST-02** · **extensión fuera de rango**: el capítulo tiene **{palabras} "
+                "palabras** y debe tener **entre 1.000 y 1.500** (unas 1.200). "
+                + (
+                    f"Te faltan unas {1200 - palabras}: amplía la escena dramatizando más "
+                    "—diálogo, gesto, lugar, lo que el punto de vista piensa y no dice— sin "
+                    "cambiar lo que ocurre ni añadir hechos nuevos."
+                    if palabras < 1000
+                    else "Recórtala sin perder lo que ocurre."
+                )
+            )
         linea = (
             f"- **{self.codigo}** · caracteres {self.desplazamiento_inicio}"
             f"–{self.desplazamiento_fin} · pasaje: «{self.cita}»"
@@ -202,7 +220,7 @@ class Escritor:
         debe juzgarse a si mismo (`CLAUDE.md` §9.1).
         """
         prompt = render_escritor(
-            PLANTILLA_V1,
+            PLANTILLA_V2,
             paquete.texto,
             restricciones,
             texto_anterior=texto_anterior,

@@ -139,7 +139,7 @@ async def _escribir(
 ) -> Escritura:
     return await escribir_capitulo(
         sesion,
-        Escritor(DobleDeterminista({"ESCRITOR · v1": PROSA})),
+        Escritor(DobleDeterminista({"ESCRITOR · v2": PROSA})),
         contexto=contexto,
         contador=_ContadorDePalabras(),
         run_id="run-t6",

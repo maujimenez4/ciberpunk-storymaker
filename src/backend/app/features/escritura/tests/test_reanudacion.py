@@ -139,7 +139,7 @@ def _agentes() -> Agentes:
             "# Arquitecto": json.dumps({"biblia": BIBLIA, "capitulos": _capitulos_del_outline()}),
             "PLANIFICADOR DE ESCENA": json.dumps(FICHA_DICT),
             "# Extractor · v1": EXTRACCION,
-            "ESCRITOR · v1": PROSA_BUENA,
+            "ESCRITOR · v2": PROSA_BUENA,
         }
     )
     return Agentes(

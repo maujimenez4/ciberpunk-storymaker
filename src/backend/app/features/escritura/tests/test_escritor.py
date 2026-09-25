@@ -21,10 +21,10 @@ import pytest
 from app.commons.llm.doble import DobleDeterminista
 from app.features.escena import RestriccionesDeDiscurso
 from app.features.escritura.agents import (
-    HASH_DE_PLANTILLA_V1,
+    HASH_DE_PLANTILLA_V2,
     MARCA_DE_PLANTILLA,
     MARCA_DE_REPARACION,
-    PLANTILLA_V1,
+    PLANTILLA_V2,
     PROMPT_ID,
     PROMPT_VERSION,
     Escritor,
@@ -147,7 +147,7 @@ def test_la_plantilla_repite_las_restricciones_duras_al_principio_y_al_final():
     modelo lee son los valores, y un marcador repetido que se sustituyera una
     sola vez dejaria la restriccion dicha una vez.
     """
-    prompt = render_escritor(PLANTILLA_V1, "el paquete", RESTRICCIONES)
+    prompt = render_escritor(PLANTILLA_V2, "el paquete", RESTRICCIONES)
     mitad = len(prompt) // 2
 
     duras = (
@@ -163,20 +163,20 @@ def test_la_plantilla_repite_las_restricciones_duras_al_principio_y_al_final():
 def test_la_plantilla_declara_rol_formato_de_salida_y_que_no_hacer():
     """`CLAUDE.md` §10, los cuatro apartados obligatorios de todo prompt."""
     for apartado in ("Rol", "Restricciones duras", "Formato de salida", "Qué NO debes hacer"):
-        assert apartado in PLANTILLA_V1
+        assert apartado in PLANTILLA_V2
 
 
 def test_la_plantilla_se_identifica_con_su_version_y_su_hash():
     """Regla de dominio 7: `ejecucion` ata la fila al fichero por el hash."""
     assert PROMPT_ID == "escritor"
-    assert PROMPT_VERSION == "v1"
-    assert len(HASH_DE_PLANTILLA_V1) == 64
-    assert HASH_DE_PLANTILLA_V1 != "0" * 64
+    assert PROMPT_VERSION == "v2"
+    assert len(HASH_DE_PLANTILLA_V2) == 64
+    assert HASH_DE_PLANTILLA_V2 != "0" * 64
 
 
 def test_el_paquete_entra_entero_en_el_prompt():
     """El Escritor no ve nada mas, asi que lo que no entre aqui no existe."""
-    prompt = render_escritor(PLANTILLA_V1, "## canon relevante\n\nNadia es botanica", RESTRICCIONES)
+    prompt = render_escritor(PLANTILLA_V2, "## canon relevante\n\nNadia es botanica", RESTRICCIONES)
     assert "Nadia es botanica" in prompt
 
 
@@ -188,14 +188,14 @@ def test_el_paquete_entra_entero_en_el_prompt():
 def test_el_primer_prompt_no_lleva_seccion_de_reparacion():
     """El contraste del test siguiente: sin el, «lleva el defecto» pasaria
     igual con una plantilla que hablara de reparacion siempre."""
-    prompt = render_escritor(PLANTILLA_V1, "el paquete", RESTRICCIONES)
+    prompt = render_escritor(PLANTILLA_V2, "el paquete", RESTRICCIONES)
     assert MARCA_DE_REPARACION not in prompt
 
 
 def test_el_reintento_lleva_el_defecto_concreto_con_su_cita():
     """RF-ESC-03. **Nunca un reintento generico** (`CLAUDE.md` §15)."""
     prompt = render_escritor(
-        PLANTILLA_V1,
+        PLANTILLA_V2,
         "el paquete",
         RESTRICCIONES,
         texto_anterior=PROSA,
@@ -217,7 +217,7 @@ def test_el_reintento_por_veto_nombra_el_termino_concreto():
     de nada.
     """
     prompt = render_escritor(
-        PLANTILLA_V1,
+        PLANTILLA_V2,
         "el paquete",
         RESTRICCIONES,
         texto_anterior="Habia sangre en el suelo.",
@@ -243,7 +243,7 @@ def test_una_reparacion_sin_defectos_no_existe():
     reparacion. Un reintento generico no es una opcion que este apagada: es una
     que no se puede construir.
     """
-    prompt = render_escritor(PLANTILLA_V1, "el paquete", RESTRICCIONES, texto_anterior=PROSA)
+    prompt = render_escritor(PLANTILLA_V2, "el paquete", RESTRICCIONES, texto_anterior=PROSA)
     assert MARCA_DE_REPARACION not in prompt
 
 

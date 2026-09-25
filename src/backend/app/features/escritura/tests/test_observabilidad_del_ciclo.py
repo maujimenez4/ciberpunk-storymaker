@@ -104,7 +104,7 @@ def prompt_del_fichero(feature: str, fichero: str) -> tuple[str, str, str]:
 
 PROMPTS_DE_LOS_ROLES_CON_MODELO = {
     "planificador": prompt_del_fichero("escena", "planificador.v1.md"),
-    "escritor": prompt_del_fichero("escritura", "escritor.v1.md"),
+    "escritor": prompt_del_fichero("escritura", "escritor.v2.md"),
     "continuista": prompt_del_fichero("calidad", "continuista.v2.md"),
     "critico": prompt_del_fichero("calidad", "critico.v1.md"),
     "extractor": prompt_del_fichero("canon", "extractor.v1.md"),
@@ -154,7 +154,7 @@ async def test_el_span_de_cada_rol_lleva_su_prompt_y_su_salida(sesion, obra_list
     traza = observador.trazas[0]
     escritor = _span(traza, "escritor")
     assert len(escritor.entradas) == 1
-    assert "ESCRITOR · v1" in escritor.entradas[0]
+    assert "ESCRITOR · v2" in escritor.entradas[0]
     assert escritor.salidas == [PROSA_BUENA]
     for rol, marca in (
         ("planificador", "PLANIFICADOR DE ESCENA"),
@@ -338,7 +338,7 @@ async def test_escribir_por_http_deja_la_traza_del_capitulo_con_sus_prompts(
     [traza] = [t for t in observador.trazas if t.nombre.startswith("capitulo")]
     assert traza.sesion_id == sesion_de(obra.id)
     escritor = _span(traza, "escritor")
-    assert "ESCRITOR · v1" in escritor.entradas[0]
+    assert "ESCRITOR · v2" in escritor.entradas[0]
     assert {p.nombre for p in _span(traza, "critico").puntuaciones} == {"juez_con_rubrica"}
 
 

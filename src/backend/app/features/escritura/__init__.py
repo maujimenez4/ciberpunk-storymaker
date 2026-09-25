@@ -44,7 +44,7 @@ paquete recibido».
   `lectura` y `obtener_atencion`: **la peticion de cambio de punta a punta**
   (plan 5, T7-T8). Viven aqui y no en `manuscrito` porque componen el ciclo, y
   `manuscrito -> escritura` cerraria un ciclo entre features.
-- `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
+- `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V2`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
 Las tablas **no cruzan**: `VersionTexto`, `Ejecucion` y `Trabajo` se quedan
@@ -60,7 +60,7 @@ regla 8 describe. Los tres hicieron lo correcto dejandolo al integrador.
 """
 
 from app.features.escritura.agents import (
-    HASH_DE_PLANTILLA_V1,
+    HASH_DE_PLANTILLA_V2,
     PROMPT_ID,
     PROMPT_VERSION,
     Escritor,
@@ -166,7 +166,7 @@ __all__ = [
     "DETIENEN_LA_NOVELA",
     "ESTADOS_TERMINALES",
     "ESTADOS_VIVOS",
-    "HASH_DE_PLANTILLA_V1",
+    "HASH_DE_PLANTILLA_V2",
     "PREFIJO_DE_REGENERACION",
     "PROMPT_ID",
     "PROMPT_VERSION",
