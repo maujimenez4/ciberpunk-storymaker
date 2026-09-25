@@ -29,18 +29,6 @@ Con el brief de ejemplo el outline sale personalizado —el perro Luna, el veran
 
 **Quién:** plan nuevo del backend (tramo 1 de la hoja de ruta), con firma de `maujimenez4`.
 
-### P-20 · Una escalada no deja nada que revisar
-
-**Severidad: «revisión humana» es un estado al que se llega y del que no se sale.**
-
-En la corrida real el capítulo 1 escaló tras tres intentos, con **cero texto, cero filas de defecto** y tres ejecuciones `rechazada` sin código. No se distingue «el modelo escribió mal tres veces» de «un validador atascado rechaza siempre».
-
-Comprobado: `ciclo._retirar_lo_descartado` **borra** las `version_texto` del `run_id` al rechazar, y no existe tabla `defecto` (`Defecto` es un modelo de Pydantic sin persistencia). El `RELEVO.md` decía que el arreglo estaba «en curso»: **no ha entrado nada** en `git log` y el árbol está limpio salvo `src/frontend/.gitignore`.
-
-**Lo que complica:** el borrado existe por R-7 —que la prosa descartada no contamine el paquete del capítulo siguiente—. Conservarla exige que quede **fuera** de lo vigente, no que deje de borrarse. Y guardar defectos es esquema nuevo (`CLAUDE.md` §3 regla 7).
-
-**Quién:** el mismo plan que P-19.
-
 ---
 
 ## Falsean una medida
@@ -225,5 +213,6 @@ Sigue siendo cierto y `RELEVO.md` lo recoge como regla: **las junturas tienen du
 | **P-12** | `Senal` no tenía causa para «el proceso murió» | `2de6027` — `PROCESO_INTERRUMPIDO` |
 | **P-17** | El Continuista estaba construido y no lo llamaba nadie | `1899ccf`, `bab4dd7` |
 | **P-3** | Catorce endpoints en `CA-33` y había quince | `6248b53` — **reabierto** arriba con otra forma |
+| **P-20** | Una escalada no dejaba nada que revisar: la `version_texto` se borraba por R-7 y los defectos no tenían tabla | `d3b0d88`, `7e44901`, `cda23f1`, `c8ecb22` (plan 8 T4) — tabla `intento_descartado` con texto, código y cita, fuera de lo vigente; `GET /trabajos/{id}/intentos`; el escalado conserva el juicio; `causa_fallo` a `String(200)` |
 | **P-18**, primera mitad | Los tokens de caché se perdían | `1a265b2` — la imputación sigue abierta |
 | *(sin número)* | Formulario con otro contrato · `database is locked` en RI-02 · el frontend publicaba sin escribir · obra sin capítulos publicable · `openapi.json` sin `/publicar` · Arquitecto rechazado por `tipo_de_corte_final` | `e275c8e` · `596faba` · `d887bb0`, `0662fcb`, `a045100`, `38a260d` · `b0871ac` · `ee5a265` · `0513035` |
