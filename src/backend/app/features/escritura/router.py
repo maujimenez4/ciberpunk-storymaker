@@ -22,6 +22,8 @@ respuesta, asi que la sesion de la peticion ya no existe cuando la tarea corre.
 `obtener_sesion_de_fondo` es lo que hace esa fabrica sustituible en pruebas.
 """
 
+import asyncio
+import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
@@ -445,22 +447,55 @@ async def _correr_la_novela(
     Abre sesion propia por lo mismo que `_correr_el_ciclo`: desde FastAPI 0.106
     la de la peticion ya esta cerrada cuando la tarea corre. Y aqui pesa mas,
     porque esta tarea vive lo que tarden diez capitulos.
+
+    **Se reanuda sola ante un fallo transitorio**, hasta `_REANUDACIONES_AUTOMATICAS`
+    veces: un `database is locked` con varias obras a la vez, o una salida mal
+    formada de un agente que ya agoto su reintento. La novela ya sabe reanudarse
+    desde su checkpoint (CA-5); en la corrida real del 2026-09-24 cada uno de esos
+    fallos la dejaba parada con la pantalla diciendo «escribiendo». Una escalada
+    no es excepcion: detiene la novela a proposito y no se reintenta.
     """
-    async with fabrica() as sesion:
-        await escribir_novela(
-            sesion,
-            obra_id=obra_id,
-            ejecutar=ciclo_de_la_novela(
-                sesion,
-                agentes=agentes,
-                contador=contador,
-                presupuesto=presupuesto,
-                cerrojo=cerrojo,
-                modelo=modelo,
-                vectorizar=vectorizar,
-                observador=observador,
-            ),
-        )
+    for intento in range(_REANUDACIONES_AUTOMATICAS + 1):
+        try:
+            async with fabrica() as sesion:
+                await escribir_novela(
+                    sesion,
+                    obra_id=obra_id,
+                    ejecutar=ciclo_de_la_novela(
+                        sesion,
+                        agentes=agentes,
+                        contador=contador,
+                        presupuesto=presupuesto,
+                        cerrojo=cerrojo,
+                        modelo=modelo,
+                        vectorizar=vectorizar,
+                        observador=observador,
+                    ),
+                )
+            return
+        except Exception as error:
+            if intento == _REANUDACIONES_AUTOMATICAS or not _es_transitorio(error):
+                raise
+            _log.warning(
+                "obra %s: %s; se reanuda en %s s (intento %s de %s)",
+                obra_id,
+                type(error).__name__,
+                _ESPERA_ANTES_DE_REANUDAR,
+                intento + 1,
+                _REANUDACIONES_AUTOMATICAS,
+            )
+            await asyncio.sleep(_ESPERA_ANTES_DE_REANUDAR)
+
+
+_REANUDACIONES_AUTOMATICAS = 3
+_ESPERA_ANTES_DE_REANUDAR = 10
+_log = logging.getLogger(__name__)
+
+
+def _es_transitorio(error: BaseException) -> bool:
+    """Un cerrojo de SQLite o una salida mal formada de un agente: se reintenta."""
+    nombre = type(error).__name__
+    return ("database is locked" in str(error)) or nombre == "SalidaMalFormada"
 
 
 # --- La peticion de cambio (plan-5 T8, RI-09) -------------------------------
