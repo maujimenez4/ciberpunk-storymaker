@@ -20,7 +20,7 @@ agéntico que escribe novelas de regalo de diez capítulos, personalizadas y ver
 | `anexo-modelo-de-datos.pdf` | A4 · El modelo de datos en SQLite: la *story bible* |
 | `anexo-red-team.pdf` | A5 · Red-team: lo que rompió la corrida real y cómo se cerró |
 | `anexo-modelos-y-coste.pdf` | A6 · Modelos y coste medido en Langfuse, por rol |
-| Vídeo de demo, en Loom | [Ver el vídeo](https://www.loom.com/share/1df6cf16505d4c3dbfc48a39d6112a03) |
+| Vídeo de demo, en Loom | **Estado: PENDIENTE DE ENVÍO** |
 
 ## Estructura del deck
 
