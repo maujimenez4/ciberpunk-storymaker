@@ -622,7 +622,7 @@
      "lectura"
     ],
     "summary": "Pdf",
-    "description": "El regalo en un fichero, para imprimir o guardar.\n\n**Fuera del alcance de T9 por decision del 2026-09-24.** El enfoque\n-- imprimir desde el Chromium de Playwright, sin dependencia nueva -- esta\npendiente de aprobacion, y escribirlo antes seria escribir contra una\ndecision que puede cambiar. Sale como tarea propia cuando se apruebe.",
+    "description": "El regalo en un fichero, para imprimir o guardar (T10, `RI-11`).\n\n**Sale de la version publicada, nunca del texto vigente** (regla de dominio\n14): cada capitulo se lee con `texto_publicado`, lo mismo que la ruta del\ncapitulo. Y la dedicatoria va en la portada, no como capitulo (regla 15).\n\nRespuesta sincrona y no trabajo en segundo plano: el spike midio 1,2-2,4 s\npor novela, casi todo arranque del navegador.\n\nSi no hay navegador, **503 con motivo y no 500**. `ImpresoraNoDisponible`\nno es un error de dominio -- es una herramienta ausente -- y el manejador\ncentral de `commons/errors/` no la conoce; se traduce aqui, que es el unico\nsitio que la ve. **Ni el HTML ni la prosa se escriben en ningun log.**",
     "operationId": "pdf_lectura__token__pdf_get",
     "parameters": [
      {
@@ -637,16 +637,16 @@
     ],
     "responses": {
      "200": {
-      "description": "Successful Response",
+      "description": "La novela publicada, en PDF",
       "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Pdf Lectura  Token  Pdf Get"
-        }
-       }
+       "application/pdf": {}
       }
+     },
+     "404": {
+      "description": "No hay nada en este enlace."
+     },
+     "503": {
+      "description": "No hay navegador con el que imprimir"
      },
      "422": {
       "description": "Validation Error",

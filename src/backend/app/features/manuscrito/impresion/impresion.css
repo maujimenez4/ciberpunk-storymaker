@@ -1,0 +1,139 @@
+/*
+ * La hoja del PDF. Plan 4, Tarea 10.
+ *
+ * **Los cuatro tokens de color repiten los de la lectura**
+ * (`src/frontend/src/app/estilos.css`, tema Papel) a proposito: es la regla 4
+ * de `CLAUDE.md` §5.1, «se duplica primero», y `test_pdf.py` vigila que la
+ * copia no diverja. El codigo no lee el frontend; el test si.
+ *
+ * Nada se carga de fuera, ni hojas ni fuentes: el navegador que imprime no
+ * tiene red, y la prosa no puede salir de la maquina (`CLAUDE.md` §4.3). La
+ * tipografia es la serif del sistema; incrustar Literata era parte del plan y
+ * se dejo fuera por rapidez (ver el commit).
+ */
+
+:root {
+  --papel: #e6e0d2;
+  --tinta: #2a2a2e;
+  --acento: #243a5e;
+  --tinta-suave: #5f5a50;
+}
+
+@page {
+  size: A5;
+  margin: 18mm 16mm 20mm;
+}
+
+html {
+  font-family: "Spectral", "Literata", Georgia, "Times New Roman", serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: var(--tinta);
+  background: var(--papel);
+}
+
+body {
+  margin: 0;
+}
+
+p {
+  margin: 0 0 0.75em;
+  text-align: justify;
+  hyphens: auto;
+  orphans: 2;
+  widows: 2;
+}
+
+a {
+  color: var(--acento);
+  text-decoration: none;
+}
+
+/* --- Portada -------------------------------------------------------- */
+
+.portada {
+  break-after: page;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.portada__titulo {
+  font-size: 22pt;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--acento);
+  margin: 0 0 2em;
+}
+
+.dedicatoria {
+  font-style: italic;
+  color: var(--tinta-suave);
+  margin: 0 auto;
+  max-width: 80%;
+  text-align: center;
+  white-space: pre-line;
+}
+
+/* --- Novedades e indice ---------------------------------------------- */
+
+.novedades,
+.indice {
+  break-after: page;
+}
+
+.novedades h2,
+.indice h2 {
+  font-size: 14pt;
+  font-weight: 600;
+  color: var(--acento);
+  margin: 0 0 1em;
+}
+
+.novedades p {
+  color: var(--tinta-suave);
+  text-align: left;
+}
+
+.novedades ol,
+.indice ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.novedades li,
+.indice li {
+  margin: 0 0 0.5em;
+}
+
+.indice__numero {
+  color: var(--tinta-suave);
+  margin-right: 0.5em;
+}
+
+/* --- Capitulos -------------------------------------------------------- */
+
+.capitulo {
+  break-before: page;
+}
+
+.capitulo__titulo {
+  font-size: 15pt;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--acento);
+  margin: 2em 0 1.5em;
+}
+
+.capitulo__numero {
+  display: block;
+  font-size: 10pt;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+  margin-bottom: 0.4em;
+}

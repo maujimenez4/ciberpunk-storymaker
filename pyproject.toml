@@ -40,6 +40,13 @@ dependencies = [
   # Es decir: se declara porque la corrida real la necesita, no porque la
   # importacion del paquete dependa de ella.
   "langfuse>=3.0",
+  # La de la Tarea 10 del plan 4, **opcion A del spike**, firmada por
+  # `maujimenez4` el 2026-09-24: el PDF se imprime desde el Chromium de
+  # Playwright, sin red y con el HTML autocontenido. El navegador se instala
+  # aparte (`uv run playwright install chromium`, `CLAUDE.md` §14) y **ningun
+  # test lo necesita**: la impresora se inyecta y la suite usa un doble. Si no
+  # esta, la ruta responde 503 con motivo, igual que `sqlite-vec` se degrada.
+  "playwright>=1.63",
 ]
 
 [dependency-groups]
@@ -58,6 +65,9 @@ packages = ["src/backend/app"]
 [tool.pytest.ini_options]
 pythonpath = ["src/backend"]
 asyncio_mode = "auto"
+markers = [
+  "chromium: arranca el Chromium de Playwright; se salta si no esta instalado",
+]
 
 [tool.ruff]
 line-length = 100

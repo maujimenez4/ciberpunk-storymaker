@@ -23,12 +23,19 @@ cual en cada linea.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.sesion import obtener_sesion
 from app.commons.observabilidad import Observador, obtener_observador
 from app.features.manuscrito import modelos
+from app.features.manuscrito.pdf import (
+    Capitulo,
+    Impresora,
+    ImpresoraNoDisponible,
+    componer_html,
+    obtener_impresora,
+)
 from app.features.manuscrito.repository import (
     capitulos_de,
     dedicatoria_de,
@@ -181,17 +188,69 @@ async def versiones(token: str, sesion: Sesion) -> list[VersionPublicada]:
     ]
 
 
-@router.get("/{token}/pdf")
-async def pdf(token: str, sesion: Sesion) -> dict[str, object]:
-    """El regalo en un fichero, para imprimir o guardar.
+@router.get(
+    "/{token}/pdf",
+    response_class=Response,
+    responses={
+        200: {"content": {"application/pdf": {}}, "description": "La novela publicada, en PDF"},
+        404: {"description": NO_ENCONTRADO},
+        503: {"description": "No hay navegador con el que imprimir"},
+    },
+)
+async def pdf(
+    token: str,
+    sesion: Sesion,
+    impresora: Annotated[Impresora, Depends(obtener_impresora)],
+) -> Response:
+    """El regalo en un fichero, para imprimir o guardar (T10, `RI-11`).
 
-    **Fuera del alcance de T9 por decision del 2026-09-24.** El enfoque
-    -- imprimir desde el Chromium de Playwright, sin dependencia nueva -- esta
-    pendiente de aprobacion, y escribirlo antes seria escribir contra una
-    decision que puede cambiar. Sale como tarea propia cuando se apruebe.
+    **Sale de la version publicada, nunca del texto vigente** (regla de dominio
+    14): cada capitulo se lee con `texto_publicado`, lo mismo que la ruta del
+    capitulo. Y la dedicatoria va en la portada, no como capitulo (regla 15).
+
+    Respuesta sincrona y no trabajo en segundo plano: el spike midio 1,2-2,4 s
+    por novela, casi todo arranque del navegador.
+
+    Si no hay navegador, **503 con motivo y no 500**. `ImpresoraNoDisponible`
+    no es un error de dominio -- es una herramienta ausente -- y el manejador
+    central de `commons/errors/` no la conoce; se traduce aqui, que es el unico
+    sitio que la ve. **Ni el HTML ni la prosa se escriben en ningun log.**
     """
-    await _version_o_404(sesion, token)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="La descarga en PDF todavia no esta disponible.",
+    version = await _version_o_404(sesion, token)
+
+    capitulos: list[Capitulo] = []
+    for capitulo in await capitulos_de(sesion, version.id):
+        texto = await texto_publicado(sesion, version.id, capitulo.numero)
+        if texto is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_ENCONTRADO)
+        capitulos.append((capitulo.numero, capitulo.titulo, texto, capitulo.cambiado))
+
+    titulo = await titulo_de_obra(sesion, version.obra_id)
+    dedicatoria = await dedicatoria_de(sesion, version.obra_id)
+    documento = componer_html(
+        titulo=titulo or "Novela",
+        dedicatoria=dedicatoria.texto if dedicatoria else None,
+        capitulos=capitulos,
     )
+
+    try:
+        contenido = await impresora.a_pdf(documento)
+    except ImpresoraNoDisponible as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"No se puede generar el PDF ahora mismo: {error}",
+        ) from error
+
+    return Response(
+        content=contenido,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{_nombre_de_fichero(titulo)}"'},
+    )
+
+
+def _nombre_de_fichero(titulo: str) -> str:
+    """`novela-<titulo>.pdf` solo con ASCII seguro: la cabecera no admite mas
+    sin la forma `filename*`, y un nombre feo es mejor que una cabecera rota."""
+    base = "".join(c if c.isalnum() else "-" for c in titulo.lower()).strip("-")
+    base = "-".join(p for p in base.split("-") if p)[:60]
+    return f"novela-{base}.pdf" if base else "novela.pdf"
