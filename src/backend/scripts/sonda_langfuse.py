@@ -34,6 +34,14 @@ async def main() -> None:
             async with traza.span("sonda") as span:
                 span.entrada("hola")
                 span.salida("adios")
+                from decimal import Decimal
+
+                span.consumo(
+                    modelo="claude-haiku-4-5",
+                    tokens_entrada=1000,
+                    tokens_salida=200,
+                    coste_usd=Decimal("0.002"),
+                )
         observador.cerrar()
         print("OK: traza enviada (sesion obra-0, traza 'sonda')")
     except Exception:  # noqa: BLE001 — diagnostico

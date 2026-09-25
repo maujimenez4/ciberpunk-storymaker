@@ -46,11 +46,19 @@ class _SpanLangfuse:
         # El coste va como `float` porque es lo que el proveedor acepta. El
         # `Decimal` es el que se guarda en `ejecucion`: aqui es una cifra para
         # mirar en un panel, alli es la que se suma (RF-OBS-03).
-        self._interno.update(
+        #
+        # **Como generacion hija, no como `update` del span**: Langfuse solo
+        # calcula y muestra coste y tokens en observaciones de tipo
+        # `generation`; sobre un span los ignora y el panel marcaba 0 USD
+        # (corrida real 2026-09-24).
+        generacion = self._interno.start_observation(
+            name=f"llamada · {modelo}",
+            as_type="generation",
             model=modelo,
             usage_details={"input": tokens_entrada, "output": tokens_salida},
             cost_details={"total": float(coste_usd)},
         )
+        generacion.end()
 
     def puntuar(self, puntuacion: Puntuacion) -> None:
         # P-22.1. Los criterios del juez comparten `nombre` (`juez_con_rubrica`),

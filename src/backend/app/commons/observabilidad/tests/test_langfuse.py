@@ -40,6 +40,15 @@ class SpanFalso:
         self.hijos.append(hijo)
         yield hijo
 
+    def start_observation(self, *, name: str, as_type: str = "span", **campos: Any) -> Any:
+        hijo = SpanFalso(name)
+        hijo.actualizaciones.append({"as_type": as_type, **campos})
+        self.hijos.append(hijo)
+        return hijo
+
+    def end(self) -> None:
+        self.actualizaciones.append({"end": True})
+
 
 class LangfuseFalso:
     """El cliente, con `flush` contado."""
@@ -156,3 +165,27 @@ async def test_el_prompt_versionado_sube_como_metadatos_del_span() -> None:
     assert langfuse.trazas[0].hijos[0].actualizaciones == [
         {"metadata": {"prompt_id": "escritor", "prompt_version": "v1", "prompt_hash": "a" * 64}}
     ]
+
+
+# --- El coste se ve en el panel: va en una generacion, no en el span ------------
+
+
+async def test_el_consumo_va_en_una_generacion_hija_con_tokens_y_coste() -> None:
+    """Langfuse ignora modelo, tokens y coste sobre un span: marcaba 0 USD."""
+    from decimal import Decimal
+
+    cliente = LangfuseFalso()
+    async with _observador(cliente).traza(obra_id=3, nombre="capitulo 1") as traza:
+        async with traza.span("escritor") as span:
+            span.consumo(
+                modelo="claude-haiku-4-5", tokens_entrada=4000, tokens_salida=1500, coste_usd=Decimal("0.0115")
+            )
+
+    rol = cliente.trazas[0].hijos[0]
+    generacion = rol.hijos[0]
+    datos = generacion.actualizaciones[0]
+    assert datos["as_type"] == "generation"
+    assert datos["model"] == "claude-haiku-4-5"
+    assert datos["usage_details"] == {"input": 4000, "output": 1500}
+    assert datos["cost_details"] == {"total": 0.0115}
+    assert {"end": True} in generacion.actualizaciones
