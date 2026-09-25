@@ -329,6 +329,8 @@ describe("el recorrido entero", () => {
     // La cadena entera: el token salio de `publicar` y la lectura lo uso.
     expect(doble.llamadas).toContain("/lectura/tok-7");
     expect(await screen.findByText(/Para Marta/)).toBeInTheDocument();
+    // Se abre en la portada, como un libro; la prosa está a una página.
+    await persona.click(screen.getByRole("button", { name: /Empezar a leer/ }));
     expect(await screen.findByText(/Olía a sal/)).toBeInTheDocument();
   });
 

@@ -167,6 +167,36 @@
 /* El texto del pie no puede tapar el final de la novela. */
 .lectura {
   padding-block-end: 5rem;
+  /* Un deslizamiento horizontal es pasar página, no desplazar el documento. */
+  touch-action: pan-y;
+}
+
+/* --- pasar página, como en un lector electrónico ------------------------- */
+
+.paso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-inline-size: var(--medida);
+  margin: 2.5rem auto 0;
+  padding-block-start: 1.25rem;
+  border-block-start: 1px dashed var(--linea);
+}
+
+.paso__donde {
+  font-size: var(--nota);
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+.paso__siguiente {
+  margin-inline-start: auto;
+}
+
+.lectura__portada {
+  max-inline-size: var(--medida);
+  margin-inline: auto;
 }
 
 /* --- el panel «Aa» -------------------------------------------------------- */

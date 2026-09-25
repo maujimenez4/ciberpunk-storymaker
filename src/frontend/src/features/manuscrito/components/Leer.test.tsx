@@ -1,13 +1,15 @@
 /**
- * Plan 3 · T2 · La novela entera, continua.
+ * Plan 3 · T2 · La novela, **página a página** como un lector electrónico.
  *
- * Se lee **bajando**, no saltando entre páginas: el sumario lleva a un
- * fragmento de esta misma página.
+ * Invierte D-06 («se lee bajando»), decisión de `maujimenez4` del 2026-09-25:
+ * la portada (dedicatoria, novedades, sumario) y después un capítulo por
+ * página, que se pasa con botones, con ← → y deslizando. El sumario sigue
+ * llevando al fragmento de cada capítulo.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DobleDeApi } from "@/shared/api/doble";
 
@@ -54,7 +56,16 @@ function conDoble(doble: DobleDeApi) {
   };
 }
 
-describe("la lectura continua", () => {
+/** Abre la lectura en un capítulo, como lo haría un enlace compartido. */
+function enElCapitulo(numero: number) {
+  window.history.replaceState({}, "", `#capitulo-${numero}`);
+}
+
+beforeEach(() => {
+  window.history.replaceState({}, "", window.location.pathname);
+});
+
+describe("la lectura, página a página", () => {
   it("abre con la dedicatoria, y no es el capitulo cero", async () => {
     /** Regla de dominio 15: la dedicatoria no es prosa del manuscrito. */
     render(<Leer token="T" />, { wrapper: conDoble(novela()) });
@@ -93,12 +104,63 @@ describe("la lectura continua", () => {
     expect(await screen.findAllByTestId(/^sumario-/)).toHaveLength(1);
   });
 
-  it("los capitulos se pintan en la misma pagina, uno tras otro", async () => {
+  it("abre en la portada y se pasa de página hacia delante y hacia atrás", async () => {
     const { container } = render(<Leer token="T" />, { wrapper: conDoble(novela()) });
 
-    await waitFor(() => expect(container.querySelectorAll("section.capitulo")).toHaveLength(10));
-    expect(container.querySelector("#capitulo-1")).toBeInTheDocument();
-    expect(container.querySelector("#capitulo-10")).toBeInTheDocument();
+    await screen.findByText(/Para Marta/);
+    expect(container.querySelectorAll("section.capitulo")).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /Empezar a leer/ }));
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 1\b/ })).toBeInTheDocument();
+    expect(container.querySelectorAll("section.capitulo")).toHaveLength(1);
+    expect(screen.queryByText(/Para Marta/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 2\b/ })).toBeInTheDocument();
+    expect(container.querySelector("#capitulo-1")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Anterior/ }));
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 1\b/ })).toBeInTheDocument();
+  });
+
+  it("las flechas del teclado pasan de página", async () => {
+    enElCapitulo(4);
+    render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+    await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 4\b/ });
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 5\b/ })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 3\b/ })).toBeInTheDocument();
+  });
+
+  it("deslizar hacia la izquierda pasa a la página siguiente", async () => {
+    enElCapitulo(2);
+    const { container } = render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+    await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 2\b/ });
+
+    const libro = container.querySelector(".lectura") as HTMLElement;
+    fireEvent.touchStart(libro, { touches: [{ clientX: 300, clientY: 200 }] });
+    fireEvent.touchEnd(libro, { changedTouches: [{ clientX: 100, clientY: 210 }] });
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 3\b/ })).toBeInTheDocument();
+  });
+
+  it("el sumario lleva a su capítulo en la misma lectura", async () => {
+    render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+
+    fireEvent.click(await screen.findByTestId("sumario-7"));
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 7\b/ })).toBeInTheDocument();
+    expect(window.location.hash).toBe("#capitulo-7");
+  });
+
+  it("un enlace a un capítulo abre esa página, y la última no tiene siguiente", async () => {
+    enElCapitulo(10);
+    render(<Leer token="T" />, { wrapper: conDoble(novela()) });
+
+    expect(await screen.findByRole("heading", { level: 2, name: /Cap[ií]tulo 10\b/ })).toBeInTheDocument();
+    expect(screen.getByText("Capítulo 10 de 10")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Siguiente/ })).toBeDisabled();
   });
 
   it("la prosa se muestra como texto y nunca se interpreta", async () => {
@@ -108,6 +170,7 @@ describe("la lectura continua", () => {
     // `respuestas` es publico desde que el puente necesito mutarlo en un test.
     doble.respuestas["/lectura/T/capitulos/1"] = { numero: 1, titulo: "T", texto: veneno };
 
+    enElCapitulo(1);
     const { container } = render(<Leer token="T" />, { wrapper: conDoble(doble) });
 
     expect(await screen.findByText(/alert\("x"\)/)).toBeInTheDocument();
@@ -134,9 +197,10 @@ describe("la lectura continua", () => {
   it("el sello del margen es adorno, y el número sigue en el título accesible", async () => {
     // Plan 4, enmienda 1: «capítulo / 3 / de 10» como sello. Un lector de
     // pantalla no debe oír el número dos veces, pero tampoco perderlo.
+    enElCapitulo(3);
     const { container } = render(<Leer token="T" />, { wrapper: conDoble(novela()) });
 
-    await waitFor(() => expect(container.querySelectorAll("section.capitulo")).toHaveLength(10));
+    await waitFor(() => expect(container.querySelector("#capitulo-3")).toBeInTheDocument());
     const tercero = container.querySelector("#capitulo-3");
     const sello = tercero?.querySelector(".sello");
     expect(sello).toHaveAttribute("aria-hidden", "true");
@@ -147,6 +211,7 @@ describe("la lectura continua", () => {
   });
 
   it("la prosa va en la columna del margen rojo, con el ritmo de libro", async () => {
+    enElCapitulo(1);
     render(<Leer token="T" />, { wrapper: conDoble(novela({ capitulos: 1 })) });
 
     const parrafo = await screen.findByText("La casa olía a sal.");
@@ -211,14 +276,12 @@ describe("el pie de lectura", () => {
   }
 
   it("a mitad de un capítulo de 1.150 palabras, quedan 3 min", async () => {
+    enElCapitulo(1);
     render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
     await screen.findAllByText(/^ola ola/);
 
     // El borde inferior de la pantalla, justo en la mitad del capítulo 1.
-    medidas({
-      "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 },
-      "capitulo-2": { arriba: ALTO_PANTALLA + 1000, alto: 2000 },
-    });
+    medidas({ "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 } });
     fireEvent.scroll(window);
 
     expect(await screen.findByText("Quedan 3 min en este capítulo")).toBeInTheDocument();
@@ -228,13 +291,11 @@ describe("el pie de lectura", () => {
   it("el camino recorrido y el punto donde vas son la misma cifra, dibujada", async () => {
     // Enmienda 1: línea de puntos, lo recorrido sólido y un punto en la
     // posición. Todo `aria-hidden`: el porcentaje ya lo dice en texto.
+    enElCapitulo(1);
     const { container } = render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
     await screen.findAllByText(/^ola ola/);
 
-    medidas({
-      "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 },
-      "capitulo-2": { arriba: ALTO_PANTALLA + 1000, alto: 2000 },
-    });
+    medidas({ "capitulo-1": { arriba: ALTO_PANTALLA - 1000, alto: 2000 } });
     fireEvent.scroll(window);
     await screen.findByText("25 %");
 
@@ -245,20 +306,19 @@ describe("el pie de lectura", () => {
   });
 
   it("al final de la novela, 100 % y el capítulo terminado", async () => {
+    enElCapitulo(2);
     render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
     await screen.findAllByText(/^ola ola/);
 
-    medidas({
-      "capitulo-1": { arriba: -5000, alto: 2000 },
-      "capitulo-2": { arriba: -2500, alto: 2000 },
-    });
+    medidas({ "capitulo-2": { arriba: -2500, alto: 2000 } });
     fireEvent.scroll(window);
 
     expect(await screen.findByText("100 %")).toBeInTheDocument();
     expect(screen.getByText("Terminaste este capítulo")).toBeInTheDocument();
   });
 
-  it("al abrir, sin desplazar, el primer capítulo entero por leer", async () => {
+  it("al abrir el primer capítulo, sin desplazar, está entero por leer", async () => {
+    enElCapitulo(1);
     render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
 
     expect(await screen.findByText("Quedan 5 min en este capítulo")).toBeInTheDocument();
@@ -266,6 +326,7 @@ describe("el pie de lectura", () => {
   });
 
   it("no se anuncia en cada desplazamiento: no es una región viva", async () => {
+    enElCapitulo(1);
     // Un número que cambia al bajar cada línea, leído en voz alta, taparía la
     // novela que el lector de pantalla está leyendo.
     render(<Leer token="T" />, { wrapper: conDoble(novelaDe1150()) });
