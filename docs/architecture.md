@@ -638,7 +638,7 @@ Las operaciones largas (escribir un capítulo, auditar el manuscrito) son **trab
 | --- | --- | --- |
 | Grafo de canon | Tablas `entidad`, `hecho_canon` | Fuente de verdad, con escena de origen. Corregir un hecho escribe otro que **cita al anterior** en `sustituye_a` |
 | Variantes de un nombre | `variante_de_nombre` (`forma_canonica`, `variante`) | Apodos e hipocorísticos **declarados**. Es lo que separa un error de grafía de un apodo, y lo lee el validador de nombres |
-| Ledger de eventos | Tabla `evento` *append-only* | Nunca se actualiza ni se borra |
+| Ledger de eventos | Tabla `evento` *append-only* | Nunca se actualiza ni se borra. Corregir un evento escribe otro que **cita al anterior** en `sustituye_a`, y `estado_en_t` y `cronologia` dejan fuera el sustituido |
 | Estado en T | Vista derivada + *snapshots* cada N escenas | **Nunca se edita a mano** |
 | Manuscrito | `escena`, `version_texto` (inmutable) | Editar = versión nueva + marcar vigente |
 | Índice vectorial | `vec0` (sqlite-vec) o BLOB + NumPy | Detrás de la interfaz `VectorStore` |

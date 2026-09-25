@@ -73,6 +73,14 @@ class Evento(Base):
     causa: Mapped[list[str]] = mapped_column(JSON, default=list)
     consecuencia: Mapped[list[str]] = mapped_column(JSON, default=list)
     excluye: Mapped[list[str]] = mapped_column(JSON, default=list)
+    sustituye_a: Mapped[int | None] = mapped_column(
+        ForeignKey("evento.id", name="fk_evento_sustituye_a")
+    )
+    """El evento que este corrige. **Corregir no edita** (`CLAUDE.md` §4.2): un
+    evento mal extraido no se actualiza --el disparador lo impide--; se registra
+    otro que lo cita, y las vistas solo ven el vigente. Corrida real, obra 3: el
+    Extractor anoto «cruza el salon hacia la salida» como partida definitiva.
+    """
     run_id: Mapped[str | None] = mapped_column(String(60), index=True)
     """Que corrida lo escribio (P-6).
 
@@ -285,7 +293,8 @@ SELECT ev.obra_id      AS obra_id,
        esc.orden_discurso AS sabe_desde
 FROM evento ev
 JOIN json_each(ev.testigos) t
-LEFT JOIN escena esc ON esc.id = ev.escena_id;
+LEFT JOIN escena esc ON esc.id = ev.escena_id
+WHERE NOT EXISTS (SELECT 1 FROM evento s WHERE s.sustituye_a = ev.id);
 """
 
 # La cronologia es la entrada del validador formal (`definitions.md` §4.4), que
@@ -302,7 +311,8 @@ SELECT ev.id            AS evento_id,
        ev.excluye       AS excluye,
        esc.orden_discurso AS orden_discurso
 FROM evento ev
-LEFT JOIN escena esc ON esc.id = ev.escena_id;
+LEFT JOIN escena esc ON esc.id = ev.escena_id
+WHERE NOT EXISTS (SELECT 1 FROM evento s WHERE s.sustituye_a = ev.id);
 """
 
 SENTENCIAS_DDL = (

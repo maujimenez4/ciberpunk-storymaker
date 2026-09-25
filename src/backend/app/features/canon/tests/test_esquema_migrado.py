@@ -226,3 +226,22 @@ def _sembrar(con: sqlite3.Connection) -> None:
                   '{}', '{}', 10, '[]', '[]', '2026-09-24 00:00:00+00:00');
         """
     )
+
+
+def test_sobre_la_base_migrada_un_evento_sustituido_sale_de_las_vistas(base_migrada):
+    """Corregir no edita (`CLAUDE.md` §4.2), tambien en el ledger. Corrida
+    real, obra 3: el Extractor anoto «cruza el salon hacia la salida» como una
+    partida definitiva, y Lean vio a las dos protagonistas reaparecer. El
+    evento corregido cita al original, y las vistas solo ven el vigente."""
+    _sembrar(base_migrada)
+    base_migrada.execute(
+        """INSERT INTO evento (id, obra_id, escena_id, descripcion, tiempo_historia, lugar,
+                               participantes, testigos, causa, consecuencia, excluye, sustituye_a)
+           VALUES (2, 1, 1, 'Nadia encuentra la carta', 'dia 2', 'La cocina',
+                   '["Nadia"]', '["Nadia"]', '[]', '[]', '[]', 1)"""
+    )
+
+    assert base_migrada.execute("SELECT evento_id, lugar FROM cronologia").fetchall() == [
+        (2, "La cocina")
+    ]
+    assert base_migrada.execute("SELECT DISTINCT evento_id FROM estado_en_t").fetchall() == [(2,)]

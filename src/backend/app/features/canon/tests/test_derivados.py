@@ -98,3 +98,28 @@ async def test_el_evento_conserva_a_quien_excluye(sesion, obra_con_outline):
 
     filas = await sesion.execute(text("SELECT excluye FROM cronologia ORDER BY evento_id"))
     assert filas.scalars().all() == ["[]", '["la carta"]']
+
+
+async def test_un_evento_sustituido_sale_de_la_cronologia(sesion, obra_con_outline):
+    """Lo mismo sobre el esquema de `create_all`: son dos esquemas y los dos
+    tienen que dejar fuera el evento sustituido."""
+    await _consolidar(sesion, obra_con_outline)
+    original = (await sesion.execute(select(Evento).order_by(Evento.id))).scalars().first()
+    sesion.add(
+        Evento(
+            obra_id=original.obra_id,
+            escena_id=original.escena_id,
+            descripcion=original.descripcion,
+            tiempo_historia=original.tiempo_historia,
+            lugar="La cocina",
+            participantes=original.participantes,
+            testigos=original.testigos,
+            sustituye_a=original.id,
+        )
+    )
+    await sesion.flush()
+
+    filas = await sesion.execute(text("SELECT lugar FROM cronologia ORDER BY evento_id"))
+    assert filas.scalars().all() == ["La cocina", "La cocina"]
+    ids = await sesion.execute(text("SELECT evento_id FROM cronologia"))
+    assert original.id not in ids.scalars().all()
