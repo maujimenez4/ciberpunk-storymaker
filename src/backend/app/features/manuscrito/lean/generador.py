@@ -80,6 +80,24 @@ def _participantes_de(crudo: Any) -> list[str]:
     return [str(v) for v in crudo if str(v).strip()]
 
 
+def momento_de(tiempo_historia: str, evento_id: object) -> str:
+    """El instante que un evento declara, **solo si lo declara**.
+
+    Corrida real, obra 3: el Extractor anota «madrugada», «presente» o
+    «amanecer» en capitulos distintos, y tomar el texto como instante puso a la
+    protagonista en nueve sitios a la vez. Ni acotando por capitulo bastaba:
+    dentro de una madrugada se pasa de la cocina a la escalera. **Un texto sin
+    cifra no identifica un instante**, y cada evento vago es el suyo propio.
+
+    «San Juan de 1996» o «dia 1, manana» si lo identifican, y siguen
+    emparejandose: es lo que B3 necesita. El punto ciego, en
+    `verification.md`: dos sitios en la misma «madrugada» ya no se ven.
+    """
+    if any(caracter.isdigit() for caracter in tiempo_historia):
+        return tiempo_historia
+    return f"{tiempo_historia} · evento {evento_id}"
+
+
 class _Indice:
     """Nombre -> entero, por orden de primera aparicion.
 
@@ -136,20 +154,19 @@ async def generar_lean(sesion: AsyncSession, obra_id: int) -> str:
     exclusiones: list[str] = []
 
     for fila in filas:
+        instante = momento_de(str(fila["tiempo_historia"]), fila["evento_id"])
         # `excluye[]` se lee **aunque el evento no tenga participantes**: una
         # muerte o una partida definitiva puede no tener a nadie «presente», y
         # perderla dejaria el invariante 2 sin nada contra que comparar.
         for excluido in _participantes_de(fila.get("excluye")):
-            exclusiones.append(
-                f"⟨{momentos.de(str(fila['tiempo_historia']))}, {personajes.de(excluido)}⟩"
-            )
+            exclusiones.append(f"⟨{momentos.de(instante)}, {personajes.de(excluido)}⟩")
 
         participantes = _participantes_de(fila["participantes"])
         if not participantes:
             # Un evento sin participantes no dice de nadie donde estaba. No hay
             # fila que emitir, y emitir una con un hueco no compilaria.
             continue
-        momento = momentos.de(str(fila["tiempo_historia"]))
+        momento = momentos.de(instante)
         lugar = lugares.de(str(fila["lugar"] or ""))
         eventos.extend(f"⟨{momento}, {personajes.de(p)}, {lugar}⟩" for p in participantes)
 

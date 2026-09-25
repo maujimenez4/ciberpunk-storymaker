@@ -240,3 +240,36 @@ async def test_un_participantes_que_no_es_una_lista_no_da_una_fila_por_caracter(
 
     assert lean.count("⟨") == 0
     assert "def eventos : List Evento := []" in lean
+
+
+def _momentos_de_los_eventos(lean: str) -> list[str]:
+    cuerpo = lean.split("def eventos : List Evento :=", 1)[1].split("def exclusiones", 1)[0]
+    return [fila.split(",")[0].strip("⟨ ") for fila in cuerpo.split("\n") if "⟨" in fila]
+
+
+async def test_un_momento_vago_no_es_un_instante_compartido(
+    sesion: AsyncSession, obra: Obra
+) -> None:
+    """Corrida real, obra 3: el Extractor anoto «madrugada» en cinco capitulos
+    y Lean vio a la protagonista en nueve sitios a la vez; ni la puerta pudo
+    publicar. Un texto sin cifra no identifica un instante: cada evento es el
+    suyo, y `sinUbicuidad` no los empareja."""
+    await _evento(sesion, obra.id, participantes=["Marta"], tiempo="madrugada", lugar="la cocina")
+    await _evento(sesion, obra.id, participantes=["Marta"], tiempo="madrugada", lugar="la playa")
+
+    primero, segundo = _momentos_de_los_eventos(await generar_lean(sesion, obra.id))
+    assert primero != segundo
+
+
+async def test_un_momento_con_cifra_si_es_un_instante_compartido(
+    sesion: AsyncSession, obra: Obra
+) -> None:
+    """La otra mitad: «la noche de San Juan de 1996» (B3) sigue siendo un
+    instante, y dos sitios en ella siguen emparejandose."""
+    for lugar in ("la hoguera", "el faro"):
+        await _evento(
+            sesion, obra.id, participantes=["Marta"], tiempo="San Juan de 1996", lugar=lugar
+        )
+
+    primero, segundo = _momentos_de_los_eventos(await generar_lean(sesion, obra.id))
+    assert primero == segundo
