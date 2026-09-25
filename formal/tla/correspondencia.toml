@@ -111,26 +111,30 @@ nota = "Si Lean falla, no se publica y el fallo vuelve al editor (CA-21): `publi
 
 [[accion]]
 nombre = "PeticionDelLector"
-codigo = []
-codigo_previsto = ["app.features.manuscrito.peticiones.registrar_peticion"]
-pendiente = "Fase 5"
+codigo = [
+  "app.features.escritura.peticion.registrar_peticion",
+  "app.features.manuscrito.peticiones.marcar_regenerando",
+]
 transiciones = []
 nota = "El estado `regenerando` de `PeticionDeCambio` es el REGENERANDO de §3.9; no hay estado nuevo en la maquina de escena."
 
 [[accion]]
 nombre = "RehacerCapitulo"
-codigo = []
-codigo_previsto = ["app.features.manuscrito.peticiones.atender_peticion"]
-pendiente = "Fase 5"
+codigo = [
+  "app.features.escritura.peticion.atender_peticion",
+  "app.features.escritura.regeneracion.regenerar_capitulo",
+]
 transiciones = []
+nota = "Aterrizo el 2026-09-24 (plan 5 T7) en `escritura` y no en `manuscrito`: `manuscrito -> escritura` cerraria un ciclo entre features. Consolidar y publicar solo si no hay introducidos (RF-PET-06)."
 
 [[accion]]
 nombre = "DescartarPeticion"
-codigo = []
-codigo_previsto = ["app.features.manuscrito.reversion.revertir"]
-pendiente = "Fase 5"
+codigo = [
+  "app.features.escritura.regeneracion.retirar_prosa_de_la_corrida",
+  "app.features.manuscrito.peticiones.cerrar_peticion",
+]
 transiciones = []
-nota = "No crea version y no toca la vigente (§3.9). Es lo que S3 vigila."
+nota = "No crea version y no toca la vigente (§3.9). Es lo que S3 vigila. La prevision decia `reversion.revertir`, y no era: revertir (RF-PET-08) mueve la vigente a otra tirada, y el modelo no lo tiene. Descartar es retirar la prosa de la corrida y cerrar la peticion `descartada`."
 
 [[accion]]
 nombre = "Fin"

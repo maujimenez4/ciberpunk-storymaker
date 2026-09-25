@@ -24,11 +24,12 @@ respuesta, asi que la sesion de la peticion ya no existe cuando la tarea corre.
 
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Annotated, Literal, Protocol, runtime_checkable
 
-from fastapi import APIRouter, BackgroundTasks, Depends, status
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.db.sesion import obtener_motor, obtener_sesion
@@ -47,8 +48,24 @@ from app.features.escritura.novela import (
     escribir_novela,
     numero_de_capitulo,
 )
+from app.features.escritura.peticion import (
+    Revalidar,
+    atender_peticion,
+    avance_de_la_peticion,
+    ciclo_de_la_peticion,
+    registrar_peticion,
+    revalidar_mecanicamente,
+)
 from app.features.escritura.reanudacion import planificar_reanudacion
+from app.features.escritura.regeneracion import Ejecutar
 from app.features.escritura.service import intentos_descartados
+from app.features.manuscrito import (
+    PeticionDesconocida,
+    leer_peticion,
+    peticion_en_curso,
+    token_de_la_version,
+    version_por_token,
+)
 
 FabricaDeSesion = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
@@ -443,4 +460,218 @@ async def _correr_la_novela(
                 vectorizar=vectorizar,
                 observador=observador,
             ),
+        )
+
+
+# --- La peticion de cambio (plan-5 T8, RI-09) -------------------------------
+#
+# Vive aqui y no en `manuscrito/router.py` por lo mismo que la orquestacion vive
+# en `escritura/peticion.py`: atenderla compone el ciclo, y el ciclo -- con su
+# portero, su cerrojo y sus agentes -- se compone en este fichero. Las rutas del
+# lector van por el **token** (RNF-SEG-01, D-01 de la 002), igual que la lectura.
+
+
+@lru_cache(maxsize=1)
+def obtener_cerrojo_de_peticiones() -> CerrojoDeEscena:
+    """R-4: una peticion en vuelo por obra. **Otro** cerrojo que el de escenas:
+    `ejecutar_ciclo` toma aquel dentro, y no es reentrante."""
+    return CerrojoDeEscena()
+
+
+@dataclass(frozen=True)
+class Atencion:
+    """Lo que la tarea de fondo necesita para atender una peticion, ya compuesto.
+
+    Es una dependencia para que un test sustituya el ciclo y la revalidacion sin
+    tocar produccion (CA-4): la orquestacion, la base y la publicacion son reales.
+    """
+
+    componer: Callable[[AsyncSession], Ejecutar]
+    revalidar: Revalidar
+    vectorizar: Callable[[str], Vector] | None
+    observador: Observador | None
+
+
+def obtener_atencion(
+    agentes: Roles,
+    contador: Contador,
+    presupuesto: Portero,
+    cerrojo: Cerrojo,
+    cliente: Cliente,
+    observador: Observa,
+) -> Atencion:
+    vectorizar = vectorizador_de(cliente)
+    modelo = _nombre_del_modelo(cliente)
+
+    def componer(sesion: AsyncSession) -> Ejecutar:
+        return ciclo_de_la_peticion(
+            sesion,
+            agentes=agentes,
+            contador=contador,
+            presupuesto=presupuesto,
+            cerrojo=cerrojo,
+            vectorizar=vectorizar,
+            modelo=modelo,
+            observador=observador,
+        )
+
+    return Atencion(
+        componer=componer,
+        revalidar=revalidar_mecanicamente,
+        vectorizar=vectorizar,
+        observador=observador,
+    )
+
+
+class PeticionEntrada(BaseModel):
+    """RF-PET-01. El id dice **que** se corrige; el texto, que deberia poner (D-02)."""
+
+    hecho_canon_id: int
+    texto_pedido: str = Field(min_length=1, max_length=2000)
+
+
+class PeticionAceptada(BaseModel):
+    peticion_id: int
+    estado: Literal["registrada"]
+
+
+class CapituloEnRegeneracion(BaseModel):
+    numero: int
+    estado: Literal["pendiente", "escribiendo", "hecho"]
+
+
+class EstadoDeLaPeticion(BaseModel):
+    """Lo que la espera de la 002 consulta (RF-ESP-02)."""
+
+    peticion_id: int
+    estado: Literal["registrada", "regenerando", "atendida", "descartada"]
+    resultado: str | None
+    capitulos: list[CapituloEnRegeneracion]
+    token_resultante: str | None
+
+
+class EstadoDeLaLectura(BaseModel):
+    """H-3 de la 002: si hay una regeneracion en curso que este navegador no pidio."""
+
+    peticion_en_curso: int | None
+
+
+lectura = APIRouter(prefix="/lectura", tags=["lectura"])
+
+NO_ENCONTRADO = "No hay nada en este enlace."
+"""El mismo texto que `manuscrito/router.py`: un token que no vale no dice por que."""
+
+AtencionDep = Annotated[Atencion, Depends(obtener_atencion)]
+CerrojoDePeticiones = Annotated[CerrojoDeEscena, Depends(obtener_cerrojo_de_peticiones)]
+
+
+async def _obra_del_token(sesion: AsyncSession, token: str) -> int:
+    version = await version_por_token(sesion, token)
+    if version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NO_ENCONTRADO)
+    return version.obra_id
+
+
+async def _lanzar_peticion(
+    sesion: AsyncSession,
+    tareas: BackgroundTasks,
+    fabrica: FabricaDeSesion,
+    atencion: Atencion,
+    cerrojo: CerrojoDeEscena,
+    *,
+    obra_id: int,
+    entrada: PeticionEntrada,
+) -> PeticionAceptada:
+    peticion = await registrar_peticion(
+        sesion,
+        obra_id=obra_id,
+        hecho_canon_id=entrada.hecho_canon_id,
+        texto_pedido=entrada.texto_pedido,
+    )
+    await sesion.commit()
+    tareas.add_task(_atender_en_segundo_plano, fabrica, peticion.id, atencion, cerrojo)
+    return PeticionAceptada(peticion_id=peticion.id, estado="registrada")
+
+
+@lectura.post("/{token}/peticiones", status_code=status.HTTP_202_ACCEPTED)
+async def pedir_un_cambio_desde_la_lectura(
+    token: str,
+    entrada: PeticionEntrada,
+    tareas: BackgroundTasks,
+    sesion: Sesion,
+    fabrica: Fabrica,
+    atencion: AtencionDep,
+    cerrojo: CerrojoDePeticiones,
+) -> PeticionAceptada:
+    """RI-09 por el token. 202 y el trabajo sigue detras (`CLAUDE.md` §6); 409 si
+    el hecho ya fue sustituido (R-5), 404 si no es de esta obra."""
+    obra_id = await _obra_del_token(sesion, token)
+    return await _lanzar_peticion(
+        sesion, tareas, fabrica, atencion, cerrojo, obra_id=obra_id, entrada=entrada
+    )
+
+
+@router.post("/obras/{obra_id}/peticiones", status_code=status.HTTP_202_ACCEPTED)
+async def pedir_un_cambio(
+    obra_id: int,
+    entrada: PeticionEntrada,
+    tareas: BackgroundTasks,
+    sesion: Sesion,
+    fabrica: Fabrica,
+    atencion: AtencionDep,
+    cerrojo: CerrojoDePeticiones,
+) -> PeticionAceptada:
+    """RI-09 tal como la spec lo nombra, por `obra_id`: la del Autor."""
+    return await _lanzar_peticion(
+        sesion, tareas, fabrica, atencion, cerrojo, obra_id=obra_id, entrada=entrada
+    )
+
+
+@lectura.get("/{token}/peticiones/{peticion_id}")
+async def consultar_la_peticion(token: str, peticion_id: int, sesion: Sesion) -> EstadoDeLaPeticion:
+    """El estado de la peticion y su avance por capitulo. 404 si es de otra obra."""
+    obra_id = await _obra_del_token(sesion, token)
+    peticion = await leer_peticion(sesion, peticion_id)
+    if peticion.obra_id != obra_id:
+        raise PeticionDesconocida(peticion_id)
+    token_resultante = (
+        None
+        if peticion.estado != "atendida" or peticion.version_producida_id is None
+        else await token_de_la_version(sesion, peticion.version_producida_id)
+    )
+    return EstadoDeLaPeticion.model_validate(
+        {
+            "peticion_id": peticion.id,
+            "estado": peticion.estado,
+            "resultado": peticion.resultado,
+            "capitulos": [
+                {"numero": n, "estado": e} for n, e in await avance_de_la_peticion(sesion, peticion)
+            ],
+            "token_resultante": token_resultante,
+        }
+    )
+
+
+@lectura.get("/{token}/estado")
+async def estado_de_la_lectura(token: str, sesion: Sesion) -> EstadoDeLaLectura:
+    obra_id = await _obra_del_token(sesion, token)
+    return EstadoDeLaLectura(peticion_en_curso=await peticion_en_curso(sesion, obra_id=obra_id))
+
+
+async def _atender_en_segundo_plano(
+    fabrica: FabricaDeSesion,
+    peticion_id: int,
+    atencion: Atencion,
+    cerrojo: CerrojoDeEscena,
+) -> None:
+    """Sesion propia, como `_correr_el_ciclo`: la de la peticion ya se cerro."""
+    async with fabrica() as sesion:
+        await atender_peticion(
+            sesion,
+            peticion_id=peticion_id,
+            ejecutar=atencion.componer(sesion),
+            cerrojo=cerrojo,
+            revalidar=atencion.revalidar,
+            vectorizar=atencion.vectorizar,
+            observador=atencion.observador,
         )

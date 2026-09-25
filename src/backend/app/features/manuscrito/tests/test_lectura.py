@@ -114,7 +114,8 @@ def test_la_lectura_se_indexa_por_token_y_no_por_obra_id(cliente: TestClient) ->
 
     de_lectura = [r for r in rutas if r.startswith("/lectura/")]
 
-    assert len(de_lectura) == 5
+    # Cinco de la Fase 4 y tres de la peticion (plan-5 T8), las tres por token.
+    assert len(de_lectura) == 8
     assert not any("obra_id" in r for r in de_lectura)
 
 

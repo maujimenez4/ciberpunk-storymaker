@@ -45,10 +45,16 @@ class HechoYaSustituido(ErrorDeDominio):
         )
 
 
-async def corregir_por_peticion(
-    sesion: AsyncSession, *, hecho_canon_id: int, nuevo_valor: str
-) -> HechoCanon:
-    """RF-PET-02. Escribe el hecho que sustituye, y solo si el viejo sigue vivo."""
+async def exigir_hecho_vivo(sesion: AsyncSession, *, hecho_canon_id: int) -> None:
+    """La misma guarda que `corregir_por_peticion`, sin escribir nada.
+
+    La usa quien **registra** una peticion (plan-5 T8): el 409 de R-5 tiene que
+    salir en la respuesta, no en el trabajo de fondo que corre despues.
+    """
+    await _hecho_vivo(sesion, hecho_canon_id)
+
+
+async def _hecho_vivo(sesion: AsyncSession, hecho_canon_id: int) -> HechoCanon:
     hecho = await sesion.get(HechoCanon, hecho_canon_id)
     if hecho is None:
         raise HechoDesconocido(hecho_canon_id)
@@ -60,7 +66,14 @@ async def corregir_por_peticion(
     ).scalar_one_or_none()
     if sustituto is not None:
         raise HechoYaSustituido(hecho_canon_id, sustituto.id, sustituto.valor)
+    return hecho
 
+
+async def corregir_por_peticion(
+    sesion: AsyncSession, *, hecho_canon_id: int, nuevo_valor: str
+) -> HechoCanon:
+    """RF-PET-02. Escribe el hecho que sustituye, y solo si el viejo sigue vivo."""
+    hecho = await _hecho_vivo(sesion, hecho_canon_id)
     return await escribir_hecho_que_sustituye(
         sesion, hecho=hecho, nuevo_valor=nuevo_valor, origen="edicion_humana"
     )

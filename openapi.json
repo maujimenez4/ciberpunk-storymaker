@@ -429,6 +429,206 @@
     }
    }
   },
+  "/obras/{obra_id}/peticiones": {
+   "post": {
+    "tags": [
+     "escritura"
+    ],
+    "summary": "Pedir Un Cambio",
+    "description": "RI-09 tal como la spec lo nombra, por `obra_id`: la del Autor.",
+    "operationId": "pedir_un_cambio_obras__obra_id__peticiones_post",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PeticionAceptada"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/peticiones": {
+   "post": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Pedir Un Cambio Desde La Lectura",
+    "description": "RI-09 por el token. 202 y el trabajo sigue detras (`CLAUDE.md` §6); 409 si\nel hecho ya fue sustituido (R-5), 404 si no es de esta obra.",
+    "operationId": "pedir_un_cambio_desde_la_lectura_lectura__token__peticiones_post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PeticionAceptada"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/peticiones/{peticion_id}": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Consultar La Peticion",
+    "description": "El estado de la peticion y su avance por capitulo. 404 si es de otra obra.",
+    "operationId": "consultar_la_peticion_lectura__token__peticiones__peticion_id__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "peticion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Peticion Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EstadoDeLaPeticion"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lectura/{token}/estado": {
+   "get": {
+    "tags": [
+     "lectura"
+    ],
+    "summary": "Estado De La Lectura",
+    "operationId": "estado_de_la_lectura_lectura__token__estado_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EstadoDeLaLectura"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/lectura/{token}": {
    "get": {
     "tags": [
@@ -705,6 +905,60 @@
      }
     }
    }
+  },
+  "/obras/{obra_id}/versiones/{version}/revertir": {
+   "post": {
+    "tags": [
+     "publicacion"
+    ],
+    "summary": "Revertir La Version",
+    "description": "RI-10. `version` es el identificador de la `VersionPublicada`.\n\n**No es larga y no va a segundo plano:** mover una bandera no llama al\nmodelo. La revertida no se borra (RF-PET-08) y su enlace sigue leyendose.",
+    "operationId": "revertir_la_version_obras__obra_id__versiones__version__revertir_post",
+    "parameters": [
+     {
+      "name": "obra_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Obra Id"
+      }
+     },
+     {
+      "name": "version",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Version"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Revertir La Version Obras  Obra Id  Versiones  Version  Revertir Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -819,6 +1073,29 @@
     ],
     "title": "CapituloDelOutline",
     "description": "Un capitulo del outline: lo que RF-PLA-04 exige, capitulo a capitulo.\n\n`extra=forbid` no es celo. Sin el, un modelo que escribe `beat` en vez de\n`beat_de_genero` produce un capitulo que valida, sale con su beat en blanco\ny **pierde el dato en silencio**. La Fase 1 lo descubrio ejecutando, con un\nbrief que salia «completo» perdiendo justo lo que faltaba.\n\n`extension_objetivo` repite aqui el rango que `capitulo` sostiene con un\n`CheckConstraint`. La duplicidad es deliberada: si solo lo parase la base,\nuna extension fuera de rango seria un `IntegrityError` —un 500— en vez de lo\nque es, un agente que devolvio algo fuera de su esquema (RF-ORQ-09)."
+   },
+   "CapituloEnRegeneracion": {
+    "properties": {
+     "numero": {
+      "type": "integer",
+      "title": "Numero"
+     },
+     "estado": {
+      "type": "string",
+      "enum": [
+       "pendiente",
+       "escribiendo",
+       "hecho"
+      ],
+      "title": "Estado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "numero",
+     "estado"
+    ],
+    "title": "CapituloEnRegeneracion"
    },
    "CapituloPublicado": {
     "properties": {
@@ -947,6 +1224,27 @@
     "title": "EntrevistaAbierta",
     "description": "Salida de RI-01. Nunca se expone el modelo de base de datos."
    },
+   "EstadoDeLaLectura": {
+    "properties": {
+     "peticion_en_curso": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Peticion En Curso"
+     }
+    },
+    "type": "object",
+    "required": [
+     "peticion_en_curso"
+    ],
+    "title": "EstadoDeLaLectura",
+    "description": "H-3 de la 002: si hay una regeneracion en curso que este navegador no pidio."
+   },
    "EstadoDeLaNovela": {
     "properties": {
      "obra_id": {
@@ -1005,6 +1303,63 @@
     ],
     "title": "EstadoDeLaNovela",
     "description": "Por donde va la novela: lo que el navegador consulta mientras espera.\n\n`en_curso` es el **numero de outline** del capitulo que se esta escribiendo,\nno su id, por lo mismo que `EstadoDelTrabajo` lleva `numero_de_capitulo`.\n`motivo` solo va relleno cuando `estado` es `detenida`."
+   },
+   "EstadoDeLaPeticion": {
+    "properties": {
+     "peticion_id": {
+      "type": "integer",
+      "title": "Peticion Id"
+     },
+     "estado": {
+      "type": "string",
+      "enum": [
+       "registrada",
+       "regenerando",
+       "atendida",
+       "descartada"
+      ],
+      "title": "Estado"
+     },
+     "resultado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resultado"
+     },
+     "capitulos": {
+      "items": {
+       "$ref": "#/components/schemas/CapituloEnRegeneracion"
+      },
+      "type": "array",
+      "title": "Capitulos"
+     },
+     "token_resultante": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Token Resultante"
+     }
+    },
+    "type": "object",
+    "required": [
+     "peticion_id",
+     "estado",
+     "resultado",
+     "capitulos",
+     "token_resultante"
+    ],
+    "title": "EstadoDeLaPeticion",
+    "description": "Lo que la espera de la 002 consulta (RF-ESP-02)."
    },
    "EstadoDelTrabajo": {
     "properties": {
@@ -1349,6 +1704,46 @@
     ],
     "title": "PaqueteDeContexto",
     "description": "Lo que se enviaria al modelo, con su desglose (`definitions.md` §7)."
+   },
+   "PeticionAceptada": {
+    "properties": {
+     "peticion_id": {
+      "type": "integer",
+      "title": "Peticion Id"
+     },
+     "estado": {
+      "type": "string",
+      "const": "registrada",
+      "title": "Estado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "peticion_id",
+     "estado"
+    ],
+    "title": "PeticionAceptada"
+   },
+   "PeticionEntrada": {
+    "properties": {
+     "hecho_canon_id": {
+      "type": "integer",
+      "title": "Hecho Canon Id"
+     },
+     "texto_pedido": {
+      "type": "string",
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Texto Pedido"
+     }
+    },
+    "type": "object",
+    "required": [
+     "hecho_canon_id",
+     "texto_pedido"
+    ],
+    "title": "PeticionEntrada",
+    "description": "RF-PET-01. El id dice **que** se corrige; el texto, que deberia poner (D-02)."
    },
    "RespuestasEntrada": {
     "properties": {

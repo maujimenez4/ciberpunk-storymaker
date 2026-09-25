@@ -38,6 +38,8 @@ promete, y cada tarea anade su linea al llegar:
 | `ElementosObligatoriosAusentes`, `entrada_del_cuadro` | `service` | P-33 · plan-5 T5 |
 | `Huella`, `huella_de`, `Clasificacion`, `clasificar_contra_el_cuadro`, `cuadro_guardado`, `defectos_de_las_entradas` | `clasificacion` | **plan-5 T5** |
 | `version_vigente`, `revertir`, `VersionDesconocida`, `VersionYaVigente` | `reversion` | **plan-5 T6** |
+| `Alcance`, `alcance_de_la_peticion` | `alcance` | **plan-5 T4** |
+| `Peticion`, `registrar_peticion`, `leer_peticion`, `marcar_regenerando`, `cerrar_peticion`, `peticion_en_curso`... | `peticiones` | **plan-5 T7** |
 
 `PeticionDeCambio` (plan-5 T1) es fila de base de datos y sale por `modelos`,
 como las demas.
@@ -63,6 +65,7 @@ commit que el simbolo.** Un `__all__` que nombra algo que no existe rompe la
 importacion de la feature entera, y con ella la de todo el que la use.
 """
 
+from app.features.manuscrito.alcance import Alcance, alcance_de_la_peticion
 from app.features.manuscrito.clasificacion import (
     Clasificacion,
     Huella,
@@ -73,6 +76,19 @@ from app.features.manuscrito.clasificacion import (
 )
 from app.features.manuscrito.lean import HerramientaNoDisponible, correr_lean
 from app.features.manuscrito.modelos import nuevo_identificador_publico
+from app.features.manuscrito.peticiones import (
+    EN_CURSO,
+    TERMINADAS,
+    Peticion,
+    PeticionDesconocida,
+    anotar_hecho_nuevo,
+    cerrar_peticion,
+    leer_peticion,
+    marcar_regenerando,
+    peticion_en_curso,
+    registrar_peticion,
+    token_de_la_version,
+)
 from app.features.manuscrito.repository import (
     capitulos_cambiados,
     capitulos_de,
@@ -112,6 +128,9 @@ from app.features.manuscrito.service import (
 )
 
 __all__ = [
+    "EN_CURSO",
+    "TERMINADAS",
+    "Alcance",
     "CapituloPublicado",
     "CapituloSinPuerta",
     "Clasificacion",
@@ -124,11 +143,16 @@ __all__ = [
     "HerramientaNoDisponible",
     "Huella",
     "ObraSinCapitulos",
+    "Peticion",
+    "PeticionDesconocida",
     "VersionDesconocida",
     "VersionPublicada",
     "VersionYaVigente",
+    "alcance_de_la_peticion",
+    "anotar_hecho_nuevo",
     "capitulos_cambiados",
     "capitulos_de",
+    "cerrar_peticion",
     "clasificar_contra_el_cuadro",
     "correr_lean",
     "cuadro_guardado",
@@ -140,13 +164,18 @@ __all__ = [
     "ficha_de",
     "guardar_dedicatoria",
     "huella_de",
+    "leer_peticion",
+    "marcar_regenerando",
     "nuevo_identificador_publico",
+    "peticion_en_curso",
     "publicacion",
     "publicar",
+    "registrar_peticion",
     "revertir",
     "router",
     "texto_publicado",
     "titulo_de_obra",
+    "token_de_la_version",
     "ultima_version",
     "version_por_token",
     "version_vigente",

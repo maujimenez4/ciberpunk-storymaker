@@ -39,6 +39,11 @@ paquete recibido».
   `retirar_prosa_de_la_corrida` y `consolidar_la_regeneracion`: **regenerar un
   capitulo ya integrado** (plan 5, T3). Las consume `manuscrito` al atender una
   peticion de cambio.
+- `ResultadoDeLaPeticion`, `Revalidar`, `atender_peticion`, `registrar_peticion`,
+  `avance_de_la_peticion`, `ciclo_de_la_peticion`, `revalidar_mecanicamente`,
+  `lectura` y `obtener_atencion`: **la peticion de cambio de punta a punta**
+  (plan 5, T7-T8). Viven aqui y no en `manuscrito` porque componen el ciclo, y
+  `manuscrito -> escritura` cerraria un ciclo entre features.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
@@ -117,6 +122,15 @@ from app.features.escritura.novela import (
     hechos_usados,
     numero_de_capitulo,
 )
+from app.features.escritura.peticion import (
+    ResultadoDeLaPeticion,
+    Revalidar,
+    atender_peticion,
+    avance_de_la_peticion,
+    ciclo_de_la_peticion,
+    registrar_peticion,
+    revalidar_mecanicamente,
+)
 from app.features.escritura.reanudacion import (
     ESTADOS_VIVOS,
     Reanudacion,
@@ -136,7 +150,12 @@ from app.features.escritura.regeneracion import (
     reparaciones_de_la_regeneracion,
     retirar_prosa_de_la_corrida,
 )
-from app.features.escritura.router import obtener_sesion_de_fondo, router
+from app.features.escritura.router import (
+    lectura,
+    obtener_atencion,
+    obtener_sesion_de_fondo,
+    router,
+)
 from app.features.escritura.service import (
     Escritura,
     IntentoDeEscritura,
@@ -176,17 +195,22 @@ __all__ = [
     "RastroEnVersionTexto",
     "Reanudacion",
     "Reparacion",
+    "ResultadoDeLaPeticion",
     "ResultadoDelCiclo",
     "ResultadoDelPaso",
     "Retomada",
+    "Revalidar",
     "Senal",
     "TrabajoDesconocido",
     "TrabajoSinCapitulo",
     "TrabajoTerminal",
     "TransicionInexistente",
     "abrir_trabajo",
+    "atender_peticion",
+    "avance_de_la_peticion",
     "avanzar",
     "ciclo_de_la_novela",
+    "ciclo_de_la_peticion",
     "cobertura_de_la_novela",
     "consolidar_la_regeneracion",
     "descartar",
@@ -199,16 +223,20 @@ __all__ = [
     "estado_de",
     "exigir_que_la_novela_siga",
     "hechos_usados",
+    "lectura",
     "leer_trabajo",
     "numero_de_capitulo",
+    "obtener_atencion",
     "obtener_sesion_de_fondo",
     "planificar_reanudacion",
     "reanudar",
     "regenerar_capitulo",
     "registrar_checkpoint",
+    "registrar_peticion",
     "reparaciones_de_la_regeneracion",
     "reparaciones_del_capitulo",
     "retirar_prosa_de_la_corrida",
+    "revalidar_mecanicamente",
     "router",
     "siguiente_capitulo",
     "trabajos_en_vuelo",

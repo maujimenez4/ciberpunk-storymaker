@@ -52,6 +52,7 @@ from app.features.canon.correccion import (
     HechoDesconocido,
     HechoYaSustituido,
     corregir_por_peticion,
+    exigir_hecho_vivo,
     origen_del_hecho,
 )
 from app.features.canon.modelos import Embedding
@@ -92,6 +93,7 @@ __all__ = [
     "corregir_hecho",
     "corregir_por_peticion",
     "declarar_variantes",
+    "exigir_hecho_vivo",
     "leer_hechos_del_canon",
     "leer_nombres_del_canon",
     "leer_resumenes_anteriores",

@@ -146,8 +146,18 @@ async def capitulos_con_su_puerta(sesion: AsyncSession, obra_id: int) -> list[di
                 "SELECT c.numero AS numero, c.titulo AS titulo, "
                 "       t.estado AS estado, v.id AS version_texto_id, v.texto AS texto "
                 "FROM capitulo AS c "
-                "LEFT JOIN trabajo AS t "
-                "       ON t.capitulo_id = c.id AND t.tipo = 'escribir_escena' "
+                # **Un trabajo por capitulo, el ultimo que cuenta** (plan-5 T7).
+                # Con regeneraciones un capitulo tiene varios, y el `JOIN` a
+                # secas lo duplicaba: dos filas del mismo numero y
+                # `uq_capitulo_publicado_version_numero` al publicar. Una
+                # regeneracion que no llego a `INTEGRADA` no cuenta: su prosa
+                # se retiro y el capitulo sigue siendo el entregado. El prefijo
+                # `reg-` es `escritura.PREFIJO_DE_REGENERACION`, repetido porque
+                # importar `escritura` desde aqui cerraria un ciclo (§5.1).
+                "LEFT JOIN trabajo AS t ON t.id = ("
+                "       SELECT MAX(t2.id) FROM trabajo AS t2 "
+                "       WHERE t2.capitulo_id = c.id AND t2.tipo = 'escribir_escena' "
+                "         AND (t2.run_id NOT LIKE 'reg-%' OR t2.estado = 'INTEGRADA')) "
                 "LEFT JOIN version_texto AS v "
                 "       ON v.escena_id = t.escena_id AND v.vigente = 1 "
                 "WHERE c.obra_id = :obra_id "

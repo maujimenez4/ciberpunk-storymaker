@@ -53,6 +53,7 @@ def crear_app() -> FastAPI:
     app.include_router(outline.router)
     app.include_router(contexto.router)
     app.include_router(escritura.router)
+    app.include_router(escritura.lectura)
     app.include_router(manuscrito.router)
     app.include_router(manuscrito.publicacion)
     return app

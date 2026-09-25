@@ -45,6 +45,7 @@ from app.features.manuscrito.repository import (
     version_por_token,
     versiones_de,
 )
+from app.features.manuscrito.reversion import revertir
 from app.features.manuscrito.schemas import (
     CapituloPublicado,
     EntradaDeFicha,
@@ -93,6 +94,18 @@ async def publicar_obra(
     version = await publicar(sesion, obra_id, observador=observador)
     await sesion.commit()
     return {"token": version.identificador_publico, "ordinal": version.ordinal}
+
+
+@publicacion.post("/{obra_id}/versiones/{version}/revertir")
+async def revertir_la_version(obra_id: int, version: int, sesion: Sesion) -> dict[str, object]:
+    """RI-10. `version` es el identificador de la `VersionPublicada`.
+
+    **No es larga y no va a segundo plano:** mover una bandera no llama al
+    modelo. La revertida no se borra (RF-PET-08) y su enlace sigue leyendose.
+    """
+    vuelta = await revertir(sesion, obra_id=obra_id, version_publicada_id=version)
+    await sesion.commit()
+    return {"token": vuelta.identificador_publico, "ordinal": vuelta.ordinal}
 
 
 # El mismo texto para los dos casos, y es deliberado: ver la cabecera.
