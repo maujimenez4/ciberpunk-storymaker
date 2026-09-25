@@ -270,6 +270,20 @@ aquí porque afecta a la cifra que el *tuning* compara.
 
 ---
 
+## K bis · Lo que dijo la primera corrida de evals (2026-09-24, noche)
+
+| Causa | Cambio | Por qué | Commit |
+| --- | --- | --- | --- |
+| **Eval B3**: el capítulo 1 escaló con 812, 141 y 621 palabras (`EST-02`); el segundo intento ni siquiera era prosa, comentaba la reparación | `escritor.v2` con la extensión como restricción dura, y la reparación de `EST-02` dice cuántas palabras faltan en vez de citar el capítulo entero | El prompt v1 no pedía extensión y la reparación ordenaba «dejar intacto todo lo demás». **Iteración de tuning con antes y después:** `evals/tuning.md` — con v2, 5 de 5 capítulos aprobados (4 con una reparación) | `35cca58` |
+| Evals B1 y B5: el Arquitecto olvidó un beat obligatorio (`revelacion_interior`, `gran_gesto`) → 409 sin segunda oportunidad | Un reintento dirigido también para las reglas de planificación (beats, giros, numeración, discurso) | El reintento solo cubría salidas mal formadas | `609a781` |
+| Tres outlines en 500: `database is locked` con cinco obras a la vez | El ciclo confirma antes de cada llamada al modelo; Planificador y Arquitecto cierran la lectura antes de esperar; `busy_timeout` 30 s; la novela se reanuda sola ante un cerrojo | SQLite es de un escritor: el ciclo retenía la escritura el capítulo entero, y en WAL una lectura vieja que escribe falla al instante | `324e801`, `d09ddfa`, `350911d` |
+| Langfuse sin trazas en producción | Adaptador al SDK v4 (`start_as_current_observation`, `propagate_attributes`) | Se escribió contra la v3 y solo se probó con un doble: el blindaje se tragaba el `AttributeError` | `e7beabc` |
+| Langfuse con coste 0 | Tokens y coste en una **generación** hija de cada rol | El panel ignora coste y tokens sobre un span | `74e6bfb` |
+| El Extractor tumbaba la novela con el capítulo ya aprobado | Reintento dirigido del Extractor | Una salida mal formada no tenía segunda oportunidad | `78e2246` |
+| Eval B4: el Entrevistador **detectó** que vetar «hospital» choca con el elemento obligatorio «la cafetería de Valdecilla» | Ninguno: **es el resultado esperado** | Contradicción de brief cazada antes de escribir (§1 del encargo) | — |
+
+---
+
 ## L · Lo que decidió una persona al verlo
 
 **La apariencia es U**: ningún test juzga que una lectura apetezca. Aquí la causa es la
@@ -314,17 +328,16 @@ revisión, y el efecto, una decisión firmada.
 
 Y conviene que esté escrito, porque es exactamente lo que el encargo pedía y hoy no está:
 
-- **Ninguna iteración disparada por una eval.** No existe `evals/` ni se ha generado una
-  novela completa. Desde `bfb5396` cada span lleva la versión y el hash de su plantilla, que es
-  lo que hará falta para decir **con qué versión de plantilla mejoró** algo; hoy no hay dato.
+- ~~Ninguna iteración disparada por una eval.~~ **Ya hay una** (§K bis y `evals/tuning.md`):
+  `escritor` v1 → v2 por `EST-02`, con antes y después medidos sobre la base.
 - **Ningún contraejemplo real de TLC.** Los de §H son de laboratorio, y `formal/README.md` lo
   dice.
 - **Ningún caso real de Lean.** Falta la fila que el encargo §5c pide explícitamente: **una
   incoherencia real que el validador formal detecte y los otros no**, o por qué no hubo
   ninguna. El candidato previsto, B3, depende de P-27. Y el fallo de Lean **no vuelve a ningún
   rol como *feedback***: acaba en un `409` (P-28).
-- **Ninguna traza vista en un Langfuse real.** Lo de §K está probado contra un cliente falso que
-  imita el SDK.
+- ~~Ninguna traza vista en un Langfuse real.~~ Vistas desde el 2026-09-24 en la corrida real,
+  tras adaptar el SDK v4 (§K bis).
 - **Ninguna observación del navegador MCP.** `.claude/mcp.json` declara Playwright y la
   lectura web ya existe, pero **ningún agente la ha inspeccionado todavía**: no hay qué
   registrar.
