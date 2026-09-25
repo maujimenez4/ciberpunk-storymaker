@@ -230,8 +230,20 @@ async def _guardar_version(
     return version
 
 
+def _foto_del_consumo(escritor: Escritor) -> "_Consumo | None":
+    """P-31: el consumo del Escritor, **leido justo despues de su llamada**.
+
+    El cliente es compartido con el Continuista y el Critico, asi que leerlo al
+    cerrar la fila devolvia el de la ultima llamada de juez.
+    """
+    cliente = escritor.cliente
+    if isinstance(cliente, _ClienteQueDeclaraConsumo):
+        return cliente.ultimo_consumo
+    return None
+
+
 async def _completar_ejecucion(
-    sesion: AsyncSession, ejecucion_id: int, escritor: Escritor, veredicto: str
+    sesion: AsyncSession, ejecucion_id: int, consumo: "_Consumo | None", veredicto: str
 ) -> None:
     """Cierra la fila que nacio antes de la llamada (P-A, decision de T6).
 
@@ -245,16 +257,13 @@ async def _completar_ejecucion(
     dato no estaba; un nulo se ve.
     """
     valores: dict[str, object] = {"veredicto": veredicto}
-    cliente = escritor.cliente
-    if isinstance(cliente, _ClienteQueDeclaraConsumo):
-        consumo = cliente.ultimo_consumo
-        if consumo is not None:
-            valores["tokens_reales"] = consumo.tokens_entrada + consumo.tokens_salida
-            valores["coste"] = float(consumo.coste_usd)
-            # P-18: se guardan y **no se suman** a `tokens_reales`. El coste de
-            # arriba sigue saliendo de los mismos dos numeros que antes.
-            valores["cache_read_input_tokens"] = consumo.cache_read_input_tokens
-            valores["cache_creation_input_tokens"] = consumo.cache_creation_input_tokens
+    if consumo is not None:
+        valores["tokens_reales"] = consumo.tokens_entrada + consumo.tokens_salida
+        valores["coste"] = float(consumo.coste_usd)
+        # P-18: se guardan y **no se suman** a `tokens_reales`. El coste de
+        # arriba sigue saliendo de los mismos dos numeros que antes.
+        valores["cache_read_input_tokens"] = consumo.cache_read_input_tokens
+        valores["cache_creation_input_tokens"] = consumo.cache_creation_input_tokens
 
     await sesion.execute(update(Ejecucion).where(Ejecucion.id == ejecucion_id).values(**valores))
 
@@ -492,6 +501,7 @@ async def escribir_capitulo(
                 texto_anterior=texto_anterior,
                 reparaciones=reparaciones,
             )
+        consumo = _foto_del_consumo(escritor)  # P-31: antes de que hablen los jueces
         version = await _guardar_version(sesion, contexto.escena_id, texto, run_id)
 
         async with observacion.span("policy") as span:
@@ -590,7 +600,7 @@ async def escribir_capitulo(
             )
 
         if resultado.aprobado:
-            await _completar_ejecucion(sesion, ejecucion_id, escritor, "aprobada")
+            await _completar_ejecucion(sesion, ejecucion_id, consumo, "aprobada")
             return Escritura(
                 aprobado=True,
                 version_texto_id=version.id,
@@ -604,7 +614,7 @@ async def escribir_capitulo(
         # `len(intentos)` y vive en esta llamada, asi que no hay donde pudiera
         # sobrevivir al capitulo: avanzar al siguiente no consume nada.
         if len(intentos) > INTENTOS_MAXIMOS:
-            await _completar_ejecucion(sesion, ejecucion_id, escritor, "escalada")
+            await _completar_ejecucion(sesion, ejecucion_id, consumo, "escalada")
             return Escritura(
                 aprobado=False,
                 version_texto_id=version.id,
@@ -616,7 +626,7 @@ async def escribir_capitulo(
                 juicio=juicio,
             )
 
-        await _completar_ejecucion(sesion, ejecucion_id, escritor, "rechazada")
+        await _completar_ejecucion(sesion, ejecucion_id, consumo, "rechazada")
         reparaciones = tuple(
             Reparacion.de_defecto(
                 defecto,

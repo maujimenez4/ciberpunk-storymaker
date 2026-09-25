@@ -439,6 +439,49 @@ async def test_un_cliente_que_no_declara_consumo_no_impide_el_veredicto(sesion, 
     assert fila.veredicto == "aprobada"
 
 
+class DobleConConsumoPorLlamada(DobleDeterminista):
+    """`ultimo_consumo` cambia en cada llamada, como el cliente real (P-31).
+
+    El Escritor y los jueces comparten cliente: leer el consumo al cerrar la
+    fila devolvia el de la ultima llamada de juez, no el del Escritor.
+    """
+
+    class Consumo:
+        def __init__(self, entrada: int, salida: int, coste: str) -> None:
+            self.tokens_entrada = entrada
+            self.tokens_salida = salida
+            self.coste_usd = Decimal(coste)
+            self.cache_read_input_tokens = 0
+            self.cache_creation_input_tokens = 0
+
+    def __init__(self, respuestas: dict[str, str]) -> None:
+        super().__init__(respuestas)
+        self.ultimo_consumo: DobleConConsumoPorLlamada.Consumo | None = None
+
+    async def completar(self, prompt: str, semilla: int, modelo: str | None = None) -> str:
+        respuesta = await super().completar(prompt, semilla, modelo)
+        if MARCA_DE_PLANTILLA in prompt:
+            self.ultimo_consumo = self.Consumo(900, 120, "0.0015")
+        else:
+            self.ultimo_consumo = self.Consumo(5000, 50, "0.0400")
+        return respuesta
+
+
+async def test_la_ejecucion_del_escritor_no_guarda_el_consumo_del_juez(sesion, obra_con_outline):
+    """P-31: la foto del consumo se toma justo despues de `escritor.escribir`."""
+    from app.features.calidad import Continuista
+
+    doble = DobleConConsumoPorLlamada(
+        {MARCA_DE_PLANTILLA: BUENA, "# Continuista": '{"defectos": []}'}
+    )
+    await _escribir(sesion, obra_con_outline, Escritor(doble), continuista=Continuista(doble))
+
+    assert len(doble.llamadas) == 2, "el juez tiene que haber usado el cliente despues"
+    fila = (await sesion.execute(select(Ejecucion))).scalars().one()
+    assert fila.tokens_reales == 1020
+    assert fila.coste == pytest.approx(0.0015)
+
+
 async def test_cada_llamada_deja_su_ejecucion(sesion, obra_con_outline):
     """Regla de dominio 7: **cada** ejecucion, no la primera de cada capitulo."""
     await _escribir(
