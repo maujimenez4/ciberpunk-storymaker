@@ -203,6 +203,32 @@ La Fase 5 añade cinco rutas: `POST /obras/{obra_id}/peticiones` (RI-09), `POST 
 
 ---
 
+## Lo que deja abierto la corrida real del 2026-09-25
+
+Los arreglos de esa corrida están en sus commits (`e1a9022`, `ecbd730`, `2af1414`, `5c96ed7`, `5283e8b`, `a4c53e5`). Esto es lo que **no** se cerró.
+
+### P-36 · Un trabajo escalado no tiene cómo recibir la decisión humana
+
+`ESCALADA` detiene la novela y «espera decisión humana» (`maquina.py`), pero no hay endpoint para darla. En la obra 3 se pasó el trabajo 40 a `CANCELADA` **a mano en la base**, con la causa anotada, para reintentar tras corregir el falso positivo de `PER-02`. Es saltarse la máquina de estados: falta `POST /trabajos/{id}/decision` (reintentar o cancelar), su transición en `maquina.py` y en `Harness.tla`.
+
+### P-37 · El lector solo puede corregir una entrada con un hecho único
+
+`_hecho_de_la_entrada` (`manuscrito/service.py`) da `hecho_canon_id` a una entrada de la ficha solo si tiene hecho de `nombre` o un único hecho. El Extractor no registra `nombre` y cada personaje acumula muchos: en la obra 3 **ninguna** entrada ofrece «Corregir», y la ficha solo lista a los presentes, no objetos ni lugares. La demo de la petición se hizo por `POST /lectura/{token}/peticiones`. Cerrarlo es que la ficha muestre los hechos de cada entrada y el lector elija.
+
+### P-38 · El Extractor escribe un canon que los validadores castigan
+
+Tres formas vistas en la obra 3: la misma entidad dos veces («Andrés» y «Andres»), objetos como nombres propios («Café», «Bufanda») y **salir de una escena anotado como `excluye[]`** (evento 60). Los validadores ya no bloquean por las dos primeras y Lean cazó la tercera, pero la causa está en el prompt del Extractor y en su esquema, que no distingue personaje de objeto. En la obra 3, las variantes «café» y «bufanda» se declararon a mano (`declarar_variantes`) y el evento 60 se sustituyó por el 89.
+
+### P-39 · Lean ya no ve dos sitios en la misma «madrugada»
+
+Decisión de `maujimenez4`: solo emparejan los momentos con cifra (`momento_de`, `manuscrito/lean/generador.py`), porque `tiempo_historia` es texto libre y los vagos ponían a la protagonista en nueve sitios a la vez. Es un punto ciego declarado. Se cierra con un tiempo de historia ordenable en el esquema.
+
+### P-40 · La batería de evals no llegó a Lean ni a G4
+
+B1, B3 y B5 se cortaron por cuota y por caídas de la base; B2 y B4 dieron su resultado (`evals/resultados/corridas.json`). La única novela que recorrió todas las puertas es la de ejemplo. Terminar B5 cuesta unos ocho capítulos.
+
+---
+
 ## Deudas de estructura y vocabulario
 
 ### P-9 · `hecho_canon` vive en `features/obra` y lo escribe `canon`
