@@ -2,10 +2,12 @@ import { Aviso, Texto } from "@/shared/ui/primitives";
 
 import "../lectura.css";
 
-import { type Ficha, useFicha } from "../api/lectura";
+import { useFicha } from "../api/lectura";
+import type { EntradaCorregible } from "../api/peticion";
 import { idDeCapitulo } from "../hooks/usePosicion";
+import { PedirCorreccion } from "./PedirCorreccion";
 
-type Entrada = NonNullable<Ficha["entradas"]>[number];
+type Entrada = EntradaCorregible;
 
 /**
  * «Quién viaja contigo»: personajes y lugares como etiquetas de equipaje
@@ -27,9 +29,12 @@ type Entrada = NonNullable<Ficha["entradas"]>[number];
 export function QuienEsQuien({
   token,
   onIrACapitulo,
+  onPeticionEnviada,
 }: {
   token: string;
   onIrACapitulo?: (numero: number) => void;
+  /** RF-PET-01. Quien monta la ficha decide adónde se va después: la espera. */
+  onPeticionEnviada?: (peticionId: number) => void;
 }) {
   const ficha = useFicha(token);
 
@@ -40,7 +45,7 @@ export function QuienEsQuien({
     return <Aviso tono="error">No se pudo cargar la ficha. Vuelve a abrir el enlace.</Aviso>;
   }
 
-  const entradas = ficha.data.entradas ?? [];
+  const entradas: Entrada[] = ficha.data.entradas ?? [];
 
   return (
     <section className="viajeros" aria-labelledby="viajeros-titulo">
@@ -55,7 +60,12 @@ export function QuienEsQuien({
         <ul className="viajeros__lista">
           {entradas.map((entrada) => (
             <li key={entrada.nombre}>
-              <Etiqueta entrada={entrada} onIrACapitulo={onIrACapitulo} />
+              <Etiqueta
+                token={token}
+                entrada={entrada}
+                onIrACapitulo={onIrACapitulo}
+                onPeticionEnviada={onPeticionEnviada}
+              />
             </li>
           ))}
           <li>
@@ -75,11 +85,15 @@ export function QuienEsQuien({
 }
 
 function Etiqueta({
+  token,
   entrada,
   onIrACapitulo,
+  onPeticionEnviada,
 }: {
+  token: string;
   entrada: Entrada;
   onIrACapitulo: ((numero: number) => void) | undefined;
+  onPeticionEnviada: ((peticionId: number) => void) | undefined;
 }) {
   const capitulos = entrada.capitulos ?? [];
   return (
@@ -109,6 +123,16 @@ function Etiqueta({
               </span>
             ))}
           </p>
+        ) : null}
+        {/* Sin el id del hecho no hay qué corregir: pedirlo por el nombre
+            sería la búsqueda difusa que D-02 descartó. */}
+        {typeof entrada.hecho_canon_id === "number" ? (
+          <PedirCorreccion
+            token={token}
+            hechoId={entrada.hecho_canon_id}
+            nombre={entrada.nombre}
+            onEnviada={onPeticionEnviada}
+          />
         ) : null}
       </div>
     </article>

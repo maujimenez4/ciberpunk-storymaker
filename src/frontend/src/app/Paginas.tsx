@@ -1,7 +1,7 @@
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { type AvanceDeLaNovela, Entrevista, leerNovelaEnCurso } from "@/features/entrevista";
-import { Leer, QuienEsQuien, useAjustesDeLectura } from "@/features/manuscrito";
+import { Leer, PuertaDeEspera, QuienEsQuien, useAjustesDeLectura } from "@/features/manuscrito";
 import { Pagina } from "@/shared/ui/patterns/Pagina";
 
 import "./navegacion.css";
@@ -66,6 +66,35 @@ export function Paginas() {
   const [novela, setNovela] = useState<Novela>(() =>
     leerNovelaEnCurso() === null ? { tipo: "ninguna" } : { tipo: "en-curso", avance: null },
   );
+
+  const [peticion, setPeticion] = useState<number | null>(null);
+  const [destino, setDestino] = useState<number | null>(null);
+
+  /**
+   * P-24: un capítulo de la ficha lleva a ese capítulo **en Leer**. El
+   * fragmento se escribe antes de cambiar de pestaña —así `usePosicion` lo toma
+   * como el punto al que te mandaron— y se baja hasta él cuando la sección
+   * exista: la lectura se monta al cambiar de pestaña y carga después.
+   */
+  const irACapitulo = (numero: number) => {
+    window.history.replaceState({}, "", `${window.location.search}#capitulo-${numero}`);
+    setDestino(numero);
+    setVista(VISTAS.leer);
+  };
+  useEffect(() => {
+    if (destino === null || vista !== VISTAS.leer) return;
+    let intentos = 0;
+    const reloj = window.setInterval(() => {
+      const seccion = document.getElementById(`capitulo-${destino}`);
+      intentos += 1;
+      if (seccion || intentos > 50) {
+        window.clearInterval(reloj);
+        seccion?.scrollIntoView?.();
+        setDestino(null);
+      }
+    }, 100);
+    return () => window.clearInterval(reloj);
+  }, [destino, vista]);
 
   const hayNovela = token !== null;
   const disponibles = PESTANAS.filter((p) => p.vista === VISTAS.entrevista || hayNovela);
@@ -167,9 +196,32 @@ export function Paginas() {
             deshabilitado={escribiendo}
           />
         ) : vista === VISTAS.leer && token ? (
-          <Leer token={token} />
+          <PuertaDeEspera
+            token={token}
+            peticionId={peticion}
+            onPeticionTerminada={(resultado) => {
+              setPeticion(null);
+              // Cada tirada tiene su enlace: si la corrección se publicó con uno
+              // nuevo, se pasa a él sin recargar. `replaceState` y no
+              // `pushState`, igual que la posición: atrás es para salir.
+              const nuevo = resultado.token_resultante;
+              if (resultado.estado === "atendida" && nuevo && nuevo !== token) {
+                window.history.replaceState({}, "", `/?token=${encodeURIComponent(nuevo)}`);
+                setToken(nuevo);
+              }
+            }}
+          >
+            <Leer token={token} />
+          </PuertaDeEspera>
         ) : token ? (
-          <QuienEsQuien token={token} />
+          <QuienEsQuien
+            token={token}
+            onIrACapitulo={irACapitulo}
+            onPeticionEnviada={(id) => {
+              setPeticion(id);
+              setVista(VISTAS.leer);
+            }}
+          />
         ) : null}
       </div>
     </Pagina>

@@ -479,3 +479,128 @@
     padding: 1rem 1.125rem;
   }
 }
+
+/* --- corregir un hecho (D-02) --------------------------------------------- */
+
+.corregir__abrir {
+  margin-block-start: 0.5rem;
+  padding-inline: 0;
+  font-size: var(--nota);
+}
+
+.corregir {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px dashed var(--linea);
+}
+
+.corregir__etiqueta {
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+.corregir__campo {
+  inline-size: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  padding: 0.5rem 0.625rem;
+  font: inherit;
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--tinta-suave);
+  border-radius: var(--radio-bloque);
+  resize: vertical;
+}
+
+.corregir__campo:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.corregir__nota {
+  margin: 0;
+  font-size: var(--nota);
+  color: var(--tinta-suave);
+}
+
+.corregir__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+/* --- la espera de una regeneración (D-05) --------------------------------- */
+
+.espera {
+  padding: 1.5rem 1.625rem;
+}
+
+.espera__titulo {
+  margin: 0;
+  font-size: var(--titulo);
+  line-height: 1.1;
+}
+
+.espera__entradilla {
+  margin: 0.375rem 0 1rem;
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+.espera__estado {
+  margin: 0 0 1rem;
+}
+
+.espera__capitulos {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.espera__capitulo {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.375rem;
+  border-block-end: 1px dotted var(--linea);
+}
+
+.espera__marca {
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+/* Lo terminado no se distingue solo por color: cambia la letra entera. */
+.espera__capitulo[data-estado="hecho"] .espera__marca {
+  font-style: normal;
+  color: var(--sello);
+}
+
+.espera__salida {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+/* --- novedades y resultado de una petición -------------------------------- */
+
+.novedades,
+.resultado {
+  padding: 1rem 1.25rem;
+  margin-block-end: 1.5rem;
+}
+
+.novedades__titulo {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.novedades__texto,
+.resultado__texto {
+  margin: 0;
+}

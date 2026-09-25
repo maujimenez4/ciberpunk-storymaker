@@ -35,6 +35,8 @@ export function Leer({ token }: { token: string }) {
         <p className="dedicatoria">{version.data.dedicatoria}</p>
       ) : null}
 
+      <Novedades numeros={capitulos.filter((c) => c.cambiado).map((c) => c.numero)} />
+
       <Sumario token={token} capitulos={capitulos} />
 
       {capitulos.map((capitulo) => (
@@ -60,6 +62,35 @@ export function Leer({ token }: { token: string }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * Qué cambió respecto a la tirada anterior (RF-IND-02, RF-NOV-01), con la marca
+ * `cambiado` **que da el backend**. En la primera versión no hay ninguna y esto
+ * no se pinta (RF-IND-03): «nada ha cambiado» en un regalo recién abierto no
+ * informa de nada.
+ */
+function Novedades({ numeros }: { numeros: number[] }) {
+  if (numeros.length === 0) return null;
+  return (
+    <aside className="hoja novedades" aria-labelledby="novedades-titulo">
+      <h2 id="novedades-titulo" className="novedades__titulo">
+        Novedades de esta versión
+      </h2>
+      <p className="novedades__texto">
+        {numeros.length === 1 ? "Se reescribió el capítulo " : "Se reescribieron los capítulos "}
+        {numeros.map((numero, i) => (
+          <span key={numero}>
+            {i === 0 ? "" : i === numeros.length - 1 ? " y " : ", "}
+            <a className="enlace" href={`#${idDeCapitulo(numero)}`} aria-label={`Capítulo ${numero}`}>
+              {numero}
+            </a>
+          </span>
+        ))}
+        .
+      </p>
+    </aside>
   );
 }
 
