@@ -174,6 +174,10 @@ class HechoCanon(Base):
     sustituye_a: Mapped[int | None] = mapped_column(
         ForeignKey("hecho_canon.id", name="fk_hecho_canon_sustituye_a")
     )
+    run_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    """Que corrida lo escribio (P-6). Nulo para los de `origen: brief`, que
+    existian antes del texto (regla de dominio 4), y para lo anterior a la
+    migracion de la Fase 5."""
 
 
 class Entrevista(Base):

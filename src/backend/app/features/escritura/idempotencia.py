@@ -34,16 +34,17 @@ que paso se trata y **cual de sus vueltas**.
 | --- | --- | --- |
 | `version_texto` | filas de esa escena **con ese `run_id`** | corrida |
 | `ejecucion` | filas **con ese `run_id`** | corrida |
-| `evento` | filas de esa escena | escena |
-| `hecho_canon` | filas con esa `escena_de_origen` | escena |
+| `evento` | filas de esa escena **con ese `run_id`** | corrida |
+| `hecho_canon` | filas con esa `escena_de_origen` **y ese `run_id`** | corrida |
 
-**Las dos ultimas no se pueden preguntar por corrida, y no es un descuido:**
-`evento` y `hecho_canon` no tienen columna `run_id`. Anadirla es esquema y
-migracion —`modelos.py` tiene un solo dueno en esta fase (T1)— asi que su
-alcance es la escena, que hoy es exacto: `EXTRAYENDO` escribe canon y ledger una
-sola vez por escena (`architecture.md` §3.4: «la escritura a canon y ledger es
-exclusiva del paso `EXTRAYENDO`»), y una escena rechazada no escribe nada.
-Queda anotado en Desviaciones.
+**Las dos ultimas se preguntaban por escena hasta la Fase 5**, porque `evento`
+y `hecho_canon` no tenian columna `run_id`. Era exacto mientras `EXTRAYENDO`
+escribiera una sola vez por escena, y dejo de serlo el dia que una peticion del
+lector regenera un capitulo ya integrado (P-6): el rastro por escena daba por
+escrita **la corrida de ayer** y la consolidacion de la regeneracion no corria,
+dejando en el canon los hechos de la prosa que el lector pidio cambiar. Las
+filas anteriores a la migracion tienen `run_id` nulo y no cuentan para ninguna
+corrida, que es lo correcto: ninguna corrida de hoy las escribio.
 
 ## Lo que el guardia **no** hace
 
@@ -163,8 +164,7 @@ class RastroEnEjecucion:
 
 @dataclass(frozen=True, slots=True)
 class RastroEnEvento:
-    """El ledger de la escena. **Por escena y no por corrida**: `evento` no tiene
-    columna `run_id`, y el porque esta en la cabecera del fichero.
+    """El ledger de **esta corrida** en esta escena (P-6, Fase 5).
 
     Basta con que haya uno: `EXTRAYENDO` escribe los suyos dentro del punto de
     guardado de `consolidar_escena`, asi que o estan todos o no esta ninguno.
@@ -175,8 +175,10 @@ class RastroEnEvento:
     async def tabla_escrita(self, sesion: AsyncSession, paso: Paso) -> str | None:
         hay = (
             await sesion.execute(
-                text("SELECT COUNT(*) FROM evento WHERE escena_id = :escena_id"),
-                {"escena_id": self.escena_id},
+                text(
+                    "SELECT COUNT(*) FROM evento WHERE escena_id = :escena_id AND run_id = :run_id"
+                ),
+                {"escena_id": self.escena_id, "run_id": paso.run_id},
             )
         ).scalar_one()
         return "evento" if int(hay) > 0 else None
@@ -184,11 +186,12 @@ class RastroEnEvento:
 
 @dataclass(frozen=True, slots=True)
 class RastroEnHechoCanon:
-    """Los hechos que **esta escena** establecio (regla de dominio 4).
+    """Los hechos que **esta corrida** establecio en esta escena (regla 4, P-6).
 
     Por `escena_de_origen` y no por obra: los hechos de `origen: brief` no la
     tienen, existian antes del texto, y contarlos daria por consolidada una
-    escena que todavia no ha escrito nada.
+    escena que todavia no ha escrito nada. Y por corrida, por lo mismo que
+    `RastroEnEvento`.
 
     `escena_de_origen` es texto y no una clave ajena —lo dice `obra/modelos.py`—
     asi que el identificador se compara como cadena.
@@ -199,8 +202,11 @@ class RastroEnHechoCanon:
     async def tabla_escrita(self, sesion: AsyncSession, paso: Paso) -> str | None:
         hay = (
             await sesion.execute(
-                text("SELECT COUNT(*) FROM hecho_canon WHERE escena_de_origen = :escena"),
-                {"escena": str(self.escena_id)},
+                text(
+                    "SELECT COUNT(*) FROM hecho_canon "
+                    "WHERE escena_de_origen = :escena AND run_id = :run_id"
+                ),
+                {"escena": str(self.escena_id), "run_id": paso.run_id},
             )
         ).scalar_one()
         return "hecho_canon" if int(hay) > 0 else None

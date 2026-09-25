@@ -73,6 +73,13 @@ class Evento(Base):
     causa: Mapped[list[str]] = mapped_column(JSON, default=list)
     consecuencia: Mapped[list[str]] = mapped_column(JSON, default=list)
     excluye: Mapped[list[str]] = mapped_column(JSON, default=list)
+    run_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    """Que corrida lo escribio (P-6).
+
+    **Nulo a proposito:** las filas anteriores a esta migracion no tienen
+    ninguno y no se les puede inventar, y un evento del brief no lo escribe
+    ninguna corrida.
+    """
 
 
 class ResumenCapitulo(Base):

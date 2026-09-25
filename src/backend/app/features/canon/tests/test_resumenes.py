@@ -16,6 +16,7 @@ regla inalcanzable, que es la trampa que `capas.py` nombra.
 """
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.conftest import ObraConOutline
@@ -24,6 +25,7 @@ from app.features.canon import (
     leer_resumenes_anteriores,
 )
 from app.features.canon.modelos import ResumenCapitulo
+from app.features.canon.repository import escribir_resumen_de_capitulo
 from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import VersionTexto
 
@@ -258,3 +260,39 @@ async def test_un_numero_de_capitulo_no_positivo_no_pregunta_a_la_base(
         await leer_resumenes_anteriores(sesion, obra_id=obra_con_outline.obra.id, antes_de=antes_de)
         == []
     )
+
+
+async def test_consolidar_dos_veces_el_mismo_capitulo_sobrescribe_el_resumen(
+    sesion: AsyncSession, obra_con_outline: ObraConOutline
+) -> None:
+    """P-7. `UNIQUE(capitulo_id)` mas `INSERT` siempre era `IntegrityError` al
+    regenerar un capitulo ya integrado."""
+    capitulo_id = obra_con_outline.capitulos[0].id
+    entregada = await _capitulo_escrito(sesion, obra_con_outline, 1)
+    await escribir_resumen_de_capitulo(
+        sesion,
+        capitulo_id=capitulo_id,
+        version_texto_id=entregada.id,
+        texto="la version que se entrego",
+        hechos_establecidos=(),
+        hilos_abiertos=(),
+    )
+
+    resumen = await escribir_resumen_de_capitulo(
+        sesion,
+        capitulo_id=capitulo_id,
+        version_texto_id=None,
+        texto="la version regenerada",
+        hechos_establecidos=("perro.nombre=Nala",),
+        hilos_abiertos=(),
+    )
+
+    assert resumen.texto == "la version regenerada"
+    assert resumen.hechos_establecidos == ["perro.nombre=Nala"]
+    cuantos = (
+        await sesion.execute(
+            text("SELECT COUNT(*) FROM resumen_capitulo WHERE capitulo_id = :c"),
+            {"c": capitulo_id},
+        )
+    ).scalar_one()
+    assert cuantos == 1

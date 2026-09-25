@@ -107,16 +107,18 @@ def escritura_de_ejecucion(sesion: AsyncSession, obra_id: int, run_id: str) -> C
     return Contada(escribir)
 
 
-def escritura_de_evento(sesion: AsyncSession, obra_id: int, escena_id: int) -> Contada:
+def escritura_de_evento(
+    sesion: AsyncSession, obra_id: int, escena_id: int, run_id: str = RUN
+) -> Contada:
     async def escribir() -> int:
         await sesion.execute(
             text(
                 "INSERT INTO evento (obra_id, escena_id, descripcion, tiempo_historia, lugar, "
-                "participantes, testigos, causa, consecuencia, excluye) "
+                "participantes, testigos, causa, consecuencia, excluye, run_id) "
                 "VALUES (:o, :e, 'Nadia abre la carta', 'dia 1', 'El invernadero', "
-                "'[]', '[\"Nadia\"]', '[]', '[]', '[]')"
+                "'[]', '[\"Nadia\"]', '[]', '[]', '[]', :r)"
             ),
-            {"o": obra_id, "e": escena_id},
+            {"o": obra_id, "e": escena_id, "r": run_id},
         )
         await sesion.flush()
         return 1
@@ -124,14 +126,17 @@ def escritura_de_evento(sesion: AsyncSession, obra_id: int, escena_id: int) -> C
     return Contada(escribir)
 
 
-def escritura_de_hecho_canon(sesion: AsyncSession, obra_id: int, escena_id: int) -> Contada:
+def escritura_de_hecho_canon(
+    sesion: AsyncSession, obra_id: int, escena_id: int, run_id: str = RUN
+) -> Contada:
     async def escribir() -> int:
         await sesion.execute(
             text(
                 "INSERT INTO hecho_canon (obra_id, entidad, atributo, valor, confianza, origen, "
-                "escena_de_origen) VALUES (:o, 'Nadia', 'oficio', 'botanica', 1.0, 'escena', :e)"
+                "escena_de_origen, run_id) "
+                "VALUES (:o, 'Nadia', 'oficio', 'botanica', 1.0, 'escena', :e, :r)"
             ),
-            {"o": obra_id, "e": str(escena_id)},
+            {"o": obra_id, "e": str(escena_id), "r": run_id},
         )
         await sesion.flush()
         return 1
@@ -462,6 +467,26 @@ async def test_los_hechos_del_brief_no_bloquean_los_de_la_escena(
     assert resultado.repetido is False
     assert escribir.veces == 1
     assert await cuenta(sesion, "SELECT COUNT(*) FROM hecho_canon WHERE obra_id = :o", o=obra) == 2
+
+
+async def test_dos_corridas_sobre_la_misma_escena_no_se_confunden(
+    sesion: AsyncSession, obra_con_outline: ObraConOutline
+) -> None:
+    """P-6. El rastro por escena daba por escrita la corrida de ayer, y la
+    consolidacion de una regeneracion no llegaba a correr."""
+    obra = obra_con_outline.obra.id
+    escena_id = obra_con_outline.escena.id
+    await escritura_de_evento(sesion, obra, escena_id, run_id=RUN)()
+    await escritura_de_hecho_canon(sesion, obra, escena_id, run_id=RUN)()
+
+    for rastro, tabla in (
+        (RastroEnEvento(escena_id=escena_id), "evento"),
+        (RastroEnHechoCanon(escena_id=escena_id), "hecho_canon"),
+    ):
+        de_ayer = await rastro.tabla_escrita(sesion, Paso(run_id=RUN, nombre="EXTRAYENDO"))
+        de_hoy = await rastro.tabla_escrita(sesion, Paso(run_id=OTRA_CORRIDA, nombre="EXTRAYENDO"))
+        assert de_ayer == tabla
+        assert de_hoy is None, f"la corrida de hoy no escribio en {tabla} y el rastro dice que si"
 
 
 # ---------------------------------------------------------------------------

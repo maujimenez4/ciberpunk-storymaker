@@ -48,6 +48,7 @@ async def escribir_hechos_de_escena(
     obra_id: int,
     escena_id: int,
     hechos: Sequence[HechoExtraido],
+    run_id: str | None = None,
 ) -> list[HechoCanon]:
     """Regla de dominio 4: todo hecho de canon cita la escena que lo establecio.
 
@@ -68,6 +69,7 @@ async def escribir_hechos_de_escena(
             confianza=hecho.confianza,
             origen="escena",
             escena_de_origen=str(escena_id),
+            run_id=run_id,
         )
         for hecho in hechos
     ]
@@ -80,6 +82,7 @@ async def escribir_eventos(
     obra_id: int,
     escena_id: int,
     eventos: Sequence[EventoExtraido],
+    run_id: str | None = None,
 ) -> list[Evento]:
     """El ledger crece por el unico sitio por el que puede crecer: anadiendo.
 
@@ -100,6 +103,7 @@ async def escribir_eventos(
             causa=list(evento.causa),
             consecuencia=list(evento.consecuencia),
             excluye=list(evento.excluye),
+            run_id=run_id,
         )
         for evento in eventos
     ]
@@ -121,7 +125,26 @@ async def escribir_resumen_de_capitulo(
     columna lo admite y el resumen sigue siendo util para el capitulo
     siguiente. Cuando hay version, se cita, que es lo que hace el resumen
     regenerable en vez de una segunda verdad.
+
+    **Sobrescribe si ya hay uno (P-7), y no rompe ninguna regla:** el resumen
+    no es el ledger, no tiene disparadores, y `UNIQUE(capitulo_id)` dice que hay
+    uno y solo uno por capitulo. Al regenerar un capitulo integrado la verdad
+    es la nueva, porque el texto aprobado acaba de cambiar. Hasta la Fase 5
+    siempre insertaba y era inalcanzable; la regeneracion lo hace alcanzable.
     """
+    existente = (
+        await sesion.execute(
+            select(ResumenCapitulo).where(ResumenCapitulo.capitulo_id == capitulo_id)
+        )
+    ).scalar_one_or_none()
+    if existente is not None:
+        existente.version_texto_id = version_texto_id
+        existente.texto = texto
+        existente.hechos_establecidos = list(hechos_establecidos)
+        existente.hilos_abiertos = list(hilos_abiertos)
+        await sesion.flush()
+        return existente
+
     resumen = ResumenCapitulo(
         capitulo_id=capitulo_id,
         version_texto_id=version_texto_id,
