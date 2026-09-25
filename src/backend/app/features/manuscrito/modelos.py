@@ -16,7 +16,7 @@ import secrets
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON, DateTime
 
@@ -61,6 +61,14 @@ class VersionPublicada(Base):
     __tablename__ = "version_publicada"
     __table_args__ = (
         UniqueConstraint("obra_id", "ordinal", name="uq_version_publicada_obra_ordinal"),
+        # Una sola vigente por obra, sujeta por el esquema y no por el servicio
+        # (plan-5 T1): dos vigentes dejan sin respuesta «que version se lee».
+        Index(
+            "uq_version_publicada_vigente",
+            "obra_id",
+            unique=True,
+            sqlite_where=text("vigente = 1"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -79,6 +87,13 @@ class VersionPublicada(Base):
     identificador_publico: Mapped[str] = mapped_column(
         String(64), unique=True, index=True, default=nuevo_identificador_publico
     )
+    vigente: Mapped[bool] = mapped_column(default=False, server_default=text("0"))
+    """Cual de las versiones publicadas es la que se esta leyendo (plan-5 T1).
+
+    **No se deduce de `ordinal`:** `revertir` devuelve a la anterior sin borrar
+    la revertida (RF-PET-08), asi que despues de revertir la de mayor ordinal es
+    justo la que ya no se lee.
+    """
 
 
 class CapituloPublicado(Base):
@@ -167,3 +182,47 @@ class Dedicatoria(Base):
         ForeignKey("obra.id", name="fk_dedicatoria_obra_id"), unique=True
     )
     texto: Mapped[str] = mapped_column(Text)
+
+
+class PeticionDeCambio(Base):
+    """Lo que el lector pide sobre un `HechoCanon` de lo que esta leyendo (plan-5 T1).
+
+    **No edita el canon**: la correccion es un hecho nuevo que sustituye, y
+    `hecho_nuevo_id` lo cita (RF-PET-02). Los cuatro estados son los de
+    `architecture.md` §3.9. `resultado` es obligatorio al terminar porque
+    RF-PET-07 dice que la peticion se conserva **con su resultado**.
+    """
+
+    __tablename__ = "peticion_de_cambio"
+    __table_args__ = (
+        CheckConstraint(
+            "estado IN ('registrada', 'regenerando', 'atendida', 'descartada')",
+            name="ck_peticion_estado",
+        ),
+        CheckConstraint("trim(texto_pedido) <> ''", name="ck_peticion_texto_no_vacio"),
+        CheckConstraint(
+            "estado NOT IN ('atendida', 'descartada') OR resultado IS NOT NULL",
+            name="ck_peticion_terminada_con_resultado",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    obra_id: Mapped[int] = mapped_column(ForeignKey("obra.id", name="fk_peticion_obra_id"))
+    version_publicada_id: Mapped[int] = mapped_column(
+        ForeignKey("version_publicada.id", name="fk_peticion_version_publicada_id")
+    )
+    hecho_canon_id: Mapped[int] = mapped_column(
+        ForeignKey("hecho_canon.id", name="fk_peticion_hecho_canon_id")
+    )
+    texto_pedido: Mapped[str] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(
+        String(12), default="registrada", server_default="registrada"
+    )
+    hecho_nuevo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("hecho_canon.id", name="fk_peticion_hecho_nuevo_id")
+    )
+    version_producida_id: Mapped[int | None] = mapped_column(
+        ForeignKey("version_publicada.id", name="fk_peticion_version_producida_id")
+    )
+    resultado: Mapped[str | None] = mapped_column(String(500))
+    run_id: Mapped[str | None] = mapped_column(String(60), index=True)

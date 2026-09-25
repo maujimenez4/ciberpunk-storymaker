@@ -112,7 +112,9 @@ La primera mitad está cerrada: `Consumo` guarda `cache_read_input_tokens` y `ca
 
 **Coste:** falsea el coste y los tokens por capítulo que usan las evals. **Quién:** la sesión de evals (plan 6), antes de medir: tomar la foto del consumo justo después de `escritor.escribir`.
 
-### P-33 · La cobertura de los elementos obligatorios se mide al publicar, pero no lo impide
+### P-33 · La cobertura de los elementos obligatorios se mide al publicar, pero no lo impide — **cerrado el 2026-09-24**
+
+*Cerrado:* `publicar` lanza `ElementosObligatoriosAusentes` —nombrando cuáles faltan— **antes de crear la versión**, con el *score* de G4 ya emitido; test `test_sin_un_elemento_obligatorio_no_se_publica_y_dice_cual`. De paso, el cuadro leía `cobertura.faltantes` con `getattr` y el campo se llama `ausentes`: guardaba siempre «no falta nada». Lo de abajo queda como historia.
 
 **Severidad: incumple la regla de dominio 11 de `CLAUDE.md` §8** («todo elemento obligatorio del brief aparece en al menos un capítulo… un dato que el comprador pidió y no está es el producto sin entregar»).
 

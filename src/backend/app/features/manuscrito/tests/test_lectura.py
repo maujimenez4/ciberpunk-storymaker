@@ -23,6 +23,7 @@ from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import Trabajo, VersionTexto
 from app.features.manuscrito import publicar
 from app.features.manuscrito.modelos import Dedicatoria, VersionPublicada
+from app.features.manuscrito.tests.ayudas import cubrir_los_obligatorios
 
 CAPITULOS = 10
 DEDICATORIA = "Para Marta, que nunca se rinde."
@@ -90,6 +91,7 @@ async def _integrar(sesion: AsyncSession, obra: ObraConOutline) -> None:
             )
         )
     await sesion.flush()
+    await cubrir_los_obligatorios(sesion, obra.obra.id)
 
 
 @pytest.fixture

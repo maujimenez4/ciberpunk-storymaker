@@ -27,12 +27,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commons.domain.errores import ErrorDeDominio
 from app.commons.observabilidad import Observador, ObservadorNulo, Puntuacion, Span, Traza
 from app.features.calidad import (
     CATALOGO_DE_MANUSCRITO,
+    Defecto,
     HechoUsado,
     ManuscritoAValidar,
     cerrar_manuscrito,
@@ -203,6 +205,34 @@ def _lista(crudo: Any) -> list[str]:
     return [str(v) for v in crudo if str(v).strip()]
 
 
+class ElementosObligatoriosAusentes(ErrorDeDominio):
+    """Falta en la novela un elemento que el comprador pidio: **no se publica**.
+
+    Regla de dominio 11 (`CLAUDE.md` §8) y P-33: «un dato que el comprador pidio
+    y no esta no es una omision: es el producto sin entregar». Hasta aqui la
+    cobertura se media en G4, emitia su *score* y la novela salia igual.
+
+    El mensaje nombra **cuales** faltan, por lo mismo que `CapituloSinPuerta`
+    nombra el capitulo: quien lo recibe es quien tiene que ir a arreglarlo.
+    """
+
+    def __init__(self, faltantes: Sequence[str]) -> None:
+        self.faltantes = list(faltantes)
+        super().__init__(
+            "No se puede publicar: faltan en la novela elementos obligatorios del brief: "
+            + ", ".join(f"«{f}»" for f in self.faltantes)
+        )
+
+
+def entrada_del_cuadro(capitulo: int, defecto: Defecto) -> dict[str, Any]:
+    """Como se guarda un defecto vigente en `cuadro_de_defectos.defectos`.
+
+    Con el **numero de capitulo** fuera del `Defecto`, porque `calidad.Defecto`
+    no lo lleva y la clasificacion de la Fase 5 lo necesita en la huella.
+    """
+    return {"capitulo": capitulo, "defecto": defecto.model_dump()}
+
+
 async def _cuadro_de_defectos(
     sesion: AsyncSession, obra_id: int, span: Span | None = None
 ) -> list[dict[str, Any]]:
@@ -248,18 +278,31 @@ async def _cuadro_de_defectos(
     if span is not None:
         emitir(span, puntuaciones_de_g4(cierre))
     cobertura = cierre.cobertura
+    # Antes se leian `cubiertos` y `faltantes` con `getattr`, y `Cobertura` no
+    # tiene `faltantes`: se llama `ausentes`. El cuadro decia siempre «no falta
+    # nada», que es la otra mitad de P-33.
     return [
         {
             "cobertura": {
-                "cubiertos": list(getattr(cobertura, "cubiertos", ()) or ()),
-                "faltantes": list(getattr(cobertura, "faltantes", ()) or ()),
+                "cubiertos": [c.elemento for c in cobertura.cubiertos],
+                "faltantes": [a.elemento for a in cobertura.ausentes],
             }
         }
     ]
 
 
+def _faltantes(cuadro: Sequence[dict[str, Any]]) -> list[str]:
+    return [
+        str(f) for entrada in cuadro for f in (entrada.get("cobertura") or {}).get("faltantes", [])
+    ]
+
+
 async def publicar(
-    sesion: AsyncSession, obra_id: int, *, observador: Observador | None = None
+    sesion: AsyncSession,
+    obra_id: int,
+    *,
+    observador: Observador | None = None,
+    defectos_vigentes: Sequence[tuple[int, Defecto]] = (),
 ) -> VersionPublicada:
     """Una tirada inmutable de la obra, o ninguna.
 
@@ -272,13 +315,25 @@ async def publicar(
     un span por validador: `cronologia_lean` y `puerta_g4`, cada uno con su
     *score*. El observador de produccion llega blindado: si Langfuse se cae, se
     publica igual.
+
+    **La tirada nueva queda vigente** y la anterior deja de serlo (plan-5 T1):
+    publicar es lo que el lector pasa a tener delante.
+
+    `defectos_vigentes` son los `(numero de capitulo, Defecto)` que la tirada
+    lleva encima sin que impidan publicar; van al cuadro, que es contra lo que
+    la Fase 5 clasifica preexistente frente a introducido (RF-PET-05).
     """
     observador = observador if observador is not None else ObservadorNulo()
     async with observador.traza(obra_id=obra_id, nombre="publicacion") as traza:
-        return await _publicar(sesion, obra_id, traza)
+        return await _publicar(sesion, obra_id, traza, defectos_vigentes)
 
 
-async def _publicar(sesion: AsyncSession, obra_id: int, traza: Traza) -> VersionPublicada:
+async def _publicar(
+    sesion: AsyncSession,
+    obra_id: int,
+    traza: Traza,
+    defectos_vigentes: Sequence[tuple[int, Defecto]] = (),
+) -> VersionPublicada:
     listos = await _capitulos_listos(sesion, obra_id)
 
     # `CA-21`. **Antes de escribir nada**: `publicar` ya es atomico por su
@@ -311,6 +366,16 @@ async def _publicar(sesion: AsyncSession, obra_id: int, traza: Traza) -> Version
     if anterior is not None and not _hay_cambios(fijados, listos):
         return anterior
 
+    # P-33 y regla de dominio 11. **Antes de crear la version**: una novela sin
+    # un elemento que el comprador pidio es el producto sin entregar, y el
+    # *score* de G4 ya se emite aunque no se publique.
+    async with traza.span("puerta_g4") as span:
+        defectos = await _cuadro_de_defectos(sesion, obra_id, span)
+    faltantes = _faltantes(defectos)
+    if faltantes:
+        raise ElementosObligatoriosAusentes(faltantes)
+    defectos = [*defectos, *(entrada_del_cuadro(c, d) for c, d in defectos_vigentes)]
+
     # RF-PUB-08, y **el punto de retorno es propio a proposito**. `publicar` no
     # hace `commit` -- escribe en la transaccion de quien llama --, asi que sin
     # este `begin_nested` un fallo a mitad dejaria la `VersionPublicada` escrita
@@ -318,7 +383,15 @@ async def _publicar(sesion: AsyncSession, obra_id: int, traza: Traza) -> Version
     # SAVEPOINT deshace **solo lo de aqui** y no toca lo que el llamador tuviera
     # empezado, que no es cosa nuestra.
     async with sesion.begin_nested():
+        # Se apaga la vigente **antes** de insertar la nueva: el indice parcial
+        # admite una sola vigente por obra, y al reves lanza `IntegrityError`.
+        await sesion.execute(
+            update(VersionPublicada)
+            .where(VersionPublicada.obra_id == obra_id, VersionPublicada.vigente.is_(True))
+            .values(vigente=False)
+        )
         version = VersionPublicada(
+            vigente=True,
             obra_id=obra_id,
             ordinal=1 if anterior is None else anterior.ordinal + 1,
             sucede_a_id=None if anterior is None else anterior.id,
@@ -343,8 +416,6 @@ async def _publicar(sesion: AsyncSession, obra_id: int, traza: Traza) -> Version
         sesion.add(
             FichaDeLectura(version_id=version.id, entradas=await _ficha_de_lectura(sesion, obra_id))
         )
-        async with traza.span("puerta_g4") as span:
-            defectos = await _cuadro_de_defectos(sesion, obra_id, span)
         sesion.add(CuadroDeDefectos(version_id=version.id, defectos=defectos))
 
     return version

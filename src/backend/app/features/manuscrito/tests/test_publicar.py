@@ -15,6 +15,7 @@ from app.features.escena.modelos import Escena
 from app.features.escritura.modelos import Trabajo, VersionTexto
 from app.features.manuscrito import (
     CapituloSinPuerta,
+    ElementosObligatoriosAusentes,
     ObraSinCapitulos,
     ensamblar_manuscrito,
     publicar,
@@ -26,13 +27,18 @@ from app.features.manuscrito.modelos import (
     FichaDeLectura,
     VersionPublicada,
 )
+from app.features.manuscrito.tests.ayudas import cubrir_los_obligatorios
 from app.features.obra.modelos import Obra
 
 CAPITULOS = 10
 
 
 async def _integrar(
-    sesion: AsyncSession, obra: ObraConOutline, *, escalado: int | None = None
+    sesion: AsyncSession,
+    obra: ObraConOutline,
+    *,
+    escalado: int | None = None,
+    cubrir: bool = True,
 ) -> None:
     """Diez capitulos escritos, con su texto vigente y su trabajo cerrado.
 
@@ -86,6 +92,8 @@ async def _integrar(
             )
         )
     await sesion.flush()
+    if cubrir:
+        await cubrir_los_obligatorios(sesion, obra.obra.id)
 
 
 @pytest.fixture
@@ -303,6 +311,38 @@ async def test_una_obra_sin_capitulos_no_se_publica_y_lean_ni_se_llama(
 
     assert llamadas == []
     assert await _cuantas(sesion, obra.id) == 0
+
+
+async def test_sin_un_elemento_obligatorio_no_se_publica_y_dice_cual(
+    sesion: AsyncSession, obra_con_outline: ObraConOutline
+) -> None:
+    """P-33 y regla de dominio 11: un dato que el comprador pidio y no esta es el
+    producto sin entregar. Antes se medía, se emitia el *score* y se publicaba."""
+    await _integrar(sesion, obra_con_outline, cubrir=False)
+
+    with pytest.raises(ElementosObligatoriosAusentes) as fallo:
+        await publicar(sesion, obra_con_outline.obra.id)
+
+    assert "un elemento que el comprador pidio" in str(fallo.value)
+    assert await _cuantas(sesion, obra_con_outline.obra.id) == 0
+
+    await cubrir_los_obligatorios(sesion, obra_con_outline.obra.id)
+    assert (await publicar(sesion, obra_con_outline.obra.id)).ordinal == 1
+
+
+async def test_la_tirada_nueva_queda_vigente_y_la_anterior_no(
+    sesion: AsyncSession, integrada: ObraConOutline
+) -> None:
+    """Plan-5 T1: publicar es lo que el lector pasa a tener delante."""
+    primera = await publicar(sesion, integrada.obra.id)
+    assert primera.vigente is True
+
+    await _regenerar(sesion, integrada, numero=4, texto="Capitulo 4, reescrito.")
+    segunda = await publicar(sesion, integrada.obra.id)
+
+    await sesion.refresh(primera)
+    assert segunda.vigente is True
+    assert primera.vigente is False
 
 
 # --- ayudas de lectura, no del servicio ------------------------------------

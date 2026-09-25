@@ -35,6 +35,12 @@ promete, y cada tarea anade su linea al llegar:
 | `CapituloSinPuerta`      | `service`       | **T6**        |
 | `generar_lean`           | `lean.generador`| T4            |
 | `router`                 | `router`        | **T9**        |
+| `ElementosObligatoriosAusentes`, `entrada_del_cuadro` | `service` | P-33 · plan-5 T5 |
+| `Huella`, `huella_de`, `Clasificacion`, `clasificar_contra_el_cuadro`, `cuadro_guardado`, `defectos_de_las_entradas` | `clasificacion` | **plan-5 T5** |
+| `version_vigente`, `revertir`, `VersionDesconocida`, `VersionYaVigente` | `reversion` | **plan-5 T6** |
+
+`PeticionDeCambio` (plan-5 T1) es fila de base de datos y sale por `modelos`,
+como las demas.
 
 **Los modelos de base de datos ya no salen de aqui. Invertido el 2026-09-24,
 en T9, y conviene el porque porque contradice lo que T1 decidio.** T1 exporto
@@ -57,6 +63,14 @@ commit que el simbolo.** Un `__all__` que nombra algo que no existe rompe la
 importacion de la feature entera, y con ella la de todo el que la use.
 """
 
+from app.features.manuscrito.clasificacion import (
+    Clasificacion,
+    Huella,
+    clasificar_contra_el_cuadro,
+    cuadro_guardado,
+    defectos_de_las_entradas,
+    huella_de,
+)
 from app.features.manuscrito.lean import HerramientaNoDisponible, correr_lean
 from app.features.manuscrito.modelos import nuevo_identificador_publico
 from app.features.manuscrito.repository import (
@@ -71,6 +85,12 @@ from app.features.manuscrito.repository import (
     version_por_token,
     versiones_de,
 )
+from app.features.manuscrito.reversion import (
+    VersionDesconocida,
+    VersionYaVigente,
+    revertir,
+    version_vigente,
+)
 from app.features.manuscrito.router import publicacion, router
 from app.features.manuscrito.schemas import (
     CapituloPublicado,
@@ -83,38 +103,52 @@ from app.features.manuscrito.schemas import (
 from app.features.manuscrito.service import (
     CapituloSinPuerta,
     CronologiaIncoherente,
+    ElementosObligatoriosAusentes,
     ObraSinCapitulos,
     dedicatoria_o_nada,
     ensamblar_manuscrito,
+    entrada_del_cuadro,
     publicar,
 )
 
 __all__ = [
     "CapituloPublicado",
     "CapituloSinPuerta",
+    "Clasificacion",
     "CronologiaIncoherente",
     "DedicatoriaEntrada",
     "DefectoDelCuadro",
+    "ElementosObligatoriosAusentes",
     "EntradaDeFicha",
     "FichaDeLectura",
     "HerramientaNoDisponible",
+    "Huella",
     "ObraSinCapitulos",
+    "VersionDesconocida",
     "VersionPublicada",
+    "VersionYaVigente",
     "capitulos_cambiados",
     "capitulos_de",
+    "clasificar_contra_el_cuadro",
     "correr_lean",
+    "cuadro_guardado",
     "dedicatoria_de",
     "dedicatoria_o_nada",
+    "defectos_de_las_entradas",
     "ensamblar_manuscrito",
+    "entrada_del_cuadro",
     "ficha_de",
     "guardar_dedicatoria",
+    "huella_de",
     "nuevo_identificador_publico",
     "publicacion",
     "publicar",
+    "revertir",
     "router",
     "texto_publicado",
     "titulo_de_obra",
     "ultima_version",
     "version_por_token",
+    "version_vigente",
     "versiones_de",
 ]
