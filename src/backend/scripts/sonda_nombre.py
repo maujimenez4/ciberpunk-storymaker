@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.commons.llm.claude_code import ClienteClaudeCode  # noqa: E402
-from app.features.outline.agents import PLANTILLA_V2, render_arquitecto  # noqa: E402
+from app.commons.llm.claude_code import ClienteClaudeCode
+from app.features.outline.agents import PLANTILLA_V2, render_arquitecto
 
 BRIEF = json.loads(Path("ejemplos/brief-marta.json").read_text(encoding="utf-8"))
 
