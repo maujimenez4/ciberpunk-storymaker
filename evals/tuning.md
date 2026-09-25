@@ -31,8 +31,8 @@ Ejecuciones: `v1 rechazada`, `v1 rechazada`, `v1 escalada`.
 | Novela de ejemplo · 1 | 840 (`EST-02`, `SEG-02`) | **1.010** | aprobado |
 | Novela de ejemplo · 2 | 884 (`EST-02`) | **1.046** | aprobado |
 | Novela de ejemplo · 3 | 802 (`EST-02`) | **1.443** | aprobado |
-| B1 (eval) · 1 | 935 (`EST-02`) | **1.346** | aprobado |
-| B1 (eval) · 2 | **1.043** a la primera | — | aprobado |
+| B5 (eval, obra 9) · 1 | 935 (`EST-02`) | **1.346** | aprobado |
+| B5 (eval, obra 9) · 2 | **1.043** a la primera | — | aprobado |
 
 **Lectura honesta:**
 
@@ -47,3 +47,5 @@ uv run python evals/tabla.py        # tabla por brief, desde la base
 ```
 
 y, para esta tabla, `intento_descartado` (texto y defectos de cada intento rechazado, `GET /trabajos/{id}/intentos`) cruzado con `version_texto` vigente por capítulo.
+
+*Corregido el 2026-09-25:* las dos últimas filas decían «B1»; son de **B5** (obra 9, `evals/resultados/corridas.json`). B1 es la obra 10 y no llegó a integrar ningún capítulo. Las cifras no cambian.
