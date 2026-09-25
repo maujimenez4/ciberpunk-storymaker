@@ -7,7 +7,7 @@ se lee bien y no puede ir en un regalo.
 """
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.conftest import ObraConOutline
@@ -161,6 +161,40 @@ async def test_la_ficha_dice_en_que_capitulos_aparece_cada_entrada(
     assert ficha.entradas
     assert all("capitulos" in e for e in ficha.entradas)
     assert any(e["capitulos"] for e in ficha.entradas)
+
+
+async def test_cada_entrada_de_la_ficha_lleva_su_hecho_de_canon_o_nulo(
+    sesion: AsyncSession, integrada: ObraConOutline
+) -> None:
+    """D-02: la correccion del lector viaja con el `hecho_canon_id` de la entrada.
+
+    Nadia tiene un hecho de `nombre`, que es el suyo. Teo tiene dos y ninguno de
+    nombre: elegir uno mandaria la correccion a un hecho que nadie pidio tocar.
+    """
+    ids: dict[str, int] = {}
+    for clave, (entidad, atributo, valor) in {
+        "nadia": ("Nadia", "nombre", "Nadia"),
+        "teo_edad": ("Teo", "edad", "40"),
+        "teo_oficio": ("Teo", "oficio", "jardinero"),
+    }.items():
+        ids[clave] = (
+            await sesion.execute(
+                text(
+                    "INSERT INTO hecho_canon (obra_id, entidad, atributo, valor, confianza, origen) "
+                    "VALUES (:o, :e, :a, :v, 1.0, 'brief') RETURNING id"
+                ),
+                {"o": integrada.obra.id, "e": entidad, "a": atributo, "v": valor},
+            )
+        ).scalar_one()
+
+    version = await publicar(sesion, integrada.obra.id)
+    ficha = (
+        await sesion.execute(select(FichaDeLectura).where(FichaDeLectura.version_id == version.id))
+    ).scalar_one()
+    por_nombre = {e["nombre"]: e["hecho_canon_id"] for e in ficha.entradas}
+
+    assert por_nombre["Nadia"] == ids["nadia"]
+    assert por_nombre["Teo"] is None
 
 
 async def test_el_cuadro_de_defectos_incluye_la_cobertura_de_personalizacion(

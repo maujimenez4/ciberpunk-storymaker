@@ -177,6 +177,27 @@ async def presentes_por_capitulo(sesion: AsyncSession, obra_id: int) -> list[dic
     return [dict(f) for f in filas]
 
 
+async def hechos_vivos(sesion: AsyncSession, obra_id: int) -> list[dict[str, Any]]:
+    """Los hechos de canon de la obra que **ningun otro sustituye**.
+
+    Son los que la ficha puede ofrecer para corregir: pedir un cambio sobre un
+    hecho ya sustituido se rechaza (plan-5 R-5).
+    """
+    filas = (
+        await sesion.execute(
+            text(
+                "SELECT h.id AS id, h.entidad AS entidad, h.atributo AS atributo "
+                "FROM hecho_canon AS h "
+                "WHERE h.obra_id = :obra_id AND NOT EXISTS ("
+                "  SELECT 1 FROM hecho_canon AS s WHERE s.sustituye_a = h.id) "
+                "ORDER BY h.id"
+            ),
+            {"obra_id": obra_id},
+        )
+    ).mappings()
+    return [dict(f) for f in filas]
+
+
 async def hechos_con_sus_capitulos(sesion: AsyncSession, obra_id: int) -> list[dict[str, Any]]:
     """El grafo de canon con los capitulos que se apoyan en cada hecho.
 

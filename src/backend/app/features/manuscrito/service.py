@@ -54,6 +54,7 @@ from app.features.manuscrito.repository import (
     dedicatoria_de,
     elementos_obligatorios_de,
     hechos_con_sus_capitulos,
+    hechos_vivos,
     presentes_por_capitulo,
     ultima_version,
 )
@@ -185,10 +186,35 @@ async def _ficha_de_lectura(sesion: AsyncSession, obra_id: int) -> list[dict[str
         for nombre in _lista(fila["presentes"]):
             por_nombre.setdefault(nombre, []).append(int(fila["numero"]))
 
+    hechos = await hechos_vivos(sesion, obra_id)
     return [
-        {"nombre": nombre, "tipo": "personaje", "capitulos": sorted(set(capitulos))}
+        {
+            "nombre": nombre,
+            "tipo": "personaje",
+            "capitulos": sorted(set(capitulos)),
+            "hecho_canon_id": _hecho_de_la_entrada(nombre, hechos),
+        }
         for nombre, capitulos in sorted(por_nombre.items())
     ]
+
+
+ATRIBUTO_DE_NOMBRE = "nombre"
+
+
+def _hecho_de_la_entrada(nombre: str, hechos: Sequence[dict[str, Any]]) -> int | None:
+    """El hecho de canon con el que se corrige una entrada de la ficha (D-02).
+
+    Entre los hechos vivos de esa entidad, el de su `nombre` si lo hay; si no,
+    el unico que tenga. **Con varios y ninguno de nombre, `None`**: elegir uno
+    al azar mandaria la correccion del lector a un hecho que no pidio tocar.
+    """
+    suyos = [h for h in hechos if str(h["entidad"]) == nombre]
+    de_nombre = [h for h in suyos if str(h["atributo"]) == ATRIBUTO_DE_NOMBRE]
+    if len(de_nombre) == 1:
+        return int(de_nombre[0]["id"])
+    if len(suyos) == 1:
+        return int(suyos[0]["id"])
+    return None
 
 
 def _lista(crudo: Any) -> list[str]:

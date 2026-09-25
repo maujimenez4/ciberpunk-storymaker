@@ -38,6 +38,10 @@ class EntradaDeFicha(BaseModel):
     tipo: str
     descripcion: str = ""
     capitulos: list[int] = Field(default_factory=list)
+    hecho_canon_id: int | None = None
+    """El hecho de canon del que sale la entrada: la peticion de cambio del
+    lector viaja con este id (D-02). Nulo si la entrada no tiene un hecho unico
+    —el frontend entonces no ofrece «corregir»—, y en fichas anteriores."""
 
 
 class FichaDeLectura(BaseModel):

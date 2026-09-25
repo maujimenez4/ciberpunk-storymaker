@@ -912,6 +912,17 @@
       },
       "type": "array",
       "title": "Capitulos"
+     },
+     "hecho_canon_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hecho Canon Id"
      }
     },
     "type": "object",
