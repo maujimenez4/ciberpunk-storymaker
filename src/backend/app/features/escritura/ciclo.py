@@ -714,8 +714,20 @@ async def _registrar_uso(sesion: AsyncSession, contexto: ContextoDelCapitulo) ->
     Es una sobreaproximacion declarada —lo que entro en el paquete, no lo que la
     prosa acabo usando— y es la direccion segura del error: se rehace de mas,
     nunca de menos (`architecture.md` §4.3).
+
+    **Y lo que el capitulo establece**, que no entra en su propio paquete
+    porque todavia no existia (corrida real, obra 3: «la bufanda roja» estaba
+    en cinco hechos nacidos en la prosa y la cobertura la dio por ausente). Se
+    lee de la base y no de la consolidacion: al reanudar, el paso de extraccion
+    ya hecho no devuelve sus hechos.
     """
-    ids = _ids_de_canon(contexto)
+    nacidos = (
+        await sesion.execute(
+            text("SELECT id FROM hecho_canon WHERE escena_de_origen = :escena ORDER BY id"),
+            {"escena": str(contexto.escena_id)},
+        )
+    ).scalars()
+    ids = [*_ids_de_canon(contexto), *(int(i) for i in nacidos)]
     if ids:
         await registrar_uso_de_hechos(sesion, capitulo_id=contexto.capitulo_id, hecho_canon_ids=ids)
 

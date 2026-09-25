@@ -404,6 +404,20 @@ async def test_un_hecho_que_ningun_capitulo_usa_llega_con_usado_en_vacio(sesion,
     assert all(h.usado_en == () for h in usados)
 
 
+async def test_un_hecho_que_nace_en_un_capitulo_cuenta_como_usado_en_el(sesion, obra_lista):
+    """Corrida real, obra 3: «la bufanda roja» estaba en la prosa y en cinco
+    hechos del canon, y la cobertura la dio por ausente. `usado_en` solo
+    apuntaba lo que **entro** en el paquete, y un hecho que el capitulo
+    establece no entra en su propio paquete: nacia sin uso y se quedaba asi."""
+    await _correr(sesion, obra_lista.obra.id)
+
+    usados = await hechos_usados(sesion, obra_id=obra_lista.obra.id)
+    del_extractor = [h for h in usados if h.entidad == "Teo"]
+
+    assert del_extractor
+    assert all(h.usado_en for h in del_extractor)
+
+
 async def test_la_cobertura_dice_cual_falta_sobre_la_novela_entera(sesion, obra_lista):
     """`CA-15` y R-5, de extremo a extremo y contra la tabla de hechos.
 
