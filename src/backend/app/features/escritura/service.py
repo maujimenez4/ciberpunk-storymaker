@@ -492,6 +492,9 @@ async def escribir_capitulo(
                 .where(Ejecucion.id == ejecucion_id)
                 .values(tokens_previstos=contexto.paquete.tokens_previstos + extra)
             )
+        # No se retiene la escritura de la base mientras escribe el modelo: con
+        # varias obras a la vez bloqueaba al resto (`database is locked`, 2026-09-24).
+        await sesion.commit()
 
         async with observacion.span("escritor") as span:
             span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V2)
@@ -503,6 +506,7 @@ async def escribir_capitulo(
             )
         consumo = _foto_del_consumo(escritor)  # P-31: antes de que hablen los jueces
         version = await _guardar_version(sesion, contexto.escena_id, texto, run_id)
+        await sesion.commit()  # antes de que hablen los jueces, por lo mismo
 
         async with observacion.span("policy") as span:
             resultado_policy = aplicar_policy(

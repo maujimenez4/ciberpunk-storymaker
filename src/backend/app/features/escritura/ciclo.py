@@ -405,6 +405,7 @@ async def _ciclo_observado(
         )
 
     await avanzar(sesion, trabajo, Senal.APROBADA)
+    await sesion.commit()  # no retener la escritura mientras extrae el modelo
     async with observacion.span("extractor") as span:
         span.prompt(canon.PROMPT_ID, canon.PROMPT_VERSION, canon.HASH_DE_PLANTILLA_V1)
         extraccion = await agentes.extractor.extraer(escritura.texto)
@@ -479,6 +480,10 @@ async def _planificar_y_ensamblar(
     """
     capitulo = await _capitulo(sesion, capitulo_id)
     if await _ficha_del_capitulo(sesion, capitulo_id) is None:
+        # Nada de lo escrito se retiene mientras se espera al modelo: con varias
+        # obras a la vez, el cerrojo de escritura de SQLite bloqueaba al resto
+        # (corrida real 2026-09-24: `database is locked` en el outline de otra obra).
+        await sesion.commit()
         async with observacion.span("planificador") as span:
             span.prompt(escena.PROMPT_ID, escena.PROMPT_VERSION, escena.HASH_DE_PLANTILLA_V1)
             await _planificar(sesion, planificador, capitulo)
@@ -542,6 +547,7 @@ async def _escribir(
     """
     await avanzar(sesion, trabajo, Senal.PASO_COMPLETADO)
     restricciones = await _restricciones(sesion, trabajo.obra_id, contexto.version_obra_id)
+    await sesion.commit()  # ver `_planificar_y_ensamblar`: no retener la escritura
 
     async with presupuesto.turno(
         contexto.paquete.tokens_previstos, paso=f"capitulo {contexto.capitulo_id}"
