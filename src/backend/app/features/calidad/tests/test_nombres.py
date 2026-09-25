@@ -88,3 +88,14 @@ def test_el_defecto_de_nombre_cita_la_palabra_en_su_desplazamiento():
     (defecto,) = nombres_literales(capitulo(texto, MARIA))
 
     assert texto[defecto.desplazamiento_inicio : defecto.desplazamiento_fin] == defecto.cita
+
+
+def test_una_forma_que_el_canon_declara_en_otra_entidad_no_es_defecto():
+    """Corrida real, obra 3 capitulo 10: el Extractor dio de alta la misma
+    persona como «Andrés» y como «Andres». Cada forma chocaba con la otra y el
+    Escritor no podia acertar: escalo tras dos reparaciones. Lo que el canon
+    declara, en cualquier entidad, no es un nombre mal escrito."""
+    con_tilde = NombreDeCanon(forma_canonica="Andrés", variantes=())
+    sin_tilde = NombreDeCanon(forma_canonica="Andres", variantes=())
+
+    assert nombres_literales(capitulo("Andrés cerró la puerta.", con_tilde, sin_tilde)) == []

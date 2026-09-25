@@ -262,13 +262,23 @@ def nombres_literales(capitulo: CapituloAValidar) -> list[Defecto]:
     nombre inventado y coherente. Si «Mari» no esta declarada, tampoco esta
     declarada como error, y el validador calla — perseguirla es exactamente lo
     que CA-16 prohibe.
+
+    **Lo aceptado es de todo el canon, no de cada entidad** (corrida real, obra
+    3 capitulo 10): el Extractor dio de alta «Andrés» y «Andres» como dos
+    entidades, y cada forma chocaba con la otra, asi que el Escritor no podia
+    acertar. La mayuscula **si** cuenta («maría»): un nombre comun que el canon
+    registro con mayuscula («Café») se resuelve declarando la variante.
     """
+    aceptadas = {
+        forma
+        for nombre in capitulo.nombres_del_canon
+        for forma in (nombre.forma_canonica, *nombre.variantes)
+    }
     defectos: list[Defecto] = []
     for nombre in capitulo.nombres_del_canon:
-        formas_aceptadas = {nombre.forma_canonica, *nombre.variantes}
-        parecidas = {normalizar(forma) for forma in formas_aceptadas}
+        parecidas = {normalizar(forma) for forma in (nombre.forma_canonica, *nombre.variantes)}
         for palabra, inicio, fin in _palabras_de_la_narracion(capitulo.texto):
-            if palabra in formas_aceptadas:
+            if palabra in aceptadas:
                 continue
             if normalizar(palabra) in parecidas:
                 defectos.append(_defecto(capitulo, "PER-02", inicio, fin))
