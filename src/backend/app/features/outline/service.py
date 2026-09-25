@@ -33,6 +33,7 @@ from app.features.outline.agents import (
     PROMPT_VERSION,
     Arquitecto,
     OutlineGenerado,
+    SalidaMalFormada,
 )
 from app.features.outline.modelos import VersionObra
 from app.features.outline.repository import (
@@ -169,6 +170,15 @@ class PlanDeObra:
     outline: OutlineGenerado
 
 
+class OutlineSinSalidaValida(ErrorDeDominio):
+    """El Arquitecto no devolvio un outline valido ni con el reintento dirigido."""
+
+    def __init__(self, motivo: str) -> None:
+        super().__init__(
+            "El Arquitecto no devolvio un outline valido tras reintentarlo: " + motivo[:500]
+        )
+
+
 def _biblia_con_discurso(outline: OutlineGenerado, obra: DatosDeObra) -> dict[str, Any]:
     """La biblia que se congela, con el nivel de calor puesto por la obra.
 
@@ -262,7 +272,12 @@ async def planificar_obra(
             _comprobar_beats(propuesto)
             _comprobar_giros_de_valor(propuesto)
 
-        outline = await arquitecto.planificar(obra.como_brief(), _cumple_las_reglas)
+        try:
+            outline = await arquitecto.planificar(obra.como_brief(), _cumple_las_reglas)
+        except SalidaMalFormada as fallo:
+            # Tras el reintento dirigido. Era un 500 sin motivo en la corrida real:
+            # como error de dominio llega al frontend con lo que fallo.
+            raise OutlineSinSalidaValida(fallo.motivo) from fallo
     biblia = _biblia_con_discurso(outline, obra)
     _comprobar_numeracion(outline)
     _comprobar_beats(outline)

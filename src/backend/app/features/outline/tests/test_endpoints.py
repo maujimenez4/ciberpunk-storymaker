@@ -56,6 +56,7 @@ def respuestas_del_modelo() -> dict[str, str]:
     """
     return {
         "Sin ruptura": json.dumps({"biblia": BIBLIA, "capitulos": _capitulos(beat_de_genero=None)}),
+        "Salida rota": "Aqui tienes el outline:",
         "# Arquitecto": json.dumps({"biblia": BIBLIA, "capitulos": _capitulos()}),
     }
 
@@ -83,6 +84,19 @@ async def test_un_beat_sin_asignar_responde_409_y_no_deja_outline(cliente, sesio
 
     assert respuesta.status_code == 409  # un beat sin asignar SI es conflicto de estado
     assert (await sesion.execute(select(func.count()).select_from(Capitulo))).scalar_one() == 0
+
+
+async def test_una_salida_invalida_del_arquitecto_responde_409_con_motivo_y_no_500(
+    cliente, sesion, obra
+):
+    """Corrida real 2026-09-24: tu novela, B1 y B2 acabaron en 500 sin motivo."""
+    obra.titulo = "Salida rota"
+    await sesion.flush()
+
+    respuesta = cliente.post(f"/obras/{obra.id}/outline")
+
+    assert respuesta.status_code == 409
+    assert "Arquitecto" in respuesta.json()["detail"]
 
 
 async def test_planificar_una_obra_inexistente_no_responde_500(cliente):
