@@ -467,7 +467,8 @@ decir si mejoró o empeoró entre dos versiones de prompt.
 **Esa frase es la regla, no el estado.** Lo que **hoy emite en producción**, en el span del
 validador que lo produce (`architecture.md` §9.2.1): `palabras_vetadas`, los validadores de la
 puerta G1a que corren —`extension_de_capitulo`, `nombres_literales`, `discurso` y
-`continuidad_y_canon`— y `juez_con_rubrica`, uno por criterio, en el ciclo del capítulo; y en la
+`continuidad_y_canon`— y `juez_con_rubrica`, uno por criterio —en Langfuse,
+`juez_con_rubrica.<criterio>`—, en el ciclo del capítulo; y en la
 publicación, `cronologia_lean` y `cobertura_de_personalizacion` (G4). Quitar cualquiera de las
 llamadas que los emiten pone rojo un test (comprobado quitándolas una a una). Los demás de esta sección
 todavía no emiten: o no corren en una generación o corren sin span.

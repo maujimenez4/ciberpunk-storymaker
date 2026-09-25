@@ -53,8 +53,16 @@ class _SpanLangfuse:
         )
 
     def puntuar(self, puntuacion: Puntuacion) -> None:
+        # P-22.1. Los criterios del juez comparten `nombre` (`juez_con_rubrica`),
+        # y el proveedor agrupa por `name`: sin el criterio dentro, las seis
+        # series salen mezcladas en una y el *tuning* no ve cual se movio.
+        nombre = (
+            f"{puntuacion.nombre}.{puntuacion.criterio}"
+            if puntuacion.criterio
+            else puntuacion.nombre
+        )
         self._interno.score(
-            name=puntuacion.nombre,
+            name=nombre,
             value=puntuacion.valor,
             comment=puntuacion.justificacion,
         )
@@ -79,11 +87,16 @@ class ObservadorLangfuse:
     este cliente falla cuando debe.
     """
 
-    def __init__(self, *, clave_publica: str, clave_secreta: str, host: str) -> None:
+    def __init__(
+        self, *, clave_publica: str, clave_secreta: str, host: str, cliente: Any | None = None
+    ) -> None:
+        """`cliente` es la costura de las pruebas: un `Langfuse` falso, para ver
+        lo que el adaptador le pide sin red ni dependencia (`CA-4`). En
+        produccion no se pasa y el real se construye al abrir la primera traza."""
         self._clave_publica = clave_publica
         self._clave_secreta = clave_secreta
         self._host = host
-        self._cliente: Any | None = None
+        self._cliente: Any | None = cliente
 
     @staticmethod
     def sesion_de(obra_id: int) -> str:
