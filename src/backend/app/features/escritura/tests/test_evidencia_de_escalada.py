@@ -21,7 +21,7 @@ from app.features.canon.agents import Extractor
 from app.features.escena.agents import Planificador
 from app.features.escritura.agents import MARCA_DE_REPARACION, Escritor
 from app.features.escritura.ciclo import Agentes
-from app.features.escritura.modelos import IntentoDescartado, VersionTexto
+from app.features.escritura.modelos import IntentoDescartado, Trabajo, VersionTexto
 from app.features.escritura.tests.test_ciclo import (
     PROSA_BUENA,
     PROSA_CORTA,
@@ -136,3 +136,26 @@ async def test_el_capitulo_escalado_trae_el_juicio_del_critico(
     assert resultado.estado == "ESCALADA"
     assert resultado.escritura is not None
     assert resultado.escritura.juicio is not None
+
+
+async def test_la_causa_del_escalado_cabe_entera_en_su_columna(
+    sesion,
+    obra_lista,  # noqa: F811
+):
+    """Paso 7: el motivo mide ~63 caracteres y `causa_fallo` era `String(60)`.
+
+    SQLite no impone la longitud, asi que la lectura sola pasaria siempre: lo
+    que se comprueba ademas es que **la columna no miente** sobre lo que guarda,
+    que es lo que dejaria de ser cierto en cualquier otro motor.
+    """
+    resultado = await _ciclo(sesion, obra_lista.capitulos[0].id, prosa=PROSA_CORTA)
+    causa = resultado.causa_fallo
+    assert causa is not None
+
+    sesion.expire_all()
+    trabajo = await sesion.get(Trabajo, resultado.trabajo_id)
+
+    assert trabajo is not None
+    assert trabajo.causa_fallo == causa
+    longitud = Trabajo.__table__.c.causa_fallo.type.length
+    assert longitud is not None and longitud >= len(causa)

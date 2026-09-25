@@ -220,7 +220,9 @@ class Trabajo(Base):
     estado: Mapped[str] = mapped_column(String(20))
     intento: Mapped[int] = mapped_column(default=0)
     run_id: Mapped[str] = mapped_column(String(60), index=True)
-    causa_fallo: Mapped[str | None] = mapped_column(String(60))
+    # `String(200)` desde el plan 8 (T4): el motivo del escalado mide ~65 y la
+    # columna decia 60. SQLite no lo impone, pero la columna mentia.
+    causa_fallo: Mapped[str | None] = mapped_column(String(200))
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: RelojDelSistema().ahora()
     )
