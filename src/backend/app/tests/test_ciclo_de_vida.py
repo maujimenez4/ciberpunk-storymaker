@@ -27,7 +27,7 @@ class _LangfuseCaido:
     """Traza bien y revienta al vaciar la cola."""
 
     @contextmanager
-    def start_as_current_span(self, *, name: str) -> Any:
+    def start_as_current_observation(self, *, name: str, as_type: str = "span") -> Any:
         raise AssertionError("no se traza nada en este test")
         yield  # pragma: no cover
 

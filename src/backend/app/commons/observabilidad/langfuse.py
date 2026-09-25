@@ -88,7 +88,10 @@ class _TrazaLangfuse:
 
     @asynccontextmanager
     async def span(self, nombre: str) -> AsyncIterator[_SpanLangfuse]:
-        with self._traza.start_as_current_span(name=nombre) as interno:
+        # SDK v4: `start_as_current_observation` (la v3 lo llamaba
+        # `start_as_current_span`; con la v4 instalada no llegaba ninguna traza
+        # y el blindaje se tragaba el AttributeError — corrida real 2026-09-24).
+        with self._traza.start_as_current_observation(name=nombre, as_type="span") as interno:
             yield _SpanLangfuse(interno)
 
 
@@ -154,6 +157,12 @@ class ObservadorLangfuse:
     @asynccontextmanager
     async def traza(self, *, obra_id: int, nombre: str) -> AsyncIterator[_TrazaLangfuse]:
         cliente = self._abrir()
-        with cliente.start_as_current_span(name=nombre) as traza:
-            traza.update_trace(session_id=self.sesion_de(obra_id))
+        from langfuse import propagate_attributes
+
+        # SDK v4: la sesion se propaga con `propagate_attributes`, no con
+        # `update_trace` (que la v4 ya no tiene).
+        with (
+            cliente.start_as_current_observation(name=nombre, as_type="span") as traza,
+            propagate_attributes(session_id=self.sesion_de(obra_id), trace_name=nombre),
+        ):
             yield _TrazaLangfuse(cliente, traza)

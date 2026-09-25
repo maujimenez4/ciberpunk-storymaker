@@ -35,7 +35,7 @@ class SpanFalso:
         self.scores.append(campos)
 
     @contextmanager
-    def start_as_current_span(self, *, name: str) -> Any:
+    def start_as_current_observation(self, *, name: str, as_type: str = "span") -> Any:
         hijo = SpanFalso(name)
         self.hijos.append(hijo)
         yield hijo
@@ -49,7 +49,7 @@ class LangfuseFalso:
         self.flushes = 0
 
     @contextmanager
-    def start_as_current_span(self, *, name: str) -> Any:
+    def start_as_current_observation(self, *, name: str, as_type: str = "span") -> Any:
         traza = SpanFalso(name)
         self.trazas.append(traza)
         yield traza
