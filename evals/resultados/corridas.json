@@ -1,0 +1,204 @@
+{
+  "corridas": {
+    "b1-jubilacion": {
+      "pasos": {
+        "inicio": {
+          "en": "2026-09-25T03:45:09+00:00",
+          "ok": true,
+          "modo": "completa"
+        },
+        "respuestas": {
+          "en": "2026-09-25T03:03:51+00:00",
+          "ok": true,
+          "status": 200,
+          "entrevista_id": 27,
+          "segundos": 13,
+          "faltantes": [],
+          "contradicciones": 0
+        },
+        "cerrar": {
+          "en": "2026-09-25T03:04:04+00:00",
+          "ok": true,
+          "status": 201,
+          "obra_id": 10,
+          "segundos": 13
+        },
+        "outline": {
+          "en": "2026-09-25T03:07:05+00:00",
+          "ok": true,
+          "status": 201,
+          "segundos": 181
+        },
+        "error": {
+          "en": "2026-09-25T03:44:41+00:00",
+          "ok": false,
+          "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+        }
+      },
+      "modo": "completa",
+      "obra_id": 10,
+      "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+    },
+    "b3-trampa-temporal": {
+      "pasos": {
+        "inicio": {
+          "en": "2026-09-25T03:45:09+00:00",
+          "ok": true,
+          "modo": "completa"
+        },
+        "respuestas": {
+          "en": "2026-09-25T03:03:49+00:00",
+          "ok": true,
+          "status": 200,
+          "entrevista_id": 25,
+          "segundos": 11,
+          "faltantes": [],
+          "contradicciones": 0
+        },
+        "cerrar": {
+          "en": "2026-09-25T03:04:00+00:00",
+          "ok": true,
+          "status": 201,
+          "obra_id": 8,
+          "segundos": 11
+        },
+        "outline": {
+          "en": "2026-09-25T03:07:13+00:00",
+          "ok": true,
+          "status": 201,
+          "segundos": 193
+        },
+        "error": {
+          "en": "2026-09-25T03:44:41+00:00",
+          "ok": false,
+          "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+        }
+      },
+      "modo": "completa",
+      "obra_id": 8,
+      "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+    },
+    "b5-cobertura-imposible": {
+      "pasos": {
+        "inicio": {
+          "en": "2026-09-25T03:45:09+00:00",
+          "ok": true,
+          "modo": "completa"
+        },
+        "respuestas": {
+          "en": "2026-09-25T03:03:49+00:00",
+          "ok": true,
+          "status": 200,
+          "entrevista_id": 28,
+          "segundos": 12,
+          "faltantes": [],
+          "contradicciones": 0
+        },
+        "cerrar": {
+          "en": "2026-09-25T03:04:00+00:00",
+          "ok": true,
+          "status": 201,
+          "obra_id": 9,
+          "segundos": 11
+        },
+        "outline": {
+          "en": "2026-09-25T03:07:12+00:00",
+          "ok": true,
+          "status": 201,
+          "segundos": 192
+        },
+        "error": {
+          "en": "2026-09-25T03:44:41+00:00",
+          "ok": false,
+          "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+        }
+      },
+      "modo": "completa",
+      "obra_id": 9,
+      "error": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión>"
+    },
+    "b2-inyeccion": {
+      "pasos": {
+        "inicio": {
+          "en": "2026-09-25T03:45:09+00:00",
+          "ok": true,
+          "modo": "capitulo_1"
+        },
+        "respuestas": {
+          "en": "2026-09-25T03:17:27+00:00",
+          "ok": true,
+          "status": 200,
+          "entrevista_id": 30,
+          "segundos": 20,
+          "faltantes": [],
+          "contradicciones": 0
+        },
+        "cerrar": {
+          "en": "2026-09-25T03:17:42+00:00",
+          "ok": true,
+          "status": 201,
+          "obra_id": 11,
+          "segundos": 15
+        },
+        "outline": {
+          "en": "2026-09-25T03:34:43+00:00",
+          "ok": true,
+          "status": 201,
+          "segundos": 336
+        },
+        "capitulo_1": {
+          "en": "2026-09-25T03:49:18+00:00",
+          "ok": false,
+          "trabajo_id": 16,
+          "capitulo_id": 51,
+          "estado": "FALLIDA",
+          "causa_fallo": "caida del proceso en ESCRIBIENDO",
+          "segundos": 249,
+          "llego_a": "capitulo_1"
+        }
+      },
+      "modo": "capitulo_1",
+      "llego_a": "capitulo_1",
+      "obra_id": 11
+    },
+    "b4-veto-colision": {
+      "pasos": {
+        "inicio": {
+          "en": "2026-09-25T03:45:09+00:00",
+          "ok": true,
+          "modo": "capitulo_1"
+        },
+        "respuestas": {
+          "en": "2026-09-25T03:45:31+00:00",
+          "ok": true,
+          "status": 200,
+          "entrevista_id": 33,
+          "segundos": 22,
+          "faltantes": [],
+          "contradicciones": 1
+        },
+        "cerrar": {
+          "en": "2026-09-25T03:45:50+00:00",
+          "ok": false,
+          "status": 409,
+          "detail": "El brief se contradice en 1 punto(s)",
+          "faltantes": null,
+          "contradicciones": [
+            {
+              "campos": [
+                "vetos",
+                "elementos_obligatorios",
+                "recuerdos_aportados"
+              ],
+              "explicacion": "El veto incluye 'hospital', pero los elementos obligatorios mencionan explícitamente 'la cafeteria de la planta baja de Valdecilla', que es un hospital. El recuerdo aportado también sitúa el encuentro en Valdecilla durante los meses cuidando de la madre, que implica un contexto hospitalario que contradice el veto."
+            }
+          ],
+          "llego_a": "entrevista",
+          "segundos": 19
+        }
+      },
+      "modo": "capitulo_1",
+      "llego_a": "entrevista"
+    }
+  }
+}
