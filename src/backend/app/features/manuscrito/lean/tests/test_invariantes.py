@@ -168,3 +168,18 @@ async def test_sin_lean_el_error_dice_que_falta_y_como_instalarlo(
     mensaje = str(fallo.value)
     assert "lean" in mensaje.lower()
     assert "elan" in mensaje.lower(), "no dice como instalarlo"
+
+
+@hay_lean
+async def test_una_novela_entera_no_agota_la_recursion_de_lean(
+    sesion: AsyncSession, obra: Obra
+) -> None:
+    """Corrida real, obra 3: 122 filas y `decide` paro en «maximum recursion
+    depth» sin decir si la cronologia era coherente. Diez capitulos son eso;
+    la puerta tiene que responder, no rendirse."""
+    for i in range(140):
+        await _evento(sesion, obra.id, tiempo=f"el dia {i}", participantes=["Marta", "Luna"])
+
+    resultado = await correr_lean(sesion, obra.id)
+
+    assert resultado.ok, resultado.mensaje

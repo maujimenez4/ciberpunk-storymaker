@@ -51,8 +51,11 @@ PLANTILLA = Path(__file__).with_name("plantilla.lean")
 TEOREMAS = """
 -- Las dos pruebas. Si alguna es falsa, esto **no compila**, y sin compilar no
 -- se publica. No hay informe intermedio que alguien pueda pasar por alto.
-theorem cronologia_sin_ubicuidad : sinUbicuidad eventos = true := by decide
-theorem cronologia_sin_reaparecidos : sinReaparecidos eventos exclusiones = true := by decide
+-- `+kernel`: la reduce el kernel y no el elaborador, que con una novela entera
+-- (122 filas, obra 3) agotaba `maxRecDepth` sin decir si era coherente.
+theorem cronologia_sin_ubicuidad : sinUbicuidad eventos = true := by decide +kernel
+theorem cronologia_sin_reaparecidos : sinReaparecidos eventos exclusiones = true := by
+  decide +kernel
 """
 
 _EJECUTABLE = "lean"
