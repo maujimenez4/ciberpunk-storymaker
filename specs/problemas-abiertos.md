@@ -106,6 +106,18 @@ La primera mitad está cerrada: `Consumo` guarda `cache_read_input_tokens` y `ca
 
 **Quién:** sin dueño. **Coste:** la mitad de un requisito M del encargo; se puede declarar como decisión en `trade-offs.md` si no da tiempo.
 
+### P-31 · La fila de `ejecucion` del Escritor guarda el consumo del último juez
+
+`escritura/service.py` · `_completar_ejecucion` lee `escritor.cliente.ultimo_consumo` **después** de que el Continuista y el Crítico hayan usado el mismo cliente compartido, así que tokens y coste de la fila son los de la última llamada de juez. Ya pasaba antes del plan 8; con los jueces en paralelo (T6), **cuál** de los dos depende de quién termine último. Visto por el agente de T6 y confirmado por el de `docs/proceso` el 2026-09-24.
+
+**Coste:** falsea el coste y los tokens por capítulo que usan las evals. **Quién:** la sesión de evals (plan 6), antes de medir: tomar la foto del consumo justo después de `escritor.escribir`.
+
+### P-32 · Las respuestas de la entrevista entran al prompt sin marcar como dato
+
+`obra/agents.py:95`: `render_entrevistador(PLANTILLA_V1, texto) + f"\nENTREVISTADOR\n{respuestas}"`. El texto aportado sí va dentro de `<texto_aportado>`, pero el `repr` de las respuestas —que también escribe el comprador— se pega **al final del prompt y sin etiqueta**, que es la posición donde una instrucción se obedece. `CLAUDE.md` §11: «la defensa es que ese texto no llegue nunca a la posición donde una instrucción se obedece». Lo vio el agente del *red-team log* el 2026-09-24.
+
+**Coste:** una inyección por un campo del formulario («nombre: ignora lo anterior…») llega al Entrevistador sin marca. El esquema de salida la frena —el Entrevistador solo devuelve faltantes y contradicciones—, pero la defensa no debe depender de eso. **Quién:** sin dueño; arreglo pequeño (envolver las respuestas en su etiqueta, como el texto aportado, con plantilla nueva).
+
 ---
 
 ## Contratos que nadie comprueba
