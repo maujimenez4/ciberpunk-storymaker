@@ -2298,4 +2298,12 @@ git commit -m "T8: RI-09 y RI-10, y CA-25 de punta a punta"
 
 | Fecha | Paso | Qué se desvió y por qué |
 | --- | --- | --- |
-| | | |
+| 2026-09-24 | T4 | `alcance_de_la_peticion` recibe `desde` por parámetro en vez de importar `origen_del_hecho`: `canon -> obra -> manuscrito` ya existe y el import cerraba un ciclo (§5.1 regla 5). No hay segunda forma de preguntar el origen: quien llama pregunta a `canon`. |
+| 2026-09-24 | T7 | La orquestación vive en `escritura/peticion.py`, no en `manuscrito/peticiones.py`: `manuscrito -> escritura` sería el mismo ciclo. `manuscrito/peticiones.py` conserva la fila y sus estados. |
+| 2026-09-24 | T7 | El cerrojo de R-4 es **otro** `CerrojoDeEscena` (de peticiones): `ejecutar_ciclo` toma el de escena por obra y `asyncio.Lock` no es reentrante. |
+| 2026-09-24 | T7 | La revalidación es un puerto inyectado (`Revalidar`); en producción, G1a mecánica sin Continuista (P-34). Se revalidan los posteriores al origen **y** los regenerados. |
+| 2026-09-24 | T7 | Consolidar y `publicar` van en un SAVEPOINT: si `publicar` rechaza, la consolidación se deshace sin `DELETE` sobre `evento`. La vigente la enciende `publicar` (T6), no la petición. |
+| 2026-09-24 | T7 | `capitulos_con_su_puerta` duplicaba un capítulo con dos trabajos; se toma uno por capítulo. |
+| 2026-09-24 | T8 | Además de RI-09 y RI-10, tres rutas por token que la 002 ya consume (`c737abd`): la lectura solo tiene el token (RNF-SEG-01). Viven en `escritura/router.py`, que es donde se compone el ciclo. `CA-33` va a P-35. |
+| 2026-09-24 | T8 | El avance por capítulo se deriva de los trabajos `reg-` posteriores a una marca que la petición guarda en su `run_id` (`pet{id}-desde{trabajo}`); sin columna nueva. |
+| 2026-09-24 | T8 | `CA-25` por HTTP con el ciclo y la revalidación dobles (`obtener_atencion`), no con `DobleDeterminista` sobre el ciclo real. Orquestación, canon, clasificación y `publicar` con Lean son los de producción. |

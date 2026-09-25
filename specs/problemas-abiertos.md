@@ -189,19 +189,17 @@ El encargo §3 pone los hooks junto a `CLAUDE.md` y la skill, que son artefactos
 
 ---
 
-## Deudas que vencen al regenerar · plan 5
+## Lo que deja abierto el plan 5
 
-### P-6 · `evento` y `hecho_canon` no tienen `run_id`
+*P-6, P-7 y P-8 —las tres deudas que vencían al regenerar— están cerradas: ver la tabla del final.*
 
-Siguen sin él. El guardia de idempotencia los reconoce por escena; **deja de ser exacto al regenerar**. Y `una_sola_vez` sigue **sin un solo llamador de producción** (solo `idempotencia.py` y `escritura/__init__.py`). **Plan-5 T1.**
+### P-34 · La revalidación de una petición no vuelve a pasar el Continuista
 
-### P-7 · `resumen_capitulo` tiene `UNIQUE(capitulo_id)` y siempre inserta
+`revalidar_mecanicamente` (`escritura/peticion.py`) corre la puerta G1a **mecánica** sobre el texto vigente de los capítulos posteriores al origen. **No** vuelve a llamar al Continuista, que es quien halla `CAN-01`: un capítulo no regenerado que sigue diciendo «Luna» después de corregir a «Nala» no sale como introducido. Los regenerados sí pasan su Continuista dentro del ciclo. Cerrarlo es una llamada al modelo por capítulo revalidado. **Quién:** `maujimenez4`, porque es presupuesto.
 
-Inalcanzable hoy; regenerar un capítulo integrado lo alcanza. **Plan-5 T1.**
+### P-35 · `CA-33` vuelve a descuadrar
 
-### P-8 · `hecho_canon.sustituye_a` sigue sin llamador de producción
-
-**Plan-5 T2.** Es literalmente «el perro se llama Nala».
+La Fase 5 añade cinco rutas: `POST /obras/{obra_id}/peticiones` (RI-09), `POST /obras/{obra_id}/versiones/{version}/revertir` (RI-10) y tres por token que pide la 002 (`POST /lectura/{token}/peticiones`, `GET /lectura/{token}/peticiones/{peticion_id}`, `GET /lectura/{token}/estado`). Contar de nuevo contra `openapi.json` es un cambio de requisito y lo firma una persona (P-3).
 
 ---
 
@@ -259,5 +257,9 @@ Sigue siendo cierto y `RELEVO.md` lo recoge como regla: **las junturas tienen du
 | **P-17** | El Continuista estaba construido y no lo llamaba nadie | `1899ccf`, `bab4dd7` |
 | **P-3** | Catorce endpoints en `CA-33` y había quince | `6248b53` — **reabierto** arriba con otra forma |
 | **P-20** | Una escalada no dejaba nada que revisar: la `version_texto` se borraba por R-7 y los defectos no tenían tabla | `d3b0d88`, `7e44901`, `cda23f1`, `c8ecb22` (plan 8 T4) — tabla `intento_descartado` con texto, código y cita, fuera de lo vigente; `GET /trabajos/{id}/intentos`; el escalado conserva el juicio; `causa_fallo` a `String(200)` |
+| **P-6** | `evento` y `hecho_canon` sin `run_id`; `una_sola_vez` sin llamador | `e3841cb` (plan 5 T1) y `476ecde` (T3, J-1 y J-2 sobre `EXTRAYENDO`) |
+| **P-7** | `resumen_capitulo` con `UNIQUE(capitulo_id)` y siempre insertaba | `e3841cb` (plan 5 T1) — el resumen se sobrescribe |
+| **P-8** | `hecho_canon.sustituye_a` sin llamador de producción | `a960791` (plan 5 T2) — `corregir_por_peticion`, y desde `ef4ef44` lo llama la petición |
+| *(sin número)* | Con dos trabajos en un capítulo —el original y una regeneración— `capitulos_con_su_puerta` lo devolvía dos veces y `publicar` chocaba con `uq_capitulo_publicado_version_numero` | `ef4ef44` — un trabajo por capítulo, y una regeneración que no llegó a `INTEGRADA` no cuenta |
 | **P-18**, primera mitad | Los tokens de caché se perdían | `1a265b2` — la imputación sigue abierta |
 | *(sin número)* | Formulario con otro contrato · `database is locked` en RI-02 · el frontend publicaba sin escribir · obra sin capítulos publicable · `openapi.json` sin `/publicar` · Arquitecto rechazado por `tipo_de_corte_final` | `e275c8e` · `596faba` · `d887bb0`, `0662fcb`, `a045100`, `38a260d` · `b0871ac` · `ee5a265` · `0513035` |
