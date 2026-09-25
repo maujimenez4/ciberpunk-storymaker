@@ -119,6 +119,18 @@ from app.features.calidad.validadores import (
     nombres_literales,
 )
 
+# Plan 7 T9: la validacion visual. `abrir_con_playwright` importa Playwright
+# dentro de la funcion, asi que exportarlo no arrastra el navegador a la suite.
+from app.features.calidad.visual import (
+    CapituloVisto,
+    DefectoVisual,
+    InformeVisual,
+    PaginaLeida,
+    RutasDeLectura,
+    abrir_con_playwright,
+    inspeccionar_lectura,
+)
+
 __all__ = [
     "CATALOGO",
     "CATALOGO_DE_MANUSCRITO",
@@ -135,6 +147,7 @@ __all__ = [
     "CapituloAJuzgar",
     "CapituloAPolicy",
     "CapituloAValidar",
+    "CapituloVisto",
     "CierreDelManuscrito",
     "Cobertura",
     "ConocimientoEnT",
@@ -145,16 +158,19 @@ __all__ = [
     "DecisionDePolicy",
     "Defecto",
     "DefectoMalFormado",
+    "DefectoVisual",
     "DefectosClasificados",
     "ElementoAusente",
     "ElementoCubierto",
     "HechoDeCanon",
     "HechoUsado",
+    "InformeVisual",
     "Juicio",
     "ManuscritoAValidar",
     "MotivoMalFormado",
     "NombreDeCanon",
     "OrigenDeHecho",
+    "PaginaLeida",
     "ParametrosDeDiscurso",
     "Persona",
     "PlantillaAusente",
@@ -167,10 +183,12 @@ __all__ = [
     "RevisionDeContinuidad",
     "Rubrica",
     "RubricaDiscordante",
+    "RutasDeLectura",
     "SalidaMalFormada",
     "TiempoVerbal",
     "Validador",
     "ValidadorDeManuscrito",
+    "abrir_con_playwright",
     "aplicar_policy",
     "cerrar_manuscrito",
     "clasificar",
@@ -183,6 +201,7 @@ __all__ = [
     "hash_de_critico_v1",
     "hash_de_plantilla",
     "hash_de_rubrica",
+    "inspeccionar_lectura",
     "localizar_veto",
     "nombres_literales",
     "plantilla_critico_v1",
