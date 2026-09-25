@@ -257,6 +257,10 @@ async def planificar_obra(
         raise ObraYaPlanificada(obra_id, ya_planificados)
 
     observador = observador if observador is not None else ObservadorNulo()
+    # Cierra la lectura antes de esperar al Arquitecto (minutos): en SQLite WAL,
+    # escribir despues sobre una lectura vieja falla al instante si otra obra
+    # confirmo entretanto (corrida real 2026-09-24).
+    await sesion.commit()
     async with (
         observador.traza(obra_id=obra_id, nombre="outline") as traza,
         Observacion(traza=traza, cliente=cliente).span("arquitecto") as span,

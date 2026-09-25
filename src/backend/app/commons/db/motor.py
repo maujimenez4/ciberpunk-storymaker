@@ -4,7 +4,10 @@ from typing import Any
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-ESPERA_MS = 5000
+ESPERA_MS = 30000
+"""Treinta segundos: con varias obras escribiendo a la vez, cinco no bastaban
+(corrida real 2026-09-24). Solo cubre la espera por el cerrojo, no una lectura
+vieja que intenta escribir: eso se evita confirmando antes de llamar al modelo."""
 
 
 def crear_motor(ruta: Path) -> AsyncEngine:

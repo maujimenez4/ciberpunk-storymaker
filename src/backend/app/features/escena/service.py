@@ -51,6 +51,10 @@ async def planificar_escena(
     una ficha escrita sobreviviria al fallo del paso siguiente.
     """
     restricciones = RestriccionesDeDiscurso.de_la_obra(biblia, nivel_de_calor)
+    # Cierra la lectura antes de esperar al modelo: en SQLite WAL, una
+    # transaccion que leyo y escribe despues de que otra obra confirmo falla al
+    # instante con `database is locked` (corrida real 2026-09-24).
+    await sesion.commit()
     salida = await planificador.planificar(capitulo, estado_en_t, restricciones)
     ficha = FichaDeEscena(
         **salida.model_dump(),
