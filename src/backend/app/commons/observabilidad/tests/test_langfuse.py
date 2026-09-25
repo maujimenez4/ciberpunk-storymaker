@@ -6,8 +6,11 @@ proveedor cambia de forma, cambia el falso y cambia este fichero; el resto del
 paquete no se entera.
 """
 
+import sys
 from contextlib import contextmanager
 from typing import Any
+
+import pytest
 
 from app.commons.observabilidad import ObservadorLangfuse, Puntuacion
 
@@ -103,3 +106,32 @@ async def test_una_puntuacion_sin_criterio_sube_con_su_nombre_tal_cual() -> None
 
     [score] = langfuse.trazas[0].hijos[0].scores
     assert score["name"] == "extension_de_capitulo"
+
+
+# --- P-22.2: lo encolado se vacia al apagar -----------------------------------
+
+
+async def test_cerrar_vacia_la_cola_del_cliente() -> None:
+    """El SDK manda en segundo plano y por lotes. Un proceso que se apaga sin
+    `flush` pierde los ultimos spans, que son justo los del ultimo capitulo."""
+    langfuse = LangfuseFalso()
+    observador = _observador(langfuse)
+    async with observador.traza(obra_id=1, nombre="capitulo 1"):
+        pass
+
+    observador.cerrar()
+
+    assert langfuse.flushes == 1
+
+
+def test_cerrar_sin_haber_abierto_no_construye_el_cliente(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Un proceso que no llego a trazar nada no tiene cola que vaciar, y
+    construir el cliente solo para cerrarlo abriria una conexion al apagar.
+    Con `langfuse` imposible de importar, cualquier intento de construirlo
+    lanzaria aqui."""
+    monkeypatch.setitem(sys.modules, "langfuse", None)
+    observador = ObservadorLangfuse(
+        clave_publica="pk-lf-x", clave_secreta="sk-lf-x", host="https://example.invalid"
+    )
+
+    observador.cerrar()

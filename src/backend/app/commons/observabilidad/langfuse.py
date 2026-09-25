@@ -128,6 +128,16 @@ class ObservadorLangfuse:
             )
         return self._cliente
 
+    def cerrar(self) -> None:
+        """P-22.2: vacia la cola del SDK, que manda por lotes y en segundo plano.
+
+        Solo si el cliente llego a construirse: un proceso que no trazo nada no
+        tiene cola, y construirlo aqui abriria una conexion para cerrarla. Si el
+        `flush` lanza, lanza: quien lo protege es el blindaje, que lo cuenta.
+        """
+        if self._cliente is not None:
+            self._cliente.flush()
+
     @asynccontextmanager
     async def traza(self, *, obra_id: int, nombre: str) -> AsyncIterator[_TrazaLangfuse]:
         cliente = self._abrir()

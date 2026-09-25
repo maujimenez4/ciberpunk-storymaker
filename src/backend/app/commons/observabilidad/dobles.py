@@ -74,10 +74,15 @@ class ObservadorEnMemoria:
 
     def __init__(self) -> None:
         self.trazas: list[TrazaEnMemoria] = []
+        self.cerrado = False
 
     @staticmethod
     def sesion_de(obra_id: int) -> str:
         return sesion_de(obra_id)
+
+    def cerrar(self) -> None:
+        """Solo lo anota: es lo que el test del *lifespan* mira."""
+        self.cerrado = True
 
     @asynccontextmanager
     async def traza(self, *, obra_id: int, nombre: str) -> AsyncIterator[TrazaEnMemoria]:
@@ -122,3 +127,6 @@ class ObservadorNulo:
     @asynccontextmanager
     async def traza(self, *, obra_id: int, nombre: str) -> AsyncIterator[_TrazaNula]:
         yield _TrazaNula()
+
+    def cerrar(self) -> None:
+        """Nada encolado, nada que vaciar."""

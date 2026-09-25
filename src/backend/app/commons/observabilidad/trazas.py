@@ -80,3 +80,8 @@ class Observador(Protocol):
     """Lo que se inyecta. `obra_id` y no `sesion_id`: ver `sesion_de`."""
 
     def traza(self, *, obra_id: int, nombre: str) -> AbstractAsyncContextManager[Traza]: ...
+
+    def cerrar(self) -> None:
+        """Vacia lo encolado. Lo llama el *lifespan* al apagar (P-22.2): el SDK
+        manda por lotes, y sin esto se pierden los ultimos spans."""
+        ...

@@ -134,6 +134,17 @@ def test_con_las_tres_credenciales_se_devuelve_uno_blindado(
     assert hasattr(observador, "fallos"), "no esta blindado: no cuenta fallos"
 
 
+def test_el_observador_es_uno_por_proceso(monkeypatch: pytest.MonkeyPatch) -> None:
+    """P-22.2. Era uno **por peticion**: cada `Depends` construia un cliente de
+    Langfuse con su propia cola, y el `flush` del apagado solo podia vaciar una
+    de ellas. Con uno por proceso, cerrar ese es cerrarlo todo."""
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-x")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-x")
+    monkeypatch.setenv("LANGFUSE_HOST", "https://example.invalid")
+
+    assert obtener_observador() is obtener_observador()
+
+
 def test_los_ajustes_leen_las_tres_del_entorno_y_de_ningun_otro_sitio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

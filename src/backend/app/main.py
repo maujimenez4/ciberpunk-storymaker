@@ -11,12 +11,14 @@ from fastapi import FastAPI
 
 from app.commons.db.vectores import extension_disponible
 from app.commons.errors.manejador import registrar_manejadores
+from app.commons.observabilidad import obtener_observador
 from app.features import contexto, escritura, manuscrito, obra, outline
 
 
 @asynccontextmanager
-async def ciclo_de_vida(_app: FastAPI) -> AsyncIterator[None]:
-    """Lo que se comprueba **al levantar**, y no en la primera peticion.
+async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
+    """Lo que se comprueba **al levantar**, y no en la primera peticion; y lo
+    que se cierra al apagar.
 
     R-6 pide que, si `sqlite-vec` no carga, «el sistema arranque y **avise**».
     La deteccion existia desde T7 y era perezosa: el aviso salia en la primera
@@ -27,9 +29,21 @@ async def ciclo_de_vida(_app: FastAPI) -> AsyncIterator[None]:
     `extension_disponible()` prueba la carga sobre una base en memoria propia y
     cachea el resultado, asi que llamarla aqui no toca la base de la obra y no
     la vuelve a probar nunca mas.
+
+    **El observador se pide al levantar y se cierra al apagar** (plan 8 T7,
+    P-22.2). Al levantar, porque sin credenciales es donde tiene que salir el
+    aviso (`SIN_CREDENCIALES`); al apagar, porque el SDK manda por lotes y sin
+    `flush` se pierden los ultimos spans. Es el mismo objeto que reciben las
+    rutas: `obtener_observador` es uno por proceso, y si una prueba lo
+    sobrescribe se cierra el sobrescrito. Llega blindado, asi que un Langfuse
+    caido al apagar no tumba el apagado: el fallo se cuenta.
     """
     extension_disponible()
-    yield
+    observador = app.dependency_overrides.get(obtener_observador, obtener_observador)()
+    try:
+        yield
+    finally:
+        observador.cerrar()
 
 
 def crear_app() -> FastAPI:

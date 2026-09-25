@@ -112,6 +112,33 @@ async def test_un_fallo_del_cuerpo_si_sale() -> None:
             raise ValueError("fallo el escritor")
 
 
+class _ObservadorQueNoVacia(ObservadorEnMemoria):
+    """Abre y traza bien, y revienta al vaciar: Langfuse caido **al apagar**."""
+
+    def cerrar(self) -> None:
+        raise RuntimeError("Langfuse no responde al flush")
+
+
+def test_un_cierre_que_revienta_no_sale_del_blindaje_y_se_cuenta() -> None:
+    """Review Focus 5 del plan 8. El `flush` corre al apagar el proceso, y un
+    apagado que lanza deja el servidor a medio parar por un panel de metricas."""
+    observador = blindar(_ObservadorQueNoVacia())
+
+    observador.cerrar()
+
+    assert observador.fallos == 1
+
+
+def test_un_cierre_sano_llega_al_de_dentro_y_no_cuenta_fallos() -> None:
+    dentro = ObservadorEnMemoria()
+    observador = blindar(dentro)
+
+    observador.cerrar()
+
+    assert dentro.cerrado is True
+    assert observador.fallos == 0
+
+
 async def test_las_credenciales_no_aparecen_en_el_repr_ni_en_los_errores() -> None:
     """RF-OBS-07 y `CLAUDE.md` §16, ultima linea.
 

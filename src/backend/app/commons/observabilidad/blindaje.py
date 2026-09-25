@@ -151,6 +151,12 @@ class ObservadorBlindado:
     def fallos(self) -> int:
         return self._contador.fallos
 
+    def cerrar(self) -> None:
+        """El `flush` del apagado, a salvo como todo lo demas (Review Focus 5 del
+        plan 8): con Langfuse caido al apagar, el proceso se para igual y el
+        fallo se cuenta."""
+        _a_salvo(self._contador, self._dentro.cerrar)
+
     @asynccontextmanager
     async def traza(self, *, obra_id: int, nombre: str) -> AsyncIterator[_TrazaBlindada]:
         interna: Traza | None = None

@@ -1014,6 +1014,12 @@ se escribe igual y el fallo se cuenta— y baja a la tarea de fondo por argument
 de modelo. Los roles se construyen sobre `ClienteObservado`, que deja en el span en curso el
 prompt renderizado, la salida y el consumo de cada llamada: ningún agente sabe que existe.
 
+El observador es **uno por proceso** (`obtener_observador` cacheado): el SDK de Langfuse manda por
+lotes y en segundo plano, y el *lifespan* de `main.py` lo pide al levantar —sin credenciales, el
+aviso sale ahí— y lo **cierra al apagar** con un `flush`, para que los últimos spans no se pierdan.
+El cierre va por el blindaje: con Langfuse caído al apagar, el proceso se para igual y el fallo se
+cuenta.
+
 | Unidad de trabajo | Traza | Spans, en orden | *Scores* |
 | --- | --- | --- | --- |
 | El ciclo de un capítulo (`POST /capitulos/{id}/escribir` y cada vuelta de `POST /obras/{id}/novela`) | `capitulo N · <run_id>` | `planificador` —solo si se planifica—, `ensamblador` —con el desglose por capa como salida—, y por cada intento `escritor`, `policy`, `continuista`, `puerta_g1a`, `critico`; al integrar, `extractor` | En `policy`: `palabras_vetadas`. En `puerta_g1a`: uno por validador que corrió, `continuidad_y_canon` incluido. En `critico`: `juez_con_rubrica`, uno por criterio con su justificación, que sube como `juez_con_rubrica.<criterio>` para que cada criterio sea su propia serie en el panel |

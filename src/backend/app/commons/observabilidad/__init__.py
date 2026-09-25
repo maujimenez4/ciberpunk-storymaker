@@ -9,6 +9,7 @@ el sistema arranca, avisa y genera. **Nunca lanza.**
 """
 
 import logging
+from functools import lru_cache
 
 from app.commons.config.ajustes import Ajustes
 from app.commons.observabilidad.blindaje import ObservadorBlindado, blindar
@@ -42,8 +43,15 @@ capitulo». Ese error ya se pago una vez.
 """
 
 
+@lru_cache(maxsize=1)
 def obtener_observador() -> Observador:
     """El observador de produccion, o el nulo. Nunca lanza.
+
+    **Uno por proceso** (P-22.2). Era uno por peticion: cada `Depends`
+    construia su cliente de Langfuse con su propia cola, y el `flush` del
+    apagado no tenia un unico objeto que vaciar. El *lifespan* de `main.py`
+    cierra este mismo. Quien cambie el entorno en un test vacia la cache
+    (`obtener_observador.cache_clear()`).
 
     Las tres credenciales o ninguna: media configuracion es el caso que se cuela
     -- alguien pone la publica, olvida el host -- y un cliente construido a
