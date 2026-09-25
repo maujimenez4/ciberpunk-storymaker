@@ -29,6 +29,17 @@ Con el brief de ejemplo el outline sale personalizado —el perro Luna, el veran
 
 **Quién:** plan nuevo del backend (tramo 1 de la hoja de ruta), con firma de `maujimenez4`.
 
+**Medido el 2026-09-24 (plan 8, T1), y cambia el diagnóstico.** `src/backend/scripts/sonda_nombre.py`, una llamada real al Arquitecto con `ejemplos/brief-marta.json`, con la **cuenta de trabajo** activa:
+
+| Nombre del destinatario | Apariciones en la salida | Marcas `ANONIMIZADO` |
+| --- | --- | --- |
+| `Marta` (el real del ejemplo) | 0 | sí |
+| `Oriana` (inventado: el marcador que proponía T2) | 0 | 13 |
+
+**La cuenta anonimiza cualquier nombre de persona, también uno inventado.** No es el modelo ni el código: son instrucciones de la organización de esa cuenta, que se aplican a toda llamada —en la misma sesión añadieron una «nota de privacidad» a una respuesta del asistente—. **Por eso el marcador no lo resolvería**, y T2 y T3 del plan 8 no se ejecutan (desviación registrada allí).
+
+**Lo que sí lo resuelve:** generar con una cuenta **sin esas instrucciones** (personal). Pendiente: repetir la sonda con esa cuenta antes de la corrida — `uv run python src/backend/scripts/sonda_nombre.py` — y cerrar P-19 si el nombre sale. **Queda como restricción del entorno**, que conviene declarar en `README.md` y en `trade-offs.md`: *el sistema no puede escribir nombres propios con una cuenta cuya organización obliga a anonimizarlos.*
+
 ---
 
 ## Falsean una medida
@@ -39,13 +50,15 @@ Con el brief de ejemplo el outline sale personalizado —el perro Luna, el veran
 
 **Antes de hacerlo hay que resolver una contradicción:** este fichero midió la sobrecarga del CLI en **~1.800 tokens por llamada**, constante; `RELEVO.md` dice **33.000–49.000 por llamada en corrida real**. Si la segunda es cierta y cuenta para el techo, dos llamadas en vuelo pueden pasar de 100.000 aunque sus paquetes quepan. **Ninguna de las dos cifras se ha podido verificar desde el repositorio.**
 
-**Medida el 2026-09-24 (plan 8, T5)** con `src/backend/scripts/medir_sobrecarga.py`: `claude-haiku-4-5`, prompts de 94, 2.014 y 8.014 tokens contados, dos rondas. `sobrecarga = (input + cache_read + cache_creation) − contados`:
+**Medida el 2026-09-24 (plan 8, T5)** con `src/backend/scripts/medir_sobrecarga.py`: `claude-haiku-4-5`, prompts de 94, 2.014 y 8.014 tokens contados, dos rondas, **con la cuenta de trabajo, que inyecta instrucciones de organización en cada llamada** (puede dar más que la cuenta de la corrida). `sobrecarga = (input + cache_read + cache_creation) − contados`:
 
 | Contados | Ronda 1 | Ronda 2 |
 | --- | --- | --- |
 | 94 | 1.200 | 1.200 |
 | 2.014 | 1.152 | 1.152 |
 | 8.014 | 1.002 (todo en `cache_creation`) | 1.002 (todo en `cache_read`) |
+
+**Pendiente: volver a medir con la cuenta de la corrida real** (`uv run python src/backend/scripts/medir_sobrecarga.py`) y ajustar `SOBRECARGA_POR_LLAMADA` si sale mayor.
 
 **Gana la primera cifra:** la sobrecarga es fija, de ~1.200, y no depende de la caché. Los 33.000–49.000 **no se reproducen** con las opciones de hoy; la hipótesis más probable —no comprobada— es que se midieron antes de `setting_sources=[]`, cuando el `CLAUDE.md` del proyecto entraba en cada prompt (`claude_code.py`, `_opciones`). `SOBRECARGA_POR_LLAMADA = 2_000` en `commons/jobs/turnos.py`. Tabla completa en `docs/verification.md` §5.2. **Con esta cifra el techo concurrente no es la restricción real**: dos jueces con sus paquetes caben con holgura, y `CLAUDE.md` §4.1 no necesita cambio.
 

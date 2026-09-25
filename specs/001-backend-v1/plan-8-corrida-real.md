@@ -418,4 +418,7 @@ if turno is not None:
 
 ## Desviaciones
 
-*(Se rellena al ejecutar: cada desviación con su causa, en el mismo commit que la produce.)*
+| Tarea | Qué se desvió | Por qué |
+| --- | --- | --- |
+| **T1** | La sonda se hizo **dos veces**: con el nombre real y con un nombre inventado («Oriana», pasado como argumento) | La primera confirmó el anonimizado; faltaba saber si el marcador lo esquivaría. La segunda dio **0 apariciones y 13 marcas**: la cuenta de trabajo anonimiza cualquier nombre de persona |
+| **T2, T3** | **No se ejecutan** | D-1 decía «solo si la cuenta anonimiza». Anonimiza, pero **también anonimiza el marcador**, así que T2–T3 no resolverían P-19. La causa son las instrucciones de la organización de la cuenta; la solución es generar con una cuenta sin ellas. Quedan escritas por si una cuenta futura anonimizara solo nombres reales. Ver P-19 |
