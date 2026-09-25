@@ -231,6 +231,42 @@ class Trabajo(Base):
     )
 
 
+class IntentoDescartado(Base):
+    """P-20: cada intento que la puerta rechazo, **con su texto y sus defectos**.
+
+    Existe para distinguir «el modelo escribio mal tres veces» de «un validador
+    rechaza siempre», que sin esto no se puede: `_retirar_lo_descartado` borra
+    la `version_texto` del intento por R-7, y los defectos no tenian tabla.
+
+    **Es una tabla aparte y no un «dejar de borrar»** a proposito: tres lectores
+    (`contexto`, `canon/resumenes`, `manuscrito`) leen `version_texto` con
+    `vigente = 1` y cuentan con que ahi solo haya lo que paso la puerta. Esta
+    tabla no la lee ninguno de ellos: **es evidencia, no un almacen de lectura**,
+    y por eso nunca puede contaminar el paquete del capitulo siguiente.
+
+    `defectos` guarda `codigo` y `cita` de cada bloqueante: lo que hace falta
+    para decidir, sin el `version_texto_id`, que apuntaria a una fila borrada.
+    """
+
+    __tablename__ = "intento_descartado"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trabajo_id: Mapped[int] = mapped_column(
+        ForeignKey("trabajo.id", name="fk_intento_descartado_trabajo_id"), index=True
+    )
+    run_id: Mapped[str] = mapped_column(String(60), index=True)
+    escena_id: Mapped[int] = mapped_column(
+        ForeignKey("escena.id", name="fk_intento_descartado_escena_id")
+    )
+    numero: Mapped[int]
+    texto: Mapped[str] = mapped_column(Text)
+    defectos: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    termino_vetado: Mapped[str | None] = mapped_column(String(200), default=None)
+    creado_en: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: RelojDelSistema().ahora()
+    )
+
+
 # ---------------------------------------------------------------------------
 # La pared de RF-ESC-02
 # ---------------------------------------------------------------------------

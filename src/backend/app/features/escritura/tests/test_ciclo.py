@@ -352,6 +352,9 @@ async def test_un_capitulo_rechazado_no_deja_rastro_en_ningun_almacen(sesion, ob
     sobre prosa de trece palabras, y lo que se comprueba es que **ni el
     manuscrito** queda sucio: la `version_texto` descartada se retira, que es lo
     unico que R-7 nombraba y nadie hacia.
+
+    `intento_descartado` no esta en la lista, y a proposito (plan 8, T4): es la
+    evidencia de la escalada, no un almacen de lectura, y ningun paquete la mira.
     """
     capitulo_id = obra_lista.capitulos[0].id
 

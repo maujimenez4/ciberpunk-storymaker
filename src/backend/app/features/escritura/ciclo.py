@@ -80,7 +80,7 @@ from app.features.contexto import (
 from app.features.escena import Planificador, RestriccionesDeDiscurso, planificar_escena
 from app.features.escritura.agents import Escritor
 from app.features.escritura.maquina import Estado, Senal, avanzar
-from app.features.escritura.modelos import Trabajo
+from app.features.escritura.modelos import IntentoDescartado, Trabajo
 from app.features.escritura.service import Escritura, escribir_capitulo
 
 TIPO_DE_TRABAJO = "escribir_escena"
@@ -356,6 +356,9 @@ async def _ciclo_observado(
     # **Ese es el hilo que faltaba:** T9 recibia los codigos como dato de
     # entrada y T12 los producia, y nadie los unia.
     bloqueantes = _codigos_bloqueantes(escritura)
+    # P-20: la evidencia se guarda **antes** de retirar lo descartado, y
+    # tambien cuando se aprueba tras reparar: es la misma evidencia.
+    await _guardar_evidencia(sesion, trabajo, contexto.escena_id, escritura)
     if not escritura.aprobado:
         await _retirar_lo_descartado(sesion, contexto.escena_id, trabajo.run_id)
         # **Se pasa por `REPARANDO`, que no es ceremonia.** `architecture.md`
@@ -528,6 +531,36 @@ def _codigos_bloqueantes(escritura: Escritura) -> tuple[str, ...]:
     """
     ultimo = escritura.intentos[-1]
     return tuple(sorted({defecto.codigo for defecto in ultimo.resultado.bloqueantes}))
+
+
+async def _guardar_evidencia(
+    sesion: AsyncSession, trabajo: Trabajo, escena_id: int, escritura: Escritura
+) -> None:
+    """P-20: cada intento que la puerta rechazo, con su texto y sus defectos.
+
+    Va a `intento_descartado` y **no** deja de borrarse la `version_texto`
+    (R-7): la evidencia no es un almacen de lectura y ningun paquete la mira.
+    Se guarda `codigo` y `cita` de cada bloqueante, que es lo que distingue
+    «el modelo escribio mal tres veces» de «un validador rechaza siempre».
+    """
+    for intento in escritura.intentos:
+        if intento.resultado.aprobado:
+            continue
+        sesion.add(
+            IntentoDescartado(
+                trabajo_id=trabajo.id,
+                run_id=trabajo.run_id,
+                escena_id=escena_id,
+                numero=intento.numero,
+                texto=intento.texto,
+                defectos=[
+                    {"codigo": defecto.codigo, "cita": defecto.cita}
+                    for defecto in intento.resultado.bloqueantes
+                ],
+                termino_vetado=intento.termino_vetado,
+            )
+        )
+    await sesion.flush()
 
 
 async def _retirar_lo_descartado(sesion: AsyncSession, escena_id: int, run_id: str) -> None:
