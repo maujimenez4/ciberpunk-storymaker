@@ -28,6 +28,11 @@ RF-MEM-06).
   como se puede llamar a alguien ademas de por su forma canonica, y el
   validador de `calidad` lo **lee**; no lo adivina y no se reescribe. La
   escritura la hace el Extractor, que es esta feature.
+- `corregir_por_peticion`, `origen_del_hecho`, `HechoDesconocido` y
+  `HechoYaSustituido` (plan 5, T2): `manuscrito` construye con ellas el alcance
+  de una peticion y su correccion; entrar a `correccion.py` desde fuera seria
+  saltarse §5.1.
+
 `Embedding` cruza la frontera a proposito, y va dicho por que: el indice
 vectorial lo **escribe** el Extractor (`architecture.md` §4.3) y por eso la
 tabla vive aqui, pero quien lo **lee** es la recuperacion de `contexto` (T7).
@@ -42,6 +47,12 @@ from app.features.canon.agents import (
     PROMPT_VERSION,
     Extractor,
     SalidaMalFormada,
+)
+from app.features.canon.correccion import (
+    HechoDesconocido,
+    HechoYaSustituido,
+    corregir_por_peticion,
+    origen_del_hecho,
 )
 from app.features.canon.modelos import Embedding
 from app.features.canon.repository import (
@@ -71,16 +82,20 @@ __all__ = [
     "Embedding",
     "Extraccion",
     "Extractor",
+    "HechoDesconocido",
+    "HechoYaSustituido",
     "ResumenDeCapitulo",
     "SalidaMalFormada",
     "Vector",
     "consolidar_escena",
     "contar_capitulos_con_texto_aprobado",
     "corregir_hecho",
+    "corregir_por_peticion",
     "declarar_variantes",
     "leer_hechos_del_canon",
     "leer_nombres_del_canon",
     "leer_resumenes_anteriores",
+    "origen_del_hecho",
     "registrar_uso_de_hechos",
     "vectorizador_de",
 ]

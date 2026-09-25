@@ -73,6 +73,7 @@ async def consolidar_escena(
     version_texto_id: int | None = None,
     vectorizar: Callable[[str], Vector] | None = None,
     defectos_bloqueantes: Sequence[str] = (),
+    run_id: str | None = None,
 ) -> Consolidacion:
     """La escena aprobada pasa a memoria de largo plazo. La rechazada, no.
 
@@ -95,10 +96,14 @@ async def consolidar_escena(
 
     async with sesion.begin_nested():
         hechos = await escribir_hechos_de_escena(
-            sesion, obra_id=obra_id, escena_id=escena_id, hechos=extraccion.hechos
+            sesion, obra_id=obra_id, escena_id=escena_id, hechos=extraccion.hechos, run_id=run_id
         )
         eventos = await escribir_eventos(
-            sesion, obra_id=obra_id, escena_id=escena_id, eventos=extraccion.eventos
+            sesion,
+            obra_id=obra_id,
+            escena_id=escena_id,
+            eventos=extraccion.eventos,
+            run_id=run_id,
         )
         resumen = await escribir_resumen_de_capitulo(
             sesion,
@@ -170,11 +175,9 @@ async def corregir_hecho(
 ) -> HechoCanon:
     """RF-MEM-08: se registra un hecho nuevo que sustituye al anterior.
 
-    **Lo que hoy NO queda escrito, y conviene leerlo antes de confiar en esto:**
-    la cita al hecho sustituido. `hecho_canon` no tiene columna donde
-    guardarla, y su `modelos.py` tiene un solo dueno en esta fase, asi que el
-    vinculo se deduce por entidad y atributo en vez de declararse. Queda
-    anotado en Desviaciones, junto con los *snapshots* que el requisito manda
-    invalidar y que todavia no existen.
+    El nuevo **cita** al sustituido en `sustituye_a` desde la Fase 3 (este
+    docstring decia lo contrario y era falso). No comprueba si el hecho ya
+    estaba sustituido: el camino de una peticion del lector es
+    `correccion.corregir_por_peticion`, que si lo comprueba (R-5).
     """
     return await escribir_hecho_que_sustituye(sesion, hecho=hecho, nuevo_valor=nuevo_valor)
