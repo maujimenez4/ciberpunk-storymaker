@@ -101,4 +101,29 @@ describe("quién viaja contigo", () => {
 
     expect(await screen.findByText(/según vayas leyendo/)).toBeInTheDocument();
   });
+
+  it("cada hecho vivo de la entrada ofrece su propia corrección (P-37)", async () => {
+    // Sin hecho único la entrada no ofrecía nada: el lector elige el hecho.
+    const conHechos = [
+      {
+        nombre: "Olvido",
+        tipo: "personaje",
+        descripcion: "",
+        capitulos: [1],
+        hecho_canon_id: null,
+        hechos: [
+          { hecho_canon_id: 7, atributo: "ojos", valor: "grises" },
+          { hecho_canon_id: 9, atributo: "oficio", valor: "cerrajera" },
+        ],
+      },
+    ];
+    render(<QuienEsQuien token="T" />, { wrapper: conFicha(conHechos) });
+
+    const olvido = (await screen.findByRole("heading", { name: "Olvido" })).closest(".etiqueta");
+    const etiqueta = within(olvido as HTMLElement);
+    expect(etiqueta.getByText("ojos: grises")).toBeInTheDocument();
+    expect(etiqueta.getByText("oficio: cerrajera")).toBeInTheDocument();
+    expect(etiqueta.getAllByRole("button", { name: /^Corregir este hecho/ })).toHaveLength(2);
+    expect(etiqueta.getByRole("button", { name: "Corregir este hecho: Olvido, ojos" })).toBeInTheDocument();
+  });
 });

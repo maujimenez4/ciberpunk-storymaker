@@ -215,6 +215,8 @@ Los arreglos de esa corrida están en sus commits (`e1a9022`, `ecbd730`, `2af141
 
 `_hecho_de_la_entrada` (`manuscrito/service.py`) da `hecho_canon_id` a una entrada de la ficha solo si tiene hecho de `nombre` o un único hecho. El Extractor no registra `nombre` y cada personaje acumula muchos: en la obra 3 **ninguna** entrada ofrece «Corregir», y la ficha solo lista a los presentes, no objetos ni lugares. La demo de la petición se hizo por `POST /lectura/{token}/peticiones`. Cerrarlo es que la ficha muestre los hechos de cada entrada y el lector elija.
 
+**Cerrado a medias en `feature/ficha-corregible`:** cada entrada trae sus hechos vivos (`hechos[]`, leídos del canon al pedir la ficha) y cada uno lleva su «Corregir». Sigue abierto que la ficha liste objetos y lugares, no solo a los presentes.
+
 ### P-38 · El Extractor escribe un canon que los validadores castigan
 
 Tres formas vistas en la obra 3: la misma entidad dos veces («Andrés» y «Andres»), objetos como nombres propios («Café», «Bufanda») y **salir de una escena anotado como `excluye[]`** (evento 60). Los validadores ya no bloquean por las dos primeras y Lean cazó la tercera, pero la causa está en el prompt del Extractor y en su esquema, que no distingue personaje de objeto. En la obra 3, las variantes «café» y «bufanda» se declararon a mano (`declarar_variantes`) y el evento 60 se sustituyó por el 89.

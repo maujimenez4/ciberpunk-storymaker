@@ -20,7 +20,14 @@ import type { EntradaDeFicha } from "@/shared/api/tipos";
 
 /** La entrada de la ficha **con su hecho**. El OpenAPI de hoy no lo trae; hasta
  * que lo traiga, la entrada sin `hecho_canon_id` no ofrece corregir. */
-export type EntradaCorregible = EntradaDeFicha & { hecho_canon_id?: number | null };
+export type EntradaCorregible = EntradaDeFicha & {
+  hecho_canon_id?: number | null;
+  /** P-37: los hechos vivos de la entrada. Cada uno se corrige por su id. */
+  hechos?: HechoDeFicha[];
+};
+
+/** Un hecho vivo de una entrada de la ficha: lo que el lector puede corregir. */
+export type HechoDeFicha = { hecho_canon_id: number; atributo: string; valor: string };
 
 export type PeticionAceptada = { peticion_id: number; estado: string };
 

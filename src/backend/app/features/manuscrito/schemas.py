@@ -29,6 +29,16 @@ class CapituloPublicado(BaseModel):
     cambiado: bool = False
 
 
+class HechoDeFicha(BaseModel):
+    """Un hecho vivo de la entrada, el que el lector puede pedir corregir (P-37)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    hecho_canon_id: int
+    atributo: str
+    valor: str
+
+
 class EntradaDeFicha(BaseModel):
     """Quien es quien, con los capitulos en que aparece (`RF-PUB-05`)."""
 
@@ -42,6 +52,11 @@ class EntradaDeFicha(BaseModel):
     """El hecho de canon del que sale la entrada: la peticion de cambio del
     lector viaja con este id (D-02). Nulo si la entrada no tiene un hecho unico
     —el frontend entonces no ofrece «corregir»—, y en fichas anteriores."""
+    hechos: list[HechoDeFicha] = Field(default_factory=list)
+    """Los hechos **vivos** de la entrada, leidos del canon al pedir la ficha y no
+    guardados con ella (P-37): asi una tirada ya publicada los ofrece, y uno que
+    se sustituyo despues deja de ofrecerse. El lector elige cual corregir, que es
+    lo que D-02 temia que eligiera el sistema."""
 
 
 class FichaDeLectura(BaseModel):

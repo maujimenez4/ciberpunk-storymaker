@@ -18,6 +18,7 @@ from app.features.manuscrito import (
     ElementosObligatoriosAusentes,
     ObraSinCapitulos,
     ensamblar_manuscrito,
+    ficha_para_leer,
     publicar,
 )
 from app.features.manuscrito.modelos import (
@@ -195,6 +196,48 @@ async def test_cada_entrada_de_la_ficha_lleva_su_hecho_de_canon_o_nulo(
 
     assert por_nombre["Nadia"] == ids["nadia"]
     assert por_nombre["Teo"] is None
+
+
+async def test_la_ficha_ofrece_cada_hecho_vivo_de_la_entrada_para_corregir(
+    sesion: AsyncSession, integrada: ObraConOutline
+) -> None:
+    """P-37. Con un solo hecho corregible, en la obra 3 **ninguna** entrada
+    ofrecia «Corregir»: el Extractor no registra `nombre` y cada personaje
+    acumula muchos. La ficha trae los hechos vivos de cada entrada y el lector
+    elige cual; uno ya sustituido no se ofrece, porque pedirlo se rechaza (R-5).
+    """
+    ids: dict[str, int] = {}
+    for clave, (atributo, valor, sustituye) in {
+        "edad": ("edad", "40", None),
+        "oficio_viejo": ("oficio", "jardinero", None),
+    }.items():
+        ids[clave] = (
+            await sesion.execute(
+                text(
+                    "INSERT INTO hecho_canon (obra_id, entidad, atributo, valor, confianza, origen) "
+                    "VALUES (:o, 'Teo', :a, :v, 1.0, 'brief') RETURNING id"
+                ),
+                {"o": integrada.obra.id, "a": atributo, "v": valor},
+            )
+        ).scalar_one()
+    ids["oficio"] = (
+        await sesion.execute(
+            text(
+                "INSERT INTO hecho_canon (obra_id, entidad, atributo, valor, confianza, origen, "
+                "sustituye_a) VALUES (:o, 'Teo', 'oficio', 'relojero', 1.0, 'brief', :s) RETURNING id"
+            ),
+            {"o": integrada.obra.id, "s": ids["oficio_viejo"]},
+        )
+    ).scalar_one()
+
+    version = await publicar(sesion, integrada.obra.id)
+    ficha = await ficha_para_leer(sesion, version)
+    teo = next(e for e in ficha.entradas if e.nombre == "Teo")
+
+    assert [(h.hecho_canon_id, h.atributo, h.valor) for h in teo.hechos] == [
+        (ids["edad"], "edad", "40"),
+        (ids["oficio"], "oficio", "relojero"),
+    ]
 
 
 async def test_el_cuadro_de_defectos_incluye_la_cobertura_de_personalizacion(
