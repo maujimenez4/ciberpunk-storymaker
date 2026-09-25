@@ -452,6 +452,24 @@
   color: var(--tinta-suave);
 }
 
+/* P-37: los hechos de la entrada, cada uno con su corrección. */
+.etiqueta__hechos {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.etiqueta__hecho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--nota);
+}
+
 .etiqueta--pendiente {
   align-items: center;
   gap: 1rem;

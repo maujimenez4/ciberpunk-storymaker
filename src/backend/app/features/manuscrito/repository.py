@@ -196,7 +196,7 @@ async def hechos_vivos(sesion: AsyncSession, obra_id: int) -> list[dict[str, Any
     filas = (
         await sesion.execute(
             text(
-                "SELECT h.id AS id, h.entidad AS entidad, h.atributo AS atributo "
+                "SELECT h.id AS id, h.entidad AS entidad, h.atributo AS atributo, h.valor AS valor "
                 "FROM hecho_canon AS h "
                 "WHERE h.obra_id = :obra_id AND NOT EXISTS ("
                 "  SELECT 1 FROM hecho_canon AS s WHERE s.sustituye_a = h.id) "

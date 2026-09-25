@@ -41,6 +41,7 @@ from app.features.calidad import (
     emitir,
     puntuaciones_de_g4,
 )
+from app.features.manuscrito import schemas
 from app.features.manuscrito.lean import correr_lean
 from app.features.manuscrito.modelos import (
     CapituloPublicado,
@@ -53,6 +54,7 @@ from app.features.manuscrito.repository import (
     capitulos_de,
     dedicatoria_de,
     elementos_obligatorios_de,
+    ficha_de,
     hechos_con_sus_capitulos,
     hechos_vivos,
     presentes_por_capitulo,
@@ -196,6 +198,37 @@ async def _ficha_de_lectura(sesion: AsyncSession, obra_id: int) -> list[dict[str
         }
         for nombre, capitulos in sorted(por_nombre.items())
     ]
+
+
+async def ficha_para_leer(
+    sesion: AsyncSession, version: VersionPublicada
+) -> schemas.FichaDeLectura:
+    """La ficha de una tirada **con los hechos vivos** de cada entrada (P-37).
+
+    Las entradas y sus capitulos son los que se guardaron al publicar: la ficha
+    de una tirada no cambia. Los hechos se leen ahora, del canon, porque lo que
+    se puede corregir es lo que sigue vivo. Una tirada sin ficha da la vacia.
+    """
+    guardada = await ficha_de(sesion, version.id)
+    if guardada is None:
+        return schemas.FichaDeLectura()
+    por_entidad: dict[str, list[schemas.HechoDeFicha]] = {}
+    for hecho in await hechos_vivos(sesion, version.obra_id):
+        por_entidad.setdefault(str(hecho["entidad"]), []).append(
+            schemas.HechoDeFicha(
+                hecho_canon_id=int(hecho["id"]),
+                atributo=str(hecho["atributo"]),
+                valor=str(hecho["valor"]),
+            )
+        )
+    return schemas.FichaDeLectura(
+        entradas=[
+            schemas.EntradaDeFicha.model_validate(
+                {**entrada, "hechos": por_entidad.get(str(entrada["nombre"]), [])}
+            )
+            for entrada in guardada.entradas
+        ]
+    )
 
 
 ATRIBUTO_DE_NOMBRE = "nombre"

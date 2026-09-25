@@ -124,6 +124,7 @@ from app.features.manuscrito.service import (
     dedicatoria_o_nada,
     ensamblar_manuscrito,
     entrada_del_cuadro,
+    ficha_para_leer,
     publicar,
 )
 
@@ -162,6 +163,7 @@ __all__ = [
     "ensamblar_manuscrito",
     "entrada_del_cuadro",
     "ficha_de",
+    "ficha_para_leer",
     "guardar_dedicatoria",
     "huella_de",
     "leer_peticion",

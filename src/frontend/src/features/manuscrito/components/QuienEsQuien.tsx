@@ -96,6 +96,7 @@ function Etiqueta({
   onPeticionEnviada: ((peticionId: number) => void) | undefined;
 }) {
   const capitulos = entrada.capitulos ?? [];
+  const hechos = entrada.hechos ?? [];
   return (
     <article className="etiqueta">
       <span className="etiqueta__ojal" aria-hidden="true" />
@@ -124,9 +125,23 @@ function Etiqueta({
             ))}
           </p>
         ) : null}
-        {/* Sin el id del hecho no hay qué corregir: pedirlo por el nombre
-            sería la búsqueda difusa que D-02 descartó. */}
-        {typeof entrada.hecho_canon_id === "number" ? (
+        {/* P-37: cada hecho vivo, con su propia corrección. El lector elige el
+            hecho; el sistema no adivina cuál quiso tocar (D-02). */}
+        {hechos.length > 0 ? (
+          <ul className="etiqueta__hechos">
+            {hechos.map((hecho) => (
+              <li key={hecho.hecho_canon_id} className="etiqueta__hecho">
+                <span>{`${legible(hecho.atributo)}: ${hecho.valor}`}</span>
+                <PedirCorreccion
+                  token={token}
+                  hechoId={hecho.hecho_canon_id}
+                  nombre={`${entrada.nombre}, ${legible(hecho.atributo)}`}
+                  onEnviada={onPeticionEnviada}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : typeof entrada.hecho_canon_id === "number" ? (
           <PedirCorreccion
             token={token}
             hechoId={entrada.hecho_canon_id}
@@ -137,6 +152,11 @@ function Etiqueta({
       </div>
     </article>
   );
+}
+
+/** El nombre del campo como se lee: «lugar_habitual» es de la base, no de quien lee. */
+function legible(atributo: string): string {
+  return atributo.replaceAll("_", " ").trim();
 }
 
 /** «1, 2 y 3»: coma entre los primeros, «y» antes del último. */

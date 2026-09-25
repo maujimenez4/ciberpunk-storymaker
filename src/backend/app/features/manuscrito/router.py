@@ -39,7 +39,6 @@ from app.features.manuscrito.pdf import (
 from app.features.manuscrito.repository import (
     capitulos_de,
     dedicatoria_de,
-    ficha_de,
     texto_publicado,
     titulo_de_obra,
     version_por_token,
@@ -48,11 +47,10 @@ from app.features.manuscrito.repository import (
 from app.features.manuscrito.reversion import revertir
 from app.features.manuscrito.schemas import (
     CapituloPublicado,
-    EntradaDeFicha,
     FichaDeLectura,
     VersionPublicada,
 )
-from app.features.manuscrito.service import publicar
+from app.features.manuscrito.service import ficha_para_leer, publicar
 
 Sesion = Annotated[AsyncSession, Depends(obtener_sesion)]
 
@@ -176,14 +174,7 @@ async def ficha(token: str, sesion: Sesion) -> FichaDeLectura:
     existe, que es otra cosa.
     """
     version = await _version_o_404(sesion, token)
-
-    guardada = await ficha_de(sesion, version.id)
-    if guardada is None:
-        return FichaDeLectura()
-
-    return FichaDeLectura(
-        entradas=[EntradaDeFicha.model_validate(entrada) for entrada in guardada.entradas]
-    )
+    return await ficha_para_leer(sesion, version)
 
 
 @router.get("/{token}/versiones")
