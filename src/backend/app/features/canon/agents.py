@@ -110,11 +110,25 @@ class Extractor:
         self._semilla = semilla
 
     async def extraer(self, prosa: str) -> Extraccion:
-        """De una escena aprobada: hechos, eventos, resumen e hilos."""
-        crudo = await self._cliente.completar(
-            render_extractor(PLANTILLA_V1, prosa), semilla=self._semilla
+        """De una escena aprobada: hechos, eventos, resumen e hilos.
+
+        **Con un reintento dirigido si no valida**: en la corrida real
+        (2026-09-24) una salida mal formada del Extractor detenia la novela
+        entera con el capitulo ya aprobado. Uno solo, con el motivo concreto.
+        """
+        prompt = render_extractor(PLANTILLA_V1, prosa)
+        crudo = await self._cliente.completar(prompt, semilla=self._semilla)
+        try:
+            return _validar(Extraccion, crudo)
+        except SalidaMalFormada as fallo:
+            motivo = str(fallo.__cause__)[:1500]
+        reintento = (
+            f"{prompt}\n\n## Tu salida anterior no validó\n\n"
+            f"No cumple el formato de salida por esto:\n\n{motivo}\n\n"
+            "Devuelve el objeto JSON completo otra vez, corrigiendo exactamente eso, "
+            "sin texto antes ni después."
         )
-        return _validar(Extraccion, crudo)
+        return _validar(Extraccion, await self._cliente.completar(reintento, semilla=self._semilla))
 
     async def extraer_del_brief(self, texto_aportado: str) -> list[HechoDelBrief]:
         """Del `TextoAportado`: hechos con `origen: brief` y **sin escena**.
