@@ -7,13 +7,14 @@ distintos —uno del agente, otro de la obra— que merecen dos errores distinto
 """
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from app.commons.domain.errores import ErrorDeDominio
 from app.commons.llm.cliente import ClienteModelo
 from app.commons.llm.json_de_modelo import json_de_modelo
 from app.features.outline.schemas import CapituloDelOutline
@@ -125,7 +126,11 @@ class Arquitecto:
         self._cliente = cliente
         self._semilla = semilla
 
-    async def planificar(self, brief: Mapping[str, Any]) -> OutlineGenerado:
+    async def planificar(
+        self,
+        brief: Mapping[str, Any],
+        comprobar: Callable[["OutlineGenerado"], None] | None = None,
+    ) -> OutlineGenerado:
         """Una llamada al modelo, y su salida validada antes de creersela.
 
         Una llamada y no dos —biblia primero, outline despues— porque el outline
@@ -141,9 +146,21 @@ class Arquitecto:
         """
         prompt = render_arquitecto(PLANTILLA_V2, brief)
         try:
-            return await self._una_llamada(prompt)
+            outline = await self._una_llamada(prompt)
         except SalidaMalFormada as fallo:
-            return await self._una_llamada(_con_reparacion(prompt, fallo.motivo))
+            motivo = fallo.motivo
+        else:
+            if comprobar is None:
+                return outline
+            try:
+                comprobar(outline)
+                return outline
+            except (ErrorDeDominio, ValueError) as regla:  # la regla que incumple, dicha
+                motivo = f"- {regla}"
+        segundo = await self._una_llamada(_con_reparacion(prompt, motivo))
+        if comprobar is not None:
+            comprobar(segundo)  # si sigue sin cumplir, sube el error de dominio
+        return segundo
 
     async def _una_llamada(self, prompt: str) -> OutlineGenerado:
         crudo = await self._cliente.completar(prompt, semilla=self._semilla)
@@ -170,7 +187,7 @@ def _motivo(error: Exception) -> str:
 def _con_reparacion(prompt: str, motivo: str) -> str:
     return (
         f"{prompt}\n\n{MARCA_DE_REPARACION}\n\n"
-        "Tu respuesta anterior no cumple el formato de salida por esto:\n\n"
+        "Tu respuesta anterior no cumple lo pedido por esto:\n\n"
         f"{motivo}\n\n"
         "Devuelve el objeto JSON completo otra vez, corrigiendo exactamente eso y "
         "respetando todas las restricciones duras."

@@ -83,6 +83,25 @@ async def test_una_salida_mal_formada_se_repara_una_vez_con_el_motivo_concreto()
     assert "capitulos.2.extension_objetivo" in reintento
 
 
+async def test_una_regla_de_planificacion_incumplida_tambien_se_repara_una_vez():
+    """Corrida real: `gran_gesto` sin asignar daba 409 sin segunda oportunidad."""
+    sin_beat = json.loads(outline_crudo())
+    sin_beat["capitulos"][8]["beat_de_genero"] = None
+    doble = DobleDeterminista(
+        {MARCA_DE_REPARACION: outline_crudo(), "# Arquitecto": json.dumps(sin_beat)}
+    )
+
+    def exige_diez_beats(outline):
+        if sum(1 for c in outline.capitulos if c.beat_de_genero) < 10:
+            raise ValueError("Sin asignar: ['gran_gesto']")
+
+    outline = await Arquitecto(doble).planificar(BRIEF, exige_diez_beats)
+
+    assert len(doble.llamadas) == 2
+    assert "gran_gesto" in doble.llamadas[1][0]
+    assert all(c.beat_de_genero for c in outline.capitulos)
+
+
 async def test_si_la_reparacion_tampoco_valida_es_un_fallo_tras_dos_llamadas():
     """Un reintento, no un bucle: el coste de CU-02 sigue siendo previsible."""
     doble = DobleDeterminista({"# Arquitecto": "Aqui tienes el outline:"})

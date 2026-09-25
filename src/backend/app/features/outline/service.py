@@ -252,7 +252,17 @@ async def planificar_obra(
         Observacion(traza=traza, cliente=cliente).span("arquitecto") as span,
     ):
         span.prompt(PROMPT_ID, PROMPT_VERSION, HASH_DE_PLANTILLA_V2)
-        outline = await arquitecto.planificar(obra.como_brief())
+
+        def _cumple_las_reglas(propuesto: OutlineGenerado) -> None:
+            # Las reglas de la planificacion, para que un incumplimiento tenga un
+            # reintento dirigido con el motivo (corrida real: `gran_gesto` sin
+            # asignar daba 409 y costaba un clic y tres minutos).
+            _biblia_con_discurso(propuesto, obra)
+            _comprobar_numeracion(propuesto)
+            _comprobar_beats(propuesto)
+            _comprobar_giros_de_valor(propuesto)
+
+        outline = await arquitecto.planificar(obra.como_brief(), _cumple_las_reglas)
     biblia = _biblia_con_discurso(outline, obra)
     _comprobar_numeracion(outline)
     _comprobar_beats(outline)
