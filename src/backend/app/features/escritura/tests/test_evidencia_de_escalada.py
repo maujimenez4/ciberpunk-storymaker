@@ -15,7 +15,12 @@ Ninguna prueba llama al proveedor (CA-4): el cliente es `DobleDeterminista`.
 import pytest
 from sqlalchemy import func, select
 
-from app.features.escritura.agents import MARCA_DE_REPARACION
+from app.commons.llm.doble import DobleDeterminista
+from app.features.calidad import Critico, rubrica_vigente
+from app.features.canon.agents import Extractor
+from app.features.escena.agents import Planificador
+from app.features.escritura.agents import MARCA_DE_REPARACION, Escritor
+from app.features.escritura.ciclo import Agentes
 from app.features.escritura.modelos import IntentoDescartado, VersionTexto
 from app.features.escritura.tests.test_ciclo import (
     PROSA_BUENA,
@@ -107,3 +112,27 @@ async def test_un_capitulo_aprobado_tras_reparar_guarda_el_intento_que_se_rechaz
     assert [f.numero for f in filas] == [1]
     assert filas[0].texto == PROSA_CORTA
     assert [d["codigo"] for d in filas[0].defectos] == ["EST-02"]
+
+
+async def test_el_capitulo_escalado_trae_el_juicio_del_critico(
+    sesion,
+    obra_lista,  # noqa: F811
+):
+    """Paso 6: el Critico corre en cada vuelta, y al escalar su juicio se perdia.
+
+    El retorno aprobado lo llevaba y el escalado no, que es justo el caso en que
+    una persona tiene que decidir y el juez tenia algo que decir.
+    """
+    doble = DobleDeterminista(_respuestas(PROSA_CORTA))
+    agentes = Agentes(
+        planificador=Planificador(doble),
+        escritor=Escritor(doble),
+        extractor=Extractor(doble),
+        critico=Critico(doble, rubrica_vigente()),
+    )
+
+    resultado = await _ciclo(sesion, obra_lista.capitulos[0].id, agentes=agentes)
+
+    assert resultado.estado == "ESCALADA"
+    assert resultado.escritura is not None
+    assert resultado.escritura.juicio is not None

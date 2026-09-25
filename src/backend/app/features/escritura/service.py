@@ -510,6 +510,9 @@ async def escribir_capitulo(
                 texto=texto,
                 intentos=tuple(intentos),
                 motivo_de_escalado=_motivo(resultado, intentos[-1].termino_vetado),
+                # Plan 8 T4: el juez tambien corrio en esta vuelta, y al
+                # escalar es cuando una persona mas necesita lo que dijo.
+                juicio=juicio,
             )
 
         await _completar_ejecucion(sesion, ejecucion_id, escritor, "rechazada")
