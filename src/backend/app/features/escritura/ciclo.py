@@ -66,6 +66,7 @@ from app.features.calidad import (
 )
 from app.features.canon import (
     Consolidacion,
+    Extraccion,
     Extractor,
     Vector,
     consolidar_escena,
@@ -83,6 +84,13 @@ from app.features.contexto import (
 )
 from app.features.escena import Planificador, RestriccionesDeDiscurso, planificar_escena
 from app.features.escritura.agents import Escritor
+from app.features.escritura.idempotencia import (
+    Paso,
+    RastroCompuesto,
+    RastroEnEvento,
+    RastroEnHechoCanon,
+    una_sola_vez,
+)
 from app.features.escritura.maquina import Estado, Senal, avanzar
 from app.features.escritura.modelos import IntentoDescartado, Trabajo
 from app.features.escritura.service import Escritura, escribir_capitulo
@@ -206,6 +214,14 @@ class ResultadoDelCiclo:
     escritura: Escritura | None = None
     consolidacion: Consolidacion | None = None
     causa_fallo: str | None = None
+    extraccion: Extraccion | None = None
+    """Lo que el Extractor saco de la prosa, **sin consolidar** (plan 5, T3).
+
+    Solo viaja con `consolidar=False`: es el dato que le falta a quien decide si
+    la regeneracion prospera. Con `consolidar=True` ya esta en el canon."""
+    ids_de_canon: tuple[int, ...] = ()
+    """Los hechos que entraron en el paquete, para registrar su uso (RF-MEM-02)
+    cuando la consolidacion se aplaza. Con `consolidar=True` ya estan escritos."""
 
 
 async def abrir_trabajo(sesion: AsyncSession, *, capitulo_id: int) -> Trabajo:
@@ -264,8 +280,15 @@ async def ejecutar_ciclo(
     semilla: int = 0,
     rango_de_extension: RangoDeExtension = RANGO_DE_CAPITULO,
     observador: Observador | None = None,
+    consolidar: bool = True,
 ) -> ResultadoDelCiclo:
     """Planifica, ensambla, escribe, valida y consolida. En ese orden.
+
+    **`consolidar=False` es para la regeneracion** (plan 5, decision previa):
+    si una peticion del lector no prospera no puede quedar rastro, y `evento`
+    tiene `trg_evento_sin_delete`: lo escrito en el ledger no se retira. Asi que
+    la regeneracion escribe prosa y **no** toca memoria de largo plazo; quien
+    decide consolida despues con la `Extraccion` que viaja en el resultado.
 
     **Una traza por capitulo** en la sesion de la obra (`CLAUDE.md` §4.3), y
     dentro un span por rol que se llama. El `observador` que llega de
@@ -302,6 +325,7 @@ async def ejecutar_ciclo(
                 semilla=semilla,
                 rango_de_extension=rango_de_extension,
                 observacion=Observacion(traza=traza, cliente=agentes.observado),
+                consolidar=consolidar,
             )
 
 
@@ -320,6 +344,7 @@ async def _ciclo_observado(
     semilla: int,
     rango_de_extension: RangoDeExtension,
     observacion: Observacion,
+    consolidar: bool = True,
 ) -> ResultadoDelCiclo:
     """El cuerpo del ciclo, dentro del cerrojo y de la traza del capitulo."""
     try:
@@ -383,18 +408,36 @@ async def _ciclo_observado(
     async with observacion.span("extractor") as span:
         span.prompt(canon.PROMPT_ID, canon.PROMPT_VERSION, canon.HASH_DE_PLANTILLA_V1)
         extraccion = await agentes.extractor.extraer(escritura.texto)
-    consolidacion = await consolidar_escena(
-        sesion,
-        obra_id=trabajo.obra_id,
-        escena_id=contexto.escena_id,
-        capitulo_id=contexto.capitulo_id,
-        extraccion=extraccion,
-        prosa=escritura.texto,
-        version_texto_id=escritura.version_texto_id,
-        vectorizar=vectorizar,
-        defectos_bloqueantes=bloqueantes,
-    )
-    await _registrar_uso(sesion, contexto)
+    consolidacion: Consolidacion | None = None
+    if consolidar:
+        # J-2 (plan 5): el guardia de idempotencia estrena llamador de
+        # produccion, solo sobre `EXTRAYENDO`, que es el paso que una
+        # regeneracion repite sobre datos ya escritos. Los rastros preguntan
+        # por corrida (P-6), asi que otra corrida sobre la misma escena corre.
+        paso = await una_sola_vez(
+            sesion,
+            Paso(run_id=trabajo.run_id, nombre=Estado.EXTRAYENDO.value),
+            RastroCompuesto(
+                rastros=(
+                    RastroEnEvento(escena_id=contexto.escena_id),
+                    RastroEnHechoCanon(escena_id=contexto.escena_id),
+                )
+            ),
+            lambda: consolidar_escena(
+                sesion,
+                obra_id=trabajo.obra_id,
+                escena_id=contexto.escena_id,
+                capitulo_id=contexto.capitulo_id,
+                extraccion=extraccion,
+                prosa=escritura.texto,
+                version_texto_id=escritura.version_texto_id,
+                vectorizar=vectorizar,
+                defectos_bloqueantes=bloqueantes,
+                run_id=trabajo.run_id,
+            ),
+        )
+        consolidacion = paso.valor
+        await _registrar_uso(sesion, contexto)
 
     resultado = await _terminar(sesion, trabajo, Senal.PASO_COMPLETADO, escritura=escritura)
     return ResultadoDelCiclo(
@@ -403,6 +446,8 @@ async def _ciclo_observado(
         run_id=resultado.run_id,
         escritura=escritura,
         consolidacion=consolidacion,
+        extraccion=None if consolidar else extraccion,
+        ids_de_canon=() if consolidar else tuple(_ids_de_canon(contexto)),
     )
 
 

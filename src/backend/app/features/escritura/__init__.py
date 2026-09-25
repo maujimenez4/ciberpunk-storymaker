@@ -34,6 +34,11 @@ paquete recibido».
   que cierra `CA-1`. Sale por la puerta porque quien la arranca de verdad no es
   solo el router de esta feature: la cobertura la consumira la publicacion
   (Fase 4), que vive en `manuscrito`.
+- `CapituloNoIntegrado`, `Ejecutar`, `PREFIJO_DE_REGENERACION`,
+  `regenerar_capitulo`, `reparaciones_de_la_regeneracion`,
+  `retirar_prosa_de_la_corrida` y `consolidar_la_regeneracion`: **regenerar un
+  capitulo ya integrado** (plan 5, T3). Las consume `manuscrito` al atender una
+  peticion de cambio.
 - `PROMPT_ID`, `PROMPT_VERSION` y `HASH_DE_PLANTILLA_V1`: lo que ata una fila de
   `ejecucion` al fichero de la plantilla (regla de dominio 7).
 
@@ -122,6 +127,15 @@ from app.features.escritura.reanudacion import (
     reanudar,
     trabajos_en_vuelo,
 )
+from app.features.escritura.regeneracion import (
+    PREFIJO_DE_REGENERACION,
+    CapituloNoIntegrado,
+    Ejecutar,
+    consolidar_la_regeneracion,
+    regenerar_capitulo,
+    reparaciones_de_la_regeneracion,
+    retirar_prosa_de_la_corrida,
+)
 from app.features.escritura.router import obtener_sesion_de_fondo, router
 from app.features.escritura.service import (
     Escritura,
@@ -134,16 +148,19 @@ __all__ = [
     "ESTADOS_TERMINALES",
     "ESTADOS_VIVOS",
     "HASH_DE_PLANTILLA_V1",
+    "PREFIJO_DE_REGENERACION",
     "PROMPT_ID",
     "PROMPT_VERSION",
     "Agentes",
     "Arranque",
     "CapituloAnteriorSinIntegrar",
     "CapituloDeLaNovela",
+    "CapituloNoIntegrado",
     "CapituloPendiente",
     "CapituloYaIntegrado",
     "Checkpoint",
     "CheckpointPrematuro",
+    "Ejecutar",
     "Escritor",
     "Escritura",
     "Estado",
@@ -171,6 +188,7 @@ __all__ = [
     "avanzar",
     "ciclo_de_la_novela",
     "cobertura_de_la_novela",
+    "consolidar_la_regeneracion",
     "descartar",
     "detiene_la_novela",
     "ejecutar_ciclo",
@@ -186,8 +204,11 @@ __all__ = [
     "obtener_sesion_de_fondo",
     "planificar_reanudacion",
     "reanudar",
+    "regenerar_capitulo",
     "registrar_checkpoint",
+    "reparaciones_de_la_regeneracion",
     "reparaciones_del_capitulo",
+    "retirar_prosa_de_la_corrida",
     "router",
     "siguiente_capitulo",
     "trabajos_en_vuelo",
