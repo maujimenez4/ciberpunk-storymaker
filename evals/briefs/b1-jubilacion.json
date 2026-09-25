@@ -1,0 +1,24 @@
+{
+  "destinatario": {
+    "nombre": "Aurelio",
+    "edad": 65,
+    "rasgos": ["meticuloso", "socarron", "paciente"],
+    "recuerdos_aportados": [
+      "las mananas en el taller de relojeria de la calle Mayor",
+      "el viaje en Vespa a Peniscola del verano de 1983",
+      "la partida de mus de los jueves en el bar Casino"
+    ]
+  },
+  "genero": "aventura",
+  "tono": "calido y con humor",
+  "nivel_de_calor": 1,
+  "vetos": ["cancer", "divorcio"],
+  "elementos_obligatorios": [
+    "la lupa de relojero",
+    "la Vespa verde",
+    "el bar Casino",
+    "su nieta Irene",
+    "el reloj de la estacion que nunca daba la hora"
+  ],
+  "dedicatoria": "Para Aurelio, que ahora por fin tiene todo el tiempo del mundo."
+}

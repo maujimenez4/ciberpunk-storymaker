@@ -1,0 +1,22 @@
+{
+  "destinatario": {
+    "nombre": "Julian",
+    "edad": 40,
+    "rasgos": ["nostalgico", "testarudo"],
+    "recuerdos_aportados": [
+      "la noche de San Juan de 1996: la familia jura que Julian estuvo a la vez en la hoguera de la playa con su pandilla y en el faro con el abuelo Tomas, y nadie ha conseguido nunca decidir cual de las dos versiones es la buena",
+      "el dia en que el abuelo Tomas se marcho para siempre a Montevideo en el barco de las seis"
+    ]
+  },
+  "genero": "aventura",
+  "tono": "nostalgico",
+  "nivel_de_calor": 1,
+  "vetos": [],
+  "elementos_obligatorios": [
+    "la noche de San Juan de 1996 en la hoguera de la playa, con su pandilla",
+    "la noche de San Juan de 1996 en el faro, con el abuelo Tomas",
+    "la partida definitiva del abuelo Tomas a Montevideo en el barco de las seis",
+    "el abuelo Tomas ensenandole el nudo as de guia en el muelle"
+  ],
+  "dedicatoria": "Para Julian, que estuvo en los dos sitios."
+}

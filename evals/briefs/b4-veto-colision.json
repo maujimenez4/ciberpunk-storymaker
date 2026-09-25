@@ -1,0 +1,19 @@
+{
+  "destinatario": {
+    "nombre": "Rocio",
+    "edad": 52,
+    "rasgos": ["generosa", "discreta"],
+    "recuerdos_aportados": [
+      "los meses en Valdecilla cuidando de su madre, cuando conocio a Andres en la cafeteria de la planta baja"
+    ]
+  },
+  "genero": "romance",
+  "tono": "tierno",
+  "nivel_de_calor": 1,
+  "vetos": ["hospital", "enfermedad"],
+  "elementos_obligatorios": [
+    "la cafeteria de la planta baja de Valdecilla donde conocio a Andres",
+    "el termo de cafe que Andres le rellenaba cada noche"
+  ],
+  "dedicatoria": "Para Rocio, que cuido de todos."
+}

@@ -1,0 +1,27 @@
+{
+  "destinatario": {
+    "nombre": "Ines",
+    "edad": 31,
+    "rasgos": ["impulsiva", "leal"],
+    "recuerdos_aportados": ["el ano de Erasmus en Lisboa"]
+  },
+  "genero": "romance",
+  "tono": "luminoso",
+  "nivel_de_calor": 1,
+  "vetos": [],
+  "elementos_obligatorios": [
+    "el tranvia 28",
+    "la libreria Bertrand",
+    "su gato Pessoa",
+    "la bicicleta con cesta de mimbre",
+    "el piso de la Rua da Rosa",
+    "los pasteis de Belem de los domingos",
+    "la guitarra de su hermano Diego",
+    "el concierto de fado en Alfama",
+    "la postal que nunca envio",
+    "el mirador de Santa Luzia",
+    "la tormenta del 14 de marzo",
+    "un reloj de bolsillo de plata con la inscripcion 'A tiempo, siempre'"
+  ],
+  "dedicatoria": "Para Ines, que llega a tiempo, siempre."
+}
