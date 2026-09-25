@@ -1,6 +1,6 @@
 # Verificación — StoryMaker
 
-**Versión:** 4.1 · **Fecha:** 2026-09-23
+**Versión:** 4.2 · **Fecha:** 2026-09-24
 
 Cómo pensamos ganar confianza en el código y en el comportamiento de los agentes.
 Dos preguntas, separadas porque fallan por separado:
@@ -313,6 +313,31 @@ comprobación**. Salen gratis cuando se piensan al escribir el test y son carís
 se descubren por un tropiezo, porque hasta entonces todo lo que ese test afirmaba estaba
 sin sostener — y se había citado como evidencia.
 
+### 5.2 Una cifra medida: la sobrecarga del CLI por llamada
+
+El techo concurrente (`CLAUDE.md` §4.1) reserva turno con los tokens que **contamos**, pero
+al modelo llega algo más: el CLI del Claude Agent SDK envuelve el prompt. Esa diferencia
+se **midió**, no se supuso, el **2026-09-24** con `src/backend/scripts/medir_sobrecarga.py`
+(plan 8, T5): `claude-haiku-4-5`, tres prompts contados con `ContadorTiktoken`, dos rondas
+seguidas, salida «ok». `sobrecarga = (input + cache_read + cache_creation) − contados`.
+
+| Ronda | Contados | `input_tokens` | `cache_read` | `cache_creation` | Sobrecarga |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 94 | 1.294 | 0 | 0 | **1.200** |
+| 1 | 2.014 | 3.166 | 0 | 0 | 1.152 |
+| 1 | 8.014 | 10 | 0 | 9.006 | 1.002 |
+| 2 | 94 | 1.294 | 0 | 0 | **1.200** |
+| 2 | 2.014 | 3.166 | 0 | 0 | 1.152 |
+| 2 | 8.014 | 10 | 9.006 | 0 | 1.002 |
+
+Qué se lee: la sobrecarga es **fija, de unos mil doscientos tokens**, y no crece con el
+prompt; la caché cambia **dónde** se contabilizan los tokens —el prompt largo pasa de
+`cache_creation` a `cache_read` en la segunda ronda—, no cuántos son. La leve bajada con el
+tamaño es la deriva entre `cl100k_base` y el vocabulario de Anthropic (`contador.py`), que
+en este texto cuenta a favor. **Lo que no mide:** otro tipo de texto puede derivar en
+contra, y por eso `SOBRECARGA_POR_LLAMADA` (`commons/jobs/turnos.py`) se fija en **2.000**,
+por encima del máximo de esta tabla y de los ~1.800 que P-21 registraba de antes.
+
 ## 6. El conjunto de validadores
 
 Las tablas de §2 y §3 están ordenadas por método, y leídas así inducen a contar: ocho
@@ -599,6 +624,7 @@ tiene mecanismo, y por eso está dicha y no dada por hecha.
 | 1.0 | Catálogo de metodologías con veredicto por método, y clasificación T/A/I/D/U de los requisitos del proyecto |
 | 2.0 | Se separan los dos sujetos del §1, se detalla el estado de cada método en este repositorio y se nombra lo que es U |
 | 3.0 | El documento pasa de catálogo a conjunto: §2.1 y §3.1 añaden el punto ciego de cada método; §6, las reglas del conjunto —independencia correlacionada, determinista frente a probabilístico, quién mide a los validadores—; §7, la matriz de riesgo × validadores con los descubiertos. §4 fija la letra principal con refuerzo; §4.1 anota que la reproducción del paquete caduca con el estado de almacenes y que el techo por llamada no acota el total; §4.2 separa pertinencia de presencia y añade el hecho nuevo que no contradice nada |
+| **4.2** | §5.2 nueva: la sobrecarga del CLI por llamada, **medida** (plan 8, T5), con la tabla y la cifra que reserva el techo concurrente |
 | **4.1** | **Pasada de coherencia cruzada con `architecture.md`, hecha por dos sesiones por separado y fundida en un plan.** La fila de supresión del alcance se cruzó con la del navegador: **la primera resultó no estar caducada**, porque el validador visual es código conduciendo un navegador y no un agente (arq. §3.5.1), y quien sí recibe la herramienta es el **agente de código**. Se afila igualmente a «los diez agentes narrativos» y se deja escrito que la formulación original sobrevive, para que nadie la debilite otra vez por el mismo camino. G1b deja de no bloquear «hasta que exista la calibración» —condición que se habría disparado sola— y pasa a exigir correlación medida **y firmada**. Entran en §4.1 las dos reglas de `CLAUDE.md` §8 que no tenían letra: la **10** (`VOZ-03`), sin clasificar desde la v1.3 y única regla con código de defecto propio y sin ella, y la **15**. Y las reglas 11 a 14 pasan a citarse también por su número, no solo por su origen en el encargo |
 | **4.0** | **Al cruzar el documento contra `docs/entregable/examen-final.md`, dos veredictos se invierten y uno se corrige.** Verificación formal deja de ser «No aplicable»: entra **Lean 4** sobre la cronología, con dos invariantes y **puerta de publicación** (§2). Comprobación de modelos deja de ser «No aplicable, por ahora»: entra **TLA+ con TLC** sobre el harness, con tres invariantes de seguridad y una de liveness (§3). Las **evals** dejan de esperar a la fase 4 y son obligatorias, con cinco briefs —uno adversarial y uno de trampa temporal— y una iteración de tuning; entran además el **juicio por modelo con rúbrica** y la **revisión humana con la misma rúbrica**, que es lo que convierte la calibración del Crítico en dato. §4.1 clasifica los once requisitos nuevos, §8 es nueva —cada validador con su nombre, dónde corre y qué bloquea, que es el eje que faltaba—, entra la **inspección visual por browser MCP** (§3), que era el único método del encargo ausente, §7 gana cuatro riesgos —incoherencia temporal, palabra vetada, el destinatario que no se reconoce y la correspondencia TLA+/código— y el porqué de las dos inversiones está en el §10. **Corrección de hecho:** §6.3 decía que la tasa de defectos mal formados mide al Continuista; no lo mide a él, mide su capacidad de copiar |
 | 3.1 | Se clasifican los axiomas 11 y 12 y la comprobación de forma previa a G1a (§4.1), y la matriz gana la casilla que cubren (§7). El punto ciego de los tests de contrato (§2.1) se corrige: la comprobación de forma elimina el defecto bien formado con la cita inventada. §6.3 deja de decir que nada mide a los validadores: la tasa de defectos mal formados es la primera señal, y se nombra lo que no alcanza. Guardarraíles deja de mezclar los dos sujetos (§3) |

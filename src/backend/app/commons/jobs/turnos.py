@@ -57,6 +57,19 @@ from app.commons.domain.errores import TiempoAgotado
 TECHO_CONCURRENTE = 100_000
 """Suma maxima de tokens en vuelo. Del encargo §7, literal: «concurrentes»."""
 
+SOBRECARGA_POR_LLAMADA = 2_000
+"""Tokens que el CLI del SDK anade a cada llamada por encima del prompt contado.
+
+**Medida el 2026-09-24** con `src/backend/scripts/medir_sobrecarga.py` (plan 8,
+T5); la tabla esta en `docs/verification.md` §5.2 y en P-21. Maximo observado:
+**1.200**, fijo, sin depender del tamano del prompt ni de la cache. Se redondea
+hacia arriba a 2.000 porque la deriva entre `cl100k_base` y el vocabulario de
+Anthropic cambia de signo con el texto, y porque una medida anterior dio ~1.800.
+
+Quien pide turno por una llamada al modelo reserva `contados + esto`: sin ello,
+la suma en vuelo que ve este portero seria menor que la que llega al proveedor.
+"""
+
 
 @dataclass
 class _EnEspera:

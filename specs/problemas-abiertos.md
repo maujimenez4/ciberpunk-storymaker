@@ -51,6 +51,16 @@ Comprobado: `ciclo._retirar_lo_descartado` **borra** las `version_texto` del `ru
 
 **Antes de hacerlo hay que resolver una contradicción:** este fichero midió la sobrecarga del CLI en **~1.800 tokens por llamada**, constante; `RELEVO.md` dice **33.000–49.000 por llamada en corrida real**. Si la segunda es cierta y cuenta para el techo, dos llamadas en vuelo pueden pasar de 100.000 aunque sus paquetes quepan. **Ninguna de las dos cifras se ha podido verificar desde el repositorio.**
 
+**Medida el 2026-09-24 (plan 8, T5)** con `src/backend/scripts/medir_sobrecarga.py`: `claude-haiku-4-5`, prompts de 94, 2.014 y 8.014 tokens contados, dos rondas. `sobrecarga = (input + cache_read + cache_creation) − contados`:
+
+| Contados | Ronda 1 | Ronda 2 |
+| --- | --- | --- |
+| 94 | 1.200 | 1.200 |
+| 2.014 | 1.152 | 1.152 |
+| 8.014 | 1.002 (todo en `cache_creation`) | 1.002 (todo en `cache_read`) |
+
+**Gana la primera cifra:** la sobrecarga es fija, de ~1.200, y no depende de la caché. Los 33.000–49.000 **no se reproducen** con las opciones de hoy; la hipótesis más probable —no comprobada— es que se midieron antes de `setting_sources=[]`, cuando el `CLAUDE.md` del proyecto entraba en cada prompt (`claude_code.py`, `_opciones`). `SOBRECARGA_POR_LLAMADA = 2_000` en `commons/jobs/turnos.py`. Tabla completa en `docs/verification.md` §5.2. **Con esta cifra el techo concurrente no es la restricción real**: dos jueces con sus paquetes caben con holgura, y `CLAUDE.md` §4.1 no necesita cambio.
+
 **Quién:** el plan del tramo 1. **Coste de dejarlo:** una novela un 15 % más lenta; nada se rompe.
 
 ### P-22 · Langfuse: está cableado y nunca se ha visto funcionar

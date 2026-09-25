@@ -25,7 +25,12 @@ import asyncio
 import pytest
 
 from app.commons.domain.errores import ErrorDeDominio, TiempoAgotado
-from app.commons.jobs.turnos import TECHO_CONCURRENTE, CerrojoDeEscena, PresupuestoConcurrente
+from app.commons.jobs.turnos import (
+    SOBRECARGA_POR_LLAMADA,
+    TECHO_CONCURRENTE,
+    CerrojoDeEscena,
+    PresupuestoConcurrente,
+)
 
 GUARDA = 5.0
 
@@ -364,3 +369,11 @@ async def test_la_espera_del_cerrojo_tambien_tiene_plazo():
     soltar[0].set()
     await asyncio.wait_for(primera, GUARDA)
     assert cerrojo.obras_en_vuelo == frozenset()
+
+
+def test_la_sobrecarga_del_cli_esta_declarada_y_es_positiva():
+    # Plan 8, T5. No mide nada: la medida esta en `docs/verification.md` §5.2.
+    # Lo que se prueba es que exista y que no sea cero, porque un cero reservaria
+    # turno solo por el paquete y dejaria pasar del techo lo que el CLI anade.
+    assert SOBRECARGA_POR_LLAMADA > 0
+    assert SOBRECARGA_POR_LLAMADA < TECHO_CONCURRENTE
